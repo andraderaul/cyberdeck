@@ -64,16 +64,16 @@ describe('computeFrame', () => {
     // bright cell: white (255,255,255) → lum = 1.0 ≥ 0.5 → Color A
     // dark cell: black (0,0,0) → lum = 0.0 < 0.5 → Color B
 
-    it('synthwave applies magenta (#ff00ff) to bright cells', () => {
+    it('synthwave applies cyan (#00ffff) to bright cells', () => {
       const grid = [[makeCell('X', 255, 255, 255)]]
       const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'synthwave' })
-      expect(instructions[0].color).toBe('#ff00ff')
+      expect(instructions[0].color).toBe('#00ffff')
     })
 
-    it('synthwave applies cyan (#00ffff) to dark cells', () => {
+    it('synthwave applies magenta (#ff00ff) to dark cells', () => {
       const grid = [[makeCell('X', 0, 0, 0)]]
       const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'synthwave' })
-      expect(instructions[0].color).toBe('#00ffff')
+      expect(instructions[0].color).toBe('#ff00ff')
     })
 
     it('matrix-dual applies green (#00ff41) to bright cells', () => {
@@ -92,14 +92,14 @@ describe('computeFrame', () => {
       // r=g=b=128 → lum ≈ 0.502, just above threshold → Color A
       const grid = [[makeCell('X', 128, 128, 128)]]
       const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'synthwave' })
-      expect(instructions[0].color).toBe('#ff00ff')
+      expect(instructions[0].color).toBe('#00ffff')
     })
 
     it('applies Color B just below threshold (luminosity < 0.5)', () => {
       // r=g=b=127 → lum ≈ 0.498, just below threshold → Color B
       const grid = [[makeCell('X', 127, 127, 127)]]
       const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'synthwave' })
-      expect(instructions[0].color).toBe('#00ffff')
+      expect(instructions[0].color).toBe('#ff00ff')
     })
 
     it('acid applies lime (#ccff00) to bright cells', () => {

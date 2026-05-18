@@ -17,7 +17,7 @@ const COLOR_MODE_COLORS: Partial<Record<ColorMode, string>> = {
 
 // Dual-color modes: [colorA (bright, lum ≥ 0.5), colorB (dark, lum < 0.5)]
 const DUAL_COLOR_MODES: Partial<Record<ColorMode, [string, string]>> = {
-  synthwave: ['#ff00ff', '#00ffff'],
+  synthwave: ['#00ffff', '#ff00ff'],
   'matrix-dual': ['#00ff41', '#9d00ff'],
   acid: ['#ccff00', '#ff0099'],
   infrared: ['#ff4500', '#0066ff'],
