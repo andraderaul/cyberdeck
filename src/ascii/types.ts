@@ -1,4 +1,12 @@
-export type ColorMode = 'matrix' | 'bw' | 'retro' | 'sepia' | 'neon' | 'original'
+export type ColorMode =
+  | 'matrix'
+  | 'bw'
+  | 'retro'
+  | 'sepia'
+  | 'neon'
+  | 'original'
+  | 'synthwave'
+  | 'matrix-dual'
 export type Charset =
   // ascii gradient
   | 'classic'

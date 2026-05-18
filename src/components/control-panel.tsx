@@ -29,7 +29,16 @@ export default function ControlPanel({ settings, onChange }: Props) {
         <Label>color mode</Label>
         <ToggleGroup<ColorMode>
           ariaLabel="Color mode"
-          options={['matrix', 'bw', 'retro', 'sepia', 'neon', 'original']}
+          options={[
+            'matrix',
+            'bw',
+            'retro',
+            'sepia',
+            'neon',
+            'original',
+            'synthwave',
+            'matrix-dual',
+          ]}
           value={settings.colorMode}
           onChange={(colorMode) => onChange({ colorMode })}
         />

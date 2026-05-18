@@ -15,6 +15,13 @@ const COLOR_MODE_COLORS: Partial<Record<ColorMode, string>> = {
   neon: '#ff2d78',
 }
 
+// Dual-color modes: [colorA (bright, lum ≥ 0.5), colorB (dark, lum < 0.5)]
+// TODO: add 'acid' (#ccff00 / #ff0099) and 'infrared' (#ff4500 / #0066ff)
+const DUAL_COLOR_MODES: Partial<Record<ColorMode, [string, string]>> = {
+  synthwave: ['#ff00ff', '#00ffff'],
+  'matrix-dual': ['#00ff41', '#9d00ff'],
+}
+
 export const MONOSPACE_CHAR_WIDTH_RATIO = 0.6
 
 // Pure: derives render instructions and ascii text from a cell grid — no DOM, fully testable.
@@ -34,10 +41,16 @@ export function computeFrame(
     let line = ''
     for (let col = 0; col < cells[row].length; col++) {
       const cell = cells[row][col]
-      const color =
-        colorMode === 'original'
-          ? `rgb(${cell.r},${cell.g},${cell.b})`
-          : (COLOR_MODE_COLORS[colorMode] ?? '#c8c8e0')
+      const dualColors = DUAL_COLOR_MODES[colorMode]
+      let color: string
+      if (dualColors) {
+        const lum = (0.299 * cell.r + 0.587 * cell.g + 0.114 * cell.b) / 255
+        color = lum >= 0.5 ? dualColors[0] : dualColors[1]
+      } else if (colorMode === 'original') {
+        color = `rgb(${cell.r},${cell.g},${cell.b})`
+      } else {
+        color = COLOR_MODE_COLORS[colorMode] ?? '#c8c8e0'
+      }
       instructions.push({ char: cell.char, x: col * charW, y: row * charH, color })
       line += cell.char
     }
