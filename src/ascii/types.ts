@@ -7,6 +7,8 @@ export type ColorMode =
   | 'original'
   | 'synthwave'
   | 'matrix-dual'
+  | 'acid'
+  | 'infrared'
 export type Charset =
   // ascii gradient
   | 'classic'

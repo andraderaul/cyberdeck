@@ -16,10 +16,11 @@ const COLOR_MODE_COLORS: Partial<Record<ColorMode, string>> = {
 }
 
 // Dual-color modes: [colorA (bright, lum ≥ 0.5), colorB (dark, lum < 0.5)]
-// TODO: add 'acid' (#ccff00 / #ff0099) and 'infrared' (#ff4500 / #0066ff)
 const DUAL_COLOR_MODES: Partial<Record<ColorMode, [string, string]>> = {
   synthwave: ['#ff00ff', '#00ffff'],
   'matrix-dual': ['#00ff41', '#9d00ff'],
+  acid: ['#ccff00', '#ff0099'],
+  infrared: ['#ff4500', '#0066ff'],
 }
 
 export const MONOSPACE_CHAR_WIDTH_RATIO = 0.6

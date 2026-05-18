@@ -101,5 +101,29 @@ describe('computeFrame', () => {
       const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'synthwave' })
       expect(instructions[0].color).toBe('#00ffff')
     })
+
+    it('acid applies lime (#ccff00) to bright cells', () => {
+      const grid = [[makeCell('X', 255, 255, 255)]]
+      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'acid' })
+      expect(instructions[0].color).toBe('#ccff00')
+    })
+
+    it('acid applies pink (#ff0099) to dark cells', () => {
+      const grid = [[makeCell('X', 0, 0, 0)]]
+      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'acid' })
+      expect(instructions[0].color).toBe('#ff0099')
+    })
+
+    it('infrared applies orange (#ff4500) to bright cells', () => {
+      const grid = [[makeCell('X', 255, 255, 255)]]
+      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'infrared' })
+      expect(instructions[0].color).toBe('#ff4500')
+    })
+
+    it('infrared applies electric blue (#0066ff) to dark cells', () => {
+      const grid = [[makeCell('X', 0, 0, 0)]]
+      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'infrared' })
+      expect(instructions[0].color).toBe('#0066ff')
+    })
   })
 })

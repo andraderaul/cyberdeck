@@ -38,6 +38,8 @@ export default function ControlPanel({ settings, onChange }: Props) {
             'original',
             'synthwave',
             'matrix-dual',
+            'acid',
+            'infrared',
           ]}
           value={settings.colorMode}
           onChange={(colorMode) => onChange({ colorMode })}
