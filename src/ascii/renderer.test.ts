@@ -114,16 +114,16 @@ describe('computeFrame', () => {
       expect(instructions[0].color).toBe('#ff0099')
     })
 
-    it('infrared applies orange (#ff4500) to bright cells', () => {
+    it('infrared applies electric blue (#0066ff) to bright cells', () => {
       const grid = [[makeCell('X', 255, 255, 255)]]
       const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'infrared' })
-      expect(instructions[0].color).toBe('#ff4500')
+      expect(instructions[0].color).toBe('#0066ff')
     })
 
-    it('infrared applies electric blue (#0066ff) to dark cells', () => {
+    it('infrared applies orange (#ff4500) to dark cells', () => {
       const grid = [[makeCell('X', 0, 0, 0)]]
       const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'infrared' })
-      expect(instructions[0].color).toBe('#0066ff')
+      expect(instructions[0].color).toBe('#ff4500')
     })
   })
 })
