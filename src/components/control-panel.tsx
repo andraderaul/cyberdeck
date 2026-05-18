@@ -1,4 +1,5 @@
 import type { Charset, ColorMode, ConversionSettings } from '../ascii/types'
+import { COLOR_MODES } from '../ascii/types'
 import Label from './ui/label'
 import Slider from './ui/slider'
 import ToggleGroup from './ui/toggle-group'
@@ -29,18 +30,7 @@ export default function ControlPanel({ settings, onChange }: Props) {
         <Label>color mode</Label>
         <ToggleGroup<ColorMode>
           ariaLabel="Color mode"
-          options={[
-            'matrix',
-            'bw',
-            'retro',
-            'sepia',
-            'neon',
-            'original',
-            'synthwave',
-            'matrix-dual',
-            'acid',
-            'infrared',
-          ]}
+          options={COLOR_MODES}
           value={settings.colorMode}
           onChange={(colorMode) => onChange({ colorMode })}
         />

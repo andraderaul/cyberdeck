@@ -1,3 +1,4 @@
+import { computeLuminosity } from './converter'
 import type { AsciiCell, ColorMode, ConversionSettings } from './types'
 
 export interface RenderInstruction {
@@ -15,8 +16,11 @@ const COLOR_MODE_COLORS: Partial<Record<ColorMode, string>> = {
   neon: '#ff2d78',
 }
 
-// Dual-color modes: [colorA (bright, lum ≥ 0.5), colorB (dark, lum < 0.5)]
-const DUAL_COLOR_MODES: Partial<Record<ColorMode, [string, string]>> = {
+const DUAL_COLOR_LUM_THRESHOLD = 0.5
+
+type DualColorPair = readonly [bright: string, dark: string]
+
+const DUAL_COLOR_MODES: Partial<Record<ColorMode, DualColorPair>> = {
   synthwave: ['#00ffff', '#ff00ff'],
   'matrix-dual': ['#00ff41', '#9d00ff'],
   acid: ['#ccff00', '#ff0099'],
@@ -45,8 +49,10 @@ export function computeFrame(
       const dualColors = DUAL_COLOR_MODES[colorMode]
       let color: string
       if (dualColors) {
-        const lum = (0.299 * cell.r + 0.587 * cell.g + 0.114 * cell.b) / 255
-        color = lum >= 0.5 ? dualColors[0] : dualColors[1]
+        color =
+          computeLuminosity(cell.r, cell.g, cell.b) >= DUAL_COLOR_LUM_THRESHOLD
+            ? dualColors[0]
+            : dualColors[1]
       } else if (colorMode === 'original') {
         color = `rgb(${cell.r},${cell.g},${cell.b})`
       } else {

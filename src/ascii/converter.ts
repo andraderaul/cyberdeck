@@ -4,6 +4,12 @@ const BT601_RED_LUMA_WEIGHT = 0.299
 const BT601_GREEN_LUMA_WEIGHT = 0.587
 const BT601_BLUE_LUMA_WEIGHT = 0.114
 
+export function computeLuminosity(r: number, g: number, b: number): number {
+  return (
+    (BT601_RED_LUMA_WEIGHT * r + BT601_GREEN_LUMA_WEIGHT * g + BT601_BLUE_LUMA_WEIGHT * b) / 255
+  )
+}
+
 export function getAsciiChar(brightness: number, charset: Charset): string {
   const map = CHARSET_MAPS[charset]
   const clamped = Math.max(0, Math.min(255, brightness))
@@ -39,9 +45,7 @@ export function convertImage(
       const r = data[i]
       const g = data[i + 1]
       const b = data[i + 2]
-      // ITU-R BT.601 luminosity coefficients
-      const lum =
-        BT601_RED_LUMA_WEIGHT * r + BT601_GREEN_LUMA_WEIGHT * g + BT601_BLUE_LUMA_WEIGHT * b
+      const lum = computeLuminosity(r, g, b) * 255
       const adjusted = applyBrightnessContrast(lum, brightness, contrast)
       rowData.push({ char: getAsciiChar(adjusted, charset), r, g, b })
     }
