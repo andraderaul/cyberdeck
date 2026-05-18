@@ -1,3 +1,9 @@
+## [1.4.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.3.1...v1.4.0) (2026-05-18)
+
+### Features
+
+* add synthwave and matrix-dual dual-color ([c807a8c](https://github.com/andraderaul/ascii-art-converter/commit/c807a8ca6433f3e285e1d94cb0f55d013e3881ce)), closes [#1](https://github.com/andraderaul/ascii-art-converter/issues/1) [#ccff00](https://github.com/andraderaul/ascii-art-converter/issues/ccff00) [#ff0099](https://github.com/andraderaul/ascii-art-converter/issues/ff0099) [#ff4500](https://github.com/andraderaul/ascii-art-converter/issues/ff4500) [#0066ff](https://github.com/andraderaul/ascii-art-converter/issues/0066ff) [#00ffff](https://github.com/andraderaul/ascii-art-converter/issues/00ffff) [#ff00ff](https://github.com/andraderaul/ascii-art-converter/issues/ff00ff) [#0066ff](https://github.com/andraderaul/ascii-art-converter/issues/0066ff) [#ff4500](https://github.com/andraderaul/ascii-art-converter/issues/ff4500) [#ff4500](https://github.com/andraderaul/ascii-art-converter/issues/ff4500) [#0066ff](https://github.com/andraderaul/ascii-art-converter/issues/0066ff)
+
 ## [1.3.1](https://github.com/andraderaul/ascii-art-converter/compare/v1.3.0...v1.3.1) (2026-05-05)
 
 ### Bug Fixes
