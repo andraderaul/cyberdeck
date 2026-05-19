@@ -12,6 +12,7 @@ import ControlPanel from './components/control-panel'
 import DownloadBar from './components/download-bar'
 import EmptyStateHero from './components/empty-state-hero'
 import ErrorBoundary from './components/error-boundary'
+import MobileControls from './components/mobile-controls'
 import { useToastError } from './components/toast-provider'
 import UploadZone from './components/upload-zone'
 import { useRecording } from './hooks/use-recording'
@@ -158,7 +159,7 @@ export default function App() {
       </header>
 
       <div className="flex-1 grid grid-cols-1 [grid-template-rows:1fr_auto] sm:grid-cols-[280px_1fr] sm:[grid-template-rows:1fr] overflow-hidden">
-        <aside className="border-r border-base p-md overflow-y-auto flex flex-col gap-lg max-h-[40vh] sm:max-h-none order-last sm:order-first">
+        <aside className="hidden sm:flex border-r border-base p-md overflow-y-auto flex-col gap-lg sm:order-first">
           <UploadZone
             onImage={handleImage}
             webcamState={webcamState}
@@ -211,6 +212,15 @@ export default function App() {
           </div>
         </main>
       </div>
+
+      <MobileControls
+        onImage={handleImage}
+        webcamState={webcamState}
+        onSwitchMode={switchMode}
+        onSwitchCamera={switchCamera}
+        settings={settings}
+        onSettingsChange={patchSettings}
+      />
 
       {activeModal?.kind === 'apiKey' && (
         <ApiKeyModal
