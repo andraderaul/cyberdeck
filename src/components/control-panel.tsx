@@ -4,6 +4,7 @@ import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
 import { cn } from '../utils/cn'
 import Label from './ui/label'
 import Slider from './ui/slider'
+import Tooltip from './ui/tooltip'
 
 interface Props {
   settings: ConversionSettings
@@ -60,11 +61,27 @@ export default function ControlPanel({ settings, onChange }: Props) {
         onChange={(resolution) => onChange({ resolution })}
         format={(v) => `${v}px`}
         defaultValue={12}
+        tooltip={
+          <Tooltip
+            id="tooltip-resolution"
+            content="chars per canvas — smaller value = more detail"
+          />
+        }
+        tooltipId="tooltip-resolution"
       />
 
-      {/* Color Mode picker with swatches — solid and gradient groups */}
-      <div className="flex flex-col gap-2xs">
-        <Label>color mode</Label>
+      {/* Color Mode picker with swatches — fieldset groups color mode buttons */}
+      <fieldset
+        className="flex flex-col gap-2xs border-none p-0 m-0"
+        aria-describedby="tooltip-color-mode"
+      >
+        <legend className="text-fg-muted text-xs tracking-wide uppercase w-full flex items-center gap-2xs pb-0 mb-2xs">
+          <Label>color mode</Label>
+          <Tooltip
+            id="tooltip-color-mode"
+            content="colorization scheme applied to rendered chars"
+          />
+        </legend>
         <div className="flex flex-col gap-xs">
           <div className="flex flex-wrap gap-2xs">
             {SOLID_MODES.map((mode) => (
@@ -114,11 +131,17 @@ export default function ControlPanel({ settings, onChange }: Props) {
             ))}
           </div>
         </div>
-      </div>
+      </fieldset>
 
-      {/* Grouped Charset picker — role="group" + aria-labelledby for screen readers */}
-      <div className="flex flex-col gap-xs">
-        <Label>charset</Label>
+      {/* Grouped Charset picker — outer fieldset groups all charset categories */}
+      <fieldset
+        className="flex flex-col gap-xs border-none p-0 m-0"
+        aria-describedby="tooltip-charset"
+      >
+        <legend className="text-fg-muted text-xs tracking-wide uppercase w-full flex items-center gap-2xs pb-0 mb-xs">
+          <Label>charset</Label>
+          <Tooltip id="tooltip-charset" content="symbol set mapping luminosity to a character" />
+        </legend>
         {CHARSET_CATEGORIES.map(({ label, charsets }) => (
           <fieldset key={label} className="flex flex-col gap-2xs border-none p-0 m-0">
             <legend className="text-fg-subtle font-mono text-xs uppercase tracking-wide mb-2xs">
@@ -145,7 +168,7 @@ export default function ControlPanel({ settings, onChange }: Props) {
             </div>
           </fieldset>
         ))}
-      </div>
+      </fieldset>
 
       <Slider
         label="brightness"
@@ -155,6 +178,10 @@ export default function ControlPanel({ settings, onChange }: Props) {
         step={BRIGHTNESS_RANGE.step}
         onChange={(brightness) => onChange({ brightness })}
         defaultValue={1.0}
+        tooltip={
+          <Tooltip id="tooltip-brightness" content="amplifies pixel brightness before conversion" />
+        }
+        tooltipId="tooltip-brightness"
       />
 
       <Slider
@@ -165,6 +192,13 @@ export default function ControlPanel({ settings, onChange }: Props) {
         step={CONTRAST_RANGE.step}
         onChange={(contrast) => onChange({ contrast })}
         defaultValue={1.0}
+        tooltip={
+          <Tooltip
+            id="tooltip-contrast"
+            content="sharpens the dark-to-light range before conversion"
+          />
+        }
+        tooltipId="tooltip-contrast"
       />
     </div>
   )

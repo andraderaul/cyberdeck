@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { cn } from '../../utils/cn'
 import Label from './label'
 
@@ -10,6 +11,8 @@ interface Props {
   onChange: (v: number) => void
   format?: (v: number) => string
   defaultValue?: number
+  tooltip?: ReactNode
+  tooltipId?: string
 }
 
 // Accounts for the 20px thumb width so the marker aligns with the visual thumb center
@@ -28,19 +31,25 @@ export default function Slider({
   onChange,
   format = (v) => v.toFixed(1),
   defaultValue,
+  tooltip,
+  tooltipId,
 }: Props) {
   const isAtDefault = defaultValue !== undefined && value === defaultValue
 
   return (
     <div className="flex flex-col gap-2xs">
       <div className="flex justify-between items-center">
-        <Label>{label}</Label>
+        <div className="flex items-center gap-2xs">
+          <Label>{label}</Label>
+          {tooltip}
+        </div>
         <span className="text-violet text-xs">{format(value)}</span>
       </div>
       <div className="relative">
         <input
           type="range"
           aria-label={label}
+          aria-describedby={tooltipId}
           title={
             defaultValue !== undefined
               ? `double-click to reset to ${format(defaultValue)}`
