@@ -42,7 +42,7 @@ export default function MobileControls({
         ref={triggerRef}
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-md right-md z-40 sm:hidden flex items-center gap-xs bg-abyss border border-violet text-violet font-mono text-xs px-md py-sm rounded-xs"
+        className="fixed bottom-3xl right-md z-40 sm:hidden flex items-center gap-xs bg-abyss border border-violet text-violet font-mono text-xs px-md py-sm rounded-xs"
         aria-label="controls"
       >
         ⚙ controls
