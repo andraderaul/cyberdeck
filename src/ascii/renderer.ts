@@ -8,7 +8,7 @@ export interface RenderInstruction {
   color: string
 }
 
-const COLOR_MODE_COLORS: Partial<Record<ColorMode, string>> = {
+export const COLOR_MODE_COLORS: Partial<Record<ColorMode, string>> = {
   matrix: '#00ff41',
   bw: '#c8c8e0',
   retro: '#ffe600',
@@ -18,13 +18,18 @@ const COLOR_MODE_COLORS: Partial<Record<ColorMode, string>> = {
 
 const DUAL_COLOR_LUM_THRESHOLD = 0.5
 
-type DualColorPair = readonly [bright: string, dark: string]
+export type DualColorPair = readonly [bright: string, dark: string]
 
-const DUAL_COLOR_MODES: Partial<Record<ColorMode, DualColorPair>> = {
+export const DUAL_COLOR_MODES: Partial<Record<ColorMode, DualColorPair>> = {
   synthwave: ['#00ffff', '#ff00ff'],
   'matrix-dual': ['#00ff41', '#9d00ff'],
   acid: ['#ccff00', '#ff0099'],
   infrared: ['#ff4500', '#0066ff'],
+}
+
+// Single accessor so fallback gray lives in one place
+export function getModePalette(mode: ColorMode): string | DualColorPair {
+  return DUAL_COLOR_MODES[mode] ?? COLOR_MODE_COLORS[mode] ?? '#c8c8e0'
 }
 
 export const MONOSPACE_CHAR_WIDTH_RATIO = 0.6

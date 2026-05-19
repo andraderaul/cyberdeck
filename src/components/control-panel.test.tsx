@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ConversionSettings } from '../ascii/types'
+import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
 import ControlPanel from './control-panel'
 
 const DEFAULT_SETTINGS: ConversionSettings = {
@@ -58,5 +59,71 @@ describe('ControlPanel', () => {
     fireEvent.change(screen.getByLabelText(/contrast/i), { target: { value: '2.0' } })
 
     expect(onChange).toHaveBeenCalledWith({ contrast: 2 })
+  })
+
+  // Issue #4: Grouped Charset picker
+  describe('Charset grouping', () => {
+    it('renders charset category headers', () => {
+      renderPanel()
+      expect(screen.getByText(/ascii gradient/i)).toBeInTheDocument()
+      expect(screen.getByText(/unicode blocks/i)).toBeInTheDocument()
+      expect(screen.getByText(/writing systems/i)).toBeInTheDocument()
+      expect(screen.getByText(/shapes/i)).toBeInTheDocument()
+      expect(screen.getByText(/specialized/i)).toBeInTheDocument()
+    })
+
+    it('every charset chip includes the last char of its CHARSET_MAPS entry (covers full ramp)', () => {
+      renderPanel()
+      for (const [charset, map] of Object.entries(CHARSET_MAPS)) {
+        const btn = screen.getByRole('button', { name: charset })
+        const chars = [...map]
+        const lastChar = chars[chars.length - 1] ?? ''
+        expect(btn.textContent).toContain(lastChar)
+      }
+    })
+
+    it('all 12 charset chips are rendered', () => {
+      renderPanel()
+      const charsets = Object.keys(CHARSET_MAPS)
+      for (const charset of charsets) {
+        expect(screen.getByRole('button', { name: charset })).toBeInTheDocument()
+      }
+    })
+  })
+
+  // Issue #5: Color Mode swatch picker
+  describe('Color Mode swatches', () => {
+    it('renders a [data-swatch] for every color mode', () => {
+      renderPanel()
+      for (const mode of COLOR_MODES) {
+        const btn = screen.getByRole('button', { name: mode })
+        expect(btn.querySelector('[data-swatch]')).toBeInTheDocument()
+      }
+    })
+
+    it('single-color modes render a swatch with solid background', () => {
+      renderPanel()
+      const matrixBtn = screen.getByRole('button', { name: 'matrix' })
+      const swatch = matrixBtn.querySelector('[data-swatch]') as HTMLElement
+      expect(swatch.style.background || swatch.style.backgroundColor).toBeTruthy()
+    })
+
+    it('gradient color modes render a swatch with gradient background', () => {
+      renderPanel()
+      for (const mode of ['synthwave', 'matrix-dual', 'acid', 'infrared']) {
+        const swatch = screen
+          .getByRole('button', { name: mode })
+          .querySelector('[data-swatch]') as HTMLElement
+        expect(swatch.style.background).toContain('gradient')
+      }
+    })
+
+    it('original color mode renders a multicolor gradient swatch', () => {
+      renderPanel()
+      const swatch = screen
+        .getByRole('button', { name: 'original' })
+        .querySelector('[data-swatch]') as HTMLElement
+      expect(swatch.style.background).toContain('gradient')
+    })
   })
 })
