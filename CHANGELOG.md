@@ -1,3 +1,9 @@
+## [1.5.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.4.0...v1.5.0) (2026-05-19)
+
+### Features
+
+* empty-state hero with dual CTA in canvas area ([#20](https://github.com/andraderaul/ascii-art-converter/issues/20)) ([8b17ea9](https://github.com/andraderaul/ascii-art-converter/commit/8b17ea972814ccb7c07ed88296274ae1281da032)), closes [#2](https://github.com/andraderaul/ascii-art-converter/issues/2)
+
 ## [1.4.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.3.1...v1.4.0) (2026-05-18)
 
 ### Features
