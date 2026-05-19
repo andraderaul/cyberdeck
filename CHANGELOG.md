@@ -1,3 +1,9 @@
+## [1.11.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.10.0...v1.11.0) (2026-05-19)
+
+### Features
+
+* **upload-zone:** expose mirror toggle in webcam panel ([#28](https://github.com/andraderaul/ascii-art-converter/issues/28)) ([6422a85](https://github.com/andraderaul/ascii-art-converter/commit/6422a854cad50d9b0b857e263065f208a6f61242)), closes [#12](https://github.com/andraderaul/ascii-art-converter/issues/12)
+
 ## [1.10.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.9.0...v1.10.0) (2026-05-19)
 
 ### Features
