@@ -1,3 +1,9 @@
+## [1.10.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.9.0...v1.10.0) (2026-05-19)
+
+### Features
+
+* **control-panel:** inline info tooltips for all five controls ([#27](https://github.com/andraderaul/ascii-art-converter/issues/27)) ([3342c29](https://github.com/andraderaul/ascii-art-converter/commit/3342c299ff566dff9eacb3572c9eb92b0b687b3f)), closes [#11](https://github.com/andraderaul/ascii-art-converter/issues/11)
+
 ## [1.9.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.8.0...v1.9.0) (2026-05-19)
 
 ### Features
