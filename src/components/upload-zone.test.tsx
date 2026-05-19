@@ -2,15 +2,12 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import UploadZone from './upload-zone'
 
-vi.mock('../hooks/use-webcam-state', () => ({
-  useWebcamState: vi.fn(() => ({
-    state: { mode: 'upload', live: false, facingMode: 'user', error: null },
-    switchCamera: vi.fn(),
-    switchMode: vi.fn(),
-    startWebcam: vi.fn(),
-    stopWebcam: vi.fn(),
-  })),
-}))
+const DEFAULT_WEBCAM_STATE = {
+  mode: 'upload' as const,
+  live: false,
+  facingMode: 'user' as const,
+  error: null,
+}
 
 let lastImg: { onload: (() => void) | null; onerror: (() => void) | null } | null = null
 
@@ -31,6 +28,18 @@ function getDropZone() {
   return screen.getByText(/drag & drop/i).closest('label') as HTMLElement
 }
 
+function renderZone(overrides: Partial<Parameters<typeof UploadZone>[0]> = {}) {
+  render(
+    <UploadZone
+      onImage={vi.fn()}
+      webcamState={DEFAULT_WEBCAM_STATE}
+      onSwitchMode={vi.fn()}
+      onSwitchCamera={vi.fn()}
+      {...overrides}
+    />,
+  )
+}
+
 describe('UploadZone', () => {
   beforeEach(() => {
     lastImg = null
@@ -40,7 +49,7 @@ describe('UploadZone', () => {
 
   it('ignores non-image files dropped onto the drop zone', () => {
     const onImage = vi.fn()
-    render(<UploadZone onImage={onImage} onVideoStream={vi.fn()} />)
+    renderZone({ onImage })
 
     fireEvent.drop(getDropZone(), {
       dataTransfer: { files: [makeFile('doc.pdf', 'application/pdf')] },
@@ -52,7 +61,7 @@ describe('UploadZone', () => {
 
   it('calls onImage with the loaded image when a valid image is dropped', () => {
     const onImage = vi.fn()
-    render(<UploadZone onImage={onImage} onVideoStream={vi.fn()} />)
+    renderZone({ onImage })
 
     fireEvent.drop(getDropZone(), {
       dataTransfer: { files: [makeFile('photo.jpg', 'image/jpeg')] },
@@ -65,7 +74,7 @@ describe('UploadZone', () => {
   })
 
   it('shows error message when the image fails to load', () => {
-    render(<UploadZone onImage={vi.fn()} onVideoStream={vi.fn()} />)
+    renderZone()
 
     fireEvent.drop(getDropZone(), {
       dataTransfer: { files: [makeFile('bad.jpg', 'image/jpeg')] },
@@ -79,7 +88,7 @@ describe('UploadZone', () => {
 
   it('calls onImage when a valid image is selected via file input', () => {
     const onImage = vi.fn()
-    render(<UploadZone onImage={onImage} onVideoStream={vi.fn()} />)
+    renderZone({ onImage })
     const fileInput = document.querySelector('#file-upload') as HTMLInputElement
 
     fireEvent.change(fileInput, { target: { files: [makeFile('photo.png', 'image/png')] } })
@@ -91,7 +100,7 @@ describe('UploadZone', () => {
   })
 
   it('applies active border on dragover and removes it on dragleave', () => {
-    render(<UploadZone onImage={vi.fn()} onVideoStream={vi.fn()} />)
+    renderZone()
     const dropZone = getDropZone()
 
     fireEvent.dragOver(dropZone)
@@ -99,5 +108,12 @@ describe('UploadZone', () => {
 
     fireEvent.dragLeave(dropZone)
     expect(dropZone).toHaveClass('border-base')
+  })
+
+  it('displays webcam error from webcamState', () => {
+    renderZone({
+      webcamState: { ...DEFAULT_WEBCAM_STATE, error: 'Camera access denied' },
+    })
+    expect(screen.getByText(/camera access denied/i)).toBeInTheDocument()
   })
 })

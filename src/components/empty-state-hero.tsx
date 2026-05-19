@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react'
+import { useToastError } from '../components/toast-provider'
 import { cn } from '../utils/cn'
 import { isTouchDevice } from '../utils/device'
+import { loadImageFile } from '../utils/load-image-file'
 
 interface Props {
   onImage: (img: HTMLImageElement) => void
@@ -9,21 +11,13 @@ interface Props {
 
 export default function EmptyStateHero({ onImage, onStartWebcam }: Props) {
   const [dragging, setDragging] = useState(false)
+  const showError = useToastError()
 
   const load = useCallback(
     (file: File) => {
-      if (!file.type.startsWith('image/')) {
-        return
-      }
-      const url = URL.createObjectURL(file)
-      const img = new Image()
-      img.onload = () => {
-        onImage(img)
-        URL.revokeObjectURL(url)
-      }
-      img.src = url
+      loadImageFile(file, onImage, showError)
     },
-    [onImage],
+    [onImage, showError],
   )
 
   const onDrop = useCallback(
