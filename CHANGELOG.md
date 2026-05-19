@@ -1,3 +1,13 @@
+## [1.8.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.7.0...v1.8.0) (2026-05-19)
+
+### Features
+
+* **slider:** default marker, marks ticks, and double-click reset ([#24](https://github.com/andraderaul/ascii-art-converter/issues/24)) ([85ec903](https://github.com/andraderaul/ascii-art-converter/commit/85ec903230b2ff54655d5f01bb4c7196f5f90eb7)), closes [#8](https://github.com/andraderaul/ascii-art-converter/issues/8)
+
+### Documentation
+
+* add voice and tone guideline (cyberpunk vs neutral registers) ([#26](https://github.com/andraderaul/ascii-art-converter/issues/26)) ([b1ed68d](https://github.com/andraderaul/ascii-art-converter/commit/b1ed68d8d5f1961d68e32221207b0089e6b52aa6)), closes [#10](https://github.com/andraderaul/ascii-art-converter/issues/10)
+
 ## [1.7.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.6.0...v1.7.0) (2026-05-19)
 
 ### Features
