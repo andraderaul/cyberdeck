@@ -35,6 +35,8 @@ function renderZone(overrides: Partial<Parameters<typeof UploadZone>[0]> = {}) {
       webcamState={DEFAULT_WEBCAM_STATE}
       onSwitchMode={vi.fn()}
       onSwitchCamera={vi.fn()}
+      isMirrored={false}
+      onMirrorToggle={vi.fn()}
       {...overrides}
     />,
   )
