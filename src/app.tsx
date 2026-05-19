@@ -187,6 +187,7 @@ export default function App() {
                   onConverted={setAsciiRows}
                   canvasRef={canvasRef}
                   isMirrored={isMirrored}
+                  isRecording={isRecording}
                 />
               ) : (
                 <EmptyStateHero
