@@ -12,7 +12,13 @@ const SETTINGS: ConversionSettings = {
   contrast: 1,
 }
 
-function Wrapper({ sourceImage = null }: { sourceImage?: HTMLImageElement | null }) {
+function Wrapper({
+  sourceImage = null,
+  isRecording,
+}: {
+  sourceImage?: HTMLImageElement | null
+  isRecording?: boolean
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   return (
     <AsciiCanvas
@@ -21,6 +27,7 @@ function Wrapper({ sourceImage = null }: { sourceImage?: HTMLImageElement | null
       settings={SETTINGS}
       onConverted={vi.fn()}
       canvasRef={canvasRef}
+      isRecording={isRecording}
     />
   )
 }
@@ -44,5 +51,23 @@ describe('AsciiCanvas', () => {
 
   it('renders without crashing when sourceImage is null', () => {
     expect(() => render(<Wrapper sourceImage={null} />)).not.toThrow()
+  })
+
+  it('shows REC indicator when isRecording is true', () => {
+    const { container } = render(<Wrapper isRecording={true} />)
+
+    expect(container.querySelector('[data-testid="rec-indicator"]')).toBeInTheDocument()
+  })
+
+  it('does not show REC indicator when isRecording is false', () => {
+    const { container } = render(<Wrapper isRecording={false} />)
+
+    expect(container.querySelector('[data-testid="rec-indicator"]')).not.toBeInTheDocument()
+  })
+
+  it('does not show REC indicator when isRecording is omitted', () => {
+    const { container } = render(<Wrapper />)
+
+    expect(container.querySelector('[data-testid="rec-indicator"]')).not.toBeInTheDocument()
   })
 })

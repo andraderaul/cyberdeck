@@ -163,6 +163,7 @@ export default function App() {
                   onConverted={setAsciiRows}
                   canvasRef={canvasRef}
                   isMirrored={isMirrored}
+                  isRecording={isRecording}
                 />
               ) : (
                 <div className="h-full flex items-center justify-center text-fg-muted text-sm">

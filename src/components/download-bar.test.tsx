@@ -103,4 +103,54 @@ describe('DownloadBar (live mode)', () => {
     expect(screen.getByRole('button', { name: /stop/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^⏺ record/i })).not.toBeInTheDocument()
   })
+
+  it('timer pill is a status element, not a button', () => {
+    renderBar({
+      isLive: true,
+      isRecording: true,
+      elapsedSeconds: 5,
+      onStopRecording: vi.fn(),
+    })
+
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /0:05/i })).not.toBeInTheDocument()
+  })
+
+  it('timer pill shows elapsed time', () => {
+    renderBar({
+      isLive: true,
+      isRecording: true,
+      elapsedSeconds: 5,
+      onStopRecording: vi.fn(),
+    })
+
+    expect(screen.getByRole('status')).toHaveTextContent('0:05')
+  })
+
+  it('stop button is separate from timer pill', () => {
+    const onStopRecording = vi.fn()
+    renderBar({
+      isLive: true,
+      isRecording: true,
+      elapsedSeconds: 5,
+      onStopRecording,
+    })
+
+    const stopBtn = screen.getByRole('button', { name: /stop/i })
+    expect(stopBtn).toBeInTheDocument()
+    fireEvent.click(stopBtn)
+    expect(onStopRecording).toHaveBeenCalledOnce()
+  })
+
+  it('capture button label is "◎ capture frame" during recording', () => {
+    renderBar({
+      isLive: true,
+      isRecording: true,
+      elapsedSeconds: 0,
+      onStopRecording: vi.fn(),
+    })
+
+    expect(screen.getByRole('button', { name: /capture frame/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^◎ capture$/i })).not.toBeInTheDocument()
+  })
 })

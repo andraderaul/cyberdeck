@@ -104,12 +104,19 @@ export default function DownloadBar({
   if (isLive) {
     if (isRecording) {
       return (
-        <div className="flex gap-xs sm:gap-sm sm:justify-end">
+        <div className="flex gap-xs sm:gap-sm sm:justify-end items-center">
+          <div
+            role="status"
+            aria-live="polite"
+            className="font-mono text-xs text-hot-pink border border-hot-pink px-sm py-2xs rounded-xs"
+          >
+            ● {formatElapsedTime(elapsedSeconds)}
+          </div>
           <Button variant="danger" onClick={capture} className="flex-1 sm:flex-none">
-            ◎ capture
+            ◎ capture frame
           </Button>
           <Button variant="danger" onClick={onStopRecording} className="flex-1 sm:flex-none">
-            ● {formatElapsedTime(elapsedSeconds)} ⏹ stop
+            ⏹ stop
           </Button>
         </div>
       )
