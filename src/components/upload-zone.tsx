@@ -1,42 +1,43 @@
 import { useCallback, useRef, useState } from 'react'
-import { useWebcamState } from '../hooks/use-webcam-state'
+import type { SourceMode } from '../hooks/use-webcam-state'
 import { cn } from '../utils/cn'
 import { isTouchDevice } from '../utils/device'
+import { loadImageFile } from '../utils/load-image-file'
 import Button from './ui/button'
 import ErrorText from './ui/error-text'
 import ToggleGroup from './ui/toggle-group'
 
-interface Props {
-  onImage: (img: HTMLImageElement) => void
-  onVideoStream: (video: HTMLVideoElement | null) => void
-  onFacingModeChange?: (isMirrored: boolean) => void
+interface WebcamState {
+  mode: SourceMode
+  live: boolean
+  facingMode: 'user' | 'environment'
+  error: string | null
 }
 
-export default function UploadZone({ onImage, onVideoStream, onFacingModeChange }: Props) {
+interface Props {
+  onImage: (img: HTMLImageElement) => void
+  webcamState: WebcamState
+  onSwitchMode: (next: SourceMode) => void | Promise<void>
+  onSwitchCamera: () => void | Promise<void>
+}
+
+export default function UploadZone({ onImage, webcamState, onSwitchMode, onSwitchCamera }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
 
-  const { state, switchCamera, switchMode } = useWebcamState(onVideoStream, onFacingModeChange)
-  const { mode, live, facingMode, error } = state
+  const { mode, live, facingMode, error } = webcamState
 
   const load = useCallback(
     (file: File) => {
-      if (!file.type.startsWith('image/')) {
-        return
-      }
-      const url = URL.createObjectURL(file)
-      const img = new Image()
-      img.onload = () => {
-        setImageError(null)
-        onImage(img)
-        URL.revokeObjectURL(url)
-      }
-      img.onerror = () => {
-        setImageError('Failed to load image')
-        URL.revokeObjectURL(url)
-      }
-      img.src = url
+      loadImageFile(
+        file,
+        (img) => {
+          setImageError(null)
+          onImage(img)
+        },
+        (msg) => setImageError(msg),
+      )
     },
     [onImage],
   )
@@ -71,7 +72,7 @@ export default function UploadZone({ onImage, onVideoStream, onFacingModeChange 
         ariaLabel="Source mode"
         options={['upload', 'webcam'] as const}
         value={mode}
-        onChange={switchMode}
+        onChange={onSwitchMode}
         fullWidth
         labels={{ upload: '↑ upload', webcam: '◉ webcam' }}
       />
@@ -123,7 +124,7 @@ export default function UploadZone({ onImage, onVideoStream, onFacingModeChange 
             </span>
           )}
           {live && isTouchDevice && (
-            <Button variant="ghost" onClick={() => void switchCamera()} className="px-sm py-2xs">
+            <Button variant="ghost" onClick={() => void onSwitchCamera()} className="px-sm py-2xs">
               ⇄ {facingMode === 'user' ? 'front' : 'rear'}
             </Button>
           )}

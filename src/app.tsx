@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { analyzeCanvas } from './ai/analysis-service'
 import { AuthError, NetworkError, QuotaError } from './ai/errors'
 import type { AnalysisState } from './ai/types'
@@ -10,9 +10,12 @@ import ApiKeyModal from './components/api-key-modal'
 import AsciiCanvas from './components/ascii-canvas'
 import ControlPanel from './components/control-panel'
 import DownloadBar from './components/download-bar'
+import EmptyStateHero from './components/empty-state-hero'
 import ErrorBoundary from './components/error-boundary'
+import { useToastError } from './components/toast-provider'
 import UploadZone from './components/upload-zone'
 import { useRecording } from './hooks/use-recording'
+import { useWebcamState } from './hooks/use-webcam-state'
 
 type ActiveModal =
   | { kind: 'apiKey' }
@@ -36,6 +39,7 @@ export default function App() {
   const [isMirrored, setIsMirrored] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
+  const showError = useToastError()
   const { config: aiConfig, save: saveAiConfig, remove: removeAiConfig } = useAIConfig()
   const [activeModal, setActiveModal] = useState<ActiveModal>(null)
   const {
@@ -45,15 +49,6 @@ export default function App() {
     startRecording,
     stopRecording,
   } = useRecording(canvasRef)
-
-  const patchSettings = useCallback((patch: Partial<ConversionSettings>) => {
-    setSettings((prev) => ({ ...prev, ...patch }))
-  }, [])
-
-  const handleImage = useCallback((img: HTMLImageElement) => {
-    setSourceVideo(null)
-    setSourceImage(img)
-  }, [])
 
   const handleVideoStream = useCallback((video: HTMLVideoElement | null) => {
     setSourceImage(null)
@@ -66,6 +61,33 @@ export default function App() {
   const handleFacingModeChange = useCallback((mirrored: boolean) => {
     setIsMirrored(mirrored)
   }, [])
+
+  const {
+    state: webcamState,
+    startWebcam,
+    stopWebcam,
+    switchCamera,
+    switchMode,
+  } = useWebcamState(handleVideoStream, handleFacingModeChange)
+
+  // Surface camera errors as toasts (ADR 0006) — covers both UploadZone and hero webcam paths
+  useEffect(() => {
+    if (webcamState.error) {
+      showError(webcamState.error)
+    }
+  }, [webcamState.error, showError])
+
+  const patchSettings = useCallback((patch: Partial<ConversionSettings>) => {
+    setSettings((prev) => ({ ...prev, ...patch }))
+  }, [])
+
+  const handleImage = useCallback(
+    (img: HTMLImageElement) => {
+      stopWebcam()
+      setSourceImage(img)
+    },
+    [stopWebcam],
+  )
 
   const handleAnalyze = useCallback(async () => {
     const canvas = canvasRef.current
@@ -139,8 +161,9 @@ export default function App() {
         <aside className="border-r border-base p-md overflow-y-auto flex flex-col gap-lg max-h-[40vh] sm:max-h-none order-last sm:order-first">
           <UploadZone
             onImage={handleImage}
-            onVideoStream={handleVideoStream}
-            onFacingModeChange={handleFacingModeChange}
+            webcamState={webcamState}
+            onSwitchMode={switchMode}
+            onSwitchCamera={switchCamera}
           />
           <div className="w-full h-px bg-slate" />
           <ControlPanel settings={settings} onChange={patchSettings} />
@@ -165,9 +188,10 @@ export default function App() {
                   isMirrored={isMirrored}
                 />
               ) : (
-                <div className="h-full flex items-center justify-center text-fg-muted text-sm">
-                  upload an image or enable webcam to begin
-                </div>
+                <EmptyStateHero
+                  onImage={handleImage}
+                  onStartWebcam={() => void startWebcam('user')}
+                />
               )}
             </ErrorBoundary>
           </div>
