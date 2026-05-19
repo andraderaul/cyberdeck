@@ -129,7 +129,7 @@ export default function DownloadBar({
           ◎ capture
         </Button>
         {canRecord && (
-          <Button variant="secondary" onClick={onStartRecording} className="flex-1 sm:flex-none">
+          <Button variant="record" onClick={onStartRecording} className="flex-1 sm:flex-none">
             ⏺ record
           </Button>
         )}
