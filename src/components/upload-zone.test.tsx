@@ -116,4 +116,68 @@ describe('UploadZone', () => {
     })
     expect(screen.getByText(/camera access denied/i)).toBeInTheDocument()
   })
+
+  describe('mirror toggle', () => {
+    const WEBCAM_NOT_LIVE = {
+      mode: 'webcam' as const,
+      live: false,
+      facingMode: 'user' as const,
+      error: null,
+    }
+    const WEBCAM_LIVE = {
+      mode: 'webcam' as const,
+      live: true,
+      facingMode: 'user' as const,
+      error: null,
+    }
+
+    it('does NOT show mirror toggle when live is false', () => {
+      renderZone({
+        webcamState: WEBCAM_NOT_LIVE,
+        isMirrored: false,
+        onMirrorToggle: vi.fn(),
+      })
+      expect(screen.queryByRole('button', { name: /mirror/i })).toBeNull()
+    })
+
+    it('shows mirror toggle when live is true', () => {
+      renderZone({
+        webcamState: WEBCAM_LIVE,
+        isMirrored: false,
+        onMirrorToggle: vi.fn(),
+      })
+      expect(screen.getByRole('button', { name: /enable mirror/i })).toBeInTheDocument()
+    })
+
+    it('calls onMirrorToggle when mirror button is clicked', () => {
+      const onMirrorToggle = vi.fn()
+      renderZone({
+        webcamState: WEBCAM_LIVE,
+        isMirrored: false,
+        onMirrorToggle,
+      })
+      fireEvent.click(screen.getByRole('button', { name: /enable mirror/i }))
+      expect(onMirrorToggle).toHaveBeenCalledTimes(1)
+    })
+
+    it('has aria-pressed="true" when isMirrored is true', () => {
+      renderZone({
+        webcamState: WEBCAM_LIVE,
+        isMirrored: true,
+        onMirrorToggle: vi.fn(),
+      })
+      const btn = screen.getByRole('button', { name: /disable mirror/i })
+      expect(btn).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('has aria-pressed="false" when isMirrored is false', () => {
+      renderZone({
+        webcamState: WEBCAM_LIVE,
+        isMirrored: false,
+        onMirrorToggle: vi.fn(),
+      })
+      const btn = screen.getByRole('button', { name: /enable mirror/i })
+      expect(btn).toHaveAttribute('aria-pressed', 'false')
+    })
+  })
 })

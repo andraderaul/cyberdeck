@@ -20,6 +20,8 @@ interface Props {
   webcamState: WebcamState
   onSwitchMode: (next: SourceMode) => void | Promise<void>
   onSwitchCamera: () => void | Promise<void>
+  isMirrored: boolean
+  onMirrorToggle: () => void
   settings: ConversionSettings
   onSettingsChange: (patch: Partial<ConversionSettings>) => void
 }
@@ -29,6 +31,8 @@ export default function MobileControls({
   webcamState,
   onSwitchMode,
   onSwitchCamera,
+  isMirrored,
+  onMirrorToggle,
   settings,
   onSettingsChange,
 }: Props) {
@@ -99,6 +103,8 @@ export default function MobileControls({
               webcamState={webcamState}
               onSwitchMode={onSwitchMode}
               onSwitchCamera={onSwitchCamera}
+              isMirrored={isMirrored}
+              onMirrorToggle={onMirrorToggle}
             />
           </div>
 

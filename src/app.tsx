@@ -63,6 +63,8 @@ export default function App() {
     setIsMirrored(mirrored)
   }, [])
 
+  const handleMirrorToggle = useCallback(() => setIsMirrored((prev) => !prev), [])
+
   const {
     state: webcamState,
     startWebcam,
@@ -165,6 +167,8 @@ export default function App() {
             webcamState={webcamState}
             onSwitchMode={switchMode}
             onSwitchCamera={switchCamera}
+            isMirrored={isMirrored}
+            onMirrorToggle={handleMirrorToggle}
           />
           <div className="w-full h-px bg-slate" />
           <ControlPanel settings={settings} onChange={patchSettings} />
@@ -219,6 +223,8 @@ export default function App() {
         webcamState={webcamState}
         onSwitchMode={switchMode}
         onSwitchCamera={switchCamera}
+        isMirrored={isMirrored}
+        onMirrorToggle={handleMirrorToggle}
         settings={settings}
         onSettingsChange={patchSettings}
       />
