@@ -70,4 +70,22 @@ describe('Tooltip', () => {
     expect(panel).toHaveAttribute('role', 'tooltip')
     expect(panel).toHaveAttribute('id', 'tooltip-test')
   })
+
+  it('focus then click leaves tooltip visible (touch tap fix)', () => {
+    render(<Tooltip {...defaultProps} />)
+    const trigger = screen.getByRole('button', { name: 'more info' })
+    fireEvent.focus(trigger)
+    fireEvent.click(trigger)
+    const panel = document.getElementById('tooltip-test')
+    expect(panel).toHaveAttribute('aria-hidden', 'false')
+  })
+
+  it('Escape key dismisses tooltip while visible', () => {
+    render(<Tooltip {...defaultProps} />)
+    const trigger = screen.getByRole('button', { name: 'more info' })
+    fireEvent.mouseEnter(trigger)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    const panel = document.getElementById('tooltip-test')
+    expect(panel).toHaveAttribute('aria-hidden', 'true')
+  })
 })

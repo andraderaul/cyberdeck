@@ -9,6 +9,9 @@ interface Props {
 export default function Tooltip({ id, content }: Props) {
   const [visible, setVisible] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  // Tracks whether focus just opened the tooltip so the subsequent click
+  // (which always fires after focus on touch) doesn't immediately close it.
+  const justFocusedRef = useRef(false)
 
   useEffect(() => {
     if (!visible) {
@@ -22,8 +25,18 @@ export default function Tooltip({ id, content }: Props) {
       setVisible(false)
     }
 
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setVisible(false)
+      }
+    }
+
     document.addEventListener('click', handleOutsideClick)
-    return () => document.removeEventListener('click', handleOutsideClick)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('click', handleOutsideClick)
+      document.removeEventListener('keydown', handleEscape)
+    }
   }, [visible])
 
   return (
@@ -34,13 +47,23 @@ export default function Tooltip({ id, content }: Props) {
         aria-label="more info"
         aria-expanded={visible}
         aria-describedby={id}
-        className="font-mono text-xs text-fg-subtle hover:text-violet transition-colors cursor-default p-0 bg-transparent border-none leading-none"
+        className="font-mono text-xs text-fg-subtle hover:text-violet transition-colors cursor-help p-0 bg-transparent border-none leading-none"
         onMouseEnter={() => setVisible(true)}
         onMouseLeave={() => setVisible(false)}
-        onFocus={() => setVisible(true)}
-        onBlur={() => setVisible(false)}
+        onFocus={() => {
+          justFocusedRef.current = true
+          setVisible(true)
+        }}
+        onBlur={() => {
+          justFocusedRef.current = false
+          setVisible(false)
+        }}
         onClick={(e) => {
           e.stopPropagation()
+          if (justFocusedRef.current) {
+            justFocusedRef.current = false
+            return
+          }
           setVisible((v) => !v)
         }}
       >
@@ -51,7 +74,7 @@ export default function Tooltip({ id, content }: Props) {
         role="tooltip"
         aria-hidden={!visible}
         className={cn(
-          'absolute z-10 w-48 p-xs bg-shadow border border-slate rounded-xs font-mono text-xs text-fg-muted leading-relaxed',
+          'absolute z-10 max-w-48 w-max p-xs bg-shadow border border-slate rounded-xs font-mono text-xs text-fg-muted leading-relaxed',
           'top-full left-0 mt-2xs',
           visible ? 'block' : 'hidden',
         )}

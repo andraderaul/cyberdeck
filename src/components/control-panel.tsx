@@ -70,16 +70,19 @@ export default function ControlPanel({ settings, onChange }: Props) {
         tooltipId="tooltip-resolution"
       />
 
-      {/* Color Mode picker with swatches — solid and gradient groups */}
-      <div className="flex flex-col gap-2xs">
-        <div className="flex items-center gap-2xs">
+      {/* Color Mode picker with swatches — fieldset groups color mode buttons */}
+      <fieldset
+        className="flex flex-col gap-2xs border-none p-0 m-0"
+        aria-describedby="tooltip-color-mode"
+      >
+        <legend className="text-fg-muted text-xs tracking-wide uppercase w-full flex items-center gap-2xs pb-0 mb-2xs">
           <Label>color mode</Label>
           <Tooltip
             id="tooltip-color-mode"
             content="colorization scheme applied to rendered chars"
           />
-        </div>
-        <div className="flex flex-col gap-xs" aria-describedby="tooltip-color-mode">
+        </legend>
+        <div className="flex flex-col gap-xs">
           <div className="flex flex-wrap gap-2xs">
             {SOLID_MODES.map((mode) => (
               <button
@@ -128,45 +131,44 @@ export default function ControlPanel({ settings, onChange }: Props) {
             ))}
           </div>
         </div>
-      </div>
+      </fieldset>
 
-      {/* Grouped Charset picker — role="group" + aria-labelledby for screen readers */}
-      <div className="flex flex-col gap-xs">
-        <div className="flex items-center gap-2xs">
+      {/* Grouped Charset picker — outer fieldset groups all charset categories */}
+      <fieldset
+        className="flex flex-col gap-xs border-none p-0 m-0"
+        aria-describedby="tooltip-charset"
+      >
+        <legend className="text-fg-muted text-xs tracking-wide uppercase w-full flex items-center gap-2xs pb-0 mb-xs">
           <Label>charset</Label>
           <Tooltip id="tooltip-charset" content="symbol set mapping luminosity to a character" />
-        </div>
-        <div aria-describedby="tooltip-charset">
-          {CHARSET_CATEGORIES.map(({ label, charsets }) => (
-            <fieldset key={label} className="flex flex-col gap-2xs border-none p-0 m-0">
-              <legend className="text-fg-subtle font-mono text-xs uppercase tracking-wide mb-2xs">
-                {label}
-              </legend>
-              <div className="flex flex-wrap gap-2xs">
-                {charsets.map((cs) => (
-                  <button
-                    key={cs}
-                    type="button"
-                    aria-label={cs}
-                    onClick={() => onChange({ charset: cs })}
-                    className={cn(
-                      'flex flex-col px-sm py-2xs rounded-xs border font-mono text-xs transition-colors text-left',
-                      settings.charset === cs
-                        ? 'border-violet text-violet'
-                        : 'border-base text-fg-muted hover:border-dim',
-                    )}
-                  >
-                    <span>{cs}</span>
-                    <span className="text-fg-subtle text-xs tracking-widest">
-                      {sampleChars(cs)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-          ))}
-        </div>
-      </div>
+        </legend>
+        {CHARSET_CATEGORIES.map(({ label, charsets }) => (
+          <fieldset key={label} className="flex flex-col gap-2xs border-none p-0 m-0">
+            <legend className="text-fg-subtle font-mono text-xs uppercase tracking-wide mb-2xs">
+              {label}
+            </legend>
+            <div className="flex flex-wrap gap-2xs">
+              {charsets.map((cs) => (
+                <button
+                  key={cs}
+                  type="button"
+                  aria-label={cs}
+                  onClick={() => onChange({ charset: cs })}
+                  className={cn(
+                    'flex flex-col px-sm py-2xs rounded-xs border font-mono text-xs transition-colors text-left',
+                    settings.charset === cs
+                      ? 'border-violet text-violet'
+                      : 'border-base text-fg-muted hover:border-dim',
+                  )}
+                >
+                  <span>{cs}</span>
+                  <span className="text-fg-subtle text-xs tracking-widest">{sampleChars(cs)}</span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        ))}
+      </fieldset>
 
       <Slider
         label="brightness"
