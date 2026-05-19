@@ -1,4 +1,4 @@
-import { COLOR_MODE_COLORS, DUAL_COLOR_MODES } from '../ascii/renderer'
+import { getModePalette } from '../ascii/renderer'
 import type { Charset, ColorMode, ConversionSettings } from '../ascii/types'
 import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
 import { cn } from '../utils/cn'
@@ -14,7 +14,6 @@ const RESOLUTION_RANGE = { min: 6, max: 24, step: 1 }
 const BRIGHTNESS_RANGE = { min: 0.5, max: 2.0, step: 0.05 }
 const CONTRAST_RANGE = { min: 0.5, max: 3.0, step: 0.05 }
 
-// Issue #4 — charset category taxonomy
 const CHARSET_CATEGORIES: { label: string; charsets: Charset[] }[] = [
   { label: 'ascii gradient', charsets: ['classic', 'sharp', 'detailed', 'ascii'] },
   { label: 'unicode blocks', charsets: ['blocks', 'halfblock'] },
@@ -23,26 +22,31 @@ const CHARSET_CATEGORIES: { label: string; charsets: Charset[] }[] = [
   { label: 'specialized', charsets: ['box', 'binary'] },
 ]
 
+// Spans the full luminosity ramp: indices 0, ¼, ½, ¾, last
 function sampleChars(charset: Charset): string {
-  const map = CHARSET_MAPS[charset]
-  if (map.length <= 5) {
-    return map
+  const chars = [...CHARSET_MAPS[charset]]
+  if (chars.length <= 5) {
+    return chars.join('')
   }
-  const step = Math.floor(map.length / 5)
-  return Array.from({ length: 5 }, (_, i) => map[i * step]).join('')
+  const last = chars.length - 1
+  const step = last / 4
+  return Array.from({ length: 5 }, (_, i) => chars[Math.round(i * step)]).join('')
 }
 
-// Issue #5 — swatch background style derived from renderer palette
 function swatchStyle(colorMode: ColorMode): string {
   if (colorMode === 'original') {
     return 'linear-gradient(135deg, #ff0000 0%, #00ff00 50%, #0000ff 100%)'
   }
-  const dual = DUAL_COLOR_MODES[colorMode]
-  if (dual) {
-    return `linear-gradient(135deg, ${dual[0]} 0%, ${dual[1]} 100%)`
+  const palette = getModePalette(colorMode)
+  if (typeof palette === 'string') {
+    return palette
   }
-  return COLOR_MODE_COLORS[colorMode] ?? '#c8c8e0'
+  return `linear-gradient(135deg, ${palette[0]} 0%, ${palette[1]} 100%)`
 }
+
+// Color modes ordered: solids + original → gradient pairs
+const SOLID_MODES = COLOR_MODES.filter((m) => !Array.isArray(getModePalette(m)))
+const GRADIENT_MODES = COLOR_MODES.filter((m) => Array.isArray(getModePalette(m)))
 
 export default function ControlPanel({ settings, onChange }: Props) {
   return (
@@ -57,42 +61,68 @@ export default function ControlPanel({ settings, onChange }: Props) {
         format={(v) => `${v}px`}
       />
 
-      {/* Issue #5 — Color Mode picker with swatches */}
+      {/* Color Mode picker with swatches — solid and gradient groups */}
       <div className="flex flex-col gap-2xs">
         <Label>color mode</Label>
-        <div className="flex flex-wrap gap-2xs">
-          {COLOR_MODES.map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              aria-label={mode}
-              onClick={() => onChange({ colorMode: mode as ColorMode })}
-              className={cn(
-                'flex items-center gap-2xs px-sm py-2xs rounded-xs border font-mono text-xs transition-colors',
-                settings.colorMode === mode
-                  ? 'border-violet text-violet'
-                  : 'border-base text-fg-muted hover:border-dim',
-              )}
-            >
-              <span
-                data-swatch
-                className="inline-block w-3 h-3 rounded-full shrink-0"
-                style={{ background: swatchStyle(mode) }}
-              />
-              {mode}
-            </button>
-          ))}
+        <div className="flex flex-col gap-xs">
+          <div className="flex flex-wrap gap-2xs">
+            {SOLID_MODES.map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-label={mode}
+                onClick={() => onChange({ colorMode: mode })}
+                className={cn(
+                  'flex items-center gap-2xs px-sm py-2xs rounded-xs border font-mono text-xs transition-colors',
+                  settings.colorMode === mode
+                    ? 'border-violet text-violet'
+                    : 'border-base text-fg-muted hover:border-dim',
+                )}
+              >
+                <span
+                  data-swatch
+                  className="inline-block w-3 h-3 rounded-full shrink-0"
+                  style={{ background: swatchStyle(mode) }}
+                />
+                {mode}
+              </button>
+            ))}
+          </div>
+          <div className="w-full h-px bg-slate" />
+          <div className="flex flex-wrap gap-2xs">
+            {GRADIENT_MODES.map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-label={mode}
+                onClick={() => onChange({ colorMode: mode })}
+                className={cn(
+                  'flex items-center gap-2xs px-sm py-2xs rounded-xs border font-mono text-xs transition-colors',
+                  settings.colorMode === mode
+                    ? 'border-violet text-violet'
+                    : 'border-base text-fg-muted hover:border-dim',
+                )}
+              >
+                <span
+                  data-swatch
+                  className="inline-block w-3 h-3 rounded-full shrink-0"
+                  style={{ background: swatchStyle(mode) }}
+                />
+                {mode}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Issue #4 — Grouped Charset picker */}
+      {/* Grouped Charset picker — role="group" + aria-labelledby for screen readers */}
       <div className="flex flex-col gap-xs">
         <Label>charset</Label>
         {CHARSET_CATEGORIES.map(({ label, charsets }) => (
-          <div key={label} className="flex flex-col gap-2xs">
-            <span className="text-fg-subtle font-mono text-xs uppercase tracking-wide">
+          <fieldset key={label} className="flex flex-col gap-2xs border-none p-0 m-0">
+            <legend className="text-fg-subtle font-mono text-xs uppercase tracking-wide mb-2xs">
               {label}
-            </span>
+            </legend>
             <div className="flex flex-wrap gap-2xs">
               {charsets.map((cs) => (
                 <button
@@ -112,7 +142,7 @@ export default function ControlPanel({ settings, onChange }: Props) {
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
         ))}
       </div>
 

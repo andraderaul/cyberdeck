@@ -27,6 +27,11 @@ export const DUAL_COLOR_MODES: Partial<Record<ColorMode, DualColorPair>> = {
   infrared: ['#ff4500', '#0066ff'],
 }
 
+// Single accessor so fallback gray lives in one place
+export function getModePalette(mode: ColorMode): string | DualColorPair {
+  return DUAL_COLOR_MODES[mode] ?? COLOR_MODE_COLORS[mode] ?? '#c8c8e0'
+}
+
 export const MONOSPACE_CHAR_WIDTH_RATIO = 0.6
 
 // Pure: derives render instructions and ascii text from a cell grid — no DOM, fully testable.

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ConversionSettings } from '../ascii/types'
-import { CHARSET_MAPS } from '../ascii/types'
+import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
 import ControlPanel from './control-panel'
 
 const DEFAULT_SETTINGS: ConversionSettings = {
@@ -72,13 +72,14 @@ describe('ControlPanel', () => {
       expect(screen.getByText(/specialized/i)).toBeInTheDocument()
     })
 
-    it('each charset chip shows sample chars derived from CHARSET_MAPS', () => {
+    it('every charset chip includes the last char of its CHARSET_MAPS entry (covers full ramp)', () => {
       renderPanel()
-      const classicBtn = screen.getByRole('button', { name: 'classic' })
-      const classicMap = CHARSET_MAPS.classic
-      // button text should include at least one char from the classic charset
-      const hasCharFromMap = [...classicMap].some((ch) => classicBtn.textContent?.includes(ch))
-      expect(hasCharFromMap).toBe(true)
+      for (const [charset, map] of Object.entries(CHARSET_MAPS)) {
+        const btn = screen.getByRole('button', { name: charset })
+        const chars = [...map]
+        const lastChar = chars[chars.length - 1] ?? ''
+        expect(btn.textContent).toContain(lastChar)
+      }
     })
 
     it('all 12 charset chips are rendered', () => {
@@ -92,10 +93,12 @@ describe('ControlPanel', () => {
 
   // Issue #5: Color Mode swatch picker
   describe('Color Mode swatches', () => {
-    it('renders a swatch for each color mode', () => {
+    it('renders a [data-swatch] for every color mode', () => {
       renderPanel()
-      const matrixBtn = screen.getByRole('button', { name: 'matrix' })
-      expect(matrixBtn.querySelector('[data-swatch]')).toBeInTheDocument()
+      for (const mode of COLOR_MODES) {
+        const btn = screen.getByRole('button', { name: mode })
+        expect(btn.querySelector('[data-swatch]')).toBeInTheDocument()
+      }
     })
 
     it('single-color modes render a swatch with solid background', () => {
@@ -107,15 +110,20 @@ describe('ControlPanel', () => {
 
     it('gradient color modes render a swatch with gradient background', () => {
       renderPanel()
-      const synthwaveBtn = screen.getByRole('button', { name: 'synthwave' })
-      const swatch = synthwaveBtn.querySelector('[data-swatch]') as HTMLElement
-      expect(swatch.style.background).toContain('gradient')
+      for (const mode of ['synthwave', 'matrix-dual', 'acid', 'infrared']) {
+        const swatch = screen
+          .getByRole('button', { name: mode })
+          .querySelector('[data-swatch]') as HTMLElement
+        expect(swatch.style.background).toContain('gradient')
+      }
     })
 
-    it('original color mode renders a multicolor swatch', () => {
+    it('original color mode renders a multicolor gradient swatch', () => {
       renderPanel()
-      const originalBtn = screen.getByRole('button', { name: 'original' })
-      expect(originalBtn.querySelector('[data-swatch]')).toBeInTheDocument()
+      const swatch = screen
+        .getByRole('button', { name: 'original' })
+        .querySelector('[data-swatch]') as HTMLElement
+      expect(swatch.style.background).toContain('gradient')
     })
   })
 })
