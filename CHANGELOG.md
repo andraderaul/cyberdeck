@@ -1,3 +1,9 @@
+## [1.12.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.11.0...v1.12.0) (2026-05-19)
+
+### Features
+
+* **button:** add record variant; separate live-initiation from export ([#29](https://github.com/andraderaul/ascii-art-converter/issues/29)) ([640a9df](https://github.com/andraderaul/ascii-art-converter/commit/640a9df0f0df7098f99ada4e629d0f3a8a15caf3)), closes [#14](https://github.com/andraderaul/ascii-art-converter/issues/14)
+
 ## [1.11.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.10.0...v1.11.0) (2026-05-19)
 
 ### Features
