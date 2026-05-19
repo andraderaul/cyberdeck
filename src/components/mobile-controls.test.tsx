@@ -20,6 +20,8 @@ const defaultProps = {
   },
   onSwitchMode: vi.fn(),
   onSwitchCamera: vi.fn(),
+  isMirrored: false,
+  onMirrorToggle: vi.fn(),
   settings: {
     resolution: 12,
     brightness: 1,
