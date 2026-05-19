@@ -10,6 +10,7 @@ import ApiKeyModal from './components/api-key-modal'
 import AsciiCanvas from './components/ascii-canvas'
 import ControlPanel from './components/control-panel'
 import DownloadBar from './components/download-bar'
+import EmptyStateHero from './components/empty-state-hero'
 import ErrorBoundary from './components/error-boundary'
 import UploadZone from './components/upload-zone'
 import { useRecording } from './hooks/use-recording'
@@ -66,6 +67,21 @@ export default function App() {
   const handleFacingModeChange = useCallback((mirrored: boolean) => {
     setIsMirrored(mirrored)
   }, [])
+
+  const handleHeroWebcamStart = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+      const video = document.createElement('video')
+      video.srcObject = stream
+      video.autoplay = true
+      video.playsInline = true
+      video.muted = true
+      await video.play()
+      handleVideoStream(video)
+    } catch {
+      // silently ignore — user denied camera or API unavailable
+    }
+  }, [handleVideoStream])
 
   const handleAnalyze = useCallback(async () => {
     const canvas = canvasRef.current
@@ -165,9 +181,7 @@ export default function App() {
                   isMirrored={isMirrored}
                 />
               ) : (
-                <div className="h-full flex items-center justify-center text-fg-muted text-sm">
-                  upload an image or enable webcam to begin
-                </div>
+                <EmptyStateHero onImage={handleImage} onStartWebcam={handleHeroWebcamStart} />
               )}
             </ErrorBoundary>
           </div>
