@@ -1,3 +1,9 @@
+## [1.9.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.8.0...v1.9.0) (2026-05-19)
+
+### Features
+
+* **recording:** split timer pill from stop, add DOM REC overlay ([#25](https://github.com/andraderaul/ascii-art-converter/issues/25)) ([3b26549](https://github.com/andraderaul/ascii-art-converter/commit/3b2654924d77c48f53bf8f89bba1693702a5eba5)), closes [#9](https://github.com/andraderaul/ascii-art-converter/issues/9)
+
 ## [1.8.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.7.0...v1.8.0) (2026-05-19)
 
 ### Features
