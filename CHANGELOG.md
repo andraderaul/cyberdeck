@@ -1,3 +1,9 @@
+## [1.7.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.6.0...v1.7.0) (2026-05-19)
+
+### Features
+
+* grouped Charset picker and Color Mode swatches ([#22](https://github.com/andraderaul/ascii-art-converter/issues/22)) ([f90a44b](https://github.com/andraderaul/ascii-art-converter/commit/f90a44b999d1b7b53fea80798f334e07e7936db7)), closes [#4](https://github.com/andraderaul/ascii-art-converter/issues/4) [#5](https://github.com/andraderaul/ascii-art-converter/issues/5)
+
 ## [1.6.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.5.0...v1.6.0) (2026-05-19)
 
 ### Features
