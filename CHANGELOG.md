@@ -1,3 +1,9 @@
+## [1.6.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.5.0...v1.6.0) (2026-05-19)
+
+### Features
+
+* mobile bottom-sheet with Source/Settings tabs ([#21](https://github.com/andraderaul/ascii-art-converter/issues/21)) ([6f2abfc](https://github.com/andraderaul/ascii-art-converter/commit/6f2abfc2c54d7f59abb5f2563b2a260478fe2ffa)), closes [#3](https://github.com/andraderaul/ascii-art-converter/issues/3) [#1](https://github.com/andraderaul/ascii-art-converter/issues/1) [#4](https://github.com/andraderaul/ascii-art-converter/issues/4) [#2](https://github.com/andraderaul/ascii-art-converter/issues/2) [#3](https://github.com/andraderaul/ascii-art-converter/issues/3) [#6](https://github.com/andraderaul/ascii-art-converter/issues/6) [#7](https://github.com/andraderaul/ascii-art-converter/issues/7) [#5](https://github.com/andraderaul/ascii-art-converter/issues/5) [#8](https://github.com/andraderaul/ascii-art-converter/issues/8)
+
 ## [1.5.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.4.0...v1.5.0) (2026-05-19)
 
 ### Features
