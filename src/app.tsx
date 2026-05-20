@@ -3,6 +3,7 @@ import { analyzeCanvas } from './ai/analysis-service'
 import { AuthError, NetworkError, QuotaError } from './ai/errors'
 import type { AnalysisState } from './ai/types'
 import { useAIConfig } from './ai/use-ai-config'
+import type { Preset } from './ascii/presets'
 import type { ConversionSettings } from './ascii/types'
 import AboutModal from './components/about-modal'
 import AnalysisModal from './components/analysis-modal'
@@ -34,6 +35,7 @@ const DEFAULT_SETTINGS: ConversionSettings = {
 
 export default function App() {
   const [settings, setSettings] = useState<ConversionSettings>(DEFAULT_SETTINGS)
+  const [activePresetId, setActivePresetId] = useState<string | null>(null)
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
   const [sourceVideo, setSourceVideo] = useState<HTMLVideoElement | null>(null)
   const [asciiRows, setAsciiRows] = useState<string[]>([])
@@ -82,6 +84,11 @@ export default function App() {
 
   const patchSettings = useCallback((patch: Partial<ConversionSettings>) => {
     setSettings((prev) => ({ ...prev, ...patch }))
+  }, [])
+
+  const handlePresetSelect = useCallback((preset: Preset) => {
+    setSettings(preset.settings)
+    setActivePresetId(preset.id)
   }, [])
 
   const handleImage = useCallback(
@@ -171,7 +178,12 @@ export default function App() {
             onMirrorToggle={handleMirrorToggle}
           />
           <div className="w-full h-px bg-slate" />
-          <ControlPanel settings={settings} onChange={patchSettings} />
+          <ControlPanel
+            settings={settings}
+            onChange={patchSettings}
+            activePresetId={activePresetId}
+            onPresetSelect={handlePresetSelect}
+          />
         </aside>
 
         <main className="flex flex-col overflow-hidden">
@@ -227,6 +239,8 @@ export default function App() {
         onMirrorToggle={handleMirrorToggle}
         settings={settings}
         onSettingsChange={patchSettings}
+        activePresetId={activePresetId}
+        onPresetSelect={handlePresetSelect}
       />
 
       {activeModal?.kind === 'apiKey' && (
