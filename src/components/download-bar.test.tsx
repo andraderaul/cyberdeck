@@ -17,6 +17,7 @@ function renderBar(
         canvasRef={makeCanvasRef()}
         asciiRows={['row1', 'row2']}
         hasAiConfig={false}
+        hasImage={false}
         onAnalyze={vi.fn()}
         {...rest}
       />
@@ -74,6 +75,82 @@ describe('DownloadBar (static mode)', () => {
     fireEvent.click(screen.getByRole('button', { name: /export txt/i }))
 
     expect(createElement).not.toHaveBeenCalledWith('a')
+    vi.restoreAllMocks()
+  })
+})
+
+describe('DownloadBar (scale picker)', () => {
+  it('shows scale picker when hasImage=true and isLive=false', () => {
+    renderBar({ hasImage: true })
+
+    expect(screen.getByRole('button', { name: '1×' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2×' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '4×' })).toBeInTheDocument()
+  })
+
+  it('does not show scale picker when hasImage=false', () => {
+    renderBar({ hasImage: false })
+
+    expect(screen.queryByRole('button', { name: '1×' })).not.toBeInTheDocument()
+  })
+
+  it('does not show scale picker when isLive=true', () => {
+    renderBar({ hasImage: true, isLive: true })
+
+    expect(screen.queryByRole('button', { name: '1×' })).not.toBeInTheDocument()
+  })
+
+  it('shows resolution label containing × when hasImage=true', () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 100
+    canvas.height = 50
+    renderBar({ hasImage: true, canvasRef: makeCanvasRef(canvas) })
+
+    const label = screen.getByText(/\d+×\d+/)
+    expect(label).toBeInTheDocument()
+  })
+
+  it('clicking 2× makes it aria-pressed="true" and 1× becomes aria-pressed="false"', () => {
+    renderBar({ hasImage: true })
+
+    const btn1 = screen.getByRole('button', { name: '1×' })
+    const btn2 = screen.getByRole('button', { name: '2×' })
+
+    expect(btn1).toHaveAttribute('aria-pressed', 'true')
+    expect(btn2).toHaveAttribute('aria-pressed', 'false')
+
+    fireEvent.click(btn2)
+
+    expect(btn1).toHaveAttribute('aria-pressed', 'false')
+    expect(btn2).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('export at scale=2 creates an off-screen canvas at 2× dimensions', async () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 80
+    canvas.height = 40
+
+    const createdCanvases: HTMLCanvasElement[] = []
+    const originalCreate = document.createElement.bind(document)
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = originalCreate(tag)
+      if (tag === 'canvas') {
+        createdCanvases.push(el as HTMLCanvasElement)
+      }
+      return el
+    })
+
+    renderBar({ hasImage: true, canvasRef: makeCanvasRef(canvas) })
+
+    fireEvent.click(screen.getByRole('button', { name: '2×' }))
+    fireEvent.click(screen.getByRole('button', { name: /export png/i }))
+
+    // Allow async exportPng to start
+    await new Promise((r) => setTimeout(r, 0))
+
+    const offscreen = createdCanvases.find((c) => c.width === 160 && c.height === 80)
+    expect(offscreen).toBeDefined()
+
     vi.restoreAllMocks()
   })
 })

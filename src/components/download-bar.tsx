@@ -1,6 +1,8 @@
 import type { RefObject } from 'react'
+import { useState } from 'react'
 import { Errors } from '../errors/app-error'
 import { formatElapsedTime } from '../hooks/use-recording'
+import { cn } from '../utils/cn'
 import { isTouchDevice } from '../utils/device'
 import { shareOrDownloadBlob } from '../utils/share'
 import { useToastError } from './toast-provider'
@@ -10,6 +12,7 @@ interface Props {
   canvasRef: RefObject<HTMLCanvasElement | null>
   asciiRows: string[]
   isLive?: boolean
+  hasImage?: boolean
   hasAiConfig: boolean
   onAnalyze: () => void
   canRecord?: boolean
@@ -45,6 +48,7 @@ export default function DownloadBar({
   canvasRef,
   asciiRows,
   isLive,
+  hasImage,
   hasAiConfig,
   onAnalyze,
   canRecord,
@@ -54,6 +58,7 @@ export default function DownloadBar({
   onStopRecording,
 }: Props) {
   const toastError = useToastError()
+  const [scale, setScale] = useState<1 | 2 | 4>(1)
 
   async function exportPng() {
     const canvas = canvasRef.current
@@ -61,7 +66,19 @@ export default function DownloadBar({
       return
     }
     try {
-      await shareOrDownloadCanvas(canvas, 'ascii-art.png')
+      let target: HTMLCanvasElement = canvas
+      if (scale > 1) {
+        const offscreen = document.createElement('canvas')
+        offscreen.width = canvas.width * scale
+        offscreen.height = canvas.height * scale
+        const ctx = offscreen.getContext('2d')
+        if (ctx) {
+          ctx.imageSmoothingEnabled = false
+          ctx.drawImage(canvas, 0, 0, offscreen.width, offscreen.height)
+        }
+        target = offscreen
+      }
+      await shareOrDownloadCanvas(target, 'ascii-art.png')
     } catch {
       toastError(Errors.exportFailed('png').message)
     }
@@ -138,14 +155,41 @@ export default function DownloadBar({
   }
 
   return (
-    <div className="flex gap-xs sm:gap-sm sm:justify-end">
-      {analyzeBtn}
-      <Button variant="primary" onClick={exportPng} className="flex-1 sm:flex-none">
-        export png
-      </Button>
-      <Button variant="secondary" onClick={exportTxt} className="flex-1 sm:flex-none">
-        export txt
-      </Button>
+    <div className="flex flex-col gap-xs">
+      {hasImage && !isLive && (
+        <div className="flex items-center gap-xs">
+          {([1, 2, 4] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              aria-pressed={scale === s}
+              onClick={() => setScale(s)}
+              className={cn(
+                'font-mono text-xs px-sm py-2xs rounded-xs border transition-colors',
+                scale === s
+                  ? 'border-violet text-violet'
+                  : 'border-base text-fg-muted hover:border-dim',
+              )}
+            >
+              {s}×
+            </button>
+          ))}
+          <span className="text-fg-subtle text-xs ml-xs">
+            {canvasRef.current
+              ? `${canvasRef.current.width * scale}×${canvasRef.current.height * scale}`
+              : '—'}
+          </span>
+        </div>
+      )}
+      <div className="flex gap-xs sm:gap-sm sm:justify-end">
+        {analyzeBtn}
+        <Button variant="primary" onClick={exportPng} className="flex-1 sm:flex-none">
+          export png
+        </Button>
+        <Button variant="secondary" onClick={exportTxt} className="flex-1 sm:flex-none">
+          export txt
+        </Button>
+      </div>
     </div>
   )
 }

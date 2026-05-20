@@ -206,6 +206,7 @@ export default function App() {
               canvasRef={canvasRef}
               asciiRows={asciiRows}
               isLive={isLive}
+              hasImage={!!sourceImage}
               hasAiConfig={!!aiConfig}
               onAnalyze={handleAnalyze}
               canRecord={canRecord}
