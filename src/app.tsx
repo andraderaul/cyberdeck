@@ -154,13 +154,13 @@ export default function App() {
           <button
             type="button"
             onClick={() => setActiveModal({ kind: 'apiKey' })}
+            title="Configure AI key"
             className={cn(
               HEADER_ACTION_CLASS,
               aiConfig
                 ? 'border-transparent text-violet hover:border-violet'
                 : 'border-violet bg-accent-ghost text-violet hover:bg-accent-dim',
             )}
-            title="Configure AI key"
           >
             ⚿ {aiConfig ? 'ai configured' : 'configure ai'}
           </button>
