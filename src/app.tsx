@@ -38,6 +38,7 @@ export default function App() {
   const [sourceVideo, setSourceVideo] = useState<HTMLVideoElement | null>(null)
   const [asciiRows, setAsciiRows] = useState<string[]>([])
   const [isMirrored, setIsMirrored] = useState(false)
+  const [canvasDimensions, setCanvasDimensions] = useState<{ w: number; h: number } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const showError = useToastError()
@@ -64,6 +65,9 @@ export default function App() {
   }, [])
 
   const handleMirrorToggle = useCallback(() => setIsMirrored((prev) => !prev), [])
+  const handleDimensionsChange = useCallback((w: number, h: number) => {
+    setCanvasDimensions({ w, h })
+  }, [])
 
   const {
     state: webcamState,
@@ -192,6 +196,7 @@ export default function App() {
                   canvasRef={canvasRef}
                   isMirrored={isMirrored}
                   isRecording={isRecording}
+                  onDimensionsChange={handleDimensionsChange}
                 />
               ) : (
                 <EmptyStateHero
@@ -207,6 +212,7 @@ export default function App() {
               asciiRows={asciiRows}
               isLive={isLive}
               hasImage={!!sourceImage}
+              canvasDimensions={canvasDimensions}
               hasAiConfig={!!aiConfig}
               onAnalyze={handleAnalyze}
               canRecord={canRecord}

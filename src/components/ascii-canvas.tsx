@@ -15,6 +15,7 @@ interface Props {
   canvasRef: RefObject<HTMLCanvasElement>
   isMirrored?: boolean
   isRecording?: boolean
+  onDimensionsChange?: (w: number, h: number) => void
 }
 
 function renderFrame(
@@ -58,9 +59,14 @@ export default function AsciiCanvas({
   canvasRef,
   isMirrored,
   isRecording,
+  onDimensionsChange,
 }: Props) {
   const hiddenRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
   const renderStaticRef = useRef<(() => void) | null>(null)
+  const onDimensionsChangeRef = useRef(onDimensionsChange)
+  useEffect(() => {
+    onDimensionsChangeRef.current = onDimensionsChange
+  })
   const fontFamilyRef = useRef(
     getComputedStyle(document.body).getPropertyValue('--font-mono').trim() || 'monospace',
   )
@@ -126,6 +132,7 @@ export default function AsciiCanvas({
       }
       canvas.width = Math.floor(width)
       canvas.height = Math.floor(height)
+      onDimensionsChangeRef.current?.(Math.floor(width), Math.floor(height))
       if (debounceTimer) {
         clearTimeout(debounceTimer)
       }

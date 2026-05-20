@@ -13,6 +13,7 @@ interface Props {
   asciiRows: string[]
   isLive?: boolean
   hasImage?: boolean
+  canvasDimensions?: { w: number; h: number } | null
   hasAiConfig: boolean
   onAnalyze: () => void
   canRecord?: boolean
@@ -21,6 +22,8 @@ interface Props {
   onStartRecording?: () => void
   onStopRecording?: () => void
 }
+
+const MAX_EXPORT_DIM = 8192
 
 async function shareOrDownloadCanvas(canvas: HTMLCanvasElement, filename: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
@@ -49,6 +52,7 @@ export default function DownloadBar({
   asciiRows,
   isLive,
   hasImage,
+  canvasDimensions,
   hasAiConfig,
   onAnalyze,
   canRecord,
@@ -75,8 +79,9 @@ export default function DownloadBar({
         if (ctx) {
           ctx.imageSmoothingEnabled = false
           ctx.drawImage(canvas, 0, 0, offscreen.width, offscreen.height)
+          target = offscreen
         }
-        target = offscreen
+        // if ctx is unavailable, fall back to unscaled canvas rather than exporting a blank PNG
       }
       await shareOrDownloadCanvas(target, 'ascii-art.png')
     } catch {
@@ -158,26 +163,34 @@ export default function DownloadBar({
     <div className="flex flex-col gap-xs">
       {hasImage && !isLive && (
         <div className="flex items-center gap-xs">
-          {([1, 2, 4] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              aria-pressed={scale === s}
-              onClick={() => setScale(s)}
-              className={cn(
-                'font-mono text-xs px-sm py-2xs rounded-xs border transition-colors',
-                scale === s
-                  ? 'border-violet text-violet'
-                  : 'border-base text-fg-muted hover:border-dim',
-              )}
-            >
-              {s}×
-            </button>
-          ))}
+          <span className="text-fg-subtle text-xs font-mono">png scale</span>
+          {([1, 2, 4] as const).map((s) => {
+            const exceedsCap =
+              canvasDimensions !== null &&
+              canvasDimensions !== undefined &&
+              (canvasDimensions.w * s > MAX_EXPORT_DIM || canvasDimensions.h * s > MAX_EXPORT_DIM)
+            return (
+              <button
+                key={s}
+                type="button"
+                aria-pressed={scale === s}
+                disabled={exceedsCap}
+                onClick={() => setScale(s)}
+                className={cn(
+                  'font-mono text-xs px-sm rounded-xs border transition-colors min-h-[44px]',
+                  exceedsCap
+                    ? 'border-base text-fg-subtle opacity-40 cursor-not-allowed'
+                    : scale === s
+                      ? 'border-violet text-violet'
+                      : 'border-base text-fg-muted hover:border-dim',
+                )}
+              >
+                {s}×
+              </button>
+            )
+          })}
           <span className="text-fg-subtle text-xs ml-xs">
-            {canvasRef.current
-              ? `${canvasRef.current.width * scale}×${canvasRef.current.height * scale}`
-              : '—'}
+            {canvasDimensions ? `${canvasDimensions.w * scale}×${canvasDimensions.h * scale}` : '—'}
           </span>
         </div>
       )}

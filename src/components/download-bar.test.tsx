@@ -100,14 +100,33 @@ describe('DownloadBar (scale picker)', () => {
     expect(screen.queryByRole('button', { name: '1×' })).not.toBeInTheDocument()
   })
 
-  it('shows resolution label containing × when hasImage=true', () => {
-    const canvas = document.createElement('canvas')
-    canvas.width = 100
-    canvas.height = 50
-    renderBar({ hasImage: true, canvasRef: makeCanvasRef(canvas) })
+  it('shows resolution label from canvasDimensions when hasImage=true', () => {
+    renderBar({ hasImage: true, canvasDimensions: { w: 100, h: 50 } })
 
-    const label = screen.getByText(/\d+×\d+/)
-    expect(label).toBeInTheDocument()
+    expect(screen.getByText('100×50')).toBeInTheDocument()
+  })
+
+  it('shows — when canvasDimensions is null', () => {
+    renderBar({ hasImage: true, canvasDimensions: null })
+
+    expect(screen.getByText('—')).toBeInTheDocument()
+  })
+
+  it('shows scaled resolution when scale is changed', () => {
+    renderBar({ hasImage: true, canvasDimensions: { w: 100, h: 50 } })
+
+    fireEvent.click(screen.getByRole('button', { name: '2×' }))
+
+    expect(screen.getByText('200×100')).toBeInTheDocument()
+  })
+
+  it('disables 4× button when output would exceed MAX_EXPORT_DIM', () => {
+    renderBar({ hasImage: true, canvasDimensions: { w: 3000, h: 2000 } })
+
+    const btn4x = screen.getByRole('button', { name: '4×' })
+    expect(btn4x).toBeDisabled()
+    const btn2x = screen.getByRole('button', { name: '2×' })
+    expect(btn2x).not.toBeDisabled()
   })
 
   it('clicking 2× makes it aria-pressed="true" and 1× becomes aria-pressed="false"', () => {
