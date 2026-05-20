@@ -13,21 +13,16 @@ export const COLOR_MODES = [
 
 export type ColorMode = (typeof COLOR_MODES)[number]
 export type Charset =
-  // ascii gradient
   | 'classic'
   | 'sharp'
   | 'detailed'
   | 'ascii'
-  // unicode blocks
   | 'blocks'
   | 'halfblock'
-  // writing systems
   | 'braille'
   | 'katakana'
-  // shapes
   | 'geometric'
   | 'circles'
-  // specialized
   | 'box'
   | 'binary'
 
@@ -40,21 +35,16 @@ export interface ConversionSettings {
 }
 
 export const CHARSET_MAPS: Record<Charset, string> = {
-  // ascii gradient
   classic: ' .:-=+*#%@',
   sharp: ' .^!*<&%$#@',
   detailed: ' .\'`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
   ascii: ' .,;|+=i1lt*xX0#@',
-  // unicode blocks
   blocks: ' ░▒▓█',
   halfblock: ' ▄▀█',
-  // writing systems
   braille: ' ⠁⠃⠇⡇⣇⣧⣷⣿',
   katakana: ' ･ｦｧｱｲｴｵｸｶｷｺｻｼｽｾｿﾁﾂﾃﾄﾅﾆﾇﾉﾊﾌﾍﾎﾏﾐﾑﾒﾔﾗﾘﾙﾚﾛﾜﾝ',
-  // shapes
   geometric: ' ·•○◇◆□■▲▼◀▶★✦',
   circles: ' ·∘○◎●',
-  // specialized
   box: ' ╴─│┼╪╬█',
   binary: ' 01',
 }

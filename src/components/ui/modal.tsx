@@ -46,7 +46,6 @@ export default function Modal({
     }
   }, [])
 
-  // Escape key handler
   useEffect(() => {
     if (!closeable) {
       return

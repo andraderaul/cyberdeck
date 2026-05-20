@@ -59,7 +59,6 @@ export default function MobileControls({
 
       <MobileBottomSheet isOpen={isOpen} onClose={() => setIsOpen(false)} triggerRef={triggerRef}>
         <div className="flex flex-col gap-md">
-          {/* Issue #7 — proper tab semantics */}
           <div
             role="tablist"
             aria-label="Control tabs"

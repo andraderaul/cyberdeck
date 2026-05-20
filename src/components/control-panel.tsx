@@ -49,7 +49,6 @@ function swatchStyle(colorMode: ColorMode): string {
   return `linear-gradient(135deg, ${palette[0]} 0%, ${palette[1]} 100%)`
 }
 
-// Color modes ordered: solids + original → gradient pairs
 const SOLID_MODES = COLOR_MODES.filter((m) => !Array.isArray(getModePalette(m)))
 const GRADIENT_MODES = COLOR_MODES.filter((m) => Array.isArray(getModePalette(m)))
 
@@ -61,7 +60,6 @@ export default function ControlPanel({
 }: Props) {
   return (
     <div className="flex flex-col gap-md">
-      {/* Preset pills — selects a named ConversionSettings bundle */}
       <div className="flex flex-wrap gap-2xs">
         {PRESETS.map((preset) => {
           const isActive = preset.id === activePresetId
@@ -105,7 +103,6 @@ export default function ControlPanel({
         tooltipId="tooltip-resolution"
       />
 
-      {/* Color Mode picker with swatches — fieldset groups color mode buttons */}
       <fieldset
         className="flex flex-col gap-2xs border-none p-0 m-0"
         aria-describedby="tooltip-color-mode"
@@ -168,7 +165,6 @@ export default function ControlPanel({
         </div>
       </fieldset>
 
-      {/* Grouped Charset picker — outer fieldset groups all charset categories */}
       <fieldset
         className="flex flex-col gap-xs border-none p-0 m-0"
         aria-describedby="tooltip-charset"

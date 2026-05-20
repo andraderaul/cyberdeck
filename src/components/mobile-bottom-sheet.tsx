@@ -29,7 +29,6 @@ export default function MobileBottomSheet({ isOpen, onClose, children, triggerRe
     }
   }, [isOpen, triggerRef])
 
-  // Body scroll lock
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : ''
     return () => {
@@ -37,7 +36,6 @@ export default function MobileBottomSheet({ isOpen, onClose, children, triggerRe
     }
   }, [isOpen])
 
-  // Escape key listener
   useEffect(() => {
     if (!isOpen) {
       return
@@ -51,7 +49,6 @@ export default function MobileBottomSheet({ isOpen, onClose, children, triggerRe
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, onClose])
 
-  // Drag handle touch handlers — scoped to handle only
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY
     touchCurrentY.current = e.touches[0].clientY
