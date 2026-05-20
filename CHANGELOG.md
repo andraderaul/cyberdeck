@@ -1,3 +1,9 @@
+## [1.15.1](https://github.com/andraderaul/ascii-art-converter/compare/v1.15.0...v1.15.1) (2026-05-20)
+
+### Bug Fixes
+
+* expand header button touch targets ([#23](https://github.com/andraderaul/ascii-art-converter/issues/23)) ([59ccf2c](https://github.com/andraderaul/ascii-art-converter/commit/59ccf2cb35bdd2a9741d7abdedb8de05bf94eca7))
+
 ## [1.15.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.14.0...v1.15.0) (2026-05-20)
 
 ### Features
