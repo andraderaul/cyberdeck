@@ -1,5 +1,17 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useRef } from 'react'
 import { cn } from '../../utils/cn'
+
+const TABBABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+function getTabbables(container: HTMLElement | null): HTMLElement[] {
+  if (!container) {
+    return []
+  }
+  return Array.from(container.querySelectorAll<HTMLElement>(TABBABLE)).filter(
+    (el) => !el.closest('[tabindex="-1"]'),
+  )
+}
 
 interface Props {
   children: ReactNode
@@ -20,6 +32,57 @@ export default function Modal({
   closeable = true,
   containerClassName,
 }: Props) {
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<Element | null>(null)
+
+  // Save the currently focused element, then focus first tabbable on mount
+  useEffect(() => {
+    triggerRef.current = document.activeElement
+    const tabbables = getTabbables(dialogRef.current)
+    tabbables[0]?.focus()
+    return () => {
+      ;(triggerRef.current as HTMLElement | null)?.focus?.()
+    }
+  }, [])
+
+  // Escape key handler
+  useEffect(() => {
+    if (!closeable) {
+      return
+    }
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [closeable, onClose])
+
+  // Focus trap on keydown inside dialog
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key !== 'Tab') {
+      return
+    }
+    const tabbables = getTabbables(dialogRef.current)
+    if (tabbables.length === 0) {
+      return
+    }
+    const first = tabbables[0]
+    const last = tabbables[tabbables.length - 1]
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      }
+    } else {
+      if (document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+  }
+
   return (
     <div
       role="presentation"
@@ -34,9 +97,11 @@ export default function Modal({
         />
       )}
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
+        onKeyDown={handleKeyDown}
         className={cn(
           'relative flex flex-col p-xl',
           variant === 'default'
