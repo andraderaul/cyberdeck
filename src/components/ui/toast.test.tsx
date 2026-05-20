@@ -19,6 +19,11 @@ describe('Toast component', () => {
     expect(el.className).toContain('border-hot-pink')
   })
 
+  it('variant="error" icon is ✕ (distinct from warn ⚠)', () => {
+    render(<Toast message="oops" variant="error" onDismiss={vi.fn()} />)
+    expect(screen.getByText('✕')).toBeInTheDocument()
+  })
+
   it('variant="info" has border-cyan class', () => {
     render(<Toast message="info msg" variant="info" onDismiss={vi.fn()} />)
     const el = screen.getByRole('alert')

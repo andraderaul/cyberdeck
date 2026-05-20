@@ -1,4 +1,5 @@
 import type { ToastVariant } from '../../hooks/use-toast'
+import { cn } from '../../utils/cn'
 
 interface Props {
   message: string
@@ -14,7 +15,7 @@ const variantStyles: Record<
     border: 'border-hot-pink',
     shadow: '0 0 12px rgba(255, 45, 120, 0.15)',
     iconClass: 'text-danger',
-    icon: '⚠',
+    icon: '✕',
   },
   info: {
     border: 'border-cyan',
@@ -36,14 +37,14 @@ export default function Toast({ message, variant, onDismiss }: Props) {
   return (
     <div
       role="alert"
-      className={`flex items-start gap-sm p-sm bg-shadow ${border} border rounded-xs`}
+      className={cn('flex items-start gap-sm p-sm bg-shadow border rounded-xs', border)}
       style={{
         minWidth: '260px',
         maxWidth: '360px',
         boxShadow: shadow,
       }}
     >
-      <span className={`${iconClass} text-xs shrink-0`}>{icon}</span>
+      <span className={cn(iconClass, 'text-xs shrink-0')}>{icon}</span>
       <span className="text-fg text-xs flex-1">{message}</span>
       <button
         type="button"
