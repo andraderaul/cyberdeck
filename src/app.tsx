@@ -17,6 +17,7 @@ import { useToastError } from './components/toast-provider'
 import UploadZone from './components/upload-zone'
 import { useRecording } from './hooks/use-recording'
 import { useWebcamState } from './hooks/use-webcam-state'
+import { cn } from './utils/cn'
 
 type ActiveModal =
   | { kind: 'apiKey' }
@@ -129,31 +130,18 @@ export default function App() {
           <button
             type="button"
             onClick={() => setActiveModal({ kind: 'about' })}
-            className="font-mono tracking-wide cursor-pointer transition-all"
-            style={{
-              fontSize: 'var(--text-xs)',
-              color: 'var(--muted)',
-              background: 'none',
-              border: 'none',
-              letterSpacing: 'var(--tracking-wide)',
-              padding: '4px 8px',
-            }}
+            className="font-mono tracking-wide text-xs cursor-pointer bg-transparent border-none min-h-[44px] px-sm text-fg-muted hover:text-fg transition-all"
           >
             about
           </button>
           <button
             type="button"
             onClick={() => setActiveModal({ kind: 'apiKey' })}
-            className="font-mono tracking-wide cursor-pointer transition-all"
-            style={{
-              fontSize: 'var(--text-xs)',
-              color: aiConfig ? 'var(--violet)' : 'var(--muted)',
-              background: 'none',
-              border: 'none',
-              letterSpacing: 'var(--tracking-wide)',
-              padding: '4px 8px',
-            }}
             title="Configure AI key"
+            className={cn(
+              'font-mono tracking-wide text-xs cursor-pointer bg-transparent min-h-[44px] px-sm text-fg-muted hover:text-fg transition-all',
+              aiConfig ? 'border-none' : 'border border-violet rounded-full',
+            )}
           >
             ⚿ {aiConfig ? 'ai configured' : 'configure ai'}
           </button>
