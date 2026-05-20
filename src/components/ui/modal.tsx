@@ -33,15 +33,16 @@ export default function Modal({
   containerClassName,
 }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<Element | null>(null)
+  const triggerRef = useRef<HTMLElement | null>(null)
 
   // Save the currently focused element, then focus first tabbable on mount
   useEffect(() => {
-    triggerRef.current = document.activeElement
+    triggerRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
     const tabbables = getTabbables(dialogRef.current)
     tabbables[0]?.focus()
     return () => {
-      ;(triggerRef.current as HTMLElement | null)?.focus?.()
+      triggerRef.current?.focus()
     }
   }, [])
 
