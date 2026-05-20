@@ -1,3 +1,9 @@
+## [1.16.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.15.1...v1.16.0) (2026-05-20)
+
+### Features
+
+* **header:** 44px touch target + configure-ai pill border ([#32](https://github.com/andraderaul/ascii-art-converter/issues/32)) ([3588eef](https://github.com/andraderaul/ascii-art-converter/commit/3588eeff6c7febdef961d9d8d593972794ed8a25))
+
 ## [1.15.1](https://github.com/andraderaul/ascii-art-converter/compare/v1.15.0...v1.15.1) (2026-05-20)
 
 ### Bug Fixes
