@@ -140,7 +140,7 @@ export default function App() {
             title="Configure AI key"
             className={cn(
               'font-mono tracking-wide text-xs cursor-pointer bg-transparent min-h-[44px] px-sm text-fg-muted hover:text-fg transition-all',
-              aiConfig ? 'border-none' : 'border border-violet rounded-full',
+              aiConfig ? 'border border-transparent' : 'border border-violet rounded-full',
             )}
           >
             ⚿ {aiConfig ? 'ai configured' : 'configure ai'}
