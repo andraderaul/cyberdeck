@@ -12,7 +12,7 @@ function renderBar(
 ) {
   const { toastError = vi.fn(), ...rest } = props
   return render(
-    <ToastContext.Provider value={toastError}>
+    <ToastContext.Provider value={{ error: toastError, info: vi.fn(), warn: vi.fn() }}>
       <DownloadBar
         canvasRef={makeCanvasRef()}
         asciiRows={['row1', 'row2']}
