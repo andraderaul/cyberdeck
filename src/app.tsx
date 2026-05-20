@@ -214,22 +214,24 @@ export default function App() {
               )}
             </ErrorBoundary>
           </div>
-          <div className="py-sm px-md border-t border-base shrink-0">
-            <DownloadBar
-              canvasRef={canvasRef}
-              asciiRows={asciiRows}
-              isLive={isLive}
-              hasImage={!!sourceImage}
-              canvasDimensions={canvasDimensions}
-              hasAiConfig={!!aiConfig}
-              onAnalyze={handleAnalyze}
-              canRecord={canRecord}
-              isRecording={isRecording}
-              elapsedSeconds={elapsedSeconds}
-              onStartRecording={startRecording}
-              onStopRecording={stopRecording}
-            />
-          </div>
+          {(sourceImage || sourceVideo) && (
+            <div className="py-sm px-md border-t border-base shrink-0">
+              <DownloadBar
+                canvasRef={canvasRef}
+                asciiRows={asciiRows}
+                isLive={isLive}
+                hasImage={!!sourceImage}
+                canvasDimensions={canvasDimensions}
+                hasAiConfig={!!aiConfig}
+                onAnalyze={handleAnalyze}
+                canRecord={canRecord}
+                isRecording={isRecording}
+                elapsedSeconds={elapsedSeconds}
+                onStartRecording={startRecording}
+                onStopRecording={stopRecording}
+              />
+            </div>
+          )}
         </main>
       </div>
 

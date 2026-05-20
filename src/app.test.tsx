@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { AIConfig } from './ai/types'
 import App from './app'
@@ -37,7 +37,13 @@ vi.mock('./components/ascii-canvas', () => ({ default: () => <canvas /> }))
 vi.mock('./components/upload-zone', () => ({ default: () => <div>upload</div> }))
 vi.mock('./components/control-panel', () => ({ default: () => <div>control</div> }))
 vi.mock('./components/download-bar', () => ({ default: () => <div>download</div> }))
-vi.mock('./components/empty-state-hero', () => ({ default: () => <div>hero</div> }))
+vi.mock('./components/empty-state-hero', () => ({
+  default: ({ onImage }: { onImage: (img: HTMLImageElement) => void }) => (
+    <button type="button" onClick={() => onImage(new Image())}>
+      hero
+    </button>
+  ),
+}))
 vi.mock('./components/mobile-controls', () => ({ default: () => <div>mobile</div> }))
 vi.mock('./components/error-boundary', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -51,6 +57,19 @@ const mockAIConfig: AIConfig = {
   provider: 'anthropic',
   key: 'sk-ant-test',
 }
+
+describe('DownloadBar visibility', () => {
+  it('is not rendered before a source is loaded', () => {
+    render(<App />)
+    expect(screen.queryByText('download')).not.toBeInTheDocument()
+  })
+
+  it('appears after a source image is loaded via EmptyStateHero', () => {
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    expect(screen.getByText('download')).toBeInTheDocument()
+  })
+})
 
 describe('App header buttons', () => {
   it('both buttons have min-h-[44px]', () => {
