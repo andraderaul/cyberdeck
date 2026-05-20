@@ -34,7 +34,7 @@ const DEFAULT_SETTINGS: ConversionSettings = {
 }
 
 const HEADER_ACTION_CLASS =
-  'flex min-h-[44px] min-w-[44px] items-center justify-center rounded-pill border bg-transparent px-[8px] py-[4px] font-mono text-xs tracking-wide cursor-pointer transition-all duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet'
+  'flex min-h-[44px] min-w-[44px] items-center justify-center rounded-pill border bg-transparent px-xs py-2xs font-mono text-xs tracking-wide cursor-pointer transition-all duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet'
 
 export default function App() {
   const [settings, setSettings] = useState<ConversionSettings>(DEFAULT_SETTINGS)
