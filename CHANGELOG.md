@@ -1,3 +1,10 @@
+## [1.14.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.13.0...v1.14.0) (2026-05-20)
+
+### Features
+
+* **a11y:** slider aria-valuetext, threat icon, contrast fix ([#31](https://github.com/andraderaul/ascii-art-converter/issues/31)) ([695e404](https://github.com/andraderaul/ascii-art-converter/commit/695e4047d9aa2fe84cc54eaba20558f3000bdce5)), closes [#9898c0](https://github.com/andraderaul/ascii-art-converter/issues/9898c0) [#6b6b9a](https://github.com/andraderaul/ascii-art-converter/issues/6b6b9a)
+* **download-bar:** png scale picker (1×/2×/4×) + output resolution ([#35](https://github.com/andraderaul/ascii-art-converter/issues/35)) ([ea475ea](https://github.com/andraderaul/ascii-art-converter/commit/ea475ea964c80597eba6598d131ab4e6162875b6))
+
 ## [1.13.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.12.0...v1.13.0) (2026-05-20)
 
 ### Features
