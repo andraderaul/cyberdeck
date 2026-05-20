@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import type { Preset } from '../ascii/presets'
 import type { ConversionSettings } from '../ascii/types'
 import type { SourceMode } from '../hooks/use-webcam-state'
 import { cn } from '../utils/cn'
@@ -24,6 +25,8 @@ interface Props {
   onMirrorToggle: () => void
   settings: ConversionSettings
   onSettingsChange: (patch: Partial<ConversionSettings>) => void
+  activePresetId?: string | null
+  onPresetSelect?: (preset: Preset) => void
 }
 
 export default function MobileControls({
@@ -35,6 +38,8 @@ export default function MobileControls({
   onMirrorToggle,
   settings,
   onSettingsChange,
+  activePresetId,
+  onPresetSelect,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('source')
@@ -114,7 +119,12 @@ export default function MobileControls({
             aria-labelledby="tab-settings"
             hidden={activeTab !== 'settings'}
           >
-            <ControlPanel settings={settings} onChange={onSettingsChange} />
+            <ControlPanel
+              settings={settings}
+              onChange={onSettingsChange}
+              activePresetId={activePresetId}
+              onPresetSelect={onPresetSelect}
+            />
           </div>
         </div>
       </MobileBottomSheet>

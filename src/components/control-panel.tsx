@@ -1,3 +1,5 @@
+import type { Preset } from '../ascii/presets'
+import { PRESETS } from '../ascii/presets'
 import { getModePalette } from '../ascii/renderer'
 import type { Charset, ColorMode, ConversionSettings } from '../ascii/types'
 import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
@@ -9,6 +11,8 @@ import Tooltip from './ui/tooltip'
 interface Props {
   settings: ConversionSettings
   onChange: (patch: Partial<ConversionSettings>) => void
+  activePresetId?: string | null
+  onPresetSelect?: (preset: Preset) => void
 }
 
 const RESOLUTION_RANGE = { min: 6, max: 24, step: 1 }
@@ -49,9 +53,40 @@ function swatchStyle(colorMode: ColorMode): string {
 const SOLID_MODES = COLOR_MODES.filter((m) => !Array.isArray(getModePalette(m)))
 const GRADIENT_MODES = COLOR_MODES.filter((m) => Array.isArray(getModePalette(m)))
 
-export default function ControlPanel({ settings, onChange }: Props) {
+export default function ControlPanel({
+  settings,
+  onChange,
+  activePresetId = null,
+  onPresetSelect,
+}: Props) {
   return (
     <div className="flex flex-col gap-md">
+      {/* Preset pills — selects a named ConversionSettings bundle */}
+      <div className="flex flex-wrap gap-2xs">
+        {PRESETS.map((preset) => {
+          const isActive = preset.id === activePresetId
+          const isModified =
+            isActive && JSON.stringify(settings) !== JSON.stringify(preset.settings)
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => onPresetSelect?.(preset)}
+              className={cn(
+                'px-sm py-2xs rounded-xs border font-mono text-xs transition-colors',
+                isActive
+                  ? 'border-violet text-violet'
+                  : 'border-base text-fg-muted hover:border-dim',
+              )}
+            >
+              {preset.name}
+              {isModified ? ' ·' : ''}
+            </button>
+          )
+        })}
+      </div>
+
       <Slider
         label="resolution"
         value={settings.resolution}

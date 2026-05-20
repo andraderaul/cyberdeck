@@ -32,9 +32,14 @@ export function normalizeError(err: unknown): AppError {
 
 export const Errors = {
   exportFailed: (format: 'png' | 'txt'): AppError =>
-    createError({ type: 'export_failed', message: `export ${format.toUpperCase()} failed` }),
+    createError({
+      type: 'export_failed',
+      message:
+        format === 'png' ? "Couldn't save PNG — try again" : "Couldn't save text file — try again",
+    }),
 
-  captureFailed: (): AppError => createError({ type: 'capture_failed', message: 'capture failed' }),
+  captureFailed: (): AppError =>
+    createError({ type: 'capture_failed', message: "Couldn't save capture — try again" }),
 
   storageSaveFailed: (): AppError =>
     createError({

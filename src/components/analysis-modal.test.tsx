@@ -73,4 +73,20 @@ describe('AnalysisModal', () => {
 
     expect(screen.queryByRole('button', { name: /✕/i })).not.toBeInTheDocument()
   })
+
+  it('renders a redundant aria-hidden icon for CRITICAL threat level', () => {
+    render(
+      <AnalysisModal
+        state={{
+          status: 'success',
+          analysis: { threatLevel: 'CRITICAL', description: 'test', tags: [] },
+        }}
+        onClose={vi.fn()}
+      />,
+    )
+    const icon = document.querySelector('[data-testid="threat-icon"]')
+    expect(icon).toBeDefined()
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
+    expect(icon?.textContent).toBe('‼')
+  })
 })

@@ -1,8 +1,11 @@
 import { useCallback, useState } from 'react'
 
+export type ToastVariant = 'info' | 'warn' | 'error'
+
 export type ToastItem = {
   id: number
   message: string
+  variant: ToastVariant
 }
 
 export function useToast() {
@@ -12,14 +15,18 @@ export function useToast() {
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
-  const error = useCallback(
-    (message: string) => {
+  const addToast = useCallback(
+    (message: string, variant: ToastVariant) => {
       const id = Date.now()
-      setToasts((prev) => [...prev, { id, message }])
+      setToasts((prev) => [...prev, { id, message, variant }])
       setTimeout(() => dismiss(id), 4000)
     },
     [dismiss],
   )
 
-  return { toasts, error, dismiss }
+  const error = useCallback((message: string) => addToast(message, 'error'), [addToast])
+  const info = useCallback((message: string) => addToast(message, 'info'), [addToast])
+  const warn = useCallback((message: string) => addToast(message, 'warn'), [addToast])
+
+  return { toasts, error, info, warn, dismiss }
 }

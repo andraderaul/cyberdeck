@@ -36,8 +36,11 @@ describe('normalizeError', () => {
 })
 
 describe('Errors', () => {
-  it('exportFailed carries the format in the message', () => {
+  it('exportFailed png message mentions PNG', () => {
     expect(Errors.exportFailed('png').message).toContain('PNG')
-    expect(Errors.exportFailed('txt').message).toContain('TXT')
+  })
+
+  it('exportFailed txt message mentions text file', () => {
+    expect(Errors.exportFailed('txt').message).toContain('text file')
   })
 })

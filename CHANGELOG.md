@@ -1,3 +1,29 @@
+## [1.15.1](https://github.com/andraderaul/ascii-art-converter/compare/v1.15.0...v1.15.1) (2026-05-20)
+
+### Bug Fixes
+
+* expand header button touch targets ([#23](https://github.com/andraderaul/ascii-art-converter/issues/23)) ([59ccf2c](https://github.com/andraderaul/ascii-art-converter/commit/59ccf2cb35bdd2a9741d7abdedb8de05bf94eca7))
+
+## [1.15.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.14.0...v1.15.0) (2026-05-20)
+
+### Features
+
+* **presets:** named ConversionSettings presets with modified indicator ([#30](https://github.com/andraderaul/ascii-art-converter/issues/30)) ([317de7e](https://github.com/andraderaul/ascii-art-converter/commit/317de7ef6ae8cc01407f4a35f4f7410be2d1c51d))
+* **toast:** info/warn/error variants + neutral error copy ([#33](https://github.com/andraderaul/ascii-art-converter/issues/33)) ([a02aeb2](https://github.com/andraderaul/ascii-art-converter/commit/a02aeb2aa34409d4d41b7cfc762a3e98af50194f))
+
+## [1.14.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.13.0...v1.14.0) (2026-05-20)
+
+### Features
+
+* **a11y:** slider aria-valuetext, threat icon, contrast fix ([#31](https://github.com/andraderaul/ascii-art-converter/issues/31)) ([695e404](https://github.com/andraderaul/ascii-art-converter/commit/695e4047d9aa2fe84cc54eaba20558f3000bdce5)), closes [#9898c0](https://github.com/andraderaul/ascii-art-converter/issues/9898c0) [#6b6b9a](https://github.com/andraderaul/ascii-art-converter/issues/6b6b9a)
+* **download-bar:** png scale picker (1×/2×/4×) + output resolution ([#35](https://github.com/andraderaul/ascii-art-converter/issues/35)) ([ea475ea](https://github.com/andraderaul/ascii-art-converter/commit/ea475ea964c80597eba6598d131ab4e6162875b6))
+
+## [1.13.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.12.0...v1.13.0) (2026-05-20)
+
+### Features
+
+* **modal:** escape-to-close and focus trap ([#34](https://github.com/andraderaul/ascii-art-converter/issues/34)) ([017db3f](https://github.com/andraderaul/ascii-art-converter/commit/017db3fe0c07e7426bdd307c92214ccfaeffea49))
+
 ## [1.12.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.11.0...v1.12.0) (2026-05-19)
 
 ### Features

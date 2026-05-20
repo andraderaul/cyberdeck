@@ -2,17 +2,35 @@ import { createContext, type ReactNode, useContext } from 'react'
 import { useToast } from '../hooks/use-toast'
 import Toast from './ui/toast'
 
-export const ToastContext = createContext<(message: string) => void>(() => {})
+type ToastContextValue = {
+  error: (message: string) => void
+  info: (message: string) => void
+  warn: (message: string) => void
+}
+
+export const ToastContext = createContext<ToastContextValue>({
+  error: () => {},
+  info: () => {},
+  warn: () => {},
+})
 
 export function useToastError() {
-  return useContext(ToastContext)
+  return useContext(ToastContext).error
+}
+
+export function useToastInfo() {
+  return useContext(ToastContext).info
+}
+
+export function useToastWarn() {
+  return useContext(ToastContext).warn
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const { toasts, error, dismiss } = useToast()
+  const { toasts, error, info, warn, dismiss } = useToast()
 
   return (
-    <ToastContext.Provider value={error}>
+    <ToastContext.Provider value={{ error, info, warn }}>
       {children}
       <div
         aria-live="polite"
@@ -21,7 +39,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       >
         {toasts.map((t) => (
           <div key={t.id} className="pointer-events-auto">
-            <Toast message={t.message} onDismiss={() => dismiss(t.id)} />
+            <Toast message={t.message} variant={t.variant} onDismiss={() => dismiss(t.id)} />
           </div>
         ))}
       </div>

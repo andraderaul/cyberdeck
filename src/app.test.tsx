@@ -61,17 +61,19 @@ describe('App header buttons', () => {
     expect(aiBtn.className).toContain('min-h-[44px]')
   })
 
-  it('configure ai button has border-violet when aiConfig is null', () => {
+  it('configure ai button has border-violet at rest when aiConfig is null', () => {
     mockUseAIConfig.mockReturnValue({ config: null, save: vi.fn(), remove: vi.fn() })
     render(<App />)
     const aiBtn = screen.getByRole('button', { name: /configure ai/i })
-    expect(aiBtn.className).toContain('border-violet')
+    expect(aiBtn.className.split(/\s+/)).toContain('border-violet')
   })
 
-  it('configure ai button does NOT have border-violet when aiConfig is set', () => {
+  it('configure ai button has transparent border at rest when aiConfig is set', () => {
     mockUseAIConfig.mockReturnValue({ config: mockAIConfig, save: vi.fn(), remove: vi.fn() })
     render(<App />)
     const aiBtn = screen.getByRole('button', { name: /ai configured/i })
-    expect(aiBtn.className).not.toContain('border-violet')
+    const tokens = aiBtn.className.split(/\s+/)
+    expect(tokens).toContain('border-transparent')
+    expect(tokens).not.toContain('border-violet')
   })
 })

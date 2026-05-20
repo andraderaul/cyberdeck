@@ -3,6 +3,7 @@ import { analyzeCanvas } from './ai/analysis-service'
 import { AuthError, NetworkError, QuotaError } from './ai/errors'
 import type { AnalysisState } from './ai/types'
 import { useAIConfig } from './ai/use-ai-config'
+import type { Preset } from './ascii/presets'
 import type { ConversionSettings } from './ascii/types'
 import AboutModal from './components/about-modal'
 import AnalysisModal from './components/analysis-modal'
@@ -33,12 +34,17 @@ const DEFAULT_SETTINGS: ConversionSettings = {
   charset: 'sharp',
 }
 
+const HEADER_ACTION_CLASS =
+  'flex min-h-[44px] min-w-[44px] items-center justify-center rounded-pill border bg-transparent px-xs py-2xs font-mono text-xs tracking-wide cursor-pointer transition-all duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet'
+
 export default function App() {
   const [settings, setSettings] = useState<ConversionSettings>(DEFAULT_SETTINGS)
+  const [activePresetId, setActivePresetId] = useState<string | null>(null)
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
   const [sourceVideo, setSourceVideo] = useState<HTMLVideoElement | null>(null)
   const [asciiRows, setAsciiRows] = useState<string[]>([])
   const [isMirrored, setIsMirrored] = useState(false)
+  const [canvasDimensions, setCanvasDimensions] = useState<{ w: number; h: number } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const showError = useToastError()
@@ -65,6 +71,9 @@ export default function App() {
   }, [])
 
   const handleMirrorToggle = useCallback(() => setIsMirrored((prev) => !prev), [])
+  const handleDimensionsChange = useCallback((w: number, h: number) => {
+    setCanvasDimensions({ w, h })
+  }, [])
 
   const {
     state: webcamState,
@@ -83,6 +92,11 @@ export default function App() {
 
   const patchSettings = useCallback((patch: Partial<ConversionSettings>) => {
     setSettings((prev) => ({ ...prev, ...patch }))
+  }, [])
+
+  const handlePresetSelect = useCallback((preset: Preset) => {
+    setSettings(preset.settings)
+    setActivePresetId(preset.id)
   }, [])
 
   const handleImage = useCallback(
@@ -130,7 +144,10 @@ export default function App() {
           <button
             type="button"
             onClick={() => setActiveModal({ kind: 'about' })}
-            className="font-mono tracking-wide text-xs cursor-pointer bg-transparent border-none min-h-[44px] px-sm text-fg-muted hover:text-fg transition-all"
+            className={cn(
+              HEADER_ACTION_CLASS,
+              'border-transparent text-muted hover:border-base hover:text-ghost',
+            )}
           >
             about
           </button>
@@ -139,8 +156,10 @@ export default function App() {
             onClick={() => setActiveModal({ kind: 'apiKey' })}
             title="Configure AI key"
             className={cn(
-              'font-mono tracking-wide text-xs cursor-pointer bg-transparent min-h-[44px] px-sm text-fg-muted hover:text-fg transition-all',
-              aiConfig ? 'border border-transparent' : 'border border-violet rounded-full',
+              HEADER_ACTION_CLASS,
+              aiConfig
+                ? 'border-transparent text-violet hover:border-violet'
+                : 'border-violet bg-accent-ghost text-violet hover:bg-accent-dim',
             )}
           >
             ⚿ {aiConfig ? 'ai configured' : 'configure ai'}
@@ -159,7 +178,12 @@ export default function App() {
             onMirrorToggle={handleMirrorToggle}
           />
           <div className="w-full h-px bg-slate" />
-          <ControlPanel settings={settings} onChange={patchSettings} />
+          <ControlPanel
+            settings={settings}
+            onChange={patchSettings}
+            activePresetId={activePresetId}
+            onPresetSelect={handlePresetSelect}
+          />
         </aside>
 
         <main className="flex flex-col overflow-hidden">
@@ -180,6 +204,7 @@ export default function App() {
                   canvasRef={canvasRef}
                   isMirrored={isMirrored}
                   isRecording={isRecording}
+                  onDimensionsChange={handleDimensionsChange}
                 />
               ) : (
                 <EmptyStateHero
@@ -194,6 +219,8 @@ export default function App() {
               canvasRef={canvasRef}
               asciiRows={asciiRows}
               isLive={isLive}
+              hasImage={!!sourceImage}
+              canvasDimensions={canvasDimensions}
               hasAiConfig={!!aiConfig}
               onAnalyze={handleAnalyze}
               canRecord={canRecord}
@@ -215,6 +242,8 @@ export default function App() {
         onMirrorToggle={handleMirrorToggle}
         settings={settings}
         onSettingsChange={patchSettings}
+        activePresetId={activePresetId}
+        onPresetSelect={handlePresetSelect}
       />
 
       {activeModal?.kind === 'apiKey' && (

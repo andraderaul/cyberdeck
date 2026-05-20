@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { PRESETS } from '../ascii/presets'
 import type { ConversionSettings } from '../ascii/types'
 import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
 import ControlPanel from './control-panel'
@@ -124,6 +125,91 @@ describe('ControlPanel', () => {
         .getByRole('button', { name: 'original' })
         .querySelector('[data-swatch]') as HTMLElement
       expect(swatch.style.background).toContain('gradient')
+    })
+  })
+
+  // Issue #19: Named presets
+  describe('Preset pills', () => {
+    it('renders one button per preset name', () => {
+      renderPanel()
+      for (const preset of PRESETS) {
+        expect(screen.getByRole('button', { name: preset.name })).toBeInTheDocument()
+      }
+    })
+
+    it('clicking a preset button calls onPresetSelect with the correct preset', async () => {
+      const user = userEvent.setup()
+      const onPresetSelect = vi.fn()
+      render(
+        <ControlPanel
+          settings={DEFAULT_SETTINGS}
+          onChange={vi.fn()}
+          activePresetId={null}
+          onPresetSelect={onPresetSelect}
+        />,
+      )
+      const preset = PRESETS[0]
+      await user.click(screen.getByRole('button', { name: preset.name }))
+      expect(onPresetSelect).toHaveBeenCalledWith(preset)
+    })
+
+    it('active preset button has aria-pressed="true"', () => {
+      const activePreset = PRESETS[1]
+      render(
+        <ControlPanel
+          settings={activePreset.settings}
+          onChange={vi.fn()}
+          activePresetId={activePreset.id}
+          onPresetSelect={vi.fn()}
+        />,
+      )
+      const btn = screen.getByRole('button', { name: activePreset.name })
+      expect(btn).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('non-active preset buttons have aria-pressed="false"', () => {
+      const activePreset = PRESETS[0]
+      render(
+        <ControlPanel
+          settings={activePreset.settings}
+          onChange={vi.fn()}
+          activePresetId={activePreset.id}
+          onPresetSelect={vi.fn()}
+        />,
+      )
+      for (const preset of PRESETS.filter((p) => p.id !== activePreset.id)) {
+        const btn = screen.getByRole('button', { name: preset.name })
+        expect(btn).toHaveAttribute('aria-pressed', 'false')
+      }
+    })
+
+    it('shows modified dot (·) on active pill when settings diverge from preset', () => {
+      const activePreset = PRESETS[0]
+      const divergedSettings: ConversionSettings = { ...activePreset.settings, brightness: 1.9 }
+      render(
+        <ControlPanel
+          settings={divergedSettings}
+          onChange={vi.fn()}
+          activePresetId={activePreset.id}
+          onPresetSelect={vi.fn()}
+        />,
+      )
+      const btn = screen.getByRole('button', { name: new RegExp(`${activePreset.name}`) })
+      expect(btn.textContent).toContain('·')
+    })
+
+    it('does not show modified dot when settings exactly match the active preset', () => {
+      const activePreset = PRESETS[0]
+      render(
+        <ControlPanel
+          settings={activePreset.settings}
+          onChange={vi.fn()}
+          activePresetId={activePreset.id}
+          onPresetSelect={vi.fn()}
+        />,
+      )
+      const btn = screen.getByRole('button', { name: activePreset.name })
+      expect(btn.textContent).not.toContain('·')
     })
   })
 })

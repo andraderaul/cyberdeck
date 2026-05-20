@@ -9,6 +9,14 @@ interface Props {
   onRetry?: () => void
 }
 
+const THREAT_ICON: Record<ThreatLevel, string> = {
+  CRITICAL: '‼',
+  HIGH: '✕',
+  MODERATE: '◐',
+  LOW: '○',
+  UNKNOWN: '◌',
+}
+
 // Dynamic — computed from data at runtime, inline style required
 const THREAT_COLOR: Record<ThreatLevel, string> = {
   LOW: 'var(--cyan)',
@@ -58,18 +66,23 @@ export default function AnalysisModal({ state, onClose, onRetry }: Props) {
             }}
           >
             <span className="text-dim text-xs tracking-wide">THREAT LEVEL</span>
-            <span
-              className="font-bold text-sm tracking-wider"
-              style={{
-                color: THREAT_COLOR[state.analysis.threatLevel],
-                // textShadow has no Tailwind equivalent
-                textShadow:
-                  state.analysis.threatLevel === 'CRITICAL'
-                    ? `0 0 8px ${THREAT_COLOR[state.analysis.threatLevel]}`
-                    : undefined,
-              }}
-            >
-              {state.analysis.threatLevel}
+            <span className="flex items-center gap-xs">
+              <span data-testid="threat-icon" aria-hidden="true">
+                {THREAT_ICON[state.analysis.threatLevel]}
+              </span>
+              <span
+                className="font-bold text-sm tracking-wider"
+                style={{
+                  color: THREAT_COLOR[state.analysis.threatLevel],
+                  // textShadow has no Tailwind equivalent
+                  textShadow:
+                    state.analysis.threatLevel === 'CRITICAL'
+                      ? `0 0 8px ${THREAT_COLOR[state.analysis.threatLevel]}`
+                      : undefined,
+                }}
+              >
+                {state.analysis.threatLevel}
+              </span>
             </span>
           </div>
 
