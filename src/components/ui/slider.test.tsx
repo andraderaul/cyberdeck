@@ -67,7 +67,7 @@ describe('Slider', () => {
     expect(input).not.toHaveAttribute('title')
   })
 
-  it('sets aria-valuetext with label and formatted value', () => {
+  it('sets aria-valuetext to the formatted value only (no label prefix)', () => {
     render(
       <Slider
         label="brightness"
@@ -80,6 +80,6 @@ describe('Slider', () => {
       />,
     )
     const input = screen.getByRole('slider')
-    expect(input).toHaveAttribute('aria-valuetext', 'brightness, 1.05px')
+    expect(input).toHaveAttribute('aria-valuetext', '1.05px')
   })
 })

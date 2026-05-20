@@ -84,9 +84,9 @@ describe('AnalysisModal', () => {
         onClose={vi.fn()}
       />,
     )
-    // The ✕ icon appears as a threat-level icon (aria-hidden span), not a button
-    const icons = document.querySelectorAll('[aria-hidden="true"]')
-    const threatIcon = Array.from(icons).find((el) => el.textContent === '✕')
-    expect(threatIcon).toBeDefined()
+    const icon = document.querySelector('[data-testid="threat-icon"]')
+    expect(icon).toBeDefined()
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
+    expect(icon?.textContent).toBe('‼')
   })
 })

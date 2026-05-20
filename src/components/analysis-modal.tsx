@@ -10,7 +10,7 @@ interface Props {
 }
 
 const THREAT_ICON: Record<ThreatLevel, string> = {
-  CRITICAL: '✕',
+  CRITICAL: '‼',
   HIGH: '✕',
   MODERATE: '◐',
   LOW: '○',
@@ -67,7 +67,9 @@ export default function AnalysisModal({ state, onClose, onRetry }: Props) {
           >
             <span className="text-dim text-xs tracking-wide">THREAT LEVEL</span>
             <span className="flex items-center gap-xs">
-              <span aria-hidden="true">{THREAT_ICON[state.analysis.threatLevel]}</span>
+              <span data-testid="threat-icon" aria-hidden="true">
+                {THREAT_ICON[state.analysis.threatLevel]}
+              </span>
               <span
                 className="font-bold text-sm tracking-wider"
                 style={{
