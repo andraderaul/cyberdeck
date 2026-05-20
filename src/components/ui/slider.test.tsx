@@ -66,4 +66,20 @@ describe('Slider', () => {
     const input = screen.getByLabelText(/volume/i)
     expect(input).not.toHaveAttribute('title')
   })
+
+  it('sets aria-valuetext with label and formatted value', () => {
+    render(
+      <Slider
+        label="brightness"
+        value={1.05}
+        min={0.5}
+        max={2.0}
+        step={0.05}
+        onChange={vi.fn()}
+        format={(v) => `${v.toFixed(2)}px`}
+      />,
+    )
+    const input = screen.getByRole('slider')
+    expect(input).toHaveAttribute('aria-valuetext', 'brightness, 1.05px')
+  })
 })

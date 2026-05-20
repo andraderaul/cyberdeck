@@ -55,6 +55,7 @@ export default function Slider({
               ? `double-click to reset to ${format(defaultValue)}`
               : undefined
           }
+          aria-valuetext={`${label}, ${format(value)}`}
           min={min}
           max={max}
           step={step}
