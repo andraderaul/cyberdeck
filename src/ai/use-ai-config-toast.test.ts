@@ -29,7 +29,13 @@ describe('useAIConfig storage toast', () => {
       return null
     }
 
-    render(createElement(ToastContext.Provider, { value: mockToast }, createElement(Probe)))
+    render(
+      createElement(
+        ToastContext.Provider,
+        { value: { error: mockToast, info: vi.fn(), warn: vi.fn() } },
+        createElement(Probe),
+      ),
+    )
 
     await act(() => {
       capturedSave?.(STORED_CONFIG)
@@ -52,7 +58,13 @@ describe('useAIConfig storage toast', () => {
       return null
     }
 
-    render(createElement(ToastContext.Provider, { value: mockToast }, createElement(Probe)))
+    render(
+      createElement(
+        ToastContext.Provider,
+        { value: { error: mockToast, info: vi.fn(), warn: vi.fn() } },
+        createElement(Probe),
+      ),
+    )
 
     await act(() => {
       capturedRemove?.()
