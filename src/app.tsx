@@ -18,6 +18,7 @@ import { useToastError } from './components/toast-provider'
 import UploadZone from './components/upload-zone'
 import { useRecording } from './hooks/use-recording'
 import { useWebcamState } from './hooks/use-webcam-state'
+import { cn } from './utils/cn'
 
 type ActiveModal =
   | { kind: 'apiKey' }
@@ -32,6 +33,9 @@ const DEFAULT_SETTINGS: ConversionSettings = {
   colorMode: 'matrix',
   charset: 'sharp',
 }
+
+const HEADER_ACTION_CLASS =
+  'flex min-h-[44px] min-w-[44px] items-center justify-center rounded-pill border bg-transparent px-xs py-2xs font-mono text-xs tracking-wide cursor-pointer transition-all duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet'
 
 export default function App() {
   const [settings, setSettings] = useState<ConversionSettings>(DEFAULT_SETTINGS)
@@ -140,30 +144,22 @@ export default function App() {
           <button
             type="button"
             onClick={() => setActiveModal({ kind: 'about' })}
-            className="font-mono tracking-wide cursor-pointer transition-all"
-            style={{
-              fontSize: 'var(--text-xs)',
-              color: 'var(--muted)',
-              background: 'none',
-              border: 'none',
-              letterSpacing: 'var(--tracking-wide)',
-              padding: '4px 8px',
-            }}
+            className={cn(
+              HEADER_ACTION_CLASS,
+              'border-transparent text-muted hover:border-base hover:text-ghost',
+            )}
           >
             about
           </button>
           <button
             type="button"
             onClick={() => setActiveModal({ kind: 'apiKey' })}
-            className="font-mono tracking-wide cursor-pointer transition-all"
-            style={{
-              fontSize: 'var(--text-xs)',
-              color: aiConfig ? 'var(--violet)' : 'var(--muted)',
-              background: 'none',
-              border: 'none',
-              letterSpacing: 'var(--tracking-wide)',
-              padding: '4px 8px',
-            }}
+            className={cn(
+              HEADER_ACTION_CLASS,
+              aiConfig
+                ? 'border-transparent text-violet hover:border-violet'
+                : 'border-violet bg-accent-ghost text-violet hover:bg-accent-dim',
+            )}
             title="Configure AI key"
           >
             ⚿ {aiConfig ? 'ai configured' : 'configure ai'}
