@@ -1,3 +1,10 @@
+## [1.15.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.14.0...v1.15.0) (2026-05-20)
+
+### Features
+
+* **presets:** named ConversionSettings presets with modified indicator ([#30](https://github.com/andraderaul/ascii-art-converter/issues/30)) ([317de7e](https://github.com/andraderaul/ascii-art-converter/commit/317de7ef6ae8cc01407f4a35f4f7410be2d1c51d))
+* **toast:** info/warn/error variants + neutral error copy ([#33](https://github.com/andraderaul/ascii-art-converter/issues/33)) ([a02aeb2](https://github.com/andraderaul/ascii-art-converter/commit/a02aeb2aa34409d4d41b7cfc762a3e98af50194f))
+
 ## [1.14.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.13.0...v1.14.0) (2026-05-20)
 
 ### Features
