@@ -1,3 +1,9 @@
+## [1.18.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.17.3...v1.18.0) (2026-05-21)
+
+### Features
+
+* **control-panel:** label preset section and improve modified indicator ([#45](https://github.com/andraderaul/ascii-art-converter/issues/45)) ([59b3b7c](https://github.com/andraderaul/ascii-art-converter/commit/59b3b7cfaa2e632a208936dec23d7e70f981273f)), closes [#39](https://github.com/andraderaul/ascii-art-converter/issues/39) [#ffe600](https://github.com/andraderaul/ascii-art-converter/issues/ffe600)
+
 ## [1.17.3](https://github.com/andraderaul/ascii-art-converter/compare/v1.17.2...v1.17.3) (2026-05-21)
 
 ### Bug Fixes
