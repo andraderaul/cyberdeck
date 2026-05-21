@@ -1,3 +1,9 @@
+## [1.17.1](https://github.com/andraderaul/ascii-art-converter/compare/v1.17.0...v1.17.1) (2026-05-21)
+
+### Bug Fixes
+
+* **about-modal:** apply neutral register to section headings ([#42](https://github.com/andraderaul/ascii-art-converter/issues/42)) ([95f7f89](https://github.com/andraderaul/ascii-art-converter/commit/95f7f89e72cc62cef2a56b573f9b9c20752cda00)), closes [#8](https://github.com/andraderaul/ascii-art-converter/issues/8)
+
 ## [1.17.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.16.1...v1.17.0) (2026-05-21)
 
 ### Features
