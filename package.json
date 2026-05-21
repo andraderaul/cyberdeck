@@ -2,7 +2,7 @@
   "name": "ascii-art-converter",
   "description": "Client-side tool that converts images and webcam into interactive ASCII art with real-time preview and export.",
   "private": true,
-  "version": "1.16.1",
+  "version": "1.17.0",
   "license": "MIT",
   "type": "module",
   "scripts": {

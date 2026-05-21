@@ -1,3 +1,9 @@
+## [1.17.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.16.1...v1.17.0) (2026-05-21)
+
+### Features
+
+* **banner:** add AI Config banner near DownloadBar when no AI Config is set ([#41](https://github.com/andraderaul/ascii-art-converter/issues/41)) ([cef88d1](https://github.com/andraderaul/ascii-art-converter/commit/cef88d12fb91746506ebbcf5a1b88333a3c09035)), closes [#6](https://github.com/andraderaul/ascii-art-converter/issues/6)
+
 ## [1.16.1](https://github.com/andraderaul/ascii-art-converter/compare/v1.16.0...v1.16.1) (2026-05-20)
 
 ### Bug Fixes
