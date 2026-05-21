@@ -51,7 +51,7 @@ export default function AnalysisModal({ state, onClose, onRetry }: Props) {
           <span className="animate-pulse text-violet text-xs tracking-wider">
             ▸ SCANNING VISUAL FEED...
           </span>
-          <span className="text-muted text-xs">interfacing with AI Provider</span>
+          <span className="text-fg-subtle text-xs">interfacing with AI Provider</span>
         </div>
       )}
 

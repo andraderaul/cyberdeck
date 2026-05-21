@@ -112,6 +112,14 @@ describe('Modal', () => {
     })
   })
 
+  describe('close button contrast', () => {
+    it('does not use text-muted (fails WCAG AA)', () => {
+      renderModal()
+      const closeBtn = screen.getByRole('button', { name: '✕' })
+      expect(closeBtn.className.split(/\s+/)).not.toContain('text-muted')
+    })
+  })
+
   describe('Focus return on close', () => {
     it('returns focus to the previously focused element when modal unmounts', () => {
       const { container, unmount: unmountModal } = render(

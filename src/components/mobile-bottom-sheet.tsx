@@ -114,7 +114,7 @@ export default function MobileBottomSheet({ isOpen, onClose, children, triggerRe
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-md text-muted text-sm cursor-pointer bg-transparent border-none"
+            className="absolute right-md text-fg-subtle text-sm cursor-pointer bg-transparent border-none"
             aria-label="close"
           >
             ✕
