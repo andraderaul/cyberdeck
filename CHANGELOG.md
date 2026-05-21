@@ -1,3 +1,15 @@
+## [1.20.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.19.0...v1.20.0) (2026-05-21)
+
+### Features
+
+* **ui:** Chip primitive + DownloadBar cleanup ([#56](https://github.com/andraderaul/ascii-art-converter/issues/56)) ([bccabea](https://github.com/andraderaul/ascii-art-converter/commit/bccabeaf856f295f0ad96545d53a44edcb8ed439)), closes [#47](https://github.com/andraderaul/ascii-art-converter/issues/47) [#55](https://github.com/andraderaul/ascii-art-converter/issues/55)
+
+### Documentation
+
+* **claude:** fix and complete CLAUDE.md key files ([1a4f06d](https://github.com/andraderaul/ascii-art-converter/commit/1a4f06db33f7eec9bdc141580c343c412c889565))
+* **readme:** add missing ADRs 0006–0009 to architectural decisions table ([3c58cc8](https://github.com/andraderaul/ascii-art-converter/commit/3c58cc820e43a4ee40fe061a594e75284902f807))
+* **readme:** remove project structure section ([299ea63](https://github.com/andraderaul/ascii-art-converter/commit/299ea63e0c8b32c467cc164ba40b7345e37de9a1))
+
 ## [1.19.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.18.0...v1.19.0) (2026-05-21)
 
 ### Features
