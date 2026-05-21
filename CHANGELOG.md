@@ -1,3 +1,9 @@
+## [1.19.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.18.0...v1.19.0) (2026-05-21)
+
+### Features
+
+* **api-key-modal:** show provider key-generation link below select ([#44](https://github.com/andraderaul/ascii-art-converter/issues/44)) ([4658580](https://github.com/andraderaul/ascii-art-converter/commit/465858025dac1f12ef9d3f46fcdf560ef47b386a)), closes [#7](https://github.com/andraderaul/ascii-art-converter/issues/7)
+
 ## [1.18.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.17.3...v1.18.0) (2026-05-21)
 
 ### Features
