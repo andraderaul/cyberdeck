@@ -203,7 +203,8 @@ describe('ControlPanel', () => {
         />,
       )
       const btn = screen.getByRole('button', { name: new RegExp(activePreset.name) })
-      expect(btn.textContent).toContain('*')
+      const indicator = btn.querySelector('span.text-electric')
+      expect(indicator?.textContent).toBe('*')
     })
 
     it('does not show modified indicator when settings exactly match the active preset', () => {

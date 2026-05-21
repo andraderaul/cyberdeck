@@ -82,7 +82,7 @@ export default function ControlPanel({
                 )}
               >
                 {preset.name}
-                {isModified && <span className="text-violet">*</span>}
+                {isModified && <span className="text-electric">*</span>}
               </button>
             )
           })}
