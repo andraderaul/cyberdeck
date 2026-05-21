@@ -16,6 +16,12 @@ const PROVIDERS: { value: AIProviderName; label: string }[] = [
   { value: 'gemini', label: 'Google (Gemini)' },
 ]
 
+const PROVIDER_KEY_LINKS: Record<AIProviderName, string> = {
+  anthropic: 'https://console.anthropic.com/settings/keys',
+  openai: 'https://platform.openai.com/api-keys',
+  gemini: 'https://aistudio.google.com/app/apikey',
+}
+
 const inputCls = cn(
   'w-full bg-abyss border border-slate text-ghost font-mono text-sm rounded-xs',
   '[padding:var(--input-padding)]',
@@ -66,6 +72,15 @@ export default function ApiKeyModal({ current, onSave, onRemove, onClose }: Prop
             </option>
           ))}
         </select>
+        <a
+          href={PROVIDER_KEY_LINKS[provider]}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`get ${provider} api key`}
+          className="text-xs font-mono tracking-wide text-cyan no-underline hover:underline"
+        >
+          get api key →
+        </a>
       </div>
 
       <div className="flex flex-col gap-sm">
