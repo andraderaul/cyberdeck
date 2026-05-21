@@ -19,7 +19,7 @@ export default function AboutModal({ onClose }: Props) {
       </p>
 
       <div className="flex flex-col gap-sm">
-        <span className="text-fg-muted text-xs tracking-wide uppercase">AI Scan</span>
+        <span className="text-fg text-xs font-medium">ai scan</span>
         <p className="text-fg-muted text-sm leading-normal">
           There's an optional feature that lets an AI describe what it sees in your ASCII art. To
           use it, you need your own API key from Anthropic, OpenAI, or Google. Your key is saved
@@ -29,7 +29,7 @@ export default function AboutModal({ onClose }: Props) {
       </div>
 
       <div className="flex flex-col gap-sm">
-        <span className="text-fg-muted text-xs tracking-wide uppercase">Made with AI</span>
+        <span className="text-fg text-xs font-medium">made with ai</span>
         <p className="text-fg-muted text-sm leading-normal">
           This project was built in collaboration with AI — not just the code, but the design
           decisions, documentation, and architecture too. It's an experiment in what a thoughtful
