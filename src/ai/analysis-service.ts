@@ -1,5 +1,5 @@
 import { ParseError } from './errors'
-import type { AIConfig, Analysis, ThreatLevel } from './types'
+import type { AIConfig, AIProviderName, Analysis, ThreatLevel } from './types'
 
 const THREAT_LEVELS: ThreatLevel[] = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL', 'UNKNOWN']
 
@@ -17,26 +17,18 @@ function validate(data: unknown): Analysis {
   return data as Analysis
 }
 
+const ADAPTERS: Record<
+  AIProviderName,
+  (key: string) => Promise<{ analyze: (b64: string) => Promise<unknown> }>
+> = {
+  anthropic: async (key) => new (await import('./adapters/anthropic')).AnthropicAdapter(key),
+  openai: async (key) => new (await import('./adapters/openai')).OpenAIAdapter(key),
+  gemini: async (key) => new (await import('./adapters/gemini')).GeminiAdapter(key),
+}
+
 export async function analyzeCanvas(dataUrl: string, config: AIConfig): Promise<Analysis> {
   const base64 = dataUrl.split(',')[1]
-
-  if (config.provider === 'anthropic') {
-    const { AnthropicAdapter } = await import('./adapters/anthropic')
-    const raw = await new AnthropicAdapter(config.key).analyze(base64)
-    return validate(raw)
-  }
-
-  if (config.provider === 'openai') {
-    const { OpenAIAdapter } = await import('./adapters/openai')
-    const raw = await new OpenAIAdapter(config.key).analyze(base64)
-    return validate(raw)
-  }
-
-  if (config.provider !== 'gemini') {
-    throw new Error(`unknown provider: ${config.provider}`)
-  }
-
-  const { GeminiAdapter } = await import('./adapters/gemini')
-  const raw = await new GeminiAdapter(config.key).analyze(base64)
+  const adapter = await ADAPTERS[config.provider](config.key)
+  const raw = await adapter.analyze(base64)
   return validate(raw)
 }
