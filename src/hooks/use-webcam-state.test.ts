@@ -10,6 +10,12 @@ describe('SWITCH_MODE', () => {
     expect(next.facingMode).toBe('user')
     expect(next.error).toBeNull()
   })
+
+  it('upload→webcam sets mode to webcam and live to false', () => {
+    const next = reducer(INITIAL_STATE, { type: 'SWITCH_MODE', mode: 'webcam' })
+    expect(next.mode).toBe('webcam')
+    expect(next.live).toBe(false)
+  })
 })
 
 describe('WEBCAM_STARTED', () => {

@@ -78,7 +78,6 @@ export default function App() {
 
   const {
     state: webcamState,
-    startWebcam,
     stopWebcam,
     switchCamera,
     switchMode,
@@ -210,7 +209,7 @@ export default function App() {
               ) : (
                 <EmptyStateHero
                   onImage={handleImage}
-                  onStartWebcam={() => void startWebcam('user')}
+                  onStartWebcam={() => void switchMode('webcam')}
                 />
               )}
             </ErrorBoundary>

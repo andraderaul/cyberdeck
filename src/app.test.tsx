@@ -38,10 +38,21 @@ vi.mock('./components/upload-zone', () => ({ default: () => <div>upload</div> })
 vi.mock('./components/control-panel', () => ({ default: () => <div>control</div> }))
 vi.mock('./components/download-bar', () => ({ default: () => <div>download</div> }))
 vi.mock('./components/empty-state-hero', () => ({
-  default: ({ onImage }: { onImage: (img: HTMLImageElement) => void }) => (
-    <button type="button" onClick={() => onImage(new Image())}>
-      hero
-    </button>
+  default: ({
+    onImage,
+    onStartWebcam,
+  }: {
+    onImage: (img: HTMLImageElement) => void
+    onStartWebcam: () => void
+  }) => (
+    <>
+      <button type="button" onClick={() => onImage(new Image())}>
+        hero
+      </button>
+      <button type="button" onClick={onStartWebcam}>
+        hero-webcam
+      </button>
+    </>
   ),
 }))
 vi.mock('./components/mobile-controls', () => ({ default: () => <div>mobile</div> }))
@@ -50,8 +61,10 @@ vi.mock('./components/error-boundary', () => ({
 }))
 
 import { useAIConfig } from './ai/use-ai-config'
+import { useWebcamState } from './hooks/use-webcam-state'
 
 const mockUseAIConfig = vi.mocked(useAIConfig)
+const mockUseWebcamState = vi.mocked(useWebcamState)
 
 const mockAIConfig: AIConfig = {
   provider: 'anthropic',
@@ -85,6 +98,26 @@ describe('AiConfigBanner visibility', () => {
     mockUseAIConfig.mockReturnValue({ config: mockAIConfig, save: vi.fn(), remove: vi.fn() })
     rerender(<App />)
     expect(screen.queryByText(/AI Analyze/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('EmptyStateHero webcam integration', () => {
+  it('clicking webcam button calls switchMode("webcam"), not startWebcam', () => {
+    const startWebcam = vi.fn()
+    const switchMode = vi.fn()
+    mockUseWebcamState.mockReturnValue({
+      state: { mode: 'upload', live: false, facingMode: 'user', error: null },
+      startWebcam,
+      stopWebcam: vi.fn(),
+      switchCamera: vi.fn(),
+      switchMode,
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByText('hero-webcam'))
+
+    expect(switchMode).toHaveBeenCalledWith('webcam')
+    expect(startWebcam).not.toHaveBeenCalled()
   })
 })
 
