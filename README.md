@@ -79,35 +79,6 @@ When AI analysis is enabled, the app sends the rendered ASCII canvas image direc
 
 Use your own provider key and avoid using this feature with sensitive images unless you are comfortable with that provider processing the rendered canvas.
 
-## Project structure
-
-```
-src/
-├── app.tsx                        # global state, orchestrates components
-├── ascii/                         # ASCII domain module
-│   ├── types.ts                   # ConversionSettings, ColorMode, Charset, AsciiCell, CHARSET_MAPS
-│   ├── converter.ts               # convertImage(), luminosity math
-│   ├── image-utils.ts             # resizeImage() (caps Source Image at 800px)
-│   └── renderer.ts                # computeFrame() (pure), paintFrame() (side effects)
-├── ai/                            # AI analysis module
-│   ├── types.ts                   # AIConfig, Analysis, ThreatLevel
-│   ├── analysis-service.ts        # adapter selection and response validation
-│   ├── use-ai-config.ts           # localStorage hook for API keys
-│   ├── errors.ts                  # AuthError, ParseError, QuotaError
-│   └── adapters/                  # Anthropic, OpenAI, Gemini
-├── components/
-│   ├── ascii-canvas.tsx           # canvas lifecycle coordinator (static + rAF render loops)
-│   ├── control-panel.tsx          # ConversionSettings controls
-│   ├── upload-zone.tsx            # image upload and Live Source activation
-│   ├── download-bar.tsx           # PNG Export and TXT Export
-│   ├── error-boundary.tsx         # generic React error boundary
-│   ├── about-modal.tsx            # project info and API key security model
-│   ├── api-key-modal.tsx          # AI provider key configuration
-│   └── analysis-modal.tsx         # AI analysis results
-└── utils/
-    └── cn.ts                      # clsx + tailwind-merge helper
-```
-
 ## Architectural decisions
 
 Significant design decisions are documented as ADRs in [`docs/adr/`](docs/adr/):
