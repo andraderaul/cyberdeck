@@ -81,7 +81,7 @@ export default function ApiKeyModal({ current, onSave, onRemove, onClose }: Prop
           onKeyDown={(e) => e.key === 'Enter' && handleSave()}
           className={inputCls}
         />
-        <span className="text-muted text-xs">
+        <span className="text-fg-subtle text-xs">
           your key stays in your browser only — never sent to our servers
         </span>
       </div>

@@ -147,7 +147,7 @@ export default function App() {
             onClick={() => setActiveModal({ kind: 'about' })}
             className={cn(
               HEADER_ACTION_CLASS,
-              'border-transparent text-muted hover:border-base hover:text-ghost',
+              'border-transparent text-fg-subtle hover:border-base hover:text-ghost',
             )}
           >
             about

@@ -117,6 +117,19 @@ describe('App header buttons', () => {
     expect(aiBtn.className.split(/\s+/)).toContain('border-violet')
   })
 
+  it('about button does not use text-muted (fails WCAG AA)', () => {
+    render(<App />)
+    const aboutBtn = screen.getByRole('button', { name: /about/i })
+    expect(aboutBtn.className.split(/\s+/)).not.toContain('text-muted')
+  })
+
+  it('configure ai button does not use text-muted (fails WCAG AA)', () => {
+    mockUseAIConfig.mockReturnValue({ config: null, save: vi.fn(), remove: vi.fn() })
+    render(<App />)
+    const aiBtn = screen.getByRole('button', { name: /configure ai/i })
+    expect(aiBtn.className.split(/\s+/)).not.toContain('text-muted')
+  })
+
   it('configure ai button has transparent border at rest when aiConfig is set', () => {
     mockUseAIConfig.mockReturnValue({ config: mockAIConfig, save: vi.fn(), remove: vi.fn() })
     render(<App />)

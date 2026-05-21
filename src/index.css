@@ -40,10 +40,10 @@
 
   --fg: var(--ghost);
   --fg-muted: var(--dim);
-  /* --muted  (#6b6b9a) on --void (#0a0a0f) ≈ 3.6:1 — fails WCAG AA (4.5:1).
-     --dim    (#9898c0) on --void (#0a0a0f) ≈ 7.5:1 — passes WCAG AA.
-     --fg-subtle uses #7e7eaf (≈ 4.7:1 on --void) — passes AA, visibly subtler than --fg-muted. */
-  --fg-subtle: #7e7eaf;
+  /* --muted  (#6b6b9a) as text fails WCAG AA everywhere — use --fg-subtle or --fg-muted instead.
+     --dim    (#9898c0) on --void: 7.1:1, on --abyss: 6.9:1, on --shadow: 6.2:1 — passes AA.
+     --fg-subtle (#8080b2) on --void: 5.3:1, --abyss: 5.1:1, --shadow: 4.6:1 — passes AA. */
+  --fg-subtle: #8080b2;
 
   --bg: var(--void);
   --bg-surface: var(--abyss);

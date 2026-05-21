@@ -111,6 +111,16 @@ describe('MobileBottomSheet', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
+  it('close button does not use text-muted (fails WCAG AA)', () => {
+    render(
+      <MobileBottomSheet isOpen={true} onClose={vi.fn()}>
+        <div>content</div>
+      </MobileBottomSheet>,
+    )
+    const closeBtn = screen.getByRole('button', { name: /close/i })
+    expect(closeBtn.className.split(/\s+/)).not.toContain('text-muted')
+  })
+
   it('does not close when scrolling inside the sheet body (not the handle)', () => {
     const onClose = vi.fn()
     render(

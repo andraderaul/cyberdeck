@@ -116,7 +116,7 @@ export default function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="text-muted text-sm cursor-pointer bg-transparent border-none"
+              className="text-fg-subtle text-sm cursor-pointer bg-transparent border-none"
             >
               ✕
             </button>
