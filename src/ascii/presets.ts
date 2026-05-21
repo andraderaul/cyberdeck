@@ -1,5 +1,15 @@
 import type { ConversionSettings } from './types'
 
+export function settingsMatch(a: ConversionSettings, b: ConversionSettings): boolean {
+  return (
+    a.charset === b.charset &&
+    a.colorMode === b.colorMode &&
+    a.resolution === b.resolution &&
+    a.brightness === b.brightness &&
+    a.contrast === b.contrast
+  )
+}
+
 export interface Preset {
   id: string
   name: string

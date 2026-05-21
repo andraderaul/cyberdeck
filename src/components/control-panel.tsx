@@ -1,5 +1,5 @@
 import type { Preset } from '../ascii/presets'
-import { PRESETS } from '../ascii/presets'
+import { PRESETS, settingsMatch } from '../ascii/presets'
 import { getModePalette } from '../ascii/renderer'
 import type { Charset, ColorMode, ConversionSettings } from '../ascii/types'
 import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
@@ -60,30 +60,34 @@ export default function ControlPanel({
 }: Props) {
   return (
     <div className="flex flex-col gap-md">
-      <div className="flex flex-wrap gap-2xs">
-        {PRESETS.map((preset) => {
-          const isActive = preset.id === activePresetId
-          const isModified =
-            isActive && JSON.stringify(settings) !== JSON.stringify(preset.settings)
-          return (
-            <button
-              key={preset.id}
-              type="button"
-              aria-pressed={isActive}
-              onClick={() => onPresetSelect?.(preset)}
-              className={cn(
-                'px-sm py-2xs rounded-xs border font-mono text-xs transition-colors',
-                isActive
-                  ? 'border-violet text-violet'
-                  : 'border-base text-fg-muted hover:border-dim',
-              )}
-            >
-              {preset.name}
-              {isModified ? ' ·' : ''}
-            </button>
-          )
-        })}
-      </div>
+      <fieldset className="flex flex-col gap-2xs border-none p-0 m-0">
+        <legend className="text-fg-muted text-xs tracking-wide uppercase w-full flex items-center gap-2xs pb-0 mb-2xs">
+          <Label>presets</Label>
+        </legend>
+        <div className="flex flex-wrap gap-2xs">
+          {PRESETS.map((preset) => {
+            const isActive = preset.id === activePresetId
+            const isModified = isActive && !settingsMatch(settings, preset.settings)
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => onPresetSelect?.(preset)}
+                className={cn(
+                  'flex items-center gap-1 px-sm py-2xs rounded-xs border font-mono text-xs transition-colors',
+                  isActive
+                    ? 'border-violet text-violet'
+                    : 'border-base text-fg-muted hover:border-dim',
+                )}
+              >
+                {preset.name}
+                {isModified && <span className="text-electric">*</span>}
+              </button>
+            )
+          })}
+        </div>
+      </fieldset>
 
       <Slider
         label="resolution"

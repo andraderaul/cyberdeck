@@ -128,6 +128,14 @@ describe('ControlPanel', () => {
     })
   })
 
+  // Issue #39: Preset label + modified indicator
+  describe('Preset section', () => {
+    it('renders a "presets" section label', () => {
+      renderPanel()
+      expect(screen.getByText(/^presets$/i)).toBeInTheDocument()
+    })
+  })
+
   // Issue #19: Named presets
   describe('Preset pills', () => {
     it('renders one button per preset name', () => {
@@ -183,7 +191,7 @@ describe('ControlPanel', () => {
       }
     })
 
-    it('shows modified dot (·) on active pill when settings diverge from preset', () => {
+    it('shows modified indicator (*) on active pill when settings diverge from preset', () => {
       const activePreset = PRESETS[0]
       const divergedSettings: ConversionSettings = { ...activePreset.settings, brightness: 1.9 }
       render(
@@ -194,11 +202,12 @@ describe('ControlPanel', () => {
           onPresetSelect={vi.fn()}
         />,
       )
-      const btn = screen.getByRole('button', { name: new RegExp(`${activePreset.name}`) })
-      expect(btn.textContent).toContain('·')
+      const btn = screen.getByRole('button', { name: new RegExp(activePreset.name) })
+      const indicator = btn.querySelector('span.text-electric')
+      expect(indicator?.textContent).toBe('*')
     })
 
-    it('does not show modified dot when settings exactly match the active preset', () => {
+    it('does not show modified indicator when settings exactly match the active preset', () => {
       const activePreset = PRESETS[0]
       render(
         <ControlPanel
@@ -209,7 +218,7 @@ describe('ControlPanel', () => {
         />,
       )
       const btn = screen.getByRole('button', { name: activePreset.name })
-      expect(btn.textContent).not.toContain('·')
+      expect(btn.textContent).not.toContain('*')
     })
   })
 })

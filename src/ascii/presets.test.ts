@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PRESETS } from './presets'
+import { PRESETS, settingsMatch } from './presets'
 import type { ConversionSettings } from './types'
 import { CHARSET_MAPS, COLOR_MODES } from './types'
 
@@ -23,6 +23,43 @@ describe('PRESETS', () => {
       expect(typeof preset.name).toBe('string')
       expect(preset.name.length).toBeGreaterThan(0)
     }
+  })
+
+  describe('settingsMatch', () => {
+    const base: ConversionSettings = {
+      charset: 'classic',
+      colorMode: 'matrix',
+      resolution: 12,
+      brightness: 1.0,
+      contrast: 1.0,
+    }
+
+    it('returns true when both objects have identical values', () => {
+      expect(settingsMatch(base, { ...base })).toBe(true)
+    })
+
+    it('returns false when a numeric field differs', () => {
+      expect(settingsMatch(base, { ...base, brightness: 1.9 })).toBe(false)
+    })
+
+    it('returns false when a string field differs', () => {
+      expect(settingsMatch(base, { ...base, charset: 'katakana' })).toBe(false)
+    })
+
+    it('returns false when colorMode differs', () => {
+      expect(settingsMatch(base, { ...base, colorMode: 'neon' })).toBe(false)
+    })
+
+    it('is not fooled by key-ordering differences that would confuse JSON.stringify', () => {
+      const reordered = {
+        contrast: base.contrast,
+        brightness: base.brightness,
+        resolution: base.resolution,
+        colorMode: base.colorMode,
+        charset: base.charset,
+      } as ConversionSettings
+      expect(settingsMatch(base, reordered)).toBe(true)
+    })
   })
 
   describe('each preset settings is a valid ConversionSettings', () => {
