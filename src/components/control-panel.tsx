@@ -114,7 +114,6 @@ export default function ControlPanel({
                 key={mode}
                 selected={settings.colorMode === mode}
                 aria-label={mode}
-                aria-pressed={settings.colorMode === mode}
                 onClick={() => onChange({ colorMode: mode })}
               >
                 <span
@@ -133,7 +132,6 @@ export default function ControlPanel({
                 key={mode}
                 selected={settings.colorMode === mode}
                 aria-label={mode}
-                aria-pressed={settings.colorMode === mode}
                 onClick={() => onChange({ colorMode: mode })}
               >
                 <span
@@ -168,7 +166,7 @@ export default function ControlPanel({
                   selected={settings.charset === cs}
                   aria-label={cs}
                   onClick={() => onChange({ charset: cs })}
-                  className="flex-col text-left"
+                  className="flex-col items-start text-left"
                 >
                   <span>{cs}</span>
                   <span className="text-fg-subtle text-xs tracking-widest">{sampleChars(cs)}</span>

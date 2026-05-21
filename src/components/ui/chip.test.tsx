@@ -83,4 +83,13 @@ describe('Chip', () => {
     )
     expect(screen.getByTestId('child')).toBeInTheDocument()
   })
+
+  it('applies min-h-[44px] touch target', () => {
+    render(
+      <Chip selected={false} onClick={() => {}}>
+        content
+      </Chip>,
+    )
+    expect(screen.getByRole('button').className).toContain('min-h-[44px]')
+  })
 })

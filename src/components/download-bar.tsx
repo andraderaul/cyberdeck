@@ -2,6 +2,7 @@ import type { RefObject } from 'react'
 import { useState } from 'react'
 import { Errors } from '../errors/app-error'
 import { formatElapsedTime } from '../hooks/use-recording'
+import { cn } from '../utils/cn'
 import { isTouchDevice } from '../utils/device'
 import { shareOrDownloadBlob } from '../utils/share'
 import { useToastError } from './toast-provider'
@@ -135,7 +136,7 @@ export default function DownloadBar({
 
   if (isLive) {
     return (
-      <div className={`flex gap-xs sm:gap-sm sm:justify-end${isRecording ? ' items-center' : ''}`}>
+      <div className={cn('flex gap-xs sm:gap-sm sm:justify-end', isRecording && 'items-center')}>
         {isRecording && (
           <div
             role="status"
