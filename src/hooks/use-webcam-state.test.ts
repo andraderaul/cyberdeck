@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { INITIAL_STATE, reducer } from './use-webcam-state'
+import { act, renderHook } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { INITIAL_STATE, reducer, useWebcamState } from './use-webcam-state'
 
 describe('SWITCH_MODE', () => {
   it('sets new mode and resets live, facingMode, error', () => {
@@ -11,8 +12,8 @@ describe('SWITCH_MODE', () => {
     expect(next.error).toBeNull()
   })
 
-  it('upload→webcam sets mode to webcam and live to false', () => {
-    const next = reducer(INITIAL_STATE, { type: 'SWITCH_MODE', mode: 'webcam' })
+  it('upload→webcam sets mode to webcam and resets live to false', () => {
+    const next = reducer({ ...INITIAL_STATE, live: true }, { type: 'SWITCH_MODE', mode: 'webcam' })
     expect(next.mode).toBe('webcam')
     expect(next.live).toBe(false)
   })
@@ -49,5 +50,57 @@ describe('WEBCAM_ERROR', () => {
     expect(next.live).toBe(false)
     expect(next.facingMode).toBe('user')
     expect(next.error).toBe('Camera access denied')
+  })
+})
+
+describe('useWebcamState', () => {
+  let mockTrack: { stop: ReturnType<typeof vi.fn> }
+  let mockStream: { getTracks: () => (typeof mockTrack)[] }
+
+  beforeEach(() => {
+    mockTrack = { stop: vi.fn() }
+    mockStream = { getTracks: () => [mockTrack] }
+
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      mediaDevices: {
+        getUserMedia: vi.fn().mockResolvedValue(mockStream as unknown as MediaStream),
+      },
+    })
+
+    const realCreateElement = document.createElement.bind(document)
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'video') {
+        return {
+          srcObject: null,
+          autoplay: false,
+          playsInline: false,
+          muted: false,
+          play: vi.fn().mockResolvedValue(undefined),
+        } as unknown as HTMLVideoElement
+      }
+      return realCreateElement(tag)
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('switchMode webcam→upload stops all tracks on the previous stream', async () => {
+    const onVideoStream = vi.fn()
+    const { result } = renderHook(() => useWebcamState(onVideoStream))
+
+    await act(async () => {
+      await result.current.switchMode('webcam')
+    })
+
+    await act(async () => {
+      await result.current.switchMode('upload')
+    })
+
+    expect(mockTrack.stop).toHaveBeenCalled()
+    expect(result.current.state.mode).toBe('upload')
   })
 })
