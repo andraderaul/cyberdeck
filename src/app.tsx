@@ -6,6 +6,7 @@ import { useAIConfig } from './ai/use-ai-config'
 import type { Preset } from './ascii/presets'
 import type { ConversionSettings } from './ascii/types'
 import AboutModal from './components/about-modal'
+import AiConfigBanner from './components/ai-config-banner'
 import AnalysisModal from './components/analysis-modal'
 import ApiKeyModal from './components/api-key-modal'
 import AsciiCanvas from './components/ascii-canvas'
@@ -215,7 +216,10 @@ export default function App() {
             </ErrorBoundary>
           </div>
           {(sourceImage || sourceVideo) && (
-            <div className="py-sm px-md border-t border-base shrink-0">
+            <div className="flex flex-col gap-xs py-sm px-md border-t border-base shrink-0">
+              {!aiConfig && (
+                <AiConfigBanner onConfigure={() => setActiveModal({ kind: 'apiKey' })} />
+              )}
               <DownloadBar
                 canvasRef={canvasRef}
                 asciiRows={asciiRows}

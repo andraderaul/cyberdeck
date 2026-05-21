@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AIConfig } from './ai/types'
 import App from './app'
 
@@ -57,6 +57,36 @@ const mockAIConfig: AIConfig = {
   provider: 'anthropic',
   key: 'sk-ant-test',
 }
+
+describe('AiConfigBanner visibility', () => {
+  beforeEach(() => {
+    mockUseAIConfig.mockReturnValue({ config: null, save: vi.fn(), remove: vi.fn() })
+    sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    mockUseAIConfig.mockReturnValue({ config: null, save: vi.fn(), remove: vi.fn() })
+    sessionStorage.clear()
+  })
+
+  it('shows banner when source is loaded and no AI Config is set', () => {
+    mockUseAIConfig.mockReturnValue({ config: null, save: vi.fn(), remove: vi.fn() })
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    expect(screen.getByText(/AI Analyze/i)).toBeInTheDocument()
+  })
+
+  it('hides banner once AI Config is saved', () => {
+    mockUseAIConfig.mockReturnValue({ config: null, save: vi.fn(), remove: vi.fn() })
+    const { rerender } = render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    expect(screen.getByText(/AI Analyze/i)).toBeInTheDocument()
+
+    mockUseAIConfig.mockReturnValue({ config: mockAIConfig, save: vi.fn(), remove: vi.fn() })
+    rerender(<App />)
+    expect(screen.queryByText(/AI Analyze/i)).not.toBeInTheDocument()
+  })
+})
 
 describe('DownloadBar visibility', () => {
   it('is not rendered before a source is loaded', () => {
