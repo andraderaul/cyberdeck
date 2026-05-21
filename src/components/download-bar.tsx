@@ -2,11 +2,11 @@ import type { RefObject } from 'react'
 import { useState } from 'react'
 import { Errors } from '../errors/app-error'
 import { formatElapsedTime } from '../hooks/use-recording'
-import { cn } from '../utils/cn'
 import { isTouchDevice } from '../utils/device'
 import { shareOrDownloadBlob } from '../utils/share'
 import { useToastError } from './toast-provider'
 import Button from './ui/button'
+import Chip from './ui/chip'
 
 interface Props {
   canvasRef: RefObject<HTMLCanvasElement | null>
@@ -47,6 +47,19 @@ async function shareOrDownloadCanvas(canvas: HTMLCanvasElement, filename: string
   })
 }
 
+async function downloadWithToast(
+  canvas: HTMLCanvasElement,
+  filename: string,
+  toastError: (msg: string) => void,
+  errorMsg: string,
+): Promise<void> {
+  try {
+    await shareOrDownloadCanvas(canvas, filename)
+  } catch {
+    toastError(errorMsg)
+  }
+}
+
 export default function DownloadBar({
   canvasRef,
   asciiRows,
@@ -69,24 +82,20 @@ export default function DownloadBar({
     if (!canvas) {
       return
     }
-    try {
-      let target: HTMLCanvasElement = canvas
-      if (scale > 1) {
-        const offscreen = document.createElement('canvas')
-        offscreen.width = canvas.width * scale
-        offscreen.height = canvas.height * scale
-        const ctx = offscreen.getContext('2d')
-        if (ctx) {
-          ctx.imageSmoothingEnabled = false
-          ctx.drawImage(canvas, 0, 0, offscreen.width, offscreen.height)
-          target = offscreen
-        }
-        // if ctx is unavailable, fall back to unscaled canvas rather than exporting a blank PNG
+    let target: HTMLCanvasElement = canvas
+    if (scale > 1) {
+      const offscreen = document.createElement('canvas')
+      offscreen.width = canvas.width * scale
+      offscreen.height = canvas.height * scale
+      const ctx = offscreen.getContext('2d')
+      if (ctx) {
+        ctx.imageSmoothingEnabled = false
+        ctx.drawImage(canvas, 0, 0, offscreen.width, offscreen.height)
+        target = offscreen
       }
-      await shareOrDownloadCanvas(target, 'ascii-art.png')
-    } catch {
-      toastError(Errors.exportFailed('png').message)
+      // if ctx is unavailable, fall back to unscaled canvas rather than exporting a blank PNG
     }
+    await downloadWithToast(target, 'ascii-art.png', toastError, Errors.exportFailed('png').message)
   }
 
   function exportTxt() {
@@ -110,11 +119,12 @@ export default function DownloadBar({
     if (!canvas) {
       return
     }
-    try {
-      await shareOrDownloadCanvas(canvas, `ascii-capture-${Date.now()}.png`)
-    } catch {
-      toastError(Errors.captureFailed().message)
-    }
+    await downloadWithToast(
+      canvas,
+      `ascii-capture-${Date.now()}.png`,
+      toastError,
+      Errors.captureFailed().message,
+    )
   }
 
   const analyzeBtn = hasAiConfig ? (
@@ -124,9 +134,9 @@ export default function DownloadBar({
   ) : null
 
   if (isLive) {
-    if (isRecording) {
-      return (
-        <div className="flex gap-xs sm:gap-sm sm:justify-end items-center">
+    return (
+      <div className={`flex gap-xs sm:gap-sm sm:justify-end${isRecording ? ' items-center' : ''}`}>
+        {isRecording && (
           <div
             role="status"
             aria-live="polite"
@@ -134,26 +144,21 @@ export default function DownloadBar({
           >
             ● {formatElapsedTime(elapsedSeconds)}
           </div>
-          <Button variant="danger" onClick={capture} className="flex-1 sm:flex-none">
-            ◎ capture
-          </Button>
-          <Button variant="danger" onClick={onStopRecording} className="flex-1 sm:flex-none">
-            ⏹ stop
-          </Button>
-        </div>
-      )
-    }
-
-    return (
-      <div className="flex gap-xs sm:gap-sm sm:justify-end">
-        {analyzeBtn}
+        )}
+        {!isRecording && analyzeBtn}
         <Button variant="danger" onClick={capture} className="flex-1 sm:flex-none">
           ◎ capture
         </Button>
-        {canRecord && (
-          <Button variant="record" onClick={onStartRecording} className="flex-1 sm:flex-none">
-            ⏺ record
+        {isRecording ? (
+          <Button variant="danger" onClick={onStopRecording} className="flex-1 sm:flex-none">
+            ⏹ stop
           </Button>
+        ) : (
+          canRecord && (
+            <Button variant="record" onClick={onStartRecording} className="flex-1 sm:flex-none">
+              ⏺ record
+            </Button>
+          )
         )}
       </div>
     )
@@ -170,23 +175,14 @@ export default function DownloadBar({
               canvasDimensions !== undefined &&
               (canvasDimensions.w * s > MAX_EXPORT_DIM || canvasDimensions.h * s > MAX_EXPORT_DIM)
             return (
-              <button
+              <Chip
                 key={s}
-                type="button"
-                aria-pressed={scale === s}
+                selected={scale === s}
                 disabled={exceedsCap}
                 onClick={() => setScale(s)}
-                className={cn(
-                  'font-mono text-xs px-sm rounded-xs border transition-colors min-h-[44px]',
-                  exceedsCap
-                    ? 'border-base text-fg-subtle opacity-40 cursor-not-allowed'
-                    : scale === s
-                      ? 'border-violet text-violet'
-                      : 'border-base text-fg-muted hover:border-dim',
-                )}
               >
                 {s}×
-              </button>
+              </Chip>
             )
           })}
           <span className="text-fg-subtle text-xs ml-xs">
