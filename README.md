@@ -119,6 +119,10 @@ Significant design decisions are documented as ADRs in [`docs/adr/`](docs/adr/):
 | [0003](docs/adr/0003-send-ascii-canvas-to-ai-provider.md) | Send rendered ASCII canvas to AI provider |
 | [0004](docs/adr/0004-ascii-domain-module.md) | ASCII domain module structure |
 | [0005](docs/adr/0005-render-instruction-pure-impure-boundary.md) | Pure/impure boundary with RenderInstruction |
+| [0006](docs/adr/0006-dual-error-system.md) | Dual error system: AppError for operational errors, typed classes for AI errors |
+| [0007](docs/adr/0007-recording-progressive-enhancement.md) | Recording as progressive enhancement with no GIF fallback |
+| [0008](docs/adr/0008-button-variant-taxonomy.md) | Button variant taxonomy: `record` variant separate from export |
+| [0009](docs/adr/0009-wcag-contrast-audit.md) | WCAG AA contrast audit and remediation |
 
 ## Built with AI-assisted development
 
