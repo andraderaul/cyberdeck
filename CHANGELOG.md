@@ -1,3 +1,9 @@
+## [1.17.2](https://github.com/andraderaul/ascii-art-converter/compare/v1.17.1...v1.17.2) (2026-05-21)
+
+### Bug Fixes
+
+* route EmptyStateHero webcam button through switchMode ([#40](https://github.com/andraderaul/ascii-art-converter/issues/40)) ([e1153c6](https://github.com/andraderaul/ascii-art-converter/commit/e1153c6e8c561175cebcd56a27619723c5cff7a2)), closes [#36](https://github.com/andraderaul/ascii-art-converter/issues/36)
+
 ## [1.17.1](https://github.com/andraderaul/ascii-art-converter/compare/v1.17.0...v1.17.1) (2026-05-21)
 
 ### Bug Fixes
