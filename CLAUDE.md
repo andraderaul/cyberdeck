@@ -35,7 +35,7 @@ Single-page React/TS/Vite app. Fully client-side — no backend server. AI analy
 
 ### AI analysis
 
-Optional feature — user supplies their own API key. `use-ai-config` stores the `AIConfig` in `sessionStorage`. `analyzeCanvas()` in `analysis-service.ts` dynamically imports the correct adapter (Anthropic, OpenAI, or Gemini), calls it, and validates the response with `validate()`. AI errors (`AuthError`, `QuotaError`, `ParseError`) are typed classes caught in `app.tsx` and routed to `AnalysisModal` for type-specific feedback (see ADR 0003, ADR 0006).
+Optional feature — user supplies their own API key. `use-ai-config` stores the `AIConfig` in `localStorage`. `analyzeCanvas()` in `analysis-service.ts` dynamically imports the correct adapter (Anthropic, OpenAI, or Gemini), calls it, and validates the response with `validate()`. AI errors (`AuthError`, `QuotaError`, `ParseError`) are typed classes caught in `app.tsx` and routed to `AnalysisModal` for type-specific feedback (see ADR 0003, ADR 0006).
 
 ### Error handling
 
@@ -76,13 +76,14 @@ All visual tokens live as CSS custom properties in `src/index.css`. Tailwind is 
 - `src/ascii/converter.ts` — `convertImage()`, `getAsciiChar()`, luminosity math
 - `src/ascii/image-utils.ts` — `resizeImage()` (caps Source Image at 800px wide before sampling)
 - `src/ascii/renderer.ts` — `computeFrame()` (pure), `paintFrame()` (side effects) — see ADR 0005
+- `src/ascii/presets.ts` — `PRESETS`, `Preset`, `settingsMatch()` (named ConversionSettings snapshots)
 
 **AI analysis**
 - `src/ai/types.ts` — `AIConfig`, `AIProviderName`, `AIProvider`, `Analysis`, `ThreatLevel`, `AnalysisState`
 - `src/ai/analysis-service.ts` — `analyzeCanvas()`, lazy-imports correct adapter, validates response
 - `src/ai/adapters/` — `AnthropicAdapter`, `OpenAIAdapter`, `GeminiAdapter`
 - `src/ai/errors.ts` — `AuthError`, `QuotaError`, `ParseError`
-- `src/ai/use-ai-config.ts` — `AIConfig` state + `sessionStorage` persistence
+- `src/ai/use-ai-config.ts` — `AIConfig` state + `localStorage` persistence
 
 **Errors & utilities**
 - `src/errors/app-error.ts` — `AppError`, `createError`, `normalizeError`, `Errors` namespace
@@ -90,19 +91,25 @@ All visual tokens live as CSS custom properties in `src/index.css`. Tailwind is 
 - `src/hooks/use-toast.ts` — toast queue state
 - `src/hooks/use-webcam-state.ts` — webcam lifecycle state
 - `src/utils/cn.ts` — `cn()` (clsx + tailwind-merge)
+- `src/utils/load-image-file.ts` — `loadImageFile()` (File → HTMLImageElement, validates type/size)
 - `src/utils/device.ts` — device/browser detection helpers
 - `src/utils/share.ts` — `shareOrDownloadBlob()` (Web Share API with download fallback)
 
 **Components**
 - `src/components/ascii-canvas.tsx` — lifecycle coordinator: drives static and rAF render paths
 - `src/components/control-panel.tsx` — ConversionSettings controls
+- `src/components/upload-zone.tsx` — image upload and Live Source activation
 - `src/components/download-bar.tsx` — Export and Capture controls
+- `src/components/empty-state-hero.tsx` — initial empty state with upload and webcam entry points
+- `src/components/mobile-bottom-sheet.tsx` — slide-up sheet for mobile controls
+- `src/components/mobile-controls.tsx` — ConversionSettings controls layout for mobile
+- `src/components/ai-config-banner.tsx` — informational banner for AI config; dismiss state in `sessionStorage`
 - `src/components/analysis-modal.tsx` — AI Analysis results with threat-level display
 - `src/components/api-key-modal.tsx` — API key configuration
 - `src/components/about-modal.tsx` — About/info modal
 - `src/components/toast-provider.tsx` — renders the toast queue
 - `src/components/error-boundary.tsx` — generic React error boundary with customizable fallback
-- `src/components/ui/` — design system primitives: `badge`, `button`, `error-text`, `label`, `modal`, `slider`, `toast`, `toggle-group`
+- `src/components/ui/` — design system primitives: `badge`, `button`, `error-text`, `label`, `modal`, `slider`, `toast`, `toggle-group`, `tooltip`
 
 **ADRs**
-- `docs/adr/` — architectural decisions 0001–0007
+- `docs/adr/` — all architectural decisions
