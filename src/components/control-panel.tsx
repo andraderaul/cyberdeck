@@ -3,7 +3,7 @@ import { PRESETS, settingsMatch } from '../ascii/presets'
 import { getModePalette } from '../ascii/renderer'
 import type { Charset, ColorMode, ConversionSettings } from '../ascii/types'
 import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
-import { cn } from '../utils/cn'
+import Chip from './ui/chip'
 import Label from './ui/label'
 import Slider from './ui/slider'
 import Tooltip from './ui/tooltip'
@@ -69,21 +69,10 @@ export default function ControlPanel({
             const isActive = preset.id === activePresetId
             const isModified = isActive && !settingsMatch(settings, preset.settings)
             return (
-              <button
-                key={preset.id}
-                type="button"
-                aria-pressed={isActive}
-                onClick={() => onPresetSelect?.(preset)}
-                className={cn(
-                  'flex items-center gap-1 px-sm py-2xs rounded-xs border font-mono text-xs transition-colors',
-                  isActive
-                    ? 'border-violet text-violet'
-                    : 'border-base text-fg-muted hover:border-dim',
-                )}
-              >
+              <Chip key={preset.id} selected={isActive} onClick={() => onPresetSelect?.(preset)}>
                 {preset.name}
                 {isModified && <span className="text-electric">*</span>}
-              </button>
+              </Chip>
             )
           })}
         </div>
@@ -121,17 +110,12 @@ export default function ControlPanel({
         <div className="flex flex-col gap-xs">
           <div className="flex flex-wrap gap-2xs">
             {SOLID_MODES.map((mode) => (
-              <button
+              <Chip
                 key={mode}
-                type="button"
+                selected={settings.colorMode === mode}
                 aria-label={mode}
+                aria-pressed={settings.colorMode === mode}
                 onClick={() => onChange({ colorMode: mode })}
-                className={cn(
-                  'flex items-center gap-2xs px-sm py-2xs rounded-xs border font-mono text-xs transition-colors',
-                  settings.colorMode === mode
-                    ? 'border-violet text-violet'
-                    : 'border-base text-fg-muted hover:border-dim',
-                )}
               >
                 <span
                   data-swatch
@@ -139,23 +123,18 @@ export default function ControlPanel({
                   style={{ background: swatchStyle(mode) }}
                 />
                 {mode}
-              </button>
+              </Chip>
             ))}
           </div>
           <div className="w-full h-px bg-slate" />
           <div className="flex flex-wrap gap-2xs">
             {GRADIENT_MODES.map((mode) => (
-              <button
+              <Chip
                 key={mode}
-                type="button"
+                selected={settings.colorMode === mode}
                 aria-label={mode}
+                aria-pressed={settings.colorMode === mode}
                 onClick={() => onChange({ colorMode: mode })}
-                className={cn(
-                  'flex items-center gap-2xs px-sm py-2xs rounded-xs border font-mono text-xs transition-colors',
-                  settings.colorMode === mode
-                    ? 'border-violet text-violet'
-                    : 'border-base text-fg-muted hover:border-dim',
-                )}
               >
                 <span
                   data-swatch
@@ -163,7 +142,7 @@ export default function ControlPanel({
                   style={{ background: swatchStyle(mode) }}
                 />
                 {mode}
-              </button>
+              </Chip>
             ))}
           </div>
         </div>
@@ -184,21 +163,16 @@ export default function ControlPanel({
             </legend>
             <div className="flex flex-wrap gap-2xs">
               {charsets.map((cs) => (
-                <button
+                <Chip
                   key={cs}
-                  type="button"
+                  selected={settings.charset === cs}
                   aria-label={cs}
                   onClick={() => onChange({ charset: cs })}
-                  className={cn(
-                    'flex flex-col px-sm py-2xs rounded-xs border font-mono text-xs transition-colors text-left',
-                    settings.charset === cs
-                      ? 'border-violet text-violet'
-                      : 'border-base text-fg-muted hover:border-dim',
-                  )}
+                  className="flex-col text-left"
                 >
                   <span>{cs}</span>
                   <span className="text-fg-subtle text-xs tracking-widest">{sampleChars(cs)}</span>
-                </button>
+                </Chip>
               ))}
             </div>
           </fieldset>
