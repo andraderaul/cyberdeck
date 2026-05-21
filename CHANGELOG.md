@@ -1,3 +1,9 @@
+## [1.17.3](https://github.com/andraderaul/ascii-art-converter/compare/v1.17.2...v1.17.3) (2026-05-21)
+
+### Bug Fixes
+
+* **contrast:** wcag aa audit — replace text-muted with text-fg-subtle ([#43](https://github.com/andraderaul/ascii-art-converter/issues/43)) ([6f8e6e4](https://github.com/andraderaul/ascii-art-converter/commit/6f8e6e4982ce971f8594a7badf5f70325d787f67)), closes [#38](https://github.com/andraderaul/ascii-art-converter/issues/38) [#7e7eaf](https://github.com/andraderaul/ascii-art-converter/issues/7e7eaf)
+
 ## [1.17.2](https://github.com/andraderaul/ascii-art-converter/compare/v1.17.1...v1.17.2) (2026-05-21)
 
 ### Bug Fixes
