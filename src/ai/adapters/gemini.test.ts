@@ -83,4 +83,13 @@ describe('GeminiAdapter', () => {
 
     await expect(makeAdapter().analyze('base64data')).rejects.toBeInstanceOf(ParseError)
   })
+
+  // Documents the precedence decision: status code wins over message hints.
+  // { status: 429, message: 'API_KEY_INVALID' } → QuotaError (not AuthError),
+  // because status is checked before message hints in mapHttpError.
+  it('status 429 takes precedence over API_KEY_INVALID message hint → QuotaError', async () => {
+    mockGenerateContent.mockRejectedValueOnce({ status: 429, message: 'API_KEY_INVALID' })
+
+    await expect(makeAdapter().analyze('base64data')).rejects.toBeInstanceOf(QuotaError)
+  })
 })
