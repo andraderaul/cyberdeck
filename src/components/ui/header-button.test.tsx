@@ -76,4 +76,16 @@ describe('HeaderButton', () => {
     )
     expect(screen.getByTestId('child')).toBeInTheDocument()
   })
+
+  it('applies pill shape', () => {
+    render(<HeaderButton variant="neutral">x</HeaderButton>)
+    expect(screen.getByRole('button').className).toContain('rounded-pill')
+  })
+
+  it('applies focus-visible outline classes for keyboard navigation', () => {
+    render(<HeaderButton variant="neutral">x</HeaderButton>)
+    const btn = screen.getByRole('button')
+    expect(btn.className).toContain('focus-visible:outline')
+    expect(btn.className).toContain('focus-visible:outline-violet')
+  })
 })
