@@ -147,4 +147,18 @@ describe('Modal', () => {
       unmountModal()
     })
   })
+
+  describe('Body scroll lock (via useDialog)', () => {
+    it('locks body scroll when modal is open', () => {
+      renderModal()
+      expect(document.body.style.overflow).toBe('hidden')
+    })
+
+    it('restores body scroll when modal unmounts', () => {
+      const { unmount } = renderModal()
+      expect(document.body.style.overflow).toBe('hidden')
+      unmount()
+      expect(document.body.style.overflow).toBe('')
+    })
+  })
 })

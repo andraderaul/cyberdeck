@@ -135,4 +135,66 @@ describe('MobileBottomSheet', () => {
     fireEvent.touchEnd(panel)
     expect(onClose).not.toHaveBeenCalled()
   })
+
+  describe('Focus trap (via useDialog)', () => {
+    const TABBABLE =
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+    function getSheetTabbables(container: HTMLElement): HTMLElement[] {
+      return Array.from(container.querySelectorAll<HTMLElement>(TABBABLE)).filter((el) => {
+        const trap = el.closest<HTMLElement>('[tabindex="-1"]')
+        return !trap || trap === container
+      })
+    }
+
+    it('wraps Tab forward from last tabbable to first inside the sheet', () => {
+      render(
+        <MobileBottomSheet isOpen={true} onClose={vi.fn()}>
+          <button type="button" id="btn1">
+            Button 1
+          </button>
+          <button type="button" id="btn2">
+            Button 2
+          </button>
+        </MobileBottomSheet>,
+      )
+
+      const dialog = screen.getByRole('dialog')
+      const tabbables = getSheetTabbables(dialog)
+
+      expect(tabbables.length).toBeGreaterThan(1)
+
+      const last = tabbables[tabbables.length - 1]
+      last.focus()
+      expect(document.activeElement).toBe(last)
+
+      fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: false })
+      expect(document.activeElement).toBe(tabbables[0])
+    })
+
+    it('wraps Shift+Tab backward from first tabbable to last inside the sheet', () => {
+      render(
+        <MobileBottomSheet isOpen={true} onClose={vi.fn()}>
+          <button type="button" id="btn1">
+            Button 1
+          </button>
+          <button type="button" id="btn2">
+            Button 2
+          </button>
+        </MobileBottomSheet>,
+      )
+
+      const dialog = screen.getByRole('dialog')
+      const tabbables = getSheetTabbables(dialog)
+
+      expect(tabbables.length).toBeGreaterThan(1)
+
+      const first = tabbables[0]
+      first.focus()
+      expect(document.activeElement).toBe(first)
+
+      fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true })
+      expect(document.activeElement).toBe(tabbables[tabbables.length - 1])
+    })
+  })
 })
