@@ -1,3 +1,13 @@
+## [1.21.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.20.0...v1.21.0) (2026-05-22)
+
+### Features
+
+* **ui:** SourceImageDropZone primitive + WebcamState type export ([#59](https://github.com/andraderaul/ascii-art-converter/issues/59)) ([e903868](https://github.com/andraderaul/ascii-art-converter/commit/e90386861a816cff59a25e23ee053aefeb2575cf)), closes [#52](https://github.com/andraderaul/ascii-art-converter/issues/52) [#48](https://github.com/andraderaul/ascii-art-converter/issues/48)
+
+### Code Refactoring
+
+* **analysis-modal:** unify THREAT_META record and extract ScanErrorState component ([#57](https://github.com/andraderaul/ascii-art-converter/issues/57)) ([a6124f8](https://github.com/andraderaul/ascii-art-converter/commit/a6124f809a4a76a4a72a63c9bf34c017b3893330))
+
 ## [1.20.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.19.0...v1.20.0) (2026-05-21)
 
 ### Features
