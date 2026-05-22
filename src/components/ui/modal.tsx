@@ -1,17 +1,8 @@
-import { type ReactNode, useEffect, useRef } from 'react'
+import { type ReactNode, useRef } from 'react'
+import { useDialog } from '../../hooks/use-dialog'
 import { cn } from '../../utils/cn'
 
-const TABBABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-
-function getTabbables(container: HTMLElement | null): HTMLElement[] {
-  if (!container) {
-    return []
-  }
-  return Array.from(container.querySelectorAll<HTMLElement>(TABBABLE)).filter(
-    (el) => !el.closest('[tabindex="-1"]'),
-  )
-}
+const NOOP = () => {}
 
 interface Props {
   children: ReactNode
@@ -33,55 +24,8 @@ export default function Modal({
   containerClassName,
 }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLElement | null>(null)
 
-  // Save the currently focused element, then focus first tabbable on mount
-  useEffect(() => {
-    triggerRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null
-    const tabbables = getTabbables(dialogRef.current)
-    tabbables[0]?.focus()
-    return () => {
-      triggerRef.current?.focus()
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!closeable) {
-      return
-    }
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [closeable, onClose])
-
-  // Focus trap on keydown inside dialog
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key !== 'Tab') {
-      return
-    }
-    const tabbables = getTabbables(dialogRef.current)
-    if (tabbables.length === 0) {
-      return
-    }
-    const first = tabbables[0]
-    const last = tabbables[tabbables.length - 1]
-    if (e.shiftKey) {
-      if (document.activeElement === first) {
-        e.preventDefault()
-        last.focus()
-      }
-    } else {
-      if (document.activeElement === last) {
-        e.preventDefault()
-        first.focus()
-      }
-    }
-  }
+  useDialog({ panelRef: dialogRef, onClose: closeable ? onClose : NOOP })
 
   return (
     <div
@@ -101,7 +45,6 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
-        onKeyDown={handleKeyDown}
         className={cn(
           'relative flex flex-col p-xl',
           variant === 'default'

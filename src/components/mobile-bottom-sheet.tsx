@@ -1,5 +1,6 @@
 import type { ReactNode, RefObject } from 'react'
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
+import { useDialog } from '../hooks/use-dialog'
 import { cn } from '../utils/cn'
 
 interface Props {
@@ -9,45 +10,18 @@ interface Props {
   triggerRef?: RefObject<HTMLElement | null>
 }
 
-export default function MobileBottomSheet({ isOpen, onClose, children, triggerRef }: Props) {
+interface PanelProps {
+  onClose: () => void
+  children: ReactNode
+  triggerRef?: RefObject<HTMLElement | null>
+}
+
+function BottomSheetPanel({ onClose, children, triggerRef }: PanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const touchStartY = useRef<number | null>(null)
   const touchCurrentY = useRef<number | null>(null)
 
-  // Focus first focusable element on open; return focus to trigger on close
-  useEffect(() => {
-    if (isOpen && panelRef.current) {
-      const focusable = panelRef.current.querySelectorAll<HTMLElement>(
-        'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])',
-      )
-      focusable[0]?.focus()
-    } else if (!isOpen) {
-      const el = triggerRef?.current
-      if (el && typeof el.focus === 'function') {
-        el.focus()
-      }
-    }
-  }, [isOpen, triggerRef])
-
-  useEffect(() => {
-    document.body.style.overflow = isOpen ? 'hidden' : ''
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [isOpen])
-
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  useDialog({ panelRef, onClose, triggerRef })
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY
@@ -75,10 +49,6 @@ export default function MobileBottomSheet({ isOpen, onClose, children, triggerRe
     }
     touchStartY.current = null
     touchCurrentY.current = null
-  }
-
-  if (!isOpen) {
-    return null
   }
 
   return (
@@ -123,5 +93,17 @@ export default function MobileBottomSheet({ isOpen, onClose, children, triggerRe
         <div className="overflow-y-auto flex-1 p-md">{children}</div>
       </div>
     </div>
+  )
+}
+
+export default function MobileBottomSheet({ isOpen, onClose, children, triggerRef }: Props) {
+  if (!isOpen) {
+    return null
+  }
+
+  return (
+    <BottomSheetPanel onClose={onClose} triggerRef={triggerRef}>
+      {children}
+    </BottomSheetPanel>
   )
 }
