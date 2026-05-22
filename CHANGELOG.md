@@ -1,3 +1,9 @@
+## [1.22.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.21.0...v1.22.0) (2026-05-22)
+
+### Features
+
+* **hooks:** extract useDialog and adopt in Modal + MobileBottomSheet ([#60](https://github.com/andraderaul/ascii-art-converter/issues/60)) ([171ed3d](https://github.com/andraderaul/ascii-art-converter/commit/171ed3d3e9f00d1f8d37cede0b81a63559e2d362)), closes [#49](https://github.com/andraderaul/ascii-art-converter/issues/49)
+
 ## [1.21.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.20.0...v1.21.0) (2026-05-22)
 
 ### Features
