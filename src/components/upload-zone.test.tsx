@@ -91,7 +91,7 @@ describe('UploadZone', () => {
   it('calls onImage when a valid image is selected via file input', () => {
     const onImage = vi.fn()
     renderZone({ onImage })
-    const fileInput = document.querySelector('#file-upload') as HTMLInputElement
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
 
     fireEvent.change(fileInput, { target: { files: [makeFile('photo.png', 'image/png')] } })
     act(() => {
