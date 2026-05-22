@@ -1,20 +1,13 @@
 import { useRef, useState } from 'react'
 import type { Preset } from '../ascii/presets'
 import type { ConversionSettings } from '../ascii/types'
-import type { SourceMode } from '../hooks/use-webcam-state'
+import type { SourceMode, WebcamState } from '../hooks/use-webcam-state'
 import { cn } from '../utils/cn'
 import ControlPanel from './control-panel'
 import MobileBottomSheet from './mobile-bottom-sheet'
 import UploadZone from './upload-zone'
 
 type Tab = 'source' | 'settings'
-
-interface WebcamState {
-  mode: SourceMode
-  live: boolean
-  facingMode: 'user' | 'environment'
-  error: string | null
-}
 
 interface Props {
   onImage: (img: HTMLImageElement) => void

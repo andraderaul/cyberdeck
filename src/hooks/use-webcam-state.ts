@@ -3,7 +3,7 @@ import { useCallback, useEffect, useReducer, useRef } from 'react'
 export type SourceMode = 'upload' | 'webcam'
 type FacingMode = 'user' | 'environment'
 
-type State = {
+export type WebcamState = {
   mode: SourceMode
   live: boolean
   facingMode: FacingMode
@@ -16,14 +16,14 @@ type Action =
   | { type: 'WEBCAM_STOPPED' }
   | { type: 'WEBCAM_ERROR'; message: string }
 
-export const INITIAL_STATE: State = {
+export const INITIAL_STATE: WebcamState = {
   mode: 'upload',
   live: false,
   facingMode: 'user',
   error: null,
 }
 
-export function reducer(state: State, action: Action): State {
+export function reducer(state: WebcamState, action: Action): WebcamState {
   switch (action.type) {
     case 'SWITCH_MODE':
       return {

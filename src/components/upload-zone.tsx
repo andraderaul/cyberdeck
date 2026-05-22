@@ -1,18 +1,11 @@
-import { useCallback, useRef, useState } from 'react'
-import type { SourceMode } from '../hooks/use-webcam-state'
+import { useState } from 'react'
+import type { SourceMode, WebcamState } from '../hooks/use-webcam-state'
 import { cn } from '../utils/cn'
 import { isTouchDevice } from '../utils/device'
-import { loadImageFile } from '../utils/load-image-file'
 import Button from './ui/button'
 import ErrorText from './ui/error-text'
+import SourceImageDropZone from './ui/source-image-drop-zone'
 import ToggleGroup from './ui/toggle-group'
-
-interface WebcamState {
-  mode: SourceMode
-  live: boolean
-  facingMode: 'user' | 'environment'
-  error: string | null
-}
 
 interface Props {
   onImage: (img: HTMLImageElement) => void
@@ -31,47 +24,9 @@ export default function UploadZone({
   isMirrored,
   onMirrorToggle,
 }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [dragging, setDragging] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
 
   const { mode, live, facingMode, error } = webcamState
-
-  const load = useCallback(
-    (file: File) => {
-      loadImageFile(
-        file,
-        (img) => {
-          setImageError(null)
-          onImage(img)
-        },
-        (msg) => setImageError(msg),
-      )
-    },
-    [onImage],
-  )
-
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      setDragging(false)
-      const file = e.dataTransfer.files[0]
-      if (file) {
-        load(file)
-      }
-    },
-    [load],
-  )
-
-  const onFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (file) {
-        load(file)
-      }
-    },
-    [load],
-  )
 
   const displayError = error ?? imageError
 
@@ -87,33 +42,7 @@ export default function UploadZone({
       />
 
       {mode === 'upload' ? (
-        <label
-          htmlFor="file-upload"
-          onDrop={onDrop}
-          onDragOver={(e) => {
-            e.preventDefault()
-            setDragging(true)
-          }}
-          onDragLeave={() => setDragging(false)}
-          className={cn(
-            'border rounded-xs p-xl flex flex-col items-center justify-center gap-sm cursor-pointer min-h-[120px] select-none transition-colors duration-fast',
-            dragging ? 'border-violet bg-accent-ghost' : 'border-base bg-transparent',
-          )}
-        >
-          <span className="text-lg text-violet">⬆</span>
-          <span className="text-fg text-sm">
-            {isTouchDevice ? 'tap to upload' : 'drag & drop or click to upload'}
-          </span>
-          <span className="text-fg-muted text-xs">jpg · png · webp</span>
-          <input
-            id="file-upload"
-            ref={inputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={onFileChange}
-          />
-        </label>
+        <SourceImageDropZone size="sm" onImage={onImage} onError={setImageError} />
       ) : (
         <div
           className={cn(
