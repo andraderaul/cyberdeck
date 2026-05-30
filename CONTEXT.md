@@ -5,7 +5,9 @@ Ferramenta client-side que converte uma imagem estática num canvas de arte ASCI
 ## Pipeline
 
 1. **Convert** — `convertImage()`: lê os pixels da imagem e produz uma grade de **AsciiCell**
-2. **Render** — `AsciiCanvas`: percorre a grade de **AsciiCell** e pinta cada célula no canvas visível
+2. **Orchestrate** — `renderFrame()`: calcula `cols × rows`, chama Convert, Compute e Paint em sequência; retorna `false` se o canvas for pequeno demais para caber um caractere
+3. **Compute** — `computeFrame()`: percorre a grade de **AsciiCell** e produz instruções de renderização com posição e cor — puro, sem DOM
+4. **Paint** — `paintFrame()`: único ponto de escrita no canvas visível
 
 ## Language
 

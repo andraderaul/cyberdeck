@@ -1,7 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import type { AIProvider } from '../types'
 import { ANALYZE_TIMEOUT_MS, mapHttpError, PROMPT, parseJsonOrThrow } from './shared'
 
-export class GeminiAdapter {
+export class GeminiAdapter implements AIProvider {
   private genAI: GoogleGenerativeAI
 
   constructor(key: string) {

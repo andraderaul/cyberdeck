@@ -1,7 +1,8 @@
 import OpenAI from 'openai'
+import type { AIProvider } from '../types'
 import { ANALYZE_TIMEOUT_MS, mapHttpError, PROMPT, parseJsonOrThrow } from './shared'
 
-export class OpenAIAdapter {
+export class OpenAIAdapter implements AIProvider {
   private client: OpenAI
 
   constructor(key: string) {

@@ -19,6 +19,7 @@ import MobileControls from './components/mobile-controls'
 import { useToastError } from './components/toast-provider'
 import HeaderButton from './components/ui/header-button'
 import UploadZone from './components/upload-zone'
+import { normalizeError } from './errors/app-error'
 import { useRecording } from './hooks/use-recording'
 import { useWebcamState } from './hooks/use-webcam-state'
 
@@ -48,6 +49,25 @@ export default function App() {
 
   const showError = useToastError()
   const { config: aiConfig, save: saveAiConfig, remove: removeAiConfig } = useAIConfig()
+
+  const handleSaveAiConfig = useCallback(
+    (config: Parameters<typeof saveAiConfig>[0]) => {
+      try {
+        saveAiConfig(config)
+      } catch (err) {
+        showError(normalizeError(err).message)
+      }
+    },
+    [saveAiConfig, showError],
+  )
+
+  const handleRemoveAiConfig = useCallback(() => {
+    try {
+      removeAiConfig()
+    } catch (err) {
+      showError(normalizeError(err).message)
+    }
+  }, [removeAiConfig, showError])
   const [activeModal, setActiveModal] = useState<ActiveModal>(null)
   const {
     isSupported: canRecord,
@@ -244,8 +264,8 @@ export default function App() {
       {activeModal?.kind === 'apiKey' && (
         <ApiKeyModal
           current={aiConfig}
-          onSave={saveAiConfig}
-          onRemove={removeAiConfig}
+          onSave={handleSaveAiConfig}
+          onRemove={handleRemoveAiConfig}
           onClose={() => setActiveModal(null)}
         />
       )}

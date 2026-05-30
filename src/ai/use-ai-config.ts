@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useToastError } from '../components/toast-provider'
 import { Errors } from '../errors/app-error'
 import type { AIConfig } from './types'
 
@@ -14,24 +13,23 @@ function readConfig(): AIConfig | null {
 
 export function useAIConfig() {
   const [config, setConfig] = useState<AIConfig | null>(readConfig)
-  const toastError = useToastError()
 
   function save(next: AIConfig) {
     try {
       localStorage.setItem('ai_config', JSON.stringify(next))
+      setConfig(next)
     } catch {
-      toastError(Errors.storageSaveFailed().message)
+      throw Errors.storageSaveFailed()
     }
-    setConfig(next)
   }
 
   function remove() {
     try {
       localStorage.removeItem('ai_config')
+      setConfig(null)
     } catch {
-      toastError(Errors.storageRemoveFailed().message)
+      throw Errors.storageRemoveFailed()
     }
-    setConfig(null)
   }
 
   return { config, save, remove }
