@@ -1,7 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk'
+import type { AIProvider } from '../types'
 import { ANALYZE_TIMEOUT_MS, mapHttpError, PROMPT, parseJsonOrThrow } from './shared'
 
-export class AnthropicAdapter {
+export class AnthropicAdapter implements AIProvider {
   private client: Anthropic
 
   constructor(key: string) {

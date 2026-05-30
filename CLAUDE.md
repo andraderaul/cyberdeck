@@ -27,10 +27,10 @@ Single-page React/TS/Vite app. Fully client-side — no backend server. AI analy
 1. `UploadZone` hands either an `HTMLImageElement` (Source Image) or `HTMLVideoElement` (Live Source) to `App`
 2. `App` holds `ConversionSettings` state and passes both down to `AsciiCanvas`
 3. `AsciiCanvas` keeps a **hidden off-screen canvas** (`hiddenRef`) sized `cols × rows` — this is used only for pixel sampling via `getImageData`. The visible canvas is sized in pixels. These two canvases must stay separate (see ADR 0001)
-4. `renderFrame()` in `ascii-canvas.tsx` orchestrates a single render: draws source onto the hidden canvas → `convertImage()` → `computeFrame()` → `paintFrame()`
-5. `computeFrame()` is **pure** — given cells and settings, returns `RenderInstruction[]` and `asciiRows` with no DOM access (see ADR 0005)
-6. `paintFrame()` is the only function that writes to `CanvasRenderingContext2D` for rendering
-7. For Live Source, `renderFrame` is called in a `requestAnimationFrame` loop throttled to ~15fps (see ADR 0002). For static Source Image, it runs once per settings change via `useEffect`
+4. `AsciiCanvas` decides *when* to render: once per settings change via `useEffect` for Source Image, or in a `requestAnimationFrame` loop throttled to ~15fps for Live Source (see ADR 0002). It calls `renderFrame()` from `src/ascii/render-frame.ts`
+5. `renderFrame()` in `src/ascii/render-frame.ts` orchestrates a single render: computes `cols × rows` from canvas size and resolution, draws source onto the hidden canvas → `convertImage()` → `computeFrame()` → `paintFrame()`. Returns `false` (skips render) if canvas is too small to fit any character; returns `true` on success
+6. `computeFrame()` is **pure** — given cells and settings, returns `RenderInstruction[]` and `asciiRows` with no DOM access (see ADR 0005)
+7. `paintFrame()` is the only function that writes to `CanvasRenderingContext2D` for rendering
 8. `onConverted` callback sends the plain-text rows up to `App`, where they're held in `asciiRows` state for TXT Export
 
 ### AI analysis
@@ -76,6 +76,7 @@ All visual tokens live as CSS custom properties in `src/index.css`. Tailwind is 
 - `src/ascii/converter.ts` — `convertImage()`, `getAsciiChar()`, luminosity math
 - `src/ascii/image-utils.ts` — `resizeImage()` (caps Source Image at 800px wide before sampling)
 - `src/ascii/renderer.ts` — `computeFrame()` (pure), `paintFrame()` (side effects) — see ADR 0005
+- `src/ascii/render-frame.ts` — `renderFrame()`: pipeline orchestrator — cols/rows math, convertImage → computeFrame → paintFrame; returns `boolean`
 - `src/ascii/presets.ts` — `PRESETS`, `Preset`, `settingsMatch()` (named ConversionSettings snapshots)
 
 **AI analysis**

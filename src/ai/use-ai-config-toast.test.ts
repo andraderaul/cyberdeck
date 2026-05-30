@@ -1,13 +1,11 @@
-import { render } from '@testing-library/react'
-import { act, createElement } from 'react'
+import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ToastContext } from '../components/toast-provider'
 import type { AIConfig } from './types'
 import { useAIConfig } from './use-ai-config'
 
-const STORED_CONFIG = { provider: 'anthropic' as const, key: 'my-key' }
+const STORED_CONFIG: AIConfig = { provider: 'anthropic', key: 'my-key' }
 
-describe('useAIConfig storage toast', () => {
+describe('useAIConfig storage failures', () => {
   beforeEach(() => {
     localStorage.clear()
   })
@@ -16,60 +14,32 @@ describe('useAIConfig storage toast', () => {
     vi.restoreAllMocks()
   })
 
-  it('toasts when save throws', async () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+  it('save() throws and does not update in-memory config when localStorage is full', async () => {
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new Error('full')
     })
-    const mockToast = vi.fn()
-    let capturedSave: ((cfg: AIConfig) => void) | undefined
 
-    function Probe() {
-      const { save } = useAIConfig()
-      capturedSave = save
-      return null
-    }
+    const { result } = renderHook(() => useAIConfig())
 
-    render(
-      createElement(
-        ToastContext.Provider,
-        { value: { error: mockToast, info: vi.fn(), warn: vi.fn() } },
-        createElement(Probe),
-      ),
+    expect(() => result.current.save(STORED_CONFIG)).toThrow(
+      'ai configured (session only — storage unavailable)',
     )
-
-    await act(() => {
-      capturedSave?.(STORED_CONFIG)
-    })
-
-    expect(mockToast).toHaveBeenCalledWith('ai configured (session only — storage unavailable)')
+    expect(result.current.config).toBeNull()
   })
 
-  it('toasts when remove throws', async () => {
+  it('remove() throws and does not clear in-memory config when localStorage is unavailable', async () => {
     localStorage.setItem('ai_config', JSON.stringify(STORED_CONFIG))
-    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+    vi.spyOn(localStorage, 'removeItem').mockImplementation(() => {
       throw new Error('unavailable')
     })
-    const mockToast = vi.fn()
-    let capturedRemove: (() => void) | undefined
 
-    function Probe() {
-      const { remove } = useAIConfig()
-      capturedRemove = remove
-      return null
-    }
+    const { result } = renderHook(() => useAIConfig())
 
-    render(
-      createElement(
-        ToastContext.Provider,
-        { value: { error: mockToast, info: vi.fn(), warn: vi.fn() } },
-        createElement(Probe),
-      ),
+    await act(async () => {}) // flush initial render
+
+    expect(() => result.current.remove()).toThrow(
+      'storage unavailable — config removed until page reload',
     )
-
-    await act(() => {
-      capturedRemove?.()
-    })
-
-    expect(mockToast).toHaveBeenCalledWith('storage unavailable — config removed until page reload')
+    expect(result.current.config).toEqual(STORED_CONFIG)
   })
 })

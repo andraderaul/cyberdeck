@@ -1,11 +1,9 @@
 import { type RefObject, useEffect, useRef } from 'react'
-import { convertImage } from '../ascii/converter'
 import { resizeImage } from '../ascii/image-utils'
-import { computeFrame, MONOSPACE_CHAR_WIDTH_RATIO, paintFrame } from '../ascii/renderer'
+import { renderFrame } from '../ascii/render-frame'
 import type { ConversionSettings } from '../ascii/types'
 
-const LIVE_SOURCE_TARGET_FPS = 15
-const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / LIVE_SOURCE_TARGET_FPS
+const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
 
 interface Props {
   sourceImage: HTMLImageElement | null
@@ -16,39 +14,6 @@ interface Props {
   isMirrored?: boolean
   isRecording?: boolean
   onDimensionsChange?: (w: number, h: number) => void
-}
-
-function renderFrame(
-  source: CanvasImageSource,
-  canvasEl: HTMLCanvasElement,
-  hiddenEl: HTMLCanvasElement,
-  settings: ConversionSettings,
-  fontFamily: string,
-  onConverted?: (rows: string[]) => void,
-): void {
-  const ctx = canvasEl.getContext('2d')
-  const hiddenCtx = hiddenEl.getContext('2d')
-  if (!ctx || !hiddenCtx) {
-    return
-  }
-
-  const { resolution, brightness, contrast, charset } = settings
-  const charW = resolution * MONOSPACE_CHAR_WIDTH_RATIO
-  const charH = resolution
-  const cols = Math.floor(canvasEl.width / charW)
-  const rows = Math.floor(canvasEl.height / charH)
-
-  if (cols < 1 || rows < 1) {
-    return
-  }
-
-  hiddenEl.width = cols
-  hiddenEl.height = rows
-
-  const cells = convertImage(hiddenCtx, source, cols, rows, { brightness, contrast, charset })
-  const { instructions, asciiRows } = computeFrame(cells, settings)
-  paintFrame(ctx, instructions, resolution, fontFamily)
-  onConverted?.(asciiRows)
 }
 
 export default function AsciiCanvas({
