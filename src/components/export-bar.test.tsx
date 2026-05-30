@@ -67,6 +67,7 @@ describe('ExportBar', () => {
 
     expect(click).toHaveBeenCalledOnce()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('does not trigger txt download when asciiRows is empty', () => {
