@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import DownloadBar from './download-bar'
+import ExportBar from './export-bar'
 import { ToastContext } from './toast-provider'
 
 function makeCanvasRef(canvas?: HTMLCanvasElement | null) {
@@ -8,12 +8,12 @@ function makeCanvasRef(canvas?: HTMLCanvasElement | null) {
 }
 
 function renderBar(
-  props: Partial<Parameters<typeof DownloadBar>[0]> & { toastError?: (m: string) => void } = {},
+  props: Partial<Parameters<typeof ExportBar>[0]> & { toastError?: (m: string) => void } = {},
 ) {
   const { toastError = vi.fn(), ...rest } = props
   return render(
     <ToastContext.Provider value={{ error: toastError, info: vi.fn(), warn: vi.fn() }}>
-      <DownloadBar
+      <ExportBar
         canvasRef={makeCanvasRef()}
         asciiRows={['row1', 'row2']}
         hasAiConfig={false}
@@ -25,7 +25,7 @@ function renderBar(
   )
 }
 
-describe('DownloadBar (static mode)', () => {
+describe('ExportBar', () => {
   it('shows export png and export txt buttons', () => {
     renderBar()
 
@@ -79,8 +79,8 @@ describe('DownloadBar (static mode)', () => {
   })
 })
 
-describe('DownloadBar (scale picker)', () => {
-  it('shows scale picker when hasImage=true and isLive=false', () => {
+describe('ExportBar (scale picker)', () => {
+  it('shows scale picker when hasImage=true', () => {
     renderBar({ hasImage: true })
 
     expect(screen.getByRole('button', { name: '1×' })).toBeInTheDocument()
@@ -90,12 +90,6 @@ describe('DownloadBar (scale picker)', () => {
 
   it('does not show scale picker when hasImage=false', () => {
     renderBar({ hasImage: false })
-
-    expect(screen.queryByRole('button', { name: '1×' })).not.toBeInTheDocument()
-  })
-
-  it('does not show scale picker when isLive=true', () => {
-    renderBar({ hasImage: true, isLive: true })
 
     expect(screen.queryByRole('button', { name: '1×' })).not.toBeInTheDocument()
   })
@@ -164,95 +158,11 @@ describe('DownloadBar (scale picker)', () => {
     fireEvent.click(screen.getByRole('button', { name: '2×' }))
     fireEvent.click(screen.getByRole('button', { name: /export png/i }))
 
-    // Allow async exportPng to start
     await new Promise((r) => setTimeout(r, 0))
 
     const offscreen = createdCanvases.find((c) => c.width === 160 && c.height === 80)
     expect(offscreen).toBeDefined()
 
     vi.restoreAllMocks()
-  })
-})
-
-describe('DownloadBar (live mode)', () => {
-  it('shows capture button when live', () => {
-    renderBar({ isLive: true })
-
-    expect(screen.getByRole('button', { name: /capture/i })).toBeInTheDocument()
-  })
-
-  it('shows record button when live and canRecord', () => {
-    renderBar({ isLive: true, canRecord: true, onStartRecording: vi.fn() })
-
-    expect(screen.getByRole('button', { name: /record/i })).toBeInTheDocument()
-  })
-
-  it('record button uses the record variant, not the danger variant', () => {
-    renderBar({ isLive: true, canRecord: true, onStartRecording: vi.fn() })
-
-    const recordBtn = screen.getByRole('button', { name: /record/i })
-    expect(recordBtn).toHaveAttribute('data-variant', 'record')
-  })
-
-  it('shows stop button and hides record button when recording', () => {
-    renderBar({
-      isLive: true,
-      canRecord: true,
-      isRecording: true,
-      elapsedSeconds: 5,
-      onStopRecording: vi.fn(),
-    })
-
-    expect(screen.getByRole('button', { name: /stop/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^⏺ record/i })).not.toBeInTheDocument()
-  })
-
-  it('timer pill is a status element, not a button', () => {
-    renderBar({
-      isLive: true,
-      isRecording: true,
-      elapsedSeconds: 5,
-      onStopRecording: vi.fn(),
-    })
-
-    expect(screen.getByRole('status')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /0:05/i })).not.toBeInTheDocument()
-  })
-
-  it('timer pill shows elapsed time', () => {
-    renderBar({
-      isLive: true,
-      isRecording: true,
-      elapsedSeconds: 5,
-      onStopRecording: vi.fn(),
-    })
-
-    expect(screen.getByRole('status')).toHaveTextContent('0:05')
-  })
-
-  it('stop button is separate from timer pill', () => {
-    const onStopRecording = vi.fn()
-    renderBar({
-      isLive: true,
-      isRecording: true,
-      elapsedSeconds: 5,
-      onStopRecording,
-    })
-
-    const stopBtn = screen.getByRole('button', { name: /stop/i })
-    expect(stopBtn).toBeInTheDocument()
-    fireEvent.click(stopBtn)
-    expect(onStopRecording).toHaveBeenCalledOnce()
-  })
-
-  it('capture button label is "◎ capture" during recording (consistent with non-recording state)', () => {
-    renderBar({
-      isLive: true,
-      isRecording: true,
-      elapsedSeconds: 0,
-      onStopRecording: vi.fn(),
-    })
-
-    expect(screen.getByRole('button', { name: /capture/i })).toBeInTheDocument()
   })
 })
