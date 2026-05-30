@@ -1,3 +1,15 @@
+## [1.22.1](https://github.com/andraderaul/ascii-art-converter/compare/v1.22.0...v1.22.1) (2026-05-30)
+
+### Bug Fixes
+
+* leak test ([756980f](https://github.com/andraderaul/ascii-art-converter/commit/756980f13270e0f7e85e8c8f0006aa98bb5b9aa5))
+
+### Code Refactoring
+
+* **ai:** shared adapter helpers + provider Record map ([#61](https://github.com/andraderaul/ascii-art-converter/issues/61)) ([70ca429](https://github.com/andraderaul/ascii-art-converter/commit/70ca429deb69380964fdd0a9acfeb5cf74c5d8a2))
+* **ui:** ApiKeyModal Button adoption + HeaderButton primitive ([#62](https://github.com/andraderaul/ascii-art-converter/issues/62)) ([0aaf31f](https://github.com/andraderaul/ascii-art-converter/commit/0aaf31fe4a925402eb25828be703a15d79b34a57)), closes [#53](https://github.com/andraderaul/ascii-art-converter/issues/53) [#54](https://github.com/andraderaul/ascii-art-converter/issues/54)
+* **ui:** split DownloadBar into LiveSourceBar + ExportBar ([#63](https://github.com/andraderaul/ascii-art-converter/issues/63)) ([29b46fa](https://github.com/andraderaul/ascii-art-converter/commit/29b46fa49507eddb6941607967f3ab6d73d4f400))
+
 ## [1.22.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.21.0...v1.22.0) (2026-05-22)
 
 ### Features
