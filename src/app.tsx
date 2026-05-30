@@ -11,9 +11,10 @@ import AnalysisModal from './components/analysis-modal'
 import ApiKeyModal from './components/api-key-modal'
 import AsciiCanvas from './components/ascii-canvas'
 import ControlPanel from './components/control-panel'
-import DownloadBar from './components/download-bar'
 import EmptyStateHero from './components/empty-state-hero'
 import ErrorBoundary from './components/error-boundary'
+import ExportBar from './components/export-bar'
+import LiveSourceBar from './components/live-source-bar'
 import MobileControls from './components/mobile-controls'
 import { useToastError } from './components/toast-provider'
 import HeaderButton from './components/ui/header-button'
@@ -129,8 +130,6 @@ export default function App() {
     }
   }, [aiConfig])
 
-  const isLive = !!sourceVideo
-
   return (
     <div className="flex flex-col h-screen">
       <header className="py-sm px-sm sm:px-lg border-b border-base flex items-center gap-sm shrink-0">
@@ -203,20 +202,27 @@ export default function App() {
               {!aiConfig && (
                 <AiConfigBanner onConfigure={() => setActiveModal({ kind: 'apiKey' })} />
               )}
-              <DownloadBar
-                canvasRef={canvasRef}
-                asciiRows={asciiRows}
-                isLive={isLive}
-                hasImage={!!sourceImage}
-                canvasDimensions={canvasDimensions}
-                hasAiConfig={!!aiConfig}
-                onAnalyze={handleAnalyze}
-                canRecord={canRecord}
-                isRecording={isRecording}
-                elapsedSeconds={elapsedSeconds}
-                onStartRecording={startRecording}
-                onStopRecording={stopRecording}
-              />
+              {sourceVideo ? (
+                <LiveSourceBar
+                  canvasRef={canvasRef}
+                  hasAiConfig={!!aiConfig}
+                  onAnalyze={handleAnalyze}
+                  canRecord={canRecord}
+                  isRecording={isRecording}
+                  elapsedSeconds={elapsedSeconds}
+                  onStartRecording={startRecording}
+                  onStopRecording={stopRecording}
+                />
+              ) : (
+                <ExportBar
+                  canvasRef={canvasRef}
+                  asciiRows={asciiRows}
+                  hasImage={!!sourceImage}
+                  canvasDimensions={canvasDimensions}
+                  hasAiConfig={!!aiConfig}
+                  onAnalyze={handleAnalyze}
+                />
+              )}
             </div>
           )}
         </main>

@@ -36,7 +36,8 @@ vi.mock('./components/toast-provider', () => ({
 vi.mock('./components/ascii-canvas', () => ({ default: () => <canvas /> }))
 vi.mock('./components/upload-zone', () => ({ default: () => <div>upload</div> }))
 vi.mock('./components/control-panel', () => ({ default: () => <div>control</div> }))
-vi.mock('./components/download-bar', () => ({ default: () => <div>download</div> }))
+vi.mock('./components/export-bar', () => ({ default: () => <div>export</div> }))
+vi.mock('./components/live-source-bar', () => ({ default: () => <div>live</div> }))
 vi.mock('./components/empty-state-hero', () => ({
   default: ({
     onImage,
@@ -121,16 +122,16 @@ describe('EmptyStateHero webcam integration', () => {
   })
 })
 
-describe('DownloadBar visibility', () => {
+describe('ExportBar visibility', () => {
   it('is not rendered before a source is loaded', () => {
     render(<App />)
-    expect(screen.queryByText('download')).not.toBeInTheDocument()
+    expect(screen.queryByText('export')).not.toBeInTheDocument()
   })
 
   it('appears after a source image is loaded via EmptyStateHero', () => {
     render(<App />)
     fireEvent.click(screen.getByText('hero'))
-    expect(screen.getByText('download')).toBeInTheDocument()
+    expect(screen.getByText('export')).toBeInTheDocument()
   })
 })
 
