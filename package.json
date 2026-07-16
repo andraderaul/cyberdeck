@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace @cyberdeck/ascii",
+    "dev:glitch": "npm run dev --workspace @cyberdeck/glitch",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspace @cyberdeck/ascii",
     "test:run": "npm run test:run --workspaces --if-present",

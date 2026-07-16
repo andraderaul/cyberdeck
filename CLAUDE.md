@@ -11,7 +11,7 @@ versioned and deployed independently.
 | App | Path | What it is |
 |-----|------|------------|
 | **ASCII//Convert** | `apps/ascii` | Image / webcam → interactive ASCII art |
-| **GLITCH//Studio** | `apps/glitch` | Glitch effect pipeline over image / webcam (not built yet) |
+| **GLITCH//Studio** | `apps/glitch` | Glitch effect pipeline over image / webcam (tracer bullet — image → Channel Shift → PNG Export) |
 
 Each app owns its `CLAUDE.md` and `CONTEXT.md` — read the one for the app you're working in.
 `CONTEXT-MAP.md` maps the deck; `docs/adr/` holds all architectural decisions, deck-wide.
@@ -33,6 +33,7 @@ Root scripts fan out across workspaces; `--workspace` targets one app.
 
 ```bash
 npm run dev          # start ASCII//Convert's dev server
+npm run dev:glitch   # start GLITCH//Studio's dev server
 npm run build        # build every app
 npm run test         # ASCII//Convert's tests, in watch mode
 npm run test:run     # run every app's tests once (what CI runs)

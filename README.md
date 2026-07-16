@@ -10,7 +10,7 @@ No backend server — everything runs in the browser.
 | Program | Path | What it does |
 |---------|------|--------------|
 | **[ASCII//Convert](./apps/ascii)** | `apps/ascii` | Turns an image or your webcam into interactive ASCII art. **[Live demo →](https://ascii-art-converter-tawny.vercel.app/)** |
-| **GLITCH//Studio** | `apps/glitch` | Applies a pipeline of glitch effects over an image or webcam. Not built yet — see [`apps/glitch/CONTEXT.md`](./apps/glitch/CONTEXT.md). |
+| **GLITCH//Studio** | `apps/glitch` | Applies a pipeline of glitch effects over an image or webcam. Tracer bullet only — image → Channel Shift → PNG Export; see [`apps/glitch/CONTEXT.md`](./apps/glitch/CONTEXT.md). |
 
 ## Running locally
 
