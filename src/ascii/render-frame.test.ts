@@ -57,6 +57,29 @@ describe('renderFrame', () => {
     expect(onConverted).toHaveBeenCalledOnce()
   })
 
+  it('crops onConverted rows to the fit region (TXT trimmed, no letterbox padding)', () => {
+    // 200x200 canvas, resolution 10 → charW 6, charH 10 → cols 33, rows 20.
+    // A tall 100x400 source (aspect 0.25) is pillarboxed: dCols 8, dRows 20.
+    canvasEl.width = 200
+    canvasEl.height = 200
+    const cols = 33
+    const rows = 20
+    hiddenCtxMock.getImageData = vi.fn(() => ({
+      data: new Uint8ClampedArray(cols * rows * 4),
+    })) as unknown as typeof hiddenCtxMock.getImageData
+
+    const source = makeCanvas(100, 400)
+    const onConverted = vi.fn()
+
+    renderFrame(source, canvasEl, hiddenEl, SETTINGS, 'monospace', onConverted)
+
+    const emitted = onConverted.mock.calls[0][0] as string[]
+    expect(emitted).toHaveLength(20)
+    for (const line of emitted) {
+      expect(line).toHaveLength(8)
+    }
+  })
+
   it('returns true without onConverted when callback is omitted', () => {
     const result = renderFrame(canvasEl, canvasEl, hiddenEl, SETTINGS, 'monospace')
     expect(result).toBe(true)

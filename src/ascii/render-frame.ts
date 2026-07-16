@@ -1,5 +1,5 @@
 import { convertImage } from './converter'
-import { computeContainFit } from './fit'
+import { computeContainFit, sliceToRegion } from './fit'
 import { computeFrame, MONOSPACE_CHAR_WIDTH_RATIO, paintFrame } from './renderer'
 import type { ConversionSettings } from './types'
 
@@ -57,6 +57,8 @@ export function renderFrame(
   )
   const { instructions, asciiRows } = computeFrame(cells, settings)
   paintFrame(ctx, instructions, resolution, fontFamily)
-  onConverted?.(asciiRows)
+  // PNG keeps the framed canvas (painted above); TXT Export gets the region
+  // cropped tight, with no letterbox padding. See ADR 0010.
+  onConverted?.(sliceToRegion(asciiRows, region))
   return true
 }

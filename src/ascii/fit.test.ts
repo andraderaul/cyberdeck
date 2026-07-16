@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeContainFit } from './fit'
+import { computeContainFit, sliceToRegion } from './fit'
 
 describe('computeContainFit', () => {
   it('fills the whole grid when source aspect matches the grid pixel-aspect', () => {
@@ -65,5 +65,35 @@ describe('computeContainFit', () => {
       dCols: 80,
       dRows: 40,
     })
+  })
+})
+
+describe('sliceToRegion', () => {
+  const grid = ['ABCDE', 'FGHIJ', 'KLMNO', 'PQRST']
+
+  it('slices an interior sub-region by offset and dimensions', () => {
+    const region = { offsetX: 1, offsetY: 1, dCols: 3, dRows: 2 }
+    expect(sliceToRegion(grid, region)).toEqual(['GHI', 'LMN'])
+  })
+
+  it('returns exactly dRows rows, each dCols wide', () => {
+    const region = { offsetX: 2, offsetY: 0, dCols: 2, dRows: 3 }
+    const out = sliceToRegion(grid, region)
+    expect(out).toHaveLength(3)
+    for (const line of out) {
+      expect(line).toHaveLength(2)
+    }
+  })
+
+  it('is an identity when the region covers the full grid', () => {
+    const region = { offsetX: 0, offsetY: 0, dCols: 5, dRows: 4 }
+    expect(sliceToRegion(grid, region)).toEqual(grid)
+  })
+
+  it('drops the letterbox bands of a padded grid', () => {
+    // a wide source: top/bottom void rows + left/right void columns around 'HI'/'MN'
+    const padded = ['     ', ' HI  ', ' MN  ', '     ']
+    const region = { offsetX: 1, offsetY: 1, dCols: 2, dRows: 2 }
+    expect(sliceToRegion(padded, region)).toEqual(['HI', 'MN'])
   })
 })

@@ -43,3 +43,11 @@ export function computeContainFit(
     dRows,
   }
 }
+
+// Crops a full-grid ascii output down to just the fit region, dropping the void
+// letterbox bands. Used for TXT Export so the text has no padding, while PNG
+// keeps the framed canvas. See ADR 0010.
+export function sliceToRegion(rows: string[], region: FitRegion): string[] {
+  const { offsetX, offsetY, dCols, dRows } = region
+  return rows.slice(offsetY, offsetY + dRows).map((line) => line.slice(offsetX, offsetX + dCols))
+}
