@@ -1,3 +1,13 @@
+## [1.23.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.22.1...v1.23.0) (2026-07-16)
+
+### Features
+
+* **ascii:** contain-fit preserving Source aspect ratio ([#65](https://github.com/andraderaul/ascii-art-converter/issues/65)) ([#67](https://github.com/andraderaul/ascii-art-converter/issues/67)) ([eb46a1e](https://github.com/andraderaul/ascii-art-converter/commit/eb46a1e66fe8b6fab8300dac005591d9a9b9e77e))
+
+### Code Refactoring
+
+* **arch:** adapter contracts, use-ai-config silent failures, render-frame extraction ([#64](https://github.com/andraderaul/ascii-art-converter/issues/64)) ([c150040](https://github.com/andraderaul/ascii-art-converter/commit/c150040eaa31a87313a070806e27d75e8dcd4db1))
+
 ## [1.22.1](https://github.com/andraderaul/ascii-art-converter/compare/v1.22.0...v1.22.1) (2026-05-30)
 
 ### Bug Fixes
