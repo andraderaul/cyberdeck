@@ -1,3 +1,7 @@
+// AI errors are typed classes thrown by adapters and caught in app.tsx, so AnalysisModal can give
+// type-specific feedback. Deliberately distinct from the operational AppError object shape in
+// src/errors/app-error.ts; see ADR 0006 for why both exist.
+
 export class AuthError extends Error {
   constructor() {
     super('Invalid or expired API key')

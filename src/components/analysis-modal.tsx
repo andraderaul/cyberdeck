@@ -10,7 +10,7 @@ interface Props {
   onRetry?: () => void
 }
 
-// Dynamic — computed from data at runtime, inline style required
+/** Threat colors are applied as inline `var(--token)` styles — runtime-dynamic, so no Tailwind class. */
 const THREAT_META: Record<ThreatLevel, { icon: string; color: string; bgAlpha: string }> = {
   CRITICAL: { icon: '‼', color: 'var(--hot-pink)', bgAlpha: 'rgba(255,45,120,0.12)' },
   HIGH: { icon: '✕', color: 'var(--hot-pink)', bgAlpha: 'rgba(255,45,120,0.07)' },

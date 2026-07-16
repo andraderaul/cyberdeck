@@ -9,7 +9,7 @@ export interface Dimensions {
   h: number
 }
 
-// Domain terms (CONTEXT.md): PNG Export, TXT Export, Capture, Recording.
+/** Domain terms (CONTEXT.md): PNG Export, TXT Export, Capture, Recording. */
 export type OutputKind = 'png-export' | 'txt-export' | 'capture' | 'recording'
 
 export function planPngExport(
@@ -24,8 +24,10 @@ export function planPngExport(
   return { exceedsCap, targetDimensions }
 }
 
-// Timestamp is injected (shells pass Date.now()) so the function stays deterministic. Overloads make
-// each kind carry the fields it needs, so an under-specified call can't compile.
+/**
+ * Timestamp is injected (shells pass Date.now()) so the function stays deterministic. Overloads make
+ * each kind carry the fields it needs, so an under-specified call can't compile.
+ */
 export function outputFilename(kind: 'png-export' | 'txt-export'): string
 export function outputFilename(kind: 'capture', opts: { timestamp: number }): string
 export function outputFilename(kind: 'recording', opts: { timestamp: number; ext: string }): string

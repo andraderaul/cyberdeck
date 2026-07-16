@@ -15,8 +15,10 @@ interface Props {
   tooltipId?: string
 }
 
-// Accounts for the 20px thumb width so the marker aligns with the visual thumb center
-// rather than the input's left edge at min and max.
+/**
+ * Accounts for the 20px thumb width so the marker aligns with the visual thumb center
+ * rather than the input's left edge at min and max.
+ */
 function pct(value: number, min: number, max: number): string {
   const ratio = (value - min) / (max - min)
   return `calc(${ratio * 100}% + ${(0.5 - ratio) * 20}px)`

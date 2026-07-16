@@ -10,8 +10,10 @@ import type {
 
 export type AnalysisOutcome = { ok: Analysis } | { error: unknown }
 
-// Maps a settled outcome to a terminal AnalysisState (everything but `loading`) — keeps the decision
-// out of the async App callback, mirroring the render pipeline's pure/impure split (ADR 0005).
+/**
+ * Maps a settled outcome to a terminal AnalysisState (everything but `loading`) — keeps the decision
+ * out of the async App callback, mirroring the render pipeline's pure/impure split (ADR 0005).
+ */
 export function toAnalysisState(outcome: AnalysisOutcome): AnalysisState {
   if ('ok' in outcome) {
     return { status: 'success', analysis: outcome.ok }

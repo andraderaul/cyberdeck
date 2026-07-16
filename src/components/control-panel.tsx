@@ -27,7 +27,7 @@ const CHARSET_CATEGORIES: { label: string; charsets: Charset[] }[] = [
   { label: 'specialized', charsets: ['box', 'binary'] },
 ]
 
-// Spans the full luminosity ramp: indices 0, ¼, ½, ¾, last
+/** Spans the full luminosity ramp: indices 0, ¼, ½, ¾, last. */
 function sampleChars(charset: Charset): string {
   const chars = [...CHARSET_MAPS[charset]]
   if (chars.length <= 5) {

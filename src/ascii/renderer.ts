@@ -27,15 +27,17 @@ export const DUAL_COLOR_MODES: Partial<Record<ColorMode, DualColorPair>> = {
   infrared: ['#ff4500', '#0066ff'],
 }
 
-// Single accessor so fallback gray lives in one place
+/** Single accessor so the fallback gray lives in one place. */
 export function getModePalette(mode: ColorMode): string | DualColorPair {
   return DUAL_COLOR_MODES[mode] ?? COLOR_MODE_COLORS[mode] ?? '#c8c8e0'
 }
 
 export const MONOSPACE_CHAR_WIDTH_RATIO = 0.6
 
-// Pure: derives render instructions and ascii text from a cell grid — no DOM, fully testable.
-// See ADR 0005 for the pure/impure boundary rationale.
+/**
+ * Pure: derives render instructions and ascii text from a cell grid — no DOM, fully testable.
+ * See ADR 0005 for the pure/impure boundary rationale.
+ */
 export function computeFrame(
   cells: AsciiCell[][],
   settings: Pick<ConversionSettings, 'resolution' | 'colorMode'>,
@@ -72,7 +74,10 @@ export function computeFrame(
   return { instructions, asciiRows }
 }
 
-// Impure: only function that writes to CanvasRenderingContext2D for rendering.
+/**
+ * Impure: the only function that writes to CanvasRenderingContext2D for rendering.
+ * See ADR 0005 for the pure/impure boundary rationale.
+ */
 export function paintFrame(
   ctx: CanvasRenderingContext2D,
   instructions: RenderInstruction[],

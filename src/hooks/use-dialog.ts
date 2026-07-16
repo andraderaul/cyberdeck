@@ -21,8 +21,11 @@ export interface UseDialogOptions {
   triggerRef?: RefObject<HTMLElement | null>
 }
 
+/**
+ * Wires the behaviors a modal dialog needs: initial focus (returned to the trigger
+ * on unmount), a body scroll lock, Escape-to-close, and a Tab/Shift+Tab focus trap.
+ */
 export function useDialog({ panelRef, onClose, triggerRef }: UseDialogOptions): void {
-  // Focus first tabbable on mount; return focus on unmount
   useEffect(() => {
     const previouslyFocused =
       document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -39,7 +42,6 @@ export function useDialog({ panelRef, onClose, triggerRef }: UseDialogOptions): 
     }
   }, [panelRef, triggerRef])
 
-  // Body scroll lock
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => {
@@ -47,7 +49,6 @@ export function useDialog({ panelRef, onClose, triggerRef }: UseDialogOptions): 
     }
   }, [])
 
-  // Escape key → onClose
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -58,7 +59,6 @@ export function useDialog({ panelRef, onClose, triggerRef }: UseDialogOptions): 
     return () => document.removeEventListener('keydown', handler)
   }, [onClose])
 
-  // Focus trap on Tab/Shift+Tab
   useEffect(() => {
     const panel = panelRef.current
     if (!panel) {

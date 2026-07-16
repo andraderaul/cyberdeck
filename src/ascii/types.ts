@@ -56,8 +56,10 @@ export interface AsciiCell {
   b: number
 }
 
-// Centered sub-region of the char grid that the Source is drawn into (contain fit).
-// Cells outside it are void — see ADR 0010.
+/**
+ * Centered sub-region of the char grid that the Source is drawn into (contain fit).
+ * Cells outside it are void — see ADR 0010.
+ */
 export interface FitRegion {
   offsetX: number
   offsetY: number

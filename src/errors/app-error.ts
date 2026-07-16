@@ -1,3 +1,7 @@
+/**
+ * Operational errors (Export, Capture, localStorage) — a plain-object shape surfaced via toasts.
+ * Deliberately distinct from the AI adapters' typed error classes; see ADR 0006 for why both exist.
+ */
 export type AppError = {
   type: string
   message: string

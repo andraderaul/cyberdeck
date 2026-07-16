@@ -3,8 +3,10 @@ import { computeContainFit, sliceToRegion } from './fit'
 import { computeFrame, MONOSPACE_CHAR_WIDTH_RATIO, paintFrame } from './renderer'
 import type { ConversionSettings } from './types'
 
-// Intrinsic pixel dimensions of the Source, by type. Used to preserve its
-// aspect ratio when fitting into the char grid (ADR 0010).
+/**
+ * Intrinsic pixel dimensions of the Source, by type. Used to preserve its
+ * aspect ratio when fitting into the char grid (ADR 0010).
+ */
 function sourceDimensions(source: CanvasImageSource): { w: number; h: number } {
   if (typeof HTMLVideoElement !== 'undefined' && source instanceof HTMLVideoElement) {
     return { w: source.videoWidth, h: source.videoHeight }
@@ -17,6 +19,10 @@ function sourceDimensions(source: CanvasImageSource): { w: number; h: number } {
   return { w: sized.width ?? 0, h: sized.height ?? 0 }
 }
 
+/**
+ * @returns `false` when the render was skipped — no 2D context, or the canvas is too
+ *   small to fit a single character. `true` when a frame was painted.
+ */
 export function renderFrame(
   source: CanvasImageSource,
   canvasEl: HTMLCanvasElement,

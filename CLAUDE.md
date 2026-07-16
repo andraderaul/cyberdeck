@@ -69,6 +69,43 @@ Use these terms precisely — avoid the listed alternatives:
 
 All visual tokens live as CSS custom properties in `src/index.css`. Tailwind is configured in `tailwind.config.js` to reference those same variables — so `text-violet` and `var(--violet)` resolve to the same value. Components use Tailwind classes for static tokens and inline `var(--token)` references for runtime-dynamic values (e.g. threat level colors).
 
+### Comment convention
+
+**1. Only the non-obvious "why".** Never restate what the code or a name already says. Keep a comment only when it carries rationale a reader couldn't infer from the code itself:
+
+- a deliberate design choice (`Sequential by design — a stop must settle before the following start`)
+- a behavior-preserving constraint or "do not simplify this" guard
+- a reference to an ADR or a domain term from CONTEXT.md
+
+If a comment would only paraphrase the declaration below it, delete it and let the name carry the meaning.
+
+```ts
+// Bad — restates the name
+// Body scroll lock
+useEffect(() => { ... })
+
+// Good — explains a constraint the code can't show
+// Safari private mode / sandboxed iframe — silently ignore
+```
+
+**2. JSDoc (`/** */`) on module-level declarations.** Document exported functions, types, and other top-level declarations with JSDoc blocks rather than `//`.
+
+Use plain `//` for everything that can't attach to a module-level declaration:
+
+- notes inside a function or component body (a guard, a local const, an anonymous `useEffect`)
+- `biome-ignore` directives
+- **file headers** — a `/** */` block at the top of a file is not detached by a blank line; TypeScript binds it to the next declaration, so a module banner would surface as that declaration's hover text. Keep file headers as `//`.
+
+```ts
+/**
+ * Pure: derives render instructions and ascii text from a cell grid — no DOM, fully testable.
+ * See ADR 0005 for the pure/impure boundary rationale.
+ */
+export function computeFrame(...) { ... }
+```
+
+Both rules compose: JSDoc is the *format* for declaration-level comments, the "why" rule decides *whether* the comment earns its place at all. A declaration with nothing non-obvious to say gets no JSDoc.
+
 ### Key files
 
 **ASCII core**

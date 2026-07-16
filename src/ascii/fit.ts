@@ -1,10 +1,12 @@
 import { MONOSPACE_CHAR_WIDTH_RATIO } from './renderer'
 import type { FitRegion } from './types'
 
-// Computes the centered "contain" sub-region of a cols × rows char grid that
-// preserves the Source's aspect ratio. The monospace cell is ~0.6 wide × 1 tall,
-// so the Source aspect is compared against the grid's *pixel* aspect, not its
-// col/row count. See ADR 0010.
+/**
+ * Computes the centered "contain" sub-region of a cols × rows char grid that
+ * preserves the Source's aspect ratio. The monospace cell is ~0.6 wide × 1 tall,
+ * so the Source aspect is compared against the grid's *pixel* aspect, not its
+ * col/row count. See ADR 0010.
+ */
 export function computeContainFit(
   srcW: number,
   srcH: number,
@@ -44,9 +46,11 @@ export function computeContainFit(
   }
 }
 
-// Crops a full-grid ascii output down to just the fit region, dropping the void
-// letterbox bands. Used for TXT Export so the text has no padding, while PNG
-// keeps the framed canvas. See ADR 0010.
+/**
+ * Crops a full-grid ascii output down to just the fit region, dropping the void
+ * letterbox bands. Used for TXT Export so the text has no padding, while PNG
+ * keeps the framed canvas. See ADR 0010.
+ */
 export function sliceToRegion(rows: string[], region: FitRegion): string[] {
   const { offsetX, offsetY, dCols, dRows } = region
   return rows.slice(offsetY, offsetY + dRows).map((line) => line.slice(offsetX, offsetX + dCols))

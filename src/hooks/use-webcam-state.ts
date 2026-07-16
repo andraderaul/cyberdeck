@@ -25,9 +25,11 @@ export const INITIAL_STATE: WebcamState = {
 
 export type WebcamIntent = { kind: 'switchMode'; next: SourceMode } | { kind: 'switchCamera' }
 
-// Two stop flavors, deliberately distinct:
-// - stopSource: full teardown when leaving webcam
-// - stopTracks: raw track release that keeps `live` true, so the canvas doesn't blank mid camera-swap
+/**
+ * Two stop flavors, deliberately distinct:
+ * - `stopSource`: full teardown when leaving webcam
+ * - `stopTracks`: raw track release that keeps `live` true, so the canvas doesn't blank mid camera-swap
+ */
 export type WebcamEffect =
   | { type: 'stopSource' }
   | { type: 'stopTracks' }
@@ -142,7 +144,7 @@ export function useWebcamState(
     [stopWebcam, startWebcam],
   )
 
-  // Sequential by design — a stop must settle before the following start; do not use Promise.all.
+  /** Sequential by design — a stop must settle before the following start; do not use Promise.all. */
   const runEffects = useCallback(
     (effects: WebcamEffect[]) =>
       effects.reduce((prev, effect) => prev.then(() => applyEffect(effect)), Promise.resolve()),

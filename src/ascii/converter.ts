@@ -1,7 +1,9 @@
 import { type AsciiCell, CHARSET_MAPS, type Charset, type FitRegion } from './types'
 
-// Shared across every masked cell — frozen so an accidental downstream mutation
-// can't leak through the aliasing. computeFrame only ever reads cells.
+/**
+ * Shared across every masked cell — frozen so an accidental downstream mutation
+ * can't leak through the aliasing. computeFrame only ever reads cells.
+ */
 const VOID_CELL: AsciiCell = Object.freeze({ char: ' ', r: 0, g: 0, b: 0 })
 
 const BT601_RED_LUMA_WEIGHT = 0.299
@@ -28,14 +30,16 @@ function applyBrightnessContrast(value: number, brightness: number, contrast: nu
   return Math.max(0, Math.min(255, Math.round(v * 255)))
 }
 
+/**
+ * @param region Contain-fit sub-region the Source is drawn into; cells outside it are void.
+ *   Defaults to a full-grid fill. See ADR 0010.
+ */
 export function convertImage(
   ctx: CanvasRenderingContext2D,
   img: CanvasImageSource,
   cols: number,
   rows: number,
   options: { brightness: number; contrast: number; charset: Charset },
-  // Contain-fit sub-region the Source is drawn into; cells outside it are void.
-  // Defaults to a full-grid fill. See ADR 0010.
   region: FitRegion = { offsetX: 0, offsetY: 0, dCols: cols, dRows: rows },
 ): AsciiCell[][] {
   const { brightness, contrast, charset } = options
