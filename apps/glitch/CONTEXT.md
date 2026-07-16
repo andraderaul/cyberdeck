@@ -7,20 +7,26 @@ controle fino. Programa do deck **CYBERDECK** (ver `CONTEXT-MAP.md`).
 
 ## Pipeline
 
-Uma ordem **fixa** de Effects, cada um uma função pura `ImageData → ImageData`. A ordem é
+Uma ordem **fixa** de Effects, cada um uma função pura sobre um **PixelBuffer**. A ordem é
 canônica porque os Presets dependem dela — estruturais (reorganizam pixels) antes de
 superfície (sobrepõem textura):
 
 `Block Displacement → Pixel Sort → Channel Shift → Scanlines → Noise`
 
-O Pipeline é uma função pura de **GlitchSettings** → saída. Não há nenhuma fonte de
-aleatoriedade oculta: toda aleatoriedade deriva do **Seed**, que faz parte de
+O Pipeline é uma função pura de **GlitchSettings** + **Seed** → saída. Não há nenhuma fonte
+de aleatoriedade oculta: toda aleatoriedade deriva do Seed, que é passado ao lado dos
 GlitchSettings.
 
 ## Language
 
+**PixelBuffer**:
+A grade de pixels que atravessa o Pipeline — a moeda do núcleo puro, análoga ao AsciiCell
+do ASCII//Convert. Uma forma estrutural simples, deliberadamente independente do DOM, para
+que o núcleo seja testável sem canvas.
+_Avoid_: ImageData (é o tipo do DOM que a casca embrulha/desembrulha), bitmap, frame
+
 **Effect**:
-Uma transformação nomeada e isolada do pipeline; função pura `ImageData → ImageData`
+Uma transformação nomeada e isolada do pipeline; função pura `PixelBuffer → PixelBuffer`
 parametrizada pelos seus próprios params. Os cinco Effects do v1 são Block Displacement,
 Pixel Sort, Channel Shift, Scanlines e Noise.
 _Avoid_: filter, layer, camada
@@ -31,25 +37,30 @@ caso particular da futura pilha componível.
 _Avoid_: stack, chain (reservados para o modelo componível futuro — não queimar agora)
 
 **GlitchSettings**:
-O objeto plano que guarda os params de todos os Effects mais o Seed. Paralelo direto ao
-ConversionSettings do ASCII//Convert; determina inteiramente a saída.
+O objeto plano que guarda os params de todos os Effects — **o look**, e nada além dele.
+Paralelo direto ao ConversionSettings do ASCII//Convert. Não contém o Seed: o look e o
+arranjo são coisas distintas.
 _Avoid_: options, config, filters
 
 **Seed**:
-O valor que semeia toda a pseudo-aleatoriedade do Pipeline (hoje, o Block Displacement).
-Faz parte de GlitchSettings, então a saída é determinística e reproduzível. Fixo por padrão
+O valor que semeia toda a pseudo-aleatoriedade do Pipeline (hoje, o Block Displacement) —
+**o arranjo**, uma rolagem específica de um look. Vive ao lado dos GlitchSettings, não
+dentro: é o que permite que o Re-roll troque o arranjo sem alterar o look. Fixo por padrão
 tanto na imagem quanto na webcam; **Re-roll** gera um novo Seed.
 _Avoid_: random, rng
 
 **Preset**:
-Um snapshot nomeado de GlitchSettings (Seed incluso), curado para render bonito num clique
-— ex.: `VHS`, `CORRUPTED`, `VAPORWAVE`, `SIGNAL LOSS`. É a porta de entrada do app; os
-sliders ficam no modo avançado.
-_Avoid_: filtro, look (como termo de domínio)
+Um snapshot nomeado de GlitchSettings — um **look** curado para render bonito num clique,
+ex.: `VHS`, `CORRUPTED`, `VAPORWAVE`, `SIGNAL LOSS`. Não carrega Seed: aplicar um Preset
+gera um Seed novo, de modo que cada usuário recebe um arranjo próprio daquele look. É a
+porta de entrada do app; os sliders ficam no modo avançado.
+_Avoid_: filtro, look (como termo de domínio — "look" descreve o que um Preset é, mas o
+termo canônico é Preset)
 
 **Randomize**:
-O ato de gerar um novo GlitchSettings amostrando params e Seed dentro de faixas curadas
-como "sempre bonitas". Atalho de descoberta para o criador casual.
+O ato de descobrir um look novo sorteando um Preset como base e perturbando seus params
+dentro de faixas curadas ("preset + jitter"). Parte de um ponto conhecidamente bom, em vez
+de amostrar cada param independentemente — é assim que o "sempre bonito" é garantido.
 _Avoid_: shuffle, aleatorizar (mecanismo, não intenção)
 
 ## Effects
@@ -73,6 +84,7 @@ vídeo via `canvas.captureStream()` + `MediaRecorder`). Recording grava o canvas
 ## Escopo (v1)
 
 - **Dentro:** imagem estática + Live Source (webcam) em tempo real; pipeline fixo de 5
-  Effects; presets-first + Randomize; Seed fixo; PNG Export + Capture + Copy + Recording.
+  Effects; presets-first (6 Presets, um já aplicado na abertura) + Randomize; Seed fixo com
+  Re-roll; PNG Export + Capture + Copy + Recording.
 - **Fora (v2+):** datamosh real; pilha de Effects componível/reordenável; glitch animado
   (Seed avançando por frame na webcam); chromatic aberration.
