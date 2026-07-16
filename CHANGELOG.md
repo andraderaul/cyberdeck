@@ -1,3 +1,9 @@
+## [1.24.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.23.0...v1.24.0) (2026-07-16)
+
+### Features
+
+* **canvas:** clear-source control + LIVE badge overlay ([#68](https://github.com/andraderaul/ascii-art-converter/issues/68)) ([92ff123](https://github.com/andraderaul/ascii-art-converter/commit/92ff1230b60ba17fb644c206cce0153e7a1c7b6e))
+
 ## [1.23.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.22.1...v1.23.0) (2026-07-16)
 
 ### Features
