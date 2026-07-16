@@ -23,19 +23,16 @@ export const INITIAL_STATE: WebcamState = {
   error: null,
 }
 
-// A user intent that may require touching the camera device.
 export type WebcamIntent = { kind: 'switchMode'; next: SourceMode } | { kind: 'switchCamera' }
 
-// A device effect the shell must execute, in order. Two stop flavors, deliberately distinct:
-// - stopSource: full teardown (tracks + WEBCAM_STOPPED + clears the video) when leaving webcam
+// Two stop flavors, deliberately distinct:
+// - stopSource: full teardown when leaving webcam
 // - stopTracks: raw track release that keeps `live` true, so the canvas doesn't blank mid camera-swap
 export type WebcamEffect =
   | { type: 'stopSource' }
   | { type: 'stopTracks' }
   | { type: 'startStream'; facing: FacingMode }
 
-// Pure: decides which ordered device effects an intent requires — the no-op guard, whether to stop
-// on leaving webcam, and the facingMode toggle. State transitions stay with the reducer/hook.
 export function planEffects(state: WebcamState, intent: WebcamIntent): WebcamEffect[] {
   if (intent.kind === 'switchCamera') {
     const facing: FacingMode = state.facingMode === 'user' ? 'environment' : 'user'
@@ -145,8 +142,7 @@ export function useWebcamState(
     [stopWebcam, startWebcam],
   )
 
-  // Runs effects strictly in order (a stop must settle before the following start), so the
-  // sequential promise chain is deliberate — not something to parallelize with Promise.all.
+  // Sequential by design — a stop must settle before the following start; do not use Promise.all.
   const runEffects = useCallback(
     (effects: WebcamEffect[]) =>
       effects.reduce((prev, effect) => prev.then(() => applyEffect(effect)), Promise.resolve()),

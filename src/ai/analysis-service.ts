@@ -8,12 +8,10 @@ import type {
   ThreatLevel,
 } from './types'
 
-// The settled result of an analyze attempt: either a validated Analysis or a thrown error.
 export type AnalysisOutcome = { ok: Analysis } | { error: unknown }
 
-// Pure: maps a settled outcome to one of the terminal AnalysisState variants (everything but `loading`).
-// Keeps the outcome decision beside validate(), out of the async App callback — see the render pipeline's
-// pure/impure split (ADR 0005) applied to AI Analysis.
+// Maps a settled outcome to a terminal AnalysisState (everything but `loading`) — keeps the decision
+// out of the async App callback, mirroring the render pipeline's pure/impure split (ADR 0005).
 export function toAnalysisState(outcome: AnalysisOutcome): AnalysisState {
   if ('ok' in outcome) {
     return { status: 'success', analysis: outcome.ok }
