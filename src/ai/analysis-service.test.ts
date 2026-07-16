@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { analyzeCanvas } from './analysis-service'
-import { AuthError, ParseError } from './errors'
+import { analyzeCanvas, toAnalysisState } from './analysis-service'
+import { AuthError, NetworkError, ParseError, QuotaError } from './errors'
+import type { Analysis } from './types'
 
 const mockAnthropicAnalyze = vi.fn()
 const mockOpenAIAnalyze = vi.fn()
@@ -99,5 +100,27 @@ describe('analyzeCanvas', () => {
     mockAnthropicAnalyze.mockRejectedValueOnce(error)
 
     await expect(analyzeCanvas(DATA_URL, anthropicConfig())).rejects.toBe(error)
+  })
+})
+
+describe('toAnalysisState', () => {
+  const analysis: Analysis = VALID_ANALYSIS as Analysis
+
+  it('maps a successful outcome to the success state carrying the analysis', () => {
+    expect(toAnalysisState({ ok: analysis })).toEqual({ status: 'success', analysis })
+  })
+
+  it.each([
+    [new AuthError(), 'auth-error'],
+    [new QuotaError(), 'quota-error'],
+    [new NetworkError(), 'network-error'],
+    [new ParseError(), 'parse-error'],
+  ] as const)('maps %s to %s', (error, status) => {
+    expect(toAnalysisState({ error })).toEqual({ status })
+  })
+
+  it('maps an unknown error to parse-error as the safety-net fallback', () => {
+    expect(toAnalysisState({ error: new Error('boom') })).toEqual({ status: 'parse-error' })
+    expect(toAnalysisState({ error: 'not even an Error' })).toEqual({ status: 'parse-error' })
   })
 })

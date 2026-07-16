@@ -1,5 +1,35 @@
 import { AuthError, NetworkError, ParseError, QuotaError } from './errors'
-import type { AIConfig, AIProvider, AIProviderName, Analysis, ThreatLevel } from './types'
+import type {
+  AIConfig,
+  AIProvider,
+  AIProviderName,
+  Analysis,
+  AnalysisState,
+  ThreatLevel,
+} from './types'
+
+// The settled result of an analyze attempt: either a validated Analysis or a thrown error.
+export type AnalysisOutcome = { ok: Analysis } | { error: unknown }
+
+// Pure: maps a settled outcome to one of the terminal AnalysisState variants (everything but `loading`).
+// Keeps the outcome decision beside validate(), out of the async App callback — see the render pipeline's
+// pure/impure split (ADR 0005) applied to AI Analysis.
+export function toAnalysisState(outcome: AnalysisOutcome): AnalysisState {
+  if ('ok' in outcome) {
+    return { status: 'success', analysis: outcome.ok }
+  }
+  const { error } = outcome
+  if (error instanceof AuthError) {
+    return { status: 'auth-error' }
+  }
+  if (error instanceof QuotaError) {
+    return { status: 'quota-error' }
+  }
+  if (error instanceof NetworkError) {
+    return { status: 'network-error' }
+  }
+  return { status: 'parse-error' }
+}
 
 const THREAT_LEVELS: ThreatLevel[] = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL', 'UNKNOWN']
 

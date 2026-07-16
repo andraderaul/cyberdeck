@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { INITIAL_STATE, reducer, useWebcamState } from './use-webcam-state'
+import { INITIAL_STATE, planEffects, reducer, useWebcamState } from './use-webcam-state'
 
 describe('SWITCH_MODE', () => {
   it('sets new mode and resets live, facingMode, error', () => {
@@ -50,6 +50,44 @@ describe('WEBCAM_ERROR', () => {
     expect(next.live).toBe(false)
     expect(next.facingMode).toBe('user')
     expect(next.error).toBe('Camera access denied')
+  })
+})
+
+describe('planEffects', () => {
+  it('switchMode is a no-op when next equals the current mode', () => {
+    expect(
+      planEffects({ ...INITIAL_STATE, mode: 'upload' }, { kind: 'switchMode', next: 'upload' }),
+    ).toEqual([])
+    expect(
+      planEffects({ ...INITIAL_STATE, mode: 'webcam' }, { kind: 'switchMode', next: 'webcam' }),
+    ).toEqual([])
+  })
+
+  it('switchMode upload→webcam starts the stream facing user', () => {
+    expect(
+      planEffects({ ...INITIAL_STATE, mode: 'upload' }, { kind: 'switchMode', next: 'webcam' }),
+    ).toEqual([{ type: 'startStream', facing: 'user' }])
+  })
+
+  it('switchMode webcam→upload tears down the source', () => {
+    expect(
+      planEffects({ ...INITIAL_STATE, mode: 'webcam' }, { kind: 'switchMode', next: 'upload' }),
+    ).toEqual([{ type: 'stopSource' }])
+  })
+
+  it('switchCamera stops tracks then restarts on the toggled facing', () => {
+    expect(
+      planEffects(
+        { ...INITIAL_STATE, mode: 'webcam', facingMode: 'user' },
+        { kind: 'switchCamera' },
+      ),
+    ).toEqual([{ type: 'stopTracks' }, { type: 'startStream', facing: 'environment' }])
+    expect(
+      planEffects(
+        { ...INITIAL_STATE, mode: 'webcam', facingMode: 'environment' },
+        { kind: 'switchCamera' },
+      ),
+    ).toEqual([{ type: 'stopTracks' }, { type: 'startStream', facing: 'user' }])
   })
 })
 
