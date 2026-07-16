@@ -4,9 +4,12 @@ import EmptyStateHero from './components/empty-state-hero'
 import ErrorBoundary from './components/error-boundary'
 import ExportBar from './components/export-bar'
 import GlitchCanvas from './components/glitch-canvas'
-import type { GlitchSettings } from './glitch/types'
+import { DEFAULT_PIXEL_SORT, type GlitchSettings } from './glitch/types'
 
+// Both Effects start active: a casual creator has to see the point on the first screen, not a
+// near-untouched image. Presets will take this job over once they land (#75).
 const DEFAULT_SETTINGS: GlitchSettings = {
+  pixelSort: DEFAULT_PIXEL_SORT,
   channelShift: { channel: 'r', amount: 8 },
 }
 

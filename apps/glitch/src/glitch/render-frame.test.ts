@@ -3,7 +3,12 @@ import { MAX_SAMPLE_DIM } from './image-utils'
 import { renderGlitchFrame } from './render-frame'
 import type { GlitchSettings } from './types'
 
-const SETTINGS: GlitchSettings = { channelShift: { channel: 'r', amount: 2 } }
+// Pixel Sort stays off throughout: these tests exercise the shell's canvas glue, and a second
+// active Effect would only obscure whether the pure core ran at all.
+const SETTINGS: GlitchSettings = {
+  pixelSort: { enabled: false, direction: 'horizontal', threshold: 0, runLength: 64 },
+  channelShift: { channel: 'r', amount: 2 },
+}
 
 /**
  * happy-dom has no real 2D context, so the shell is exercised against a fake that records the
@@ -63,6 +68,7 @@ describe('renderGlitchFrame', () => {
     const canvas = fakeCanvas(visibleCtx)
 
     renderGlitchFrame(fakeSource(2, 1), canvas, hidden, {
+      ...SETTINGS,
       channelShift: { channel: 'r', amount: 1 },
     })
 

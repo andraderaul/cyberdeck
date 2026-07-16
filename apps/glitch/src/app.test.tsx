@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import App from './app'
-import type { GlitchSettings } from './glitch/types'
+import { DEFAULT_PIXEL_SORT, type GlitchSettings } from './glitch/types'
 
 vi.mock('./components/toast-provider', () => ({
   useToastError: vi.fn(() => vi.fn()),
@@ -82,13 +82,38 @@ describe('App', () => {
     )
   })
 
+  it('passes a toggled-off Pixel Sort down to the canvas', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderedSettings.mockClear()
+
+    fireEvent.click(screen.getByRole('button', { name: 'off' }))
+
+    expect(renderedSettings).toHaveBeenLastCalledWith(
+      expect.objectContaining({ pixelSort: expect.objectContaining({ enabled: false }) }),
+    )
+  })
+
+  it('hides the Pixel Sort params when the Effect is off', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'off' }))
+
+    expect(screen.queryByLabelText('threshold')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('run length')).not.toBeInTheDocument()
+  })
+
   it('keeps the rest of the look intact when one Effect param changes', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'upload' }))
 
     fireEvent.change(screen.getByLabelText('amount'), { target: { value: '20' } })
 
+    // Exhaustive by design: patching Channel Shift must leave Pixel Sort's params exactly as they
+    // were, and only a whole-object match catches a patch that drops a sibling Effect.
     expect(renderedSettings).toHaveBeenLastCalledWith({
+      pixelSort: DEFAULT_PIXEL_SORT,
       channelShift: { channel: 'r', amount: 20 },
     })
   })

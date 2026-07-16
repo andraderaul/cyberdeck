@@ -3,7 +3,104 @@ import {
   type ChannelShiftParams,
   type GlitchSettings,
   type PixelBuffer,
+  type PixelSortParams,
 } from './types'
+
+const BT601_RED_LUMA_WEIGHT = 0.299
+const BT601_GREEN_LUMA_WEIGHT = 0.587
+const BT601_BLUE_LUMA_WEIGHT = 0.114
+
+/**
+ * Perceived brightness of a pixel, normalised to 0..1 — the scale Pixel Sort's threshold reads on.
+ * A hand-copy of ASCII//Convert's `computeLuminosity`, kept identical rather than re-derived:
+ * the duplication is the signal that marks this for extraction later (ADR 0011).
+ */
+function computeLuminosity(r: number, g: number, b: number): number {
+  return (
+    (BT601_RED_LUMA_WEIGHT * r + BT601_GREEN_LUMA_WEIGHT * g + BT601_BLUE_LUMA_WEIGHT * b) / 255
+  )
+}
+
+/**
+ * Reorders one run of pixels by luminance, writing them back into the very offsets they came
+ * from — so a run rearranges in place and never disturbs the pixels around it.
+ *
+ * Reads every pixel from `source` before writing, which is what lets the caller pass the input
+ * buffer alongside its copy without a half-sorted run feeding back into the comparison.
+ */
+function sortRun(
+  source: Uint8ClampedArray<ArrayBuffer>,
+  target: Uint8ClampedArray<ArrayBuffer>,
+  offsets: number[],
+): void {
+  const ordered = offsets
+    .map((offset) => ({
+      offset,
+      luma: computeLuminosity(source[offset], source[offset + 1], source[offset + 2]),
+    }))
+    .sort((a, b) => a.luma - b.luma)
+
+  ordered.forEach(({ offset }, i) => {
+    const destination = offsets[i]
+    target[destination] = source[offset]
+    target[destination + 1] = source[offset + 1]
+    target[destination + 2] = source[offset + 2]
+    target[destination + 3] = source[offset + 3]
+  })
+}
+
+/**
+ * Effect: sorts contiguous runs of pixels by luminance within a threshold band — the iconic
+ * "melted" smear. Pure: builds a new PixelBuffer, never touches the input. See ADR 0005.
+ *
+ * A run collects while pixels stay in band and flushes at the first pixel below the threshold,
+ * at the end of the line, or once it reaches runLength. Sorting per run rather than per line is
+ * the whole effect: an unbroken line-wide sort reads as a gradient, not a glitch.
+ */
+export function pixelSort(pixels: PixelBuffer, params: PixelSortParams): PixelBuffer {
+  const { width, height, data } = pixels
+  const out = new Uint8ClampedArray(data)
+  if (!params.enabled) {
+    return { data: out, width, height }
+  }
+
+  const horizontal = params.direction === 'horizontal'
+  const lineCount = horizontal ? height : width
+  const lineLength = horizontal ? width : height
+  // Floors at 1 so a runLength below it turns the Effect off (a run of 1 is already sorted).
+  // Left unclamped, a 0 would never match the flush check and would sort each band end to end —
+  // the strongest possible smear from the setting that reads as the weakest.
+  const maxRun = Math.max(1, Math.floor(params.runLength))
+
+  for (let line = 0; line < lineCount; line++) {
+    let run: number[] = []
+
+    const flush = () => {
+      if (run.length > 1) {
+        sortRun(data, out, run)
+      }
+      run = []
+    }
+
+    for (let step = 0; step < lineLength; step++) {
+      const x = horizontal ? step : line
+      const y = horizontal ? line : step
+      const offset = (y * width + x) * 4
+
+      if (computeLuminosity(data[offset], data[offset + 1], data[offset + 2]) >= params.threshold) {
+        run.push(offset)
+        if (run.length === maxRun) {
+          flush()
+        }
+      } else {
+        flush()
+      }
+    }
+    flush()
+  }
+
+  return { data: out, width, height }
+}
 
 /**
  * Effect: displaces one colour channel horizontally — the uniform "RGB split".
@@ -33,9 +130,10 @@ export function channelShift(pixels: PixelBuffer, params: ChannelShiftParams): P
 
 /**
  * The fixed, canonical Effect order applied to produce the output — pure in GlitchSettings.
- * v1 carries Channel Shift alone; the remaining Effects slot in around it in the order
- * documented in CONTEXT.md (structural before surface).
+ * v1 carries Pixel Sort and Channel Shift; the remaining Effects slot in around them in the
+ * order documented in CONTEXT.md (structural before surface).
  */
 export function applyPipeline(pixels: PixelBuffer, settings: GlitchSettings): PixelBuffer {
-  return channelShift(pixels, settings.channelShift)
+  const sorted = pixelSort(pixels, settings.pixelSort)
+  return channelShift(sorted, settings.channelShift)
 }
