@@ -4,15 +4,10 @@
 app é um "programa" que roda no deck e compartilha a linguagem visual e os padrões de
 código, mas é versionado e deployado de forma independente (ver ADR 0011 e ADR 0012).
 
-> Nota de transição: a estrutura-alvo é o monorepo `cyberdeck` com `apps/*`. A migração do
-> ASCII//Convert para `apps/ascii/` ainda não ocorreu — hoje seu `CONTEXT.md` vive na raiz
-> (`./CONTEXT.md`). Os caminhos abaixo são os de destino.
-
 ## Contexts
 
 - [ASCII//Convert](./apps/ascii/CONTEXT.md) — converte uma Source Image ou Live Source num
   canvas de arte ASCII interativo, com preview em tempo real e Export.
-  _(Atualmente em `./CONTEXT.md` até a migração — ADR 0011.)_
 - [GLITCH//Studio](./apps/glitch/CONTEXT.md) — aplica um pipeline de efeitos de glitch
   (pixel sort, RGB split, scanlines, corrupção de blocos) sobre uma imagem ou webcam, com
   preview em tempo real, presets e Export.

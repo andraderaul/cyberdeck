@@ -8,11 +8,11 @@ pre-commit:
     check:
       run: npm run check
     test:
-      run: npx vitest run
+      run: npm run test:run
 
 pre-push:
   commands:
     typecheck:
-      run: npx tsc -b
+      run: npm run typecheck
     test:
-      run: npx vitest run
+      run: npm run test:run
