@@ -1,13 +1,12 @@
 import type { RefObject } from 'react'
 import { useState } from 'react'
 import { Errors } from '../errors/app-error'
+import { outputFilename, type PngScale, planPngExport } from '../export/output'
 import { isTouchDevice } from '../utils/device'
 import { shareOrDownloadCanvas } from '../utils/share'
 import { useToastError } from './toast-provider'
 import Button from './ui/button'
 import Chip from './ui/chip'
-
-const MAX_EXPORT_DIM = 8192
 
 interface Props {
   canvasRef: RefObject<HTMLCanvasElement | null>
@@ -27,7 +26,8 @@ export default function ExportBar({
   onAnalyze,
 }: Props) {
   const toastError = useToastError()
-  const [scale, setScale] = useState<1 | 2 | 4>(1)
+  const [scale, setScale] = useState<PngScale>(1)
+  const targetDimensions = planPngExport(canvasDimensions, scale).targetDimensions
 
   async function exportPng() {
     const canvas = canvasRef.current
@@ -47,7 +47,7 @@ export default function ExportBar({
       }
     }
     try {
-      await shareOrDownloadCanvas(target, 'ascii-art.png')
+      await shareOrDownloadCanvas(target, outputFilename('png-export'))
     } catch {
       toastError(Errors.exportFailed('png').message)
     }
@@ -61,7 +61,7 @@ export default function ExportBar({
       const blob = new Blob([asciiRows.join('\n')], { type: 'text/plain' })
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
-      a.download = 'ascii-art.txt'
+      a.download = outputFilename('txt-export')
       a.click()
       URL.revokeObjectURL(a.href)
     } catch {
@@ -74,23 +74,18 @@ export default function ExportBar({
       {hasImage && (
         <div className="flex items-center gap-xs">
           <span className="text-fg-subtle text-xs font-mono">png scale</span>
-          {([1, 2, 4] as const).map((s) => {
-            const exceedsCap =
-              canvasDimensions != null &&
-              (canvasDimensions.w * s > MAX_EXPORT_DIM || canvasDimensions.h * s > MAX_EXPORT_DIM)
-            return (
-              <Chip
-                key={s}
-                selected={scale === s}
-                disabled={exceedsCap}
-                onClick={() => setScale(s)}
-              >
-                {s}×
-              </Chip>
-            )
-          })}
+          {([1, 2, 4] as const).map((s) => (
+            <Chip
+              key={s}
+              selected={scale === s}
+              disabled={planPngExport(canvasDimensions, s).exceedsCap}
+              onClick={() => setScale(s)}
+            >
+              {s}×
+            </Chip>
+          ))}
           <span className="text-fg-subtle text-xs ml-xs">
-            {canvasDimensions ? `${canvasDimensions.w * scale}×${canvasDimensions.h * scale}` : '—'}
+            {targetDimensions ? `${targetDimensions.w}×${targetDimensions.h}` : '—'}
           </span>
         </div>
       )}

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { analyzeCanvas } from './ai/analysis-service'
-import { AuthError, NetworkError, QuotaError } from './ai/errors'
+import { analyzeCanvas, toAnalysisState } from './ai/analysis-service'
 import type { AnalysisState } from './ai/types'
 import { useAIConfig } from './ai/use-ai-config'
 import type { Preset } from './ascii/presets'
@@ -146,17 +145,9 @@ export default function App() {
 
     try {
       const analysis = await analyzeCanvas(dataUrl, aiConfig)
-      setActiveModal({ kind: 'analysis', state: { status: 'success', analysis } })
+      setActiveModal({ kind: 'analysis', state: toAnalysisState({ ok: analysis }) })
     } catch (err) {
-      if (err instanceof AuthError) {
-        setActiveModal({ kind: 'analysis', state: { status: 'auth-error' } })
-      } else if (err instanceof QuotaError) {
-        setActiveModal({ kind: 'analysis', state: { status: 'quota-error' } })
-      } else if (err instanceof NetworkError) {
-        setActiveModal({ kind: 'analysis', state: { status: 'network-error' } })
-      } else {
-        setActiveModal({ kind: 'analysis', state: { status: 'parse-error' } })
-      }
+      setActiveModal({ kind: 'analysis', state: toAnalysisState({ error: err }) })
     }
   }, [aiConfig])
 

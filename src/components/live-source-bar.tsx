@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 import { Errors } from '../errors/app-error'
+import { outputFilename } from '../export/output'
 import { formatElapsedTime } from '../hooks/use-recording'
 import { cn } from '../utils/cn'
 import { isTouchDevice } from '../utils/device'
@@ -36,7 +37,7 @@ export default function LiveSourceBar({
       return
     }
     try {
-      await shareOrDownloadCanvas(canvas, `ascii-capture-${Date.now()}.png`)
+      await shareOrDownloadCanvas(canvas, outputFilename('capture', { timestamp: Date.now() }))
     } catch {
       toastError(Errors.captureFailed().message)
     }

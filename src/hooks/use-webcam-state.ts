@@ -23,6 +23,34 @@ export const INITIAL_STATE: WebcamState = {
   error: null,
 }
 
+export type WebcamIntent = { kind: 'switchMode'; next: SourceMode } | { kind: 'switchCamera' }
+
+// Two stop flavors, deliberately distinct:
+// - stopSource: full teardown when leaving webcam
+// - stopTracks: raw track release that keeps `live` true, so the canvas doesn't blank mid camera-swap
+export type WebcamEffect =
+  | { type: 'stopSource' }
+  | { type: 'stopTracks' }
+  | { type: 'startStream'; facing: FacingMode }
+
+export function planEffects(state: WebcamState, intent: WebcamIntent): WebcamEffect[] {
+  if (intent.kind === 'switchCamera') {
+    const facing: FacingMode = state.facingMode === 'user' ? 'environment' : 'user'
+    return [{ type: 'stopTracks' }, { type: 'startStream', facing }]
+  }
+  if (intent.next === state.mode) {
+    return []
+  }
+  const effects: WebcamEffect[] = []
+  if (state.mode === 'webcam') {
+    effects.push({ type: 'stopSource' })
+  }
+  if (intent.next === 'webcam') {
+    effects.push({ type: 'startStream', facing: 'user' })
+  }
+  return effects
+}
+
 export function reducer(state: WebcamState, action: Action): WebcamState {
   switch (action.type) {
     case 'SWITCH_MODE':
@@ -94,29 +122,48 @@ export function useWebcamState(
     [onVideoStream, onFacingModeChange],
   )
 
-  const switchCamera = useCallback(async () => {
-    const next: FacingMode = state.facingMode === 'user' ? 'environment' : 'user'
-    streamRef.current?.getTracks().forEach((t) => {
-      t.stop()
-    })
-    streamRef.current = null
-    await startWebcam(next)
-  }, [state.facingMode, startWebcam])
+  const applyEffect = useCallback(
+    async (effect: WebcamEffect) => {
+      switch (effect.type) {
+        case 'stopSource':
+          stopWebcam()
+          break
+        case 'stopTracks':
+          streamRef.current?.getTracks().forEach((t) => {
+            t.stop()
+          })
+          streamRef.current = null
+          break
+        case 'startStream':
+          await startWebcam(effect.facing)
+          break
+      }
+    },
+    [stopWebcam, startWebcam],
+  )
+
+  // Sequential by design — a stop must settle before the following start; do not use Promise.all.
+  const runEffects = useCallback(
+    (effects: WebcamEffect[]) =>
+      effects.reduce((prev, effect) => prev.then(() => applyEffect(effect)), Promise.resolve()),
+    [applyEffect],
+  )
+
+  const switchCamera = useCallback(
+    () => runEffects(planEffects(state, { kind: 'switchCamera' })),
+    [state, runEffects],
+  )
 
   const switchMode = useCallback(
     async (next: SourceMode) => {
       if (next === state.mode) {
         return
       }
-      if (state.mode === 'webcam') {
-        stopWebcam()
-      }
+      const effects = planEffects(state, { kind: 'switchMode', next })
       dispatch({ type: 'SWITCH_MODE', mode: next })
-      if (next === 'webcam') {
-        await startWebcam('user')
-      }
+      await runEffects(effects)
     },
-    [state.mode, stopWebcam, startWebcam],
+    [state, runEffects],
   )
 
   useEffect(() => () => stopWebcam(), [stopWebcam])

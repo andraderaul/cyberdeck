@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { mimeToExtension, outputFilename } from '../export/output'
 import { shareOrDownloadBlob } from '../utils/share'
 
 const PREFERRED_MIME_TYPES = [
@@ -19,13 +20,6 @@ export function detectMimeType(): string | null {
     }
   }
   return null
-}
-
-export function mimeToExtension(mimeType: string): string {
-  if (mimeType.startsWith('video/mp4')) {
-    return 'mp4'
-  }
-  return 'webm'
 }
 
 export function formatElapsedTime(seconds: number): string {
@@ -91,7 +85,7 @@ export function useRecording(canvasRef: RefObject<HTMLCanvasElement | null>) {
 
       const blob = new Blob(chunksRef.current, { type: mimeType })
       const ext = mimeToExtension(mimeType)
-      void shareOrDownloadBlob(blob, `ascii-recording-${Date.now()}.${ext}`)
+      void shareOrDownloadBlob(blob, outputFilename('recording', { timestamp: Date.now(), ext }))
 
       recorderRef.current = null
       chunksRef.current = []

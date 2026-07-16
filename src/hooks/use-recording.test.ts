@@ -4,7 +4,6 @@ import {
   detectMimeType,
   formatElapsedTime,
   isRecordingSupported,
-  mimeToExtension,
   useRecording,
 } from './use-recording'
 
@@ -27,24 +26,6 @@ describe('formatElapsedTime', () => {
 
   it('formats minutes and seconds', () => {
     expect(formatElapsedTime(61)).toBe('1:01')
-  })
-})
-
-describe('mimeToExtension', () => {
-  it('returns mp4 for video/mp4', () => {
-    expect(mimeToExtension('video/mp4')).toBe('mp4')
-  })
-
-  it('returns mp4 for video/mp4;codecs=avc1', () => {
-    expect(mimeToExtension('video/mp4;codecs=avc1')).toBe('mp4')
-  })
-
-  it('returns webm for video/webm', () => {
-    expect(mimeToExtension('video/webm')).toBe('webm')
-  })
-
-  it('returns webm for video/webm;codecs=vp9', () => {
-    expect(mimeToExtension('video/webm;codecs=vp9')).toBe('webm')
   })
 })
 
