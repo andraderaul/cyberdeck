@@ -13,6 +13,8 @@ interface Props {
   canvasRef: RefObject<HTMLCanvasElement>
   isMirrored?: boolean
   isRecording?: boolean
+  isLive?: boolean
+  onClearSource?: () => void
   onDimensionsChange?: (w: number, h: number) => void
 }
 
@@ -24,6 +26,8 @@ export default function AsciiCanvas({
   canvasRef,
   isMirrored,
   isRecording,
+  isLive,
+  onClearSource,
   onDimensionsChange,
 }: Props) {
   const hiddenRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
@@ -122,15 +126,36 @@ export default function AsciiCanvas({
         className="w-full h-full block bg-bg [image-rendering:pixelated]"
         style={isMirrored ? { transform: 'scaleX(-1)' } : undefined}
       />
-      {isRecording && (
-        <div
-          data-testid="rec-indicator"
-          className="absolute top-xs right-xs flex items-center gap-2xs font-mono text-xs text-hot-pink motion-safe:animate-pulse pointer-events-none select-none"
-          aria-hidden="true"
-        >
-          ● REC
-        </div>
-      )}
+      <div className="absolute top-xs right-xs flex items-center gap-xs">
+        {isLive && (
+          <span className="flex items-center gap-2xs font-mono text-xs text-hot-pink border border-hot-pink px-sm py-2xs rounded-xs select-none">
+            <span className="motion-safe:animate-pulse" aria-hidden="true">
+              ◉
+            </span>{' '}
+            LIVE
+          </span>
+        )}
+        {isRecording && (
+          <span
+            data-testid="rec-indicator"
+            className="flex items-center gap-2xs font-mono text-xs text-hot-pink border border-hot-pink px-sm py-2xs rounded-xs select-none"
+            aria-hidden="true"
+          >
+            <span className="motion-safe:animate-pulse">●</span> REC
+          </span>
+        )}
+        {onClearSource && (
+          <button
+            type="button"
+            onClick={onClearSource}
+            title="clear source"
+            aria-label="clear source"
+            className="font-mono text-xs text-fg-muted border border-base px-sm py-2xs rounded-xs cursor-pointer transition-colors duration-fast hover:text-fg hover:border-strong"
+          >
+            ✕ clear
+          </button>
+        )}
+      </div>
     </div>
   )
 }

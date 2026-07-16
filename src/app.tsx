@@ -125,6 +125,16 @@ export default function App() {
     [stopWebcam],
   )
 
+  const handleClearSource = useCallback(() => {
+    if (isRecording) {
+      stopRecording()
+    }
+    stopWebcam()
+    setSourceImage(null)
+    setSourceVideo(null)
+    setAsciiRows([])
+  }, [isRecording, stopRecording, stopWebcam])
+
   const handleAnalyze = useCallback(async () => {
     const canvas = canvasRef.current
     if (!canvas || !aiConfig) {
@@ -207,6 +217,8 @@ export default function App() {
                   canvasRef={canvasRef}
                   isMirrored={isMirrored}
                   isRecording={isRecording}
+                  isLive={!!sourceVideo}
+                  onClearSource={handleClearSource}
                   onDimensionsChange={handleDimensionsChange}
                 />
               ) : (
