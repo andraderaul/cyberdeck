@@ -1,4 +1,8 @@
-import { type AsciiCell, CHARSET_MAPS, type Charset } from './types'
+import { type AsciiCell, CHARSET_MAPS, type Charset, type FitRegion } from './types'
+
+// Shared across every masked cell — frozen so an accidental downstream mutation
+// can't leak through the aliasing. computeFrame only ever reads cells.
+const VOID_CELL: AsciiCell = Object.freeze({ char: ' ', r: 0, g: 0, b: 0 })
 
 const BT601_RED_LUMA_WEIGHT = 0.299
 const BT601_GREEN_LUMA_WEIGHT = 0.587
@@ -30,17 +34,28 @@ export function convertImage(
   cols: number,
   rows: number,
   options: { brightness: number; contrast: number; charset: Charset },
+  // Contain-fit sub-region the Source is drawn into; cells outside it are void.
+  // Defaults to a full-grid fill. See ADR 0010.
+  region: FitRegion = { offsetX: 0, offsetY: 0, dCols: cols, dRows: rows },
 ): AsciiCell[][] {
   const { brightness, contrast, charset } = options
+  const { offsetX, offsetY, dCols, dRows } = region
 
-  ctx.drawImage(img, 0, 0, cols, rows)
+  ctx.drawImage(img, offsetX, offsetY, dCols, dRows)
   const data = ctx.getImageData(0, 0, cols, rows).data
 
   const result: AsciiCell[][] = []
 
   for (let row = 0; row < rows; row++) {
     const rowData: AsciiCell[] = []
+    const inRegionRow = row >= offsetY && row < offsetY + dRows
     for (let col = 0; col < cols; col++) {
+      // Cells outside the fit region are void — they never touch the luminance
+      // pipeline, so they stay empty at any brightness/contrast (ADR 0010).
+      if (!inRegionRow || col < offsetX || col >= offsetX + dCols) {
+        rowData.push(VOID_CELL)
+        continue
+      }
       const i = (row * cols + col) * 4
       const r = data[i]
       const g = data[i + 1]
