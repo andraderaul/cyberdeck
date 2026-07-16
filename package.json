@@ -1,57 +1,34 @@
 {
-  "name": "ascii-art-converter",
-  "description": "Client-side tool that converts images and webcam into interactive ASCII art with real-time preview and export.",
+  "name": "cyberdeck",
+  "description": "CYBERDECK — a deck of client-side cyberpunk creative tools. Each app is a program that runs on the deck.",
   "private": true,
-  "version": "1.25.0",
   "license": "MIT",
   "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "npm run dev --workspace @cyberdeck/ascii",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspace @cyberdeck/ascii",
+    "test:run": "npm run test:run --workspaces --if-present",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "check": "biome check .",
     "check:fix": "biome check . --write",
     "format": "biome format . --write",
     "format:check": "biome format .",
     "lint": "biome lint .",
     "lint:fix": "biome lint . --write",
-    "preview": "vite preview",
-    "test": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "release": "semantic-release",
-    "release:dry": "semantic-release --dry-run"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.92.0",
-    "@google/generative-ai": "^0.24.1",
-    "clsx": "^2.1.1",
-    "openai": "^6.35.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "tailwind-merge": "^3.5.0"
+    "changeset": "changeset",
+    "version": "changeset version && npm install --package-lock-only",
+    "release": "changeset tag"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.13",
+    "@changesets/cli": "^2.29.8",
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/git": "^10.0.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/react": "^18.3.5",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "@vitest/coverage-v8": "^2.1.9",
-    "autoprefixer": "^10.4.20",
-    "conventional-changelog-conventionalcommits": "^9.3.1",
-    "happy-dom": "^20.9.0",
-    "jsdom": "^29.1.1",
-    "lefthook": "^2.1.6",
-    "postcss": "^8.4.45",
-    "semantic-release": "^25.0.3",
-    "tailwindcss": "^3.4.10",
-    "typescript": "^5.5.3",
-    "vite": "^5.4.2",
-    "vitest": "^2.0.5"
+    "lefthook": "^2.1.6"
   }
 }
