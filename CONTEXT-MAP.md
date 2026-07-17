@@ -12,15 +12,22 @@ código, mas é versionado e deployado de forma independente (ver ADR 0011 e ADR
   (pixel sort, RGB split, scanlines, corrupção de blocos) sobre uma imagem ou webcam, com
   preview em tempo real, presets e Export.
 
+## Shared package
+
+- **Deck Kit** (`@cyberdeck/deck-kit`) — a casca compartilhada sobre a qual todo programa do
+  deck é montado: a linguagem visual (design tokens + Tailwind preset), os primitivos de `ui/`,
+  os hooks e utils neutros de framework, e a plumbing genérica de browser (mecanismo de erro
+  operacional, core de Recording). **Não** é um core de domínio — o pipeline de cada app (conversão
+  ASCII, Effects de glitch) fica no app. Escopo e fronteiras em ADR 0014.
+
 ## Relationships
 
-- **Linguagem visual compartilhada** — ambos herdam os design tokens (`index.css`), os
-  primitivos de `ui/`, `cn()`, o sistema de toast/erro e os padrões de Export / Capture /
-  Recording do ASCII//Convert.
-- **Sem código compartilhado extraído (ainda)** — por decisão explícita (ADR 0011), não há
-  `packages/` comum. A duplicação entre os apps é tolerada como sinal de qual é a superfície
-  realmente compartilhada; a extração de um core só acontece quando o segundo app tornar as
-  junções óbvias.
+- **Linguagem visual compartilhada** — ambos os apps herdam do Deck Kit os design tokens
+  (`tokens.css`), o Tailwind preset, os primitivos de `ui/`, `cn()` e o sistema de toast.
+- **Só a superfície com diff vazio + dois callers foi extraída** — ADR 0011 tolerou a duplicação
+  como sinal até o segundo app tornar as junções óbvias; ADR 0014 registra que o gatilho disparou
+  e move só o que estava provado. O que diverge de propósito fica copiado (webcam-state, os nomes
+  de `outputFilename`) — sinal, não dívida.
 - **Mesmo padrão de núcleo** — ambos os pipelines são funções puras sobre `ImageData`
   (imperative shell / functional core), com o único ponto de escrita no canvas visível
   isolado no passo de Paint.
