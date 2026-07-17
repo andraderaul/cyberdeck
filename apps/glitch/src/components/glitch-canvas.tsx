@@ -7,11 +7,11 @@ import { cn } from '../utils/cn'
 export const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
 
 /**
- * Chrome shared by everything sitting on top of the canvas. `bg-bg` is the load-bearing part: here
- * the canvas *is* the user's artwork, so a transparent chip would take its contrast from whatever
- * the Pipeline just painted — hot pink over a bright Noise field is unreadable. ADR 0009 audits
- * token-on-token pairs, so an opaque surface from that same palette is what keeps these chips at
- * the ratio it signed off. Deliberately not translucent: no alpha survives an arbitrary backdrop.
+ * Chrome shared by everything sitting on top of the canvas — see ADR 0013. `bg-bg` is the
+ * load-bearing part: the canvas *is* the user's artwork, so a transparent chip takes its contrast
+ * from whatever the Pipeline just painted (hot pink on a bright feed measures 1.57:1). Standing on
+ * an opaque surface from the palette is what holds the ratio ADR 0009 audited. Not translucent —
+ * no alpha survives an arbitrary backdrop.
  */
 const CANVAS_OVERLAY_CHROME = 'font-mono text-xs px-sm py-2xs rounded-xs bg-bg select-none'
 

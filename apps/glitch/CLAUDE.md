@@ -157,8 +157,9 @@ Tokens live as CSS custom properties in `src/index.css`; `tailwind.config.js` po
 same variables, so `text-violet` and `var(--violet)` resolve to one value. Keep the copies in
 step with `apps/ascii` by hand; the duplication is the signal that tells us what to extract later.
 
-**Anything sitting on the canvas must bring its own background** (`CANVAS_OVERLAY_CHROME` in
-`glitch-canvas.tsx` — the LIVE / REC badges and the clear control). ADR 0009's ratios are all
+**Anything sitting on the canvas must bring its own background** — ADR 0013, and a standing
+constraint on any overlay added later, not just the ones there now (`CANVAS_OVERLAY_CHROME` in
+`glitch-canvas.tsx`: the LIVE / REC badges and the clear control). ADR 0009's ratios are all
 token-on-token, and this is the one surface in the app where the backdrop isn't a token at all: it's
 the user's artwork, and the Pipeline can paint any color under a chip. Translucency can't fix that —
 no alpha survives an arbitrary backdrop — so the chips stand on an opaque `bg-bg` and hold the

@@ -51,9 +51,9 @@ describe('WCAG AA-small contrast pins (≥ 4.5:1)', () => {
     })
   })
 
-  // The canvas overlays (LIVE / REC / clear) sit on the user's artwork, so they carry `bg-bg` to
-  // stand on --void rather than on painted pixels. That only buys anything if the pair underneath
-  // actually passes — these two are what `CANVAS_OVERLAY_CHROME` is worth.
+  // The canvas overlays (LIVE / REC / clear) sit on the user's artwork, so per ADR 0013 they carry
+  // `bg-bg` to stand on --void rather than on painted pixels. That only buys anything if the pair
+  // underneath actually passes — these two are what `CANVAS_OVERLAY_CHROME` is worth.
   describe('canvas overlay chips on their own --bg surface', () => {
     it('LIVE / REC badge text passes', () => {
       expect(contrastRatio(FG.hotPink, BG.void)).toBeGreaterThanOrEqual(4.5)
