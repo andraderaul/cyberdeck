@@ -8,11 +8,11 @@ layout, the deck-wide comment convention, and the release ritual. Paths below ar
 
 ## Status
 
-Tracer bullet (#77) plus Pixel Sort (#78). The end-to-end path is live — Source Image → Pixel
-Sort → Channel Shift → PNG Export — and the pure-core / imperative-shell seam is established.
-The remaining three Effects (Block Displacement, Scanlines, Noise), Presets, Seed / Re-roll,
-Live Source, Capture and Recording are not built yet; see `CONTEXT.md` for the v1 scope they
-belong to.
+Tracer bullet (#77) plus Pixel Sort (#78) and Scanlines (#79). The end-to-end path is live —
+Source Image → Pixel Sort → Channel Shift → Scanlines → PNG Export — and the pure-core /
+imperative-shell seam is established. The remaining two Effects (Block Displacement, Noise),
+Presets, Seed / Re-roll, Live Source, Capture and Recording are not built yet; see `CONTEXT.md`
+for the v1 scope they belong to.
 
 ## Commands
 
@@ -83,8 +83,8 @@ Use these terms precisely — avoid the listed alternatives:
 | **Source Image** | Static uploaded image; immutable during session | uploadedImage, input image |
 | **Export** | Taking the result out (PNG) | download, save |
 
-`Seed` and `Preset` are domain terms the code hasn't reached yet — Pixel Sort and Channel Shift
-are both fully deterministic, so `applyPipeline` takes no Seed. It gains one when Block
+`Seed` and `Preset` are domain terms the code hasn't reached yet — Pixel Sort, Channel Shift and
+Scanlines are all fully deterministic, so `applyPipeline` takes no Seed. It gains one when Block
 Displacement lands.
 
 ### Design system
@@ -102,8 +102,10 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 
 **Glitch core**
 - `src/glitch/types.ts` — `PixelBuffer`, `GlitchSettings`, `ChannelName`, `ChannelShiftParams`,
-  `SortDirection`, `PixelSortParams`, `DEFAULT_PIXEL_SORT`
-- `src/glitch/pipeline.ts` — `applyPipeline()` (pure), `pixelSort()`, `channelShift()` — see ADR 0005
+  `SortDirection`, `PixelSortParams`, `DEFAULT_PIXEL_SORT`, `ScanlinesParams`, `DEFAULT_SCANLINES`,
+  `SPARSEST_SCANLINE_PERIOD`, `TIGHTEST_SCANLINE_PERIOD`, `SCANLINES_DENSITY_STEP`
+- `src/glitch/pipeline.ts` — `applyPipeline()` (pure), `pixelSort()`, `channelShift()`,
+  `scanlines()` — see ADR 0005
 - `src/glitch/image-utils.ts` — `sampleDimensions()` (800×800 cap), `sourceDimensions()`
 - `src/glitch/render-frame.ts` — `renderGlitchFrame()`: the imperative shell
 

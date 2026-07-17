@@ -54,8 +54,52 @@ export const DEFAULT_PIXEL_SORT: PixelSortParams = Object.freeze({
   runLength: 60,
 })
 
+export interface ScanlinesParams {
+  /**
+   * Like Pixel Sort, Scanlines has no param whose zero reads as "off" — density 0 still rasters,
+   * just sparsely — so the off state is explicit rather than encoded.
+   */
+  enabled: boolean
+  /**
+   * How tight the raster is, on the normalised 0..1 scale: 0 is the sparsest, 1 the tightest.
+   * Curated onto a pixel period inside the Effect rather than exposed as raw pixels, so the param
+   * reads the way round the name promises — more density, more lines.
+   */
+  density: number
+  /** How far the dark rows are dimmed: 0 leaves them untouched, 1 blacks them out. */
+  intensity: number
+}
+
+/** Sparsest end of the density scale: past 16 the lines read as stray scratches, not a CRT. */
+export const SPARSEST_SCANLINE_PERIOD = 16
+
+/** Tightest end of the density scale: below 2 every row darkens, which reads as a flat dim. */
+export const TIGHTEST_SCANLINE_PERIOD = 2
+
+/**
+ * The density scale holds one notch per reachable period, so every step of the slider moves the
+ * raster. Density is continuous in the type but lands on a whole pixel period in practice — a
+ * finer step would spend ~7 notches of slider travel repeating a period, leaving a control that
+ * reports a changing percentage over an unchanging image.
+ */
+export const SCANLINES_DENSITY_STEP = 1 / (SPARSEST_SCANLINE_PERIOD - TIGHTEST_SCANLINE_PERIOD)
+
+/**
+ * The default Scanlines look, and the value the sliders reset to on double-click. Lives in the
+ * core for the same reason as DEFAULT_PIXEL_SORT, and is frozen for the same reason.
+ *
+ * The density sits on a notch (7/14) — an off-notch default would be unreachable again once the
+ * slider snapped away from it.
+ */
+export const DEFAULT_SCANLINES: ScanlinesParams = Object.freeze({
+  enabled: true,
+  density: 0.5,
+  intensity: 0.35,
+})
+
 /** The flat object holding every Effect's params — the look, and nothing else. Carries no Seed. */
 export interface GlitchSettings {
   pixelSort: PixelSortParams
   channelShift: ChannelShiftParams
+  scanlines: ScanlinesParams
 }

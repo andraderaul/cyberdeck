@@ -4,6 +4,9 @@ import {
   type GlitchSettings,
   type PixelBuffer,
   type PixelSortParams,
+  type ScanlinesParams,
+  SPARSEST_SCANLINE_PERIOD,
+  TIGHTEST_SCANLINE_PERIOD,
 } from './types'
 
 const BT601_RED_LUMA_WEIGHT = 0.299
@@ -128,12 +131,51 @@ export function channelShift(pixels: PixelBuffer, params: ChannelShiftParams): P
   return { data: out, width, height }
 }
 
+/** Maps normalised density onto the pixel period between dark rows — inverted, so 1 is tightest. */
+function scanlinePeriod(density: number): number {
+  const clamped = Math.min(Math.max(density, 0), 1)
+  return Math.round(
+    SPARSEST_SCANLINE_PERIOD + (TIGHTEST_SCANLINE_PERIOD - SPARSEST_SCANLINE_PERIOD) * clamped,
+  )
+}
+
+/**
+ * Effect: dims every Nth row — the CRT raster. Pure: builds a new PixelBuffer, never touches the
+ * input. See ADR 0005.
+ *
+ * Scales the surviving channels rather than blending toward black, so a dark row keeps its hue and
+ * the raster reads as a gradient of the image underneath. Alpha is left alone: a scanline dims a
+ * pixel, it does not punch a hole in it.
+ */
+export function scanlines(pixels: PixelBuffer, params: ScanlinesParams): PixelBuffer {
+  const { width, height, data } = pixels
+  const out = new Uint8ClampedArray(data)
+  if (!params.enabled || params.intensity <= 0) {
+    return { data: out, width, height }
+  }
+
+  const period = scanlinePeriod(params.density)
+  const keep = 1 - Math.min(params.intensity, 1)
+
+  for (let y = 0; y < height; y += period) {
+    for (let x = 0; x < width; x++) {
+      const offset = (y * width + x) * 4
+      out[offset] = data[offset] * keep
+      out[offset + 1] = data[offset + 1] * keep
+      out[offset + 2] = data[offset + 2] * keep
+    }
+  }
+
+  return { data: out, width, height }
+}
+
 /**
  * The fixed, canonical Effect order applied to produce the output — pure in GlitchSettings.
- * v1 carries Pixel Sort and Channel Shift; the remaining Effects slot in around them in the
- * order documented in CONTEXT.md (structural before surface).
+ * v1 carries Pixel Sort, Channel Shift and Scanlines; the remaining Effects slot in around them in
+ * the order documented in CONTEXT.md (structural before surface).
  */
 export function applyPipeline(pixels: PixelBuffer, settings: GlitchSettings): PixelBuffer {
   const sorted = pixelSort(pixels, settings.pixelSort)
-  return channelShift(sorted, settings.channelShift)
+  const shifted = channelShift(sorted, settings.channelShift)
+  return scanlines(shifted, settings.scanlines)
 }
