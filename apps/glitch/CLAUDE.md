@@ -9,11 +9,11 @@ layout, the deck-wide comment convention, and the release ritual. Paths below ar
 ## Status
 
 Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80), Block Displacement with
-Seed / Re-roll (#81) and Live Source + Capture (#82). All five v1 Effects are live — Source Image
-*or* Live Source → Block Displacement → Pixel Sort → Channel Shift → Scanlines → Noise → PNG Export
-/ Capture — the pure-core / imperative-shell seam is established, and the Pipeline is deterministic
-in GlitchSettings + Seed. Presets and Recording are not built yet; see `CONTEXT.md` for the v1 scope
-they belong to.
+Seed / Re-roll (#81), Live Source + Capture (#82) and Copy (#83). All five v1 Effects are live —
+Source Image *or* Live Source → Block Displacement → Pixel Sort → Channel Shift → Scanlines → Noise
+→ PNG Export / Capture / Copy — the pure-core / imperative-shell seam is established, and the
+Pipeline is deterministic in GlitchSettings + Seed. Presets and Recording are not built yet; see
+`CONTEXT.md` for the v1 scope they belong to.
 
 ## Commands
 
@@ -115,6 +115,7 @@ Use these terms precisely — avoid the listed alternatives:
 | **Live Source** | The webcam feed, sampled on the rAF loop | video, camera, stream |
 | **Export** | Taking the result out (PNG) | download, save |
 | **Capture** | One frame of a Live Source taken out as PNG | screenshot, snapshot |
+| **Copy** | The result written to the clipboard as a PNG | copy to clipboard, paste |
 
 `Preset` is the one domain term the code hasn't reached yet (#75). The Seed landed with Block
 Displacement: `createSeed()` is the single place the app draws real randomness, and everything
@@ -158,6 +159,7 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/hooks/use-webcam-state.ts` — `useWebcamState()`, `planCommands()`, `reducer()`: the Live
   Source's MediaStream lifecycle
 - `src/utils/cn.ts` — `cn()` (clsx + tailwind-merge)
+- `src/utils/copy.ts` — `copyCanvasToClipboard()` (canvas → PNG on the clipboard)
 - `src/utils/load-image-file.ts` — `loadImageFile()` (File → HTMLImageElement)
 - `src/utils/share.ts` — `shareOrDownloadCanvas()` (Web Share API with download fallback)
 
@@ -167,7 +169,7 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/components/control-panel.tsx` — GlitchSettings controls, in Pipeline order, plus the Re-roll
   control (its own callback — the Seed is not part of the look)
 - `src/components/empty-state-hero.tsx` — initial empty state with the upload and webcam entry points
-- `src/components/export-bar.tsx` — PNG Export / Capture control
+- `src/components/export-bar.tsx` — PNG Export / Capture / Copy controls
 - `src/components/toast-provider.tsx` — renders the toast queue
 - `src/components/error-boundary.tsx` — generic React error boundary
 - `src/components/ui/` — design system primitives: `button`, `label`, `slider`, `toast`,
