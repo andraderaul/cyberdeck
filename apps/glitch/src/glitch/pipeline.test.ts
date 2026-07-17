@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { applyPipeline, channelShift, pixelSort, scanlines } from './pipeline'
+import { applyPipeline, channelShift, noise, pixelSort, scanlines } from './pipeline'
 import {
   DEFAULT_SCANLINES,
   type GlitchSettings,
+  MAX_NOISE_DELTA,
+  type NoiseParams,
   type PixelBuffer,
   type PixelSortParams,
   SCANLINES_DENSITY_STEP,
@@ -25,6 +27,11 @@ const SCANLINES_OFF: ScanlinesParams = {
   enabled: false,
   density: 0.5,
   intensity: 0.5,
+}
+
+const NOISE_OFF: NoiseParams = {
+  amount: 0,
+  tint: 'mono',
 }
 
 /** The tightest raster the density scale reaches — a period of 2, so every other row darkens. */
@@ -372,20 +379,155 @@ describe('scanlines', () => {
   })
 })
 
+describe('noise', () => {
+  const params: NoiseParams = { amount: 0.5, tint: 'color' }
+
+  /** A flat field of one colour — every deviation in the output is grain the Effect put there. */
+  function field(width: number, height: number, colour: number[]): PixelBuffer {
+    return buildPixels(
+      width,
+      height,
+      Array.from({ length: width * height }, () => colour),
+    )
+  }
+
+  /** Every rgb channel of a buffer, alpha dropped — the channels Noise is allowed to move. */
+  function rgbChannels(buffer: PixelBuffer): number[] {
+    return Array.from(buffer.data).filter((_, i) => i % 4 !== 3)
+  }
+
+  /** Total distance the grain moved the image — the scale `amount` is meant to turn. */
+  function deviation(grained: PixelBuffer, from: number): number {
+    return rgbChannels(grained).reduce((sum, value) => sum + Math.abs(value - from), 0)
+  }
+
+  it('perturbs the image', () => {
+    const pixels = field(8, 8, grey(128))
+
+    const grained = noise(pixels, params)
+
+    expect(rgbChannels(grained)).not.toEqual(rgbChannels(pixels))
+  })
+
+  it('keeps every grain inside the bound the amount sets', () => {
+    // Mid-grey with a bound of 64 — far enough from both ends that nothing clamps, so the
+    // perturbation is observable at its true size rather than cut off at 0 or 255.
+    const grained = noise(field(16, 16, grey(128)), { ...params, amount: 0.5 })
+
+    const bound = 0.5 * MAX_NOISE_DELTA
+    for (const value of rgbChannels(grained)) {
+      expect(Math.abs(value - 128)).toBeLessThanOrEqual(bound)
+    }
+  })
+
+  it('grains harder as the amount rises', () => {
+    const pixels = field(16, 16, grey(128))
+
+    const light = deviation(noise(pixels, { ...params, amount: 0.2 }), 128)
+    const heavy = deviation(noise(pixels, { ...params, amount: 0.8 }), 128)
+
+    expect(heavy).toBeGreaterThan(light)
+  })
+
+  it('reaches the full delta at amount 1', () => {
+    const grained = noise(field(32, 32, grey(128)), { ...params, amount: 1 })
+
+    const strongest = Math.max(...rgbChannels(grained).map((value) => Math.abs(value - 128)))
+    expect(strongest).toBeGreaterThan(MAX_NOISE_DELTA * 0.9)
+  })
+
+  it('moves every channel of a pixel together when the tint is mono — the hue survives', () => {
+    // Every channel sits at least a bound (64) clear of both 0 and 255, so none of them clamps.
+    // A channel that clamped would break step with the others for that reason, not for want of a
+    // shared draw, and the assertion could no longer tell the two apart.
+    const grained = noise(field(4, 4, [180, 140, 100, 255]), { amount: 0.5, tint: 'mono' })
+
+    for (let x = 0; x < 4; x++) {
+      const [r, g, b] = pixelAt(grained, x, 0)
+      expect(r - 180).toBe(g - 140)
+      expect(g - 140).toBe(b - 100)
+    }
+  })
+
+  it('pulls the channels apart when the tint is colour', () => {
+    const grained = noise(field(8, 8, grey(128)), { amount: 0.5, tint: 'color' })
+
+    // A grey source stays grey under mono grain; colour grain has to break r === g === b somewhere.
+    const chromatic = Array.from({ length: 8 }, (_, x) => pixelAt(grained, x, 0)).some(
+      ([r, g, b]) => r !== g || g !== b,
+    )
+    expect(chromatic).toBe(true)
+  })
+
+  it('grains each pixel on its own — the field never shifts as one block', () => {
+    const grained = noise(field(8, 8, grey(128)), { amount: 0.5, tint: 'mono' })
+
+    const deltas = new Set(Array.from({ length: 8 }, (_, x) => pixelAt(grained, x, 0)[0]))
+    expect(deltas.size).toBeGreaterThan(1)
+  })
+
+  it('is deterministic — the same params grain the same way every call', () => {
+    const pixels = field(8, 8, grey(128))
+
+    const first = noise(pixels, params)
+    const second = noise(pixels, params)
+
+    expect(Array.from(first.data)).toEqual(Array.from(second.data))
+  })
+
+  it('leaves alpha untouched — grain speckles the pixel, it does not punch a hole', () => {
+    const grained = noise(field(4, 4, [128, 128, 128, 128]), { ...params, amount: 1 })
+
+    for (let x = 0; x < 4; x++) {
+      expect(pixelAt(grained, x, 0)[3]).toBe(128)
+    }
+  })
+
+  it('clamps at the ends rather than wrapping around', () => {
+    // A raw Uint8Array would wrap a black pixel's negative grain up to near-white, turning the
+    // darkest grain into the brightest speckle; the clamped array is what keeps black looking black.
+    const dark = noise(field(16, 16, grey(0)), { ...params, amount: 1 })
+    const light = noise(field(16, 16, grey(255)), { ...params, amount: 1 })
+
+    expect(Math.min(...rgbChannels(dark))).toBeGreaterThanOrEqual(0)
+    expect(Math.max(...rgbChannels(dark))).toBeLessThanOrEqual(MAX_NOISE_DELTA)
+    expect(Math.max(...rgbChannels(light))).toBeLessThanOrEqual(255)
+    expect(Math.min(...rgbChannels(light))).toBeGreaterThanOrEqual(255 - MAX_NOISE_DELTA)
+  })
+
+  it('is pure — the input buffer is never mutated', () => {
+    const pixels = field(4, 4, grey(128))
+    const before = Array.from(pixels.data)
+
+    noise(pixels, params)
+
+    expect(Array.from(pixels.data)).toEqual(before)
+  })
+
+  it('returns an equivalent buffer at zero amount', () => {
+    const pixels = field(4, 4, grey(128))
+
+    const grained = noise(pixels, NOISE_OFF)
+
+    expect(Array.from(grained.data)).toEqual(Array.from(pixels.data))
+  })
+})
+
 describe('applyPipeline', () => {
   const settings: GlitchSettings = {
     pixelSort: SORT_OFF,
     channelShift: { channel: 'r', amount: 1 },
     scanlines: SCANLINES_OFF,
+    noise: NOISE_OFF,
   }
 
   it('applies Pixel Sort when enabled', () => {
     const pixels = buildPixels(2, 1, [grey(90), grey(10)])
 
     const out = applyPipeline(pixels, {
+      ...settings,
       pixelSort: { ...SORT_OFF, enabled: true },
       channelShift: { channel: 'r', amount: 0 },
-      scanlines: SCANLINES_OFF,
     })
 
     expect(pixelAt(out, 0, 0)).toEqual(grey(10))
@@ -396,9 +538,9 @@ describe('applyPipeline', () => {
     const pixels = buildPixels(2, 1, [grey(90), grey(10)])
 
     const out = applyPipeline(pixels, {
+      ...settings,
       pixelSort: SORT_OFF,
       channelShift: { channel: 'r', amount: 0 },
-      scanlines: SCANLINES_OFF,
     })
 
     expect(Array.from(out.data)).toEqual(Array.from(pixels.data))
@@ -413,9 +555,9 @@ describe('applyPipeline', () => {
     ])
 
     const out = applyPipeline(pixels, {
+      ...settings,
       pixelSort: { ...SORT_OFF, enabled: true },
       channelShift: { channel: 'r', amount: 1 },
-      scanlines: SCANLINES_OFF,
     })
 
     expect(pixelAt(out, 0, 0)).toEqual([0, 0, 0, 255])
@@ -444,6 +586,7 @@ describe('applyPipeline', () => {
     const pixels = buildPixels(1, 2, [grey(200), grey(10)])
 
     const out = applyPipeline(pixels, {
+      ...settings,
       pixelSort: { ...SORT_OFF, enabled: true, direction: 'vertical' },
       channelShift: { channel: 'r', amount: 0 },
       scanlines: { enabled: true, density: TIGHTEST_DENSITY, intensity: 0.5 },
@@ -453,6 +596,60 @@ describe('applyPipeline', () => {
     // first would have sunk grey(200) to 100 and left the sort to order 10 above it instead.
     expect(pixelAt(out, 0, 0)).toEqual(grey(5))
     expect(pixelAt(out, 0, 1)).toEqual(grey(200))
+  })
+
+  it('applies Noise when the amount is above zero', () => {
+    const pixels = buildPixels(
+      8,
+      1,
+      Array.from({ length: 8 }, () => grey(128)),
+    )
+
+    const out = applyPipeline(pixels, {
+      ...settings,
+      channelShift: { channel: 'r', amount: 0 },
+      noise: { amount: 0.5, tint: 'color' },
+    })
+
+    expect(Array.from(out.data)).not.toEqual(Array.from(pixels.data))
+  })
+
+  it('skips Noise at zero amount', () => {
+    const pixels = buildPixels(
+      8,
+      1,
+      Array.from({ length: 8 }, () => grey(128)),
+    )
+
+    const out = applyPipeline(pixels, {
+      ...settings,
+      channelShift: { channel: 'r', amount: 0 },
+      noise: NOISE_OFF,
+    })
+
+    expect(Array.from(out.data)).toEqual(Array.from(pixels.data))
+  })
+
+  it('runs Noise last — the grain lies over the raster instead of under it', () => {
+    const pixels = buildPixels(
+      8,
+      1,
+      Array.from({ length: 8 }, () => grey(200)),
+    )
+
+    const out = applyPipeline(pixels, {
+      ...settings,
+      channelShift: { channel: 'r', amount: 0 },
+      scanlines: { enabled: true, density: TIGHTEST_DENSITY, intensity: 1 },
+      noise: { amount: 1, tint: 'color' },
+    })
+
+    // Scanlines blacks row 0 out, and the grain then speckles that black back up. Running Noise
+    // first would have left the raster to scale the grain away to nothing along with the image.
+    const lit = Array.from({ length: 8 }, (_, x) => pixelAt(out, x, 0)).filter(
+      ([r, g, b]) => r + g + b > 0,
+    )
+    expect(lit.length).toBeGreaterThan(0)
   })
 
   it('applies Channel Shift', () => {

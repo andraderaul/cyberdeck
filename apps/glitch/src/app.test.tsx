@@ -1,7 +1,12 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import App from './app'
-import { DEFAULT_PIXEL_SORT, DEFAULT_SCANLINES, type GlitchSettings } from './glitch/types'
+import {
+  DEFAULT_NOISE,
+  DEFAULT_PIXEL_SORT,
+  DEFAULT_SCANLINES,
+  type GlitchSettings,
+} from './glitch/types'
 
 vi.mock('./components/toast-provider', () => ({
   useToastError: vi.fn(() => vi.fn()),
@@ -155,6 +160,29 @@ describe('App', () => {
       pixelSort: DEFAULT_PIXEL_SORT,
       channelShift: { channel: 'r', amount: 20 },
       scanlines: DEFAULT_SCANLINES,
+      noise: DEFAULT_NOISE,
     })
+  })
+
+  it('passes an updated Noise amount down to the canvas', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+    fireEvent.change(screen.getByLabelText('grain'), { target: { value: '0.8' } })
+
+    expect(renderedSettings).toHaveBeenLastCalledWith(
+      expect.objectContaining({ noise: expect.objectContaining({ amount: 0.8 }) }),
+    )
+  })
+
+  it('passes an updated Noise tint down to the canvas', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'color' }))
+
+    expect(renderedSettings).toHaveBeenLastCalledWith(
+      expect.objectContaining({ noise: expect.objectContaining({ tint: 'color' }) }),
+    )
   })
 })

@@ -9,6 +9,7 @@ const SETTINGS: GlitchSettings = {
   pixelSort: { enabled: false, direction: 'horizontal', threshold: 0, runLength: 64 },
   channelShift: { channel: 'r', amount: 2 },
   scanlines: { enabled: false, density: 0.5, intensity: 0.5 },
+  noise: { amount: 0, tint: 'mono' },
 }
 
 /**
