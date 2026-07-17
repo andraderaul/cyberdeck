@@ -37,4 +37,12 @@ export function normalizeError(err: unknown): AppError {
 export const Errors = {
   exportFailed: (): AppError =>
     createError({ type: 'export_failed', message: "Couldn't save PNG — try again" }),
+  copyFailed: (): AppError =>
+    createError({ type: 'copy_failed', message: "Couldn't copy PNG — try again" }),
+  // Distinct from copyFailed: no retry will ever help here, so the message can't say "try again"
+  copyUnsupported: (): AppError =>
+    createError({
+      type: 'copy_unsupported',
+      message: "This browser can't copy images — export the PNG instead",
+    }),
 }

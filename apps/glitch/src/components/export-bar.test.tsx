@@ -6,8 +6,16 @@ import ExportBar from './export-bar'
 const shareOrDownloadCanvas = vi.hoisted(() => vi.fn(() => Promise.resolve()))
 vi.mock('../utils/share', () => ({ shareOrDownloadCanvas }))
 
+const copyCanvasToClipboard = vi.hoisted(() => vi.fn(() => Promise.resolve()))
+const isClipboardImageSupported = vi.hoisted(() => vi.fn(() => true))
+vi.mock('../utils/copy', () => ({ copyCanvasToClipboard, isClipboardImageSupported }))
+
 const toastError = vi.hoisted(() => vi.fn())
-vi.mock('./toast-provider', () => ({ useToastError: () => toastError }))
+const toastInfo = vi.hoisted(() => vi.fn())
+vi.mock('./toast-provider', () => ({
+  useToastError: () => toastError,
+  useToastInfo: () => toastInfo,
+}))
 
 function canvasRef(): RefObject<HTMLCanvasElement | null> {
   return { current: document.createElement('canvas') }
@@ -71,5 +79,75 @@ describe('ExportBar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'export png' }))
 
     expect(shareOrDownloadCanvas).not.toHaveBeenCalled()
+  })
+
+  it('copies the result to the clipboard', async () => {
+    const ref = canvasRef()
+    render(<ExportBar canvasRef={ref} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'copy' }))
+
+    await waitFor(() => {
+      expect(copyCanvasToClipboard).toHaveBeenCalledWith(ref.current)
+    })
+  })
+
+  // Copy is PNG Export on a different destination — the canvas is read as-is, whatever the Source.
+  it('copies a Live Source frame off the canvas without touching the loop', async () => {
+    const ref = canvasRef()
+    render(<ExportBar canvasRef={ref} isLive />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'copy' }))
+
+    await waitFor(() => {
+      expect(copyCanvasToClipboard).toHaveBeenCalledWith(ref.current)
+    })
+    expect(shareOrDownloadCanvas).not.toHaveBeenCalled()
+    expect(toastError).not.toHaveBeenCalled()
+  })
+
+  it('confirms a Copy with a toast, since nothing on screen changes', async () => {
+    render(<ExportBar canvasRef={canvasRef()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'copy' }))
+
+    await waitFor(() => {
+      expect(toastInfo).toHaveBeenCalled()
+    })
+    expect(toastError).not.toHaveBeenCalled()
+  })
+
+  it('surfaces a failed Copy as a toast', async () => {
+    copyCanvasToClipboard.mockRejectedValueOnce(new Error('denied'))
+    render(<ExportBar canvasRef={canvasRef()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'copy' }))
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalled()
+    })
+    expect(toastInfo).not.toHaveBeenCalled()
+  })
+
+  // "try again" is the wrong advice where retrying can never work, so this failure gets its own say
+  it('tells the user to Export instead when the browser cannot copy images at all', async () => {
+    isClipboardImageSupported.mockReturnValueOnce(false)
+    render(<ExportBar canvasRef={canvasRef()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'copy' }))
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith(expect.stringContaining('export'))
+    })
+    expect(toastError).not.toHaveBeenCalledWith(expect.stringContaining('try again'))
+    expect(copyCanvasToClipboard).not.toHaveBeenCalled()
+  })
+
+  it('does not copy when there is no canvas to take from', () => {
+    render(<ExportBar canvasRef={createRef<HTMLCanvasElement>()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'copy' }))
+
+    expect(copyCanvasToClipboard).not.toHaveBeenCalled()
   })
 })
