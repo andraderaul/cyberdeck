@@ -3,11 +3,12 @@ import { MAX_SAMPLE_DIM } from './image-utils'
 import { renderGlitchFrame } from './render-frame'
 import type { GlitchSettings } from './types'
 
-// Pixel Sort stays off throughout: these tests exercise the shell's canvas glue, and a second
-// active Effect would only obscure whether the pure core ran at all.
+// Channel Shift is the only Effect left on: these tests exercise the shell's canvas glue, and a
+// second active Effect would only obscure whether the pure core ran at all.
 const SETTINGS: GlitchSettings = {
   pixelSort: { enabled: false, direction: 'horizontal', threshold: 0, runLength: 64 },
   channelShift: { channel: 'r', amount: 2 },
+  scanlines: { enabled: false, density: 0.5, intensity: 0.5 },
 }
 
 /**

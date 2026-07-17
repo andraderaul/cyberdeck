@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import App from './app'
-import { DEFAULT_PIXEL_SORT, type GlitchSettings } from './glitch/types'
+import { DEFAULT_PIXEL_SORT, DEFAULT_SCANLINES, type GlitchSettings } from './glitch/types'
 
 vi.mock('./components/toast-provider', () => ({
   useToastError: vi.fn(() => vi.fn()),
@@ -41,6 +41,12 @@ vi.mock('./components/empty-state-hero', () => ({
     </button>
   ),
 }))
+
+// Every Effect's on/off group offers the same two buttons, so a bare 'off' query is ambiguous —
+// each one has to be reached through its own group.
+function powerButton(effect: string, power: 'on' | 'off') {
+  return within(screen.getByRole('group', { name: effect })).getByRole('button', { name: power })
+}
 
 describe('App', () => {
   it('opens on the empty state, with no preview or Export yet', () => {
@@ -87,7 +93,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'upload' }))
     renderedSettings.mockClear()
 
-    fireEvent.click(screen.getByRole('button', { name: 'off' }))
+    fireEvent.click(powerButton('pixel sort', 'off'))
 
     expect(renderedSettings).toHaveBeenLastCalledWith(
       expect.objectContaining({ pixelSort: expect.objectContaining({ enabled: false }) }),
@@ -98,10 +104,43 @@ describe('App', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'upload' }))
 
-    fireEvent.click(screen.getByRole('button', { name: 'off' }))
+    fireEvent.click(powerButton('pixel sort', 'off'))
 
     expect(screen.queryByLabelText('threshold')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('run length')).not.toBeInTheDocument()
+  })
+
+  it('passes a toggled-off Scanlines down to the canvas', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderedSettings.mockClear()
+
+    fireEvent.click(powerButton('scanlines', 'off'))
+
+    expect(renderedSettings).toHaveBeenLastCalledWith(
+      expect.objectContaining({ scanlines: expect.objectContaining({ enabled: false }) }),
+    )
+  })
+
+  it('hides the Scanlines params when the Effect is off', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+    fireEvent.click(powerButton('scanlines', 'off'))
+
+    expect(screen.queryByLabelText('density')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('intensity')).not.toBeInTheDocument()
+  })
+
+  it('passes an updated Scanlines density down to the canvas', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+    fireEvent.change(screen.getByLabelText('density'), { target: { value: '1' } })
+
+    expect(renderedSettings).toHaveBeenLastCalledWith(
+      expect.objectContaining({ scanlines: expect.objectContaining({ density: 1 }) }),
+    )
   })
 
   it('keeps the rest of the look intact when one Effect param changes', () => {
@@ -115,6 +154,7 @@ describe('App', () => {
     expect(renderedSettings).toHaveBeenLastCalledWith({
       pixelSort: DEFAULT_PIXEL_SORT,
       channelShift: { channel: 'r', amount: 20 },
+      scanlines: DEFAULT_SCANLINES,
     })
   })
 })

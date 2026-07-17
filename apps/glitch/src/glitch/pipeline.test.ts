@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { applyPipeline, channelShift, pixelSort } from './pipeline'
-import type { GlitchSettings, PixelBuffer, PixelSortParams } from './types'
+import { applyPipeline, channelShift, pixelSort, scanlines } from './pipeline'
+import {
+  DEFAULT_SCANLINES,
+  type GlitchSettings,
+  type PixelBuffer,
+  type PixelSortParams,
+  SCANLINES_DENSITY_STEP,
+  type ScanlinesParams,
+} from './types'
 
 /** Greys are the clearest Pixel Sort fixture: luminance tracks the channel value directly. */
 function grey(value: number): number[] {
@@ -13,6 +20,15 @@ const SORT_OFF: PixelSortParams = {
   threshold: 0,
   runLength: 64,
 }
+
+const SCANLINES_OFF: ScanlinesParams = {
+  enabled: false,
+  density: 0.5,
+  intensity: 0.5,
+}
+
+/** Density 1 is the tightest raster — a period of 2, so every other row darkens. */
+const EVERY_OTHER_ROW = 1
 
 /** Builds a PixelBuffer from per-pixel RGBA tuples laid out row-major. */
 function buildPixels(width: number, height: number, pixels: number[][]): PixelBuffer {
@@ -225,10 +241,142 @@ describe('pixelSort', () => {
   })
 })
 
+describe('scanlines', () => {
+  const params: ScanlinesParams = { enabled: true, density: EVERY_OTHER_ROW, intensity: 0.5 }
+
+  /** A column of identical greys — every row is a candidate line, so only the raster shows. */
+  function greyColumn(height: number, value: number): PixelBuffer {
+    return buildPixels(
+      1,
+      height,
+      Array.from({ length: height }, () => grey(value)),
+    )
+  }
+
+  /** Rows apart the first two dark lines land — the period, read back off a rastered greyColumn. */
+  function periodOf(rastered: PixelBuffer): number {
+    const dark: number[] = []
+    for (let y = 0; y < rastered.height; y++) {
+      if (pixelAt(rastered, 0, y)[0] < 200) {
+        dark.push(y)
+      }
+    }
+    return dark[1] - dark[0]
+  }
+
+  it('darkens every other row at the tightest density', () => {
+    const dimmed = scanlines(greyColumn(4, 200), params)
+
+    expect(pixelAt(dimmed, 0, 0)).toEqual(grey(100))
+    expect(pixelAt(dimmed, 0, 2)).toEqual(grey(100))
+  })
+
+  it('leaves the rows between the lines untouched', () => {
+    const dimmed = scanlines(greyColumn(4, 200), params)
+
+    expect(pixelAt(dimmed, 0, 1)).toEqual(grey(200))
+    expect(pixelAt(dimmed, 0, 3)).toEqual(grey(200))
+  })
+
+  it('spaces the lines further apart as density drops', () => {
+    const dimmed = scanlines(greyColumn(8, 200), { ...params, density: 0 })
+
+    // The sparsest raster is a period of 16 — past the end of an 8-row buffer, so only row 0 lands.
+    expect(pixelAt(dimmed, 0, 0)).toEqual(grey(100))
+    for (let y = 1; y < 8; y++) {
+      expect(pixelAt(dimmed, 0, y)).toEqual(grey(200))
+    }
+  })
+
+  it('darkens the whole line, not just one channel', () => {
+    const pixels = buildPixels(2, 1, [
+      [200, 100, 40, 255],
+      [80, 60, 20, 255],
+    ])
+
+    const dimmed = scanlines(pixels, params)
+
+    expect(pixelAt(dimmed, 0, 0)).toEqual([100, 50, 20, 255])
+    expect(pixelAt(dimmed, 1, 0)).toEqual([40, 30, 10, 255])
+  })
+
+  it('scales the darkening with intensity', () => {
+    const dimmed = scanlines(greyColumn(2, 200), { ...params, intensity: 0.25 })
+
+    expect(pixelAt(dimmed, 0, 0)).toEqual(grey(150))
+  })
+
+  it('blacks the line out at full intensity', () => {
+    const dimmed = scanlines(greyColumn(2, 200), { ...params, intensity: 1 })
+
+    expect(pixelAt(dimmed, 0, 0)).toEqual(grey(0))
+  })
+
+  it('leaves alpha untouched — a scanline dims the pixel, it does not punch a hole', () => {
+    const pixels = buildPixels(1, 1, [[200, 200, 200, 128]])
+
+    const dimmed = scanlines(pixels, { ...params, intensity: 1 })
+
+    expect(pixelAt(dimmed, 0, 0)).toEqual([0, 0, 0, 128])
+  })
+
+  it('is pure — the input buffer is never mutated', () => {
+    const pixels = greyColumn(2, 200)
+    const before = Array.from(pixels.data)
+
+    scanlines(pixels, params)
+
+    expect(Array.from(pixels.data)).toEqual(before)
+  })
+
+  it('returns an equivalent buffer when disabled', () => {
+    const pixels = greyColumn(4, 200)
+
+    const dimmed = scanlines(pixels, SCANLINES_OFF)
+
+    expect(Array.from(dimmed.data)).toEqual(Array.from(pixels.data))
+  })
+
+  it('returns an equivalent buffer at zero intensity', () => {
+    const pixels = greyColumn(4, 200)
+
+    const dimmed = scanlines(pixels, { ...params, intensity: 0 })
+
+    expect(Array.from(dimmed.data)).toEqual(Array.from(pixels.data))
+  })
+
+  it('gives every density notch a period of its own — no step of the scale is a no-op', () => {
+    const notches = Math.round(1 / SCANLINES_DENSITY_STEP)
+    const periods = Array.from({ length: notches + 1 }, (_, n) =>
+      periodOf(scanlines(greyColumn(40, 200), { ...params, density: n * SCANLINES_DENSITY_STEP })),
+    )
+
+    expect(periods).toEqual([16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2])
+  })
+
+  it('puts the default density on a notch, so the reset value stays reachable', () => {
+    expect(DEFAULT_SCANLINES.density / SCANLINES_DENSITY_STEP).toBeCloseTo(
+      Math.round(DEFAULT_SCANLINES.density / SCANLINES_DENSITY_STEP),
+    )
+  })
+
+  it('clamps a density outside 0..1 to the curated ends', () => {
+    const pixels = greyColumn(4, 200)
+
+    expect(Array.from(scanlines(pixels, { ...params, density: 4 }).data)).toEqual(
+      Array.from(scanlines(pixels, { ...params, density: 1 }).data),
+    )
+    expect(Array.from(scanlines(pixels, { ...params, density: -4 }).data)).toEqual(
+      Array.from(scanlines(pixels, { ...params, density: 0 }).data),
+    )
+  })
+})
+
 describe('applyPipeline', () => {
   const settings: GlitchSettings = {
     pixelSort: SORT_OFF,
     channelShift: { channel: 'r', amount: 1 },
+    scanlines: SCANLINES_OFF,
   }
 
   it('applies Pixel Sort when enabled', () => {
@@ -237,6 +385,7 @@ describe('applyPipeline', () => {
     const out = applyPipeline(pixels, {
       pixelSort: { ...SORT_OFF, enabled: true },
       channelShift: { channel: 'r', amount: 0 },
+      scanlines: SCANLINES_OFF,
     })
 
     expect(pixelAt(out, 0, 0)).toEqual(grey(10))
@@ -249,6 +398,7 @@ describe('applyPipeline', () => {
     const out = applyPipeline(pixels, {
       pixelSort: SORT_OFF,
       channelShift: { channel: 'r', amount: 0 },
+      scanlines: SCANLINES_OFF,
     })
 
     expect(Array.from(out.data)).toEqual(Array.from(pixels.data))
@@ -265,10 +415,39 @@ describe('applyPipeline', () => {
     const out = applyPipeline(pixels, {
       pixelSort: { ...SORT_OFF, enabled: true },
       channelShift: { channel: 'r', amount: 1 },
+      scanlines: SCANLINES_OFF,
     })
 
     expect(pixelAt(out, 0, 0)).toEqual([0, 0, 0, 255])
     expect(pixelAt(out, 1, 0)).toEqual([0, 0, 0, 255])
+  })
+
+  it('applies Scanlines when enabled', () => {
+    const pixels = buildPixels(1, 2, [grey(200), grey(200)])
+
+    const out = applyPipeline(pixels, {
+      ...settings,
+      channelShift: { channel: 'r', amount: 0 },
+      scanlines: { enabled: true, density: EVERY_OTHER_ROW, intensity: 0.5 },
+    })
+
+    expect(pixelAt(out, 0, 0)).toEqual(grey(100))
+    expect(pixelAt(out, 0, 1)).toEqual(grey(200))
+  })
+
+  it('runs Scanlines last — surface texture lays over the arrangement', () => {
+    const pixels = buildPixels(1, 2, [grey(200), grey(10)])
+
+    const out = applyPipeline(pixels, {
+      pixelSort: { ...SORT_OFF, enabled: true, direction: 'vertical' },
+      channelShift: { channel: 'r', amount: 0 },
+      scanlines: { enabled: true, density: EVERY_OTHER_ROW, intensity: 0.5 },
+    })
+
+    // The sort lifts grey(10) to row 0, and only then does the scanline dim it to 5. Darkening
+    // first would have sunk grey(200) to 100 and left the sort to order 10 above it instead.
+    expect(pixelAt(out, 0, 0)).toEqual(grey(5))
+    expect(pixelAt(out, 0, 1)).toEqual(grey(200))
   })
 
   it('applies Channel Shift', () => {
