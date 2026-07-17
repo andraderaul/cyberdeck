@@ -9,12 +9,15 @@ layout, the deck-wide comment convention, and the release ritual. Paths below ar
 ## Status
 
 Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80), Block Displacement with
-Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced panel (#84) and
-Recording (#85). All five v1 Effects are live — Source Image *or* Live Source → Block Displacement →
-Pixel Sort → Channel Shift → Scanlines → Noise → PNG Export / Capture / Copy / Recording — the
-pure-core / imperative-shell seam is established, and the Pipeline is deterministic in
-GlitchSettings + Seed. Every Effect's params are reachable behind the advanced affordance. Presets
-are not built yet; see `CONTEXT.md` for the v1 scope they belong to.
+Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced panel (#84), Recording
+(#85) and Presets + Randomize (#86). All five v1 Effects are live — Source Image *or* Live Source →
+Block Displacement → Pixel Sort → Channel Shift → Scanlines → Noise → PNG Export / Capture / Copy /
+Recording — the pure-core / imperative-shell seam is established, and the Pipeline is deterministic
+in GlitchSettings + Seed. The front door is the six Presets plus Randomize; every Effect's params
+are reachable behind the advanced affordance. The v1 scope in `CONTEXT.md` is complete.
+
+The Preset **values** are taste, not derivation: they are the one thing here a human curates, and
+re-curating a number in `presets.ts` is a design change, not a bug fix.
 
 ## Commands
 
@@ -57,6 +60,31 @@ Single-page React/TS/Vite app. Fully client-side — no backend, no network.
    draw comes off the Seed's stream (`createRng`) or a Seed-fed positional hash
 6. The visible canvas is sized to the **sampled** dimensions, so the canvas *is* the output —
    PNG Export takes it as-is and CSS `object-contain` handles the on-screen fit
+
+### Presets and Randomize
+
+The six Presets in `src/glitch/presets.ts` are the app's primary surface — `PresetPicker` sits above
+the advanced Disclosure, and `DEFAULT_PRESET` is applied on open. A Preset is a whole GlitchSettings
+snapshot rather than a diff from a default: a curator can read one entire look in one place, and
+re-curate it without moving the other five.
+
+Three behaviours hang together, and all of them come from the Seed sitting *outside* GlitchSettings:
+
+- **Applying a Preset draws a fresh Seed.** The look is shared, the arrangement is yours.
+- **`glitchSettingsMatch()` is a total comparison** — every param of every Effect, with no
+  "except the seed" exclusion for a later reader to innocently tidy away. So a Re-roll keeps the
+  active Preset highlighted (a new arrangement is not a customisation) while a slider edit marks it
+  `(modified)` — the picker tracks `activePresetId` rather than deriving it, because a look alone
+  can't say which Preset it was edited away from.
+- **Randomize is preset + jitter** (`randomizeGlitchSettings`): pick a Preset, perturb its numbers
+  within spreads curated well inside the sliders' ranges. Starting from a known-good point is what
+  guarantees "always pretty"; independent per-param sampling would eventually deal out a combination
+  nobody vouched for. Only numbers jitter — a Preset's *choices* (which channel splits, which way
+  the sort runs, whether an Effect is on) ride through untouched, since flipping one lands outside
+  everything the base promised. Its randomness is injected, so a test pins both the base and the
+  perturbation; the app passes `Math.random` and draws the Seed itself. Randomize clears the active
+  Preset rather than marking its base modified: a jittered look is one the user discovered, not an
+  edit they made.
 
 ### Live Source
 
@@ -136,6 +164,7 @@ Use these terms precisely — avoid the listed alternatives:
 | **GlitchSettings** | Flat object holding every Effect's params — the look. Carries no Seed | options, config, filters |
 | **Seed** | Seeds the Pipeline's pseudo-randomness — the arrangement. Lives beside GlitchSettings | random, rng |
 | **Preset** | A named GlitchSettings snapshot — a curated look | filter, look |
+| **Randomize** | Discovering a look by picking a Preset and jittering its params | shuffle |
 | **Source Image** | Static uploaded image; immutable during session | uploadedImage, input image |
 | **Live Source** | The webcam feed, sampled on the rAF loop | video, camera, stream |
 | **Export** | Taking the result out (PNG) | download, save |
@@ -143,7 +172,7 @@ Use these terms precisely — avoid the listed alternatives:
 | **Copy** | The result written to the clipboard as a PNG | copy to clipboard, paste |
 | **Recording** | The glitched Live Source taken out as a video, via MediaRecorder | video export, screen record |
 
-`Preset` is the one domain term the code hasn't reached yet (#75). The Seed landed with Block
+Every term now has code behind it. The Seed landed with Block
 Displacement: `createSeed()` is the single place the app draws real randomness, and everything
 downstream derives from the Seed it returns. Block Displacement pulls its blocks off the Seed's rng
 stream; Noise's grain comes from a positional hash the Seed feeds, so it re-rolls with the
@@ -183,6 +212,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   `SCANLINES_DENSITY_STEP`, `NoiseParams`, `NoiseTint`, `DEFAULT_NOISE`, `MAX_NOISE_DELTA`,
   `BlockDisplacementParams`, `DEFAULT_BLOCK_DISPLACEMENT`, `MAX_DISPLACEMENT_BLOCKS`,
   `MAX_BLOCK_SHIFT_RATIO`, `MAX_BLOCK_HEIGHT_RATIO`, `MIN_BLOCK_WIDTH_RATIO`
+- `src/glitch/presets.ts` — `PRESETS` (the six curated looks), `DEFAULT_PRESET` (applied on open),
+  `Preset`, `glitchSettingsMatch()` (total), `randomizeGlitchSettings()` (preset + jitter, injected
+  randomness)
 - `src/glitch/pipeline.ts` — `applyPipeline()` (pure), `blockDisplacement()`, `pixelSort()`,
   `channelShift()`, `scanlines()`, `noise()` — see ADR 0005
 - `src/glitch/rng.ts` — `createRng()` (pure, Seed → draw stream), `createSeed()` (impure — the app's
@@ -208,6 +240,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 **Components**
 - `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render, and owns the
   ~15fps rAF loop for a Live Source. Carries the LIVE / REC badges
+- `src/components/preset-picker.tsx` — the front door: the six Preset chips (active one highlighted,
+  `(modified)` once edited) and Randomize
 - `src/components/control-panel.tsx` — GlitchSettings controls, in Pipeline order, plus the Re-roll
   control (its own callback — the Seed is not part of the look). Sits behind the `advanced`
   Disclosure in `app.tsx` (#84) — the tweak layer, not the front door
@@ -216,7 +250,7 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   recording timer
 - `src/components/toast-provider.tsx` — renders the toast queue
 - `src/components/error-boundary.tsx` — generic React error boundary
-- `src/components/ui/` — design system primitives: `button`, `disclosure`, `label`, `slider`,
+- `src/components/ui/` — design system primitives: `button`, `chip`, `disclosure`, `label`, `slider`,
   `toast`, `toggle-group`, `source-image-drop-zone`
 
 **Testing**

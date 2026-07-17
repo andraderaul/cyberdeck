@@ -49,10 +49,14 @@ export interface PixelSortParams {
 /**
  * The default Pixel Sort look, and the value the sliders reset to on double-click. Lives in the
  * core rather than beside the controls: it is a property of the Effect, not of the UI that
- * happens to edit it (ADR 0005). Becomes a Preset's business once Presets land (#75).
+ * happens to edit it (ADR 0005).
  *
- * Frozen because every session's initial settings alias this one object — an accidental
- * downstream mutation would rewrite the default look for the whole app.
+ * Distinct from a Preset, which is a whole curated look (`presets.ts`) — this is one Effect's
+ * neutral starting point, and it is what a double-click resets to. Resetting to the active Preset's
+ * value instead would leave a user who had wandered off every Preset with no way back to neutral.
+ *
+ * Frozen because a look can alias this object rather than copy it — an accidental downstream
+ * mutation would rewrite the Effect's default for the whole app.
  */
 export const DEFAULT_PIXEL_SORT: PixelSortParams = Object.freeze({
   enabled: true,
