@@ -70,9 +70,10 @@ export interface ScanlinesParams {
   intensity: number
 }
 
-// The curated ends of the density scale. Below a period of 2 every row darkens, which reads as a
-// flat dim rather than a raster; past 16 the lines read as stray scratches rather than a CRT.
+/** Sparsest end of the density scale: past 16 the lines read as stray scratches, not a CRT. */
 export const SPARSEST_SCANLINE_PERIOD = 16
+
+/** Tightest end of the density scale: below 2 every row darkens, which reads as a flat dim. */
 export const TIGHTEST_SCANLINE_PERIOD = 2
 
 /**

@@ -102,7 +102,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 
 **Glitch core**
 - `src/glitch/types.ts` — `PixelBuffer`, `GlitchSettings`, `ChannelName`, `ChannelShiftParams`,
-  `SortDirection`, `PixelSortParams`, `DEFAULT_PIXEL_SORT`, `ScanlinesParams`, `DEFAULT_SCANLINES`
+  `SortDirection`, `PixelSortParams`, `DEFAULT_PIXEL_SORT`, `ScanlinesParams`, `DEFAULT_SCANLINES`,
+  `SPARSEST_SCANLINE_PERIOD`, `TIGHTEST_SCANLINE_PERIOD`, `SCANLINES_DENSITY_STEP`
 - `src/glitch/pipeline.ts` — `applyPipeline()` (pure), `pixelSort()`, `channelShift()`,
   `scanlines()` — see ADR 0005
 - `src/glitch/image-utils.ts` — `sampleDimensions()` (800×800 cap), `sourceDimensions()`

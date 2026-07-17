@@ -27,8 +27,8 @@ const SCANLINES_OFF: ScanlinesParams = {
   intensity: 0.5,
 }
 
-/** Density 1 is the tightest raster — a period of 2, so every other row darkens. */
-const EVERY_OTHER_ROW = 1
+/** The tightest raster the density scale reaches — a period of 2, so every other row darkens. */
+const TIGHTEST_DENSITY = 1
 
 /** Builds a PixelBuffer from per-pixel RGBA tuples laid out row-major. */
 function buildPixels(width: number, height: number, pixels: number[][]): PixelBuffer {
@@ -242,7 +242,7 @@ describe('pixelSort', () => {
 })
 
 describe('scanlines', () => {
-  const params: ScanlinesParams = { enabled: true, density: EVERY_OTHER_ROW, intensity: 0.5 }
+  const params: ScanlinesParams = { enabled: true, density: TIGHTEST_DENSITY, intensity: 0.5 }
 
   /** A column of identical greys — every row is a candidate line, so only the raster shows. */
   function greyColumn(height: number, value: number): PixelBuffer {
@@ -428,20 +428,25 @@ describe('applyPipeline', () => {
     const out = applyPipeline(pixels, {
       ...settings,
       channelShift: { channel: 'r', amount: 0 },
-      scanlines: { enabled: true, density: EVERY_OTHER_ROW, intensity: 0.5 },
+      scanlines: { enabled: true, density: TIGHTEST_DENSITY, intensity: 0.5 },
     })
 
     expect(pixelAt(out, 0, 0)).toEqual(grey(100))
     expect(pixelAt(out, 0, 1)).toEqual(grey(200))
   })
 
+  // Pins Scanlines against Pixel Sort rather than against its actual Pipeline neighbour: Scanlines
+  // and Channel Shift commute, so their relative order is unobservable and no test can pin it. A
+  // per-row uniform scale and a within-row horizontal shift never see each other — scaling then
+  // shifting a row equals shifting then scaling it. Pixel Sort is the nearest Effect the order is
+  // observable against, and it's the one that matters: it proves surface runs after structural.
   it('runs Scanlines last — surface texture lays over the arrangement', () => {
     const pixels = buildPixels(1, 2, [grey(200), grey(10)])
 
     const out = applyPipeline(pixels, {
       pixelSort: { ...SORT_OFF, enabled: true, direction: 'vertical' },
       channelShift: { channel: 'r', amount: 0 },
-      scanlines: { enabled: true, density: EVERY_OTHER_ROW, intensity: 0.5 },
+      scanlines: { enabled: true, density: TIGHTEST_DENSITY, intensity: 0.5 },
     })
 
     // The sort lifts grey(10) to row 0, and only then does the scanline dim it to 5. Darkening
