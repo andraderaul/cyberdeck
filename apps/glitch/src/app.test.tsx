@@ -551,6 +551,24 @@ describe('App', () => {
       expect(screen.queryByLabelText('live glitched preview')).not.toBeInTheDocument()
     })
 
+    // ADR 0006: a denied camera is an operational failure like a failed Export or Copy — it doesn't
+    // get to fail quietly. The fallback to the empty state alone leaves the user with no reason why.
+    it('surfaces a denied camera as a toast', async () => {
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        mediaDevices: { getUserMedia: vi.fn().mockRejectedValue(new Error('denied')) },
+      })
+      render(<App />)
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'use webcam' }))
+      })
+
+      await waitFor(() => {
+        expect(toastError).toHaveBeenCalledWith(expect.stringMatching(/camera/i))
+      })
+    })
+
     describe('Recording', () => {
       async function goLive() {
         render(<App />)

@@ -30,6 +30,8 @@ const FG = {
   fgMuted: '#9898c0',
   // Carries the LIVE / REC badges, the recording timer, and every danger affordance
   hotPink: '#ff2d78',
+  // Carries the mobile "⚙ controls" trigger, which floats over the canvas — a canvas overlay too
+  violet: '#b829ff',
 }
 
 describe('WCAG AA-small contrast pins (≥ 4.5:1)', () => {
@@ -61,6 +63,12 @@ describe('WCAG AA-small contrast pins (≥ 4.5:1)', () => {
 
     it('clear control text passes', () => {
       expect(contrastRatio(FG.fgMuted, BG.void)).toBeGreaterThanOrEqual(4.5)
+    })
+
+    // The mobile "⚙ controls" trigger floats over the canvas, so it stands on --bg like the badges
+    // rather than on --abyss, where violet would fall to 4.35:1.
+    it('controls trigger text passes', () => {
+      expect(contrastRatio(FG.violet, BG.void)).toBeGreaterThanOrEqual(4.5)
     })
   })
 })
