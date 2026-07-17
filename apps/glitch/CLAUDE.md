@@ -157,6 +157,18 @@ Tokens live as CSS custom properties in `src/index.css`; `tailwind.config.js` po
 same variables, so `text-violet` and `var(--violet)` resolve to one value. Keep the copies in
 step with `apps/ascii` by hand; the duplication is the signal that tells us what to extract later.
 
+**Anything sitting on the canvas must bring its own background** (`CANVAS_OVERLAY_CHROME` in
+`glitch-canvas.tsx` — the LIVE / REC badges and the clear control). ADR 0009's ratios are all
+token-on-token, and this is the one surface in the app where the backdrop isn't a token at all: it's
+the user's artwork, and the Pipeline can paint any color under a chip. Translucency can't fix that —
+no alpha survives an arbitrary backdrop — so the chips stand on an opaque `bg-bg` and hold the
+audited ratio. `src/contrast.test.ts` pins the pairs.
+
+This is a real divergence from ASCII//Convert, whose identical-looking badges need no such thing:
+`paintFrame()` fills that canvas with `#0a0a0f` (`--void`) before drawing, so its overlays already
+sit on the audited pair. Here the canvas *is* the output (no fill, no letterbox to hide in), which
+is the same property that makes Capture and Recording a plain read of the visible pixels.
+
 ### Comment convention
 
 See the root `CLAUDE.md` — the convention is deck-wide.
