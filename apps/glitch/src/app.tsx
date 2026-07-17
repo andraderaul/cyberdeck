@@ -4,6 +4,7 @@ import EmptyStateHero from './components/empty-state-hero'
 import ErrorBoundary from './components/error-boundary'
 import ExportBar from './components/export-bar'
 import GlitchCanvas from './components/glitch-canvas'
+import MobileControls from './components/mobile-controls'
 import PresetPicker from './components/preset-picker'
 import { useToastError } from './components/toast-provider'
 import Disclosure from './components/ui/disclosure'
@@ -98,7 +99,8 @@ export default function App() {
         <span className="text-fg-muted text-xs hidden sm:block">image → glitch</span>
       </header>
 
-      {/* main leads in the DOM so it takes the 1fr row on mobile; the aside reflows to the left column at sm. */}
+      {/* On mobile the aside is hidden and its controls move to a bottom sheet (MobileControls), so
+          main takes the whole area; at sm the aside reappears as the left column. */}
       <div className="flex-1 grid grid-cols-1 [grid-template-rows:1fr_auto] sm:grid-cols-[280px_1fr] sm:[grid-template-rows:1fr] overflow-hidden">
         <main className="flex flex-col overflow-hidden">
           <div className="flex-1 relative overflow-hidden">
@@ -140,8 +142,9 @@ export default function App() {
         </main>
 
         {/* Progressive disclosure: the Presets are the front door — one click to a good-looking
-            result — and the sliders are the tweak layer, folded away behind the affordance. */}
-        <aside className="border-t sm:border-t-0 sm:border-r border-base p-md overflow-y-auto flex flex-col gap-lg sm:order-first">
+            result — and the sliders are the tweak layer, folded away behind the affordance.
+            Hidden on mobile, where MobileControls carries the same stack in a bottom sheet. */}
+        <aside className="hidden sm:flex sm:border-r border-base p-md overflow-y-auto flex-col gap-lg sm:order-first">
           <PresetPicker
             settings={settings}
             activePresetId={activePresetId}
@@ -153,6 +156,19 @@ export default function App() {
           </Disclosure>
         </aside>
       </div>
+
+      {/* Only with a Source: there's nothing to tweak on the empty state, where the choice is which
+          Source to open, not how to glitch it. */}
+      {hasSource && (
+        <MobileControls
+          settings={settings}
+          activePresetId={activePresetId}
+          onSelect={handlePresetSelect}
+          onRandomize={handleRandomize}
+          onChange={patchSettings}
+          onReroll={handleReroll}
+        />
+      )}
     </div>
   )
 }
