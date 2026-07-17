@@ -45,4 +45,9 @@ export const Errors = {
       type: 'copy_unsupported',
       message: "This browser can't copy images — export the PNG instead",
     }),
+  recordingFailed: (): AppError =>
+    createError({ type: 'recording_failed', message: "Couldn't start recording — try again" }),
+  // The take is already lost by the time this fires, so "try again" would be advice for next time
+  recordingExportFailed: (): AppError =>
+    createError({ type: 'recording_export_failed', message: "Couldn't save the recording" }),
 }

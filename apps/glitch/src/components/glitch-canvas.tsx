@@ -1,9 +1,19 @@
 import { type RefObject, useEffect, useRef } from 'react'
 import { renderGlitchFrame } from '../glitch/render-frame'
 import type { GlitchSettings, Seed } from '../glitch/types'
+import { cn } from '../utils/cn'
 
 /** ~15fps — enough for a glitched feed, and cheap enough to stay on the main thread (ADR 0002). */
 export const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
+
+/**
+ * Chrome shared by everything sitting on top of the canvas — see ADR 0013. `bg-bg` is the
+ * load-bearing part: the canvas *is* the user's artwork, so a transparent chip takes its contrast
+ * from whatever the Pipeline just painted (hot pink on a bright feed measures 1.57:1). Standing on
+ * an opaque surface from the palette is what holds the ratio ADR 0009 audited. Not translucent —
+ * no alpha survives an arbitrary backdrop.
+ */
+const CANVAS_OVERLAY_CHROME = 'font-mono text-xs px-sm py-2xs rounded-xs bg-bg select-none'
 
 /**
  * `HTMLMediaElement.HAVE_ENOUGH_DATA`, spelled out rather than read off the global: happy-dom
@@ -19,6 +29,7 @@ interface Props {
   seed: Seed
   canvasRef: RefObject<HTMLCanvasElement>
   onClearSource: () => void
+  isRecording?: boolean
 }
 
 /**
@@ -33,6 +44,7 @@ export default function GlitchCanvas({
   seed,
   canvasRef,
   onClearSource,
+  isRecording,
 }: Props) {
   const hiddenRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
 
@@ -86,11 +98,29 @@ export default function GlitchCanvas({
       />
       <div className="absolute top-xs right-xs flex items-center gap-xs">
         {isLive && (
-          <span className="flex items-center gap-2xs font-mono text-xs text-hot-pink border border-hot-pink px-sm py-2xs rounded-xs select-none">
+          <span
+            className={cn(
+              CANVAS_OVERLAY_CHROME,
+              'flex items-center gap-2xs text-hot-pink border border-hot-pink',
+            )}
+          >
             <span className="motion-safe:animate-pulse" aria-hidden="true">
               ◉
             </span>{' '}
             LIVE
+          </span>
+        )}
+        {/* Decorative: the ExportBar's timer is the announced one, so this must not double it. */}
+        {isRecording && (
+          <span
+            data-testid="rec-indicator"
+            className={cn(
+              CANVAS_OVERLAY_CHROME,
+              'flex items-center gap-2xs text-hot-pink border border-hot-pink',
+            )}
+            aria-hidden="true"
+          >
+            <span className="motion-safe:animate-pulse">●</span> REC
           </span>
         )}
         <button
@@ -98,7 +128,10 @@ export default function GlitchCanvas({
           onClick={onClearSource}
           title="clear source"
           aria-label="clear source"
-          className="font-mono text-xs text-fg-muted border border-base px-sm py-2xs rounded-xs cursor-pointer transition-colors duration-fast hover:text-fg hover:border-strong"
+          className={cn(
+            CANVAS_OVERLAY_CHROME,
+            'text-fg-muted border border-base cursor-pointer transition-colors duration-fast hover:text-fg hover:border-strong',
+          )}
         >
           ✕ clear
         </button>

@@ -141,4 +141,28 @@ describe('GlitchCanvas', () => {
     renderCanvas({ sourceImage: { naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement })
     expect(screen.queryByText('LIVE')).toBeNull()
   })
+
+  it('marks the preview as recording while a Recording runs', () => {
+    renderCanvas({ liveSource: liveSource(), isRecording: true })
+
+    expect(screen.getByTestId('rec-indicator')).toBeTruthy()
+  })
+
+  it('shows no recording marker when nothing is being recorded', () => {
+    renderCanvas({ liveSource: liveSource() })
+
+    expect(screen.queryByTestId('rec-indicator')).toBeNull()
+  })
+
+  // Unlike every other surface in the app, what sits behind these is the user's artwork — the
+  // Pipeline can paint any color at all under them. ADR 0009's audited ratios are token-on-token,
+  // so they only hold here if each chip brings its own audited surface instead of compositing on
+  // whatever was just painted. A class assertion because happy-dom composites nothing.
+  it('gives every canvas overlay its own surface rather than the artwork behind it', () => {
+    renderCanvas({ liveSource: liveSource(), isRecording: true })
+
+    expect(screen.getByText('LIVE').className).toContain('bg-bg')
+    expect(screen.getByTestId('rec-indicator').className).toContain('bg-bg')
+    expect(screen.getByRole('button', { name: 'clear source' }).className).toContain('bg-bg')
+  })
 })

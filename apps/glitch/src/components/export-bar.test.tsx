@@ -150,4 +150,87 @@ describe('ExportBar', () => {
 
     expect(copyCanvasToClipboard).not.toHaveBeenCalled()
   })
+
+  describe('Recording', () => {
+    it('offers Record while the Live Source runs', () => {
+      render(<ExportBar canvasRef={canvasRef()} isLive canRecord />)
+
+      expect(screen.getByRole('button', { name: /record/ })).toBeInTheDocument()
+    })
+
+    // Recording is a Live Source act: a Source Image has no elapsing time to record.
+    it('does not offer Record for a Source Image', () => {
+      render(<ExportBar canvasRef={canvasRef()} canRecord />)
+
+      expect(screen.queryByRole('button', { name: /record/ })).not.toBeInTheDocument()
+    })
+
+    // ADR 0007: no GIF fallback — where MediaRecorder can't serve, the control is simply absent.
+    it('hides Record entirely on a browser that cannot record', () => {
+      render(<ExportBar canvasRef={canvasRef()} isLive canRecord={false} />)
+
+      expect(screen.queryByRole('button', { name: /record/ })).not.toBeInTheDocument()
+    })
+
+    it('starts a Recording on Record', () => {
+      const onStartRecording = vi.fn()
+      render(
+        <ExportBar canvasRef={canvasRef()} isLive canRecord onStartRecording={onStartRecording} />,
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: /record/ }))
+
+      expect(onStartRecording).toHaveBeenCalledOnce()
+    })
+
+    it('swaps Record for Stop while recording', () => {
+      render(<ExportBar canvasRef={canvasRef()} isLive canRecord isRecording />)
+
+      expect(screen.getByRole('button', { name: /stop/ })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /record/ })).not.toBeInTheDocument()
+    })
+
+    it('stops the Recording on Stop', () => {
+      const onStopRecording = vi.fn()
+      render(
+        <ExportBar
+          canvasRef={canvasRef()}
+          isLive
+          canRecord
+          isRecording
+          onStopRecording={onStopRecording}
+        />,
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: /stop/ }))
+
+      expect(onStopRecording).toHaveBeenCalledOnce()
+    })
+
+    it('shows the elapsed duration while recording', () => {
+      render(<ExportBar canvasRef={canvasRef()} isLive canRecord isRecording elapsedSeconds={65} />)
+
+      expect(screen.getByRole('status')).toHaveTextContent('1:05')
+    })
+
+    it('shows no timer when nothing is being recorded', () => {
+      render(<ExportBar canvasRef={canvasRef()} isLive canRecord />)
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+
+    // A Recording reads the canvas the loop paints, so Capture and Copy stay just as available —
+    // neither act disturbs the other.
+    it('keeps Capture and Copy available while recording', async () => {
+      const ref = canvasRef()
+      render(<ExportBar canvasRef={ref} isLive canRecord isRecording />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'capture' }))
+
+      await waitFor(() => {
+        expect(shareOrDownloadCanvas).toHaveBeenCalledWith(ref.current, 'glitch-capture.png')
+      })
+      expect(screen.getByRole('button', { name: 'copy' })).toBeInTheDocument()
+    })
+  })
 })
