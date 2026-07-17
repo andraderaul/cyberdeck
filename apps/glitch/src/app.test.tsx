@@ -74,6 +74,20 @@ function powerButton(effect: string, power: 'on' | 'off') {
   return within(screen.getByRole('group', { name: effect })).getByRole('button', { name: power })
 }
 
+// The sliders and Re-roll live behind the advanced affordance, so anything reaching for a control
+// has to open it first.
+function openAdvanced() {
+  fireEvent.click(screen.getByRole('button', { name: /advanced/i }))
+}
+
+// The path to any control: a Source, then the affordance open. Worth one helper — the Presets land
+// above the panel next (#86), and that layout change should touch one line, not every test.
+function renderWithAdvancedOpen() {
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+  openAdvanced()
+}
+
 describe('App', () => {
   it('opens on the empty state, with no preview or Export yet', () => {
     render(<App />)
@@ -102,9 +116,31 @@ describe('App', () => {
     expect(screen.queryByLabelText('glitched preview')).not.toBeInTheDocument()
   })
 
-  it('passes an updated GlitchSettings down to the canvas when a control changes', () => {
+  it('keeps the per-Effect controls behind the advanced affordance', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+    expect(screen.queryByLabelText('grain')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 're-roll' })).not.toBeInTheDocument()
+  })
+
+  it('reveals every Effect’s controls and Re-roll once advanced is opened', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+    openAdvanced()
+
+    // One control per Effect, in Pipeline order — the panel exposes all five.
+    expect(screen.getByLabelText('blocks')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'pixel sort' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'channel' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'scanlines' })).toBeInTheDocument()
+    expect(screen.getByLabelText('grain')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 're-roll' })).toBeInTheDocument()
+  })
+
+  it('passes an updated GlitchSettings down to the canvas when a control changes', () => {
+    renderWithAdvancedOpen()
     renderedSettings.mockClear()
 
     fireEvent.click(screen.getByRole('button', { name: 'green' }))
@@ -115,8 +151,7 @@ describe('App', () => {
   })
 
   it('passes a toggled-off Pixel Sort down to the canvas', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderWithAdvancedOpen()
     renderedSettings.mockClear()
 
     fireEvent.click(powerButton('pixel sort', 'off'))
@@ -127,8 +162,7 @@ describe('App', () => {
   })
 
   it('hides the Pixel Sort params when the Effect is off', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderWithAdvancedOpen()
 
     fireEvent.click(powerButton('pixel sort', 'off'))
 
@@ -137,8 +171,7 @@ describe('App', () => {
   })
 
   it('passes a toggled-off Scanlines down to the canvas', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderWithAdvancedOpen()
     renderedSettings.mockClear()
 
     fireEvent.click(powerButton('scanlines', 'off'))
@@ -149,8 +182,7 @@ describe('App', () => {
   })
 
   it('hides the Scanlines params when the Effect is off', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderWithAdvancedOpen()
 
     fireEvent.click(powerButton('scanlines', 'off'))
 
@@ -159,8 +191,7 @@ describe('App', () => {
   })
 
   it('passes an updated Scanlines density down to the canvas', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderWithAdvancedOpen()
 
     fireEvent.change(screen.getByLabelText('density'), { target: { value: '1' } })
 
@@ -170,8 +201,7 @@ describe('App', () => {
   })
 
   it('keeps the rest of the look intact when one Effect param changes', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderWithAdvancedOpen()
 
     fireEvent.change(screen.getByLabelText('amount'), { target: { value: '20' } })
 
@@ -187,8 +217,7 @@ describe('App', () => {
   })
 
   it('passes an updated Noise amount down to the canvas', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderWithAdvancedOpen()
 
     fireEvent.change(screen.getByLabelText('grain'), { target: { value: '0.8' } })
 
@@ -198,8 +227,7 @@ describe('App', () => {
   })
 
   it('passes an updated Noise tint down to the canvas', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderWithAdvancedOpen()
 
     fireEvent.click(screen.getByRole('button', { name: 'color' }))
 
@@ -209,8 +237,7 @@ describe('App', () => {
   })
 
   it('passes an updated Block Displacement density down to the canvas', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderWithAdvancedOpen()
 
     fireEvent.change(screen.getByLabelText('blocks'), { target: { value: '0.8' } })
 
@@ -220,8 +247,7 @@ describe('App', () => {
   })
 
   it('passes an updated Block Displacement amount down to the canvas', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderWithAdvancedOpen()
 
     fireEvent.change(screen.getByLabelText('displace'), { target: { value: '0.9' } })
 
@@ -238,8 +264,7 @@ describe('App', () => {
   })
 
   it('hands the canvas a new Seed on Re-roll', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderWithAdvancedOpen()
     const before = renderedSeed.mock.lastCall?.[0]
 
     fireEvent.click(screen.getByRole('button', { name: 're-roll' }))
@@ -248,8 +273,7 @@ describe('App', () => {
   })
 
   it('leaves the look untouched on Re-roll — a new arrangement, the same GlitchSettings', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderWithAdvancedOpen()
     const before = renderedSettings.mock.lastCall?.[0]
 
     fireEvent.click(screen.getByRole('button', { name: 're-roll' }))
@@ -258,8 +282,7 @@ describe('App', () => {
   })
 
   it('holds the Seed steady across a look change — only Re-roll re-rolls it', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    renderWithAdvancedOpen()
     const before = renderedSeed.mock.lastCall?.[0]
 
     fireEvent.click(screen.getByRole('button', { name: 'green' }))

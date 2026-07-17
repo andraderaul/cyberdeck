@@ -5,6 +5,7 @@ import ErrorBoundary from './components/error-boundary'
 import ExportBar from './components/export-bar'
 import GlitchCanvas from './components/glitch-canvas'
 import { useToastError } from './components/toast-provider'
+import Disclosure from './components/ui/disclosure'
 import { createSeed } from './glitch/rng'
 import {
   DEFAULT_BLOCK_DISPLACEMENT,
@@ -110,8 +111,13 @@ export default function App() {
           )}
         </main>
 
+        {/* Progressive disclosure: the sliders are the tweak layer, not the front door. The
+            primary surface is the Presets, which take this slot above the panel once they land
+            (#86) — until then the aside opens holding the affordance alone. */}
         <aside className="border-t sm:border-t-0 sm:border-r border-base p-md overflow-y-auto flex flex-col gap-lg sm:order-first">
-          <ControlPanel settings={settings} onChange={patchSettings} onReroll={handleReroll} />
+          <Disclosure label="advanced">
+            <ControlPanel settings={settings} onChange={patchSettings} onReroll={handleReroll} />
+          </Disclosure>
         </aside>
       </div>
     </div>

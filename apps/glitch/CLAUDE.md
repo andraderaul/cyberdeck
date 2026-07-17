@@ -9,11 +9,12 @@ layout, the deck-wide comment convention, and the release ritual. Paths below ar
 ## Status
 
 Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80), Block Displacement with
-Seed / Re-roll (#81), Live Source + Capture (#82) and Copy (#83). All five v1 Effects are live —
-Source Image *or* Live Source → Block Displacement → Pixel Sort → Channel Shift → Scanlines → Noise
-→ PNG Export / Capture / Copy — the pure-core / imperative-shell seam is established, and the
-Pipeline is deterministic in GlitchSettings + Seed. Presets and Recording are not built yet; see
-`CONTEXT.md` for the v1 scope they belong to.
+Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83) and the advanced panel (#84). All five
+v1 Effects are live — Source Image *or* Live Source → Block Displacement → Pixel Sort → Channel
+Shift → Scanlines → Noise → PNG Export / Capture / Copy — the pure-core / imperative-shell seam is
+established, and the Pipeline is deterministic in GlitchSettings + Seed. Every Effect's params are
+reachable behind the advanced affordance. Presets and Recording are not built yet; see `CONTEXT.md`
+for the v1 scope they belong to.
 
 ## Commands
 
@@ -167,13 +168,14 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render, and owns the
   ~15fps rAF loop for a Live Source
 - `src/components/control-panel.tsx` — GlitchSettings controls, in Pipeline order, plus the Re-roll
-  control (its own callback — the Seed is not part of the look)
+  control (its own callback — the Seed is not part of the look). Sits behind the `advanced`
+  Disclosure in `app.tsx` (#84) — the tweak layer, not the front door
 - `src/components/empty-state-hero.tsx` — initial empty state with the upload and webcam entry points
 - `src/components/export-bar.tsx` — PNG Export / Capture / Copy controls
 - `src/components/toast-provider.tsx` — renders the toast queue
 - `src/components/error-boundary.tsx` — generic React error boundary
-- `src/components/ui/` — design system primitives: `button`, `label`, `slider`, `toast`,
-  `toggle-group`, `source-image-drop-zone`
+- `src/components/ui/` — design system primitives: `button`, `disclosure`, `label`, `slider`,
+  `toast`, `toggle-group`, `source-image-drop-zone`
 
 **Testing**
 - `src/test-setup.ts` polyfills `ImageData` — happy-dom ships none, and the shell constructs one.
