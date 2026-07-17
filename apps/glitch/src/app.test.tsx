@@ -26,17 +26,20 @@ vi.mock('./components/glitch-canvas', () => ({
     seed,
     liveSource,
     onClearSource,
+    isRecording,
   }: {
     settings: GlitchSettings
     seed: Seed
     liveSource: HTMLVideoElement | null
     onClearSource?: () => void
+    isRecording?: boolean
   }) => {
     renderedSettings(settings)
     renderedSeed(seed)
     return (
       <>
         <canvas aria-label={liveSource ? 'live glitched preview' : 'glitched preview'} />
+        {isRecording && <span>REC</span>}
         <button type="button" onClick={onClearSource}>
           clear
         </button>
@@ -45,8 +48,40 @@ vi.mock('./components/glitch-canvas', () => ({
   },
 }))
 
+// The hook is covered at its own seam; here it stands in as a probe so these tests can stay about
+// the app's wiring — which controls a Recording reaches, and what a cleared Source does to it.
+const recording = vi.hoisted(() => ({
+  isSupported: true,
+  isRecording: false,
+  elapsedSeconds: 0,
+  startRecording: vi.fn(),
+  stopRecording: vi.fn(),
+}))
+vi.mock('./hooks/use-recording', () => ({ useRecording: () => recording }))
+
 vi.mock('./components/export-bar', () => ({
-  default: ({ isLive }: { isLive?: boolean }) => <div>{isLive ? 'capture' : 'export png'}</div>,
+  default: ({
+    isLive,
+    canRecord,
+    isRecording,
+    onStartRecording,
+    onStopRecording,
+  }: {
+    isLive?: boolean
+    canRecord?: boolean
+    isRecording?: boolean
+    onStartRecording?: () => void
+    onStopRecording?: () => void
+  }) => (
+    <>
+      <div>{isLive ? 'capture' : 'export png'}</div>
+      {isLive && canRecord && (
+        <button type="button" onClick={isRecording ? onStopRecording : onStartRecording}>
+          {isRecording ? 'stop' : 'record'}
+        </button>
+      )}
+    </>
+  ),
 }))
 
 vi.mock('./components/empty-state-hero', () => ({
@@ -387,6 +422,83 @@ describe('App', () => {
         expect(screen.getByRole('button', { name: 'use webcam' })).toBeInTheDocument()
       })
       expect(screen.queryByLabelText('live glitched preview')).not.toBeInTheDocument()
+    })
+
+    describe('Recording', () => {
+      async function goLive() {
+        render(<App />)
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'use webcam' }))
+        })
+      }
+
+      afterEach(() => {
+        recording.isSupported = true
+        recording.isRecording = false
+      })
+
+      it('offers Record while the Live Source runs', async () => {
+        await goLive()
+
+        expect(screen.getByRole('button', { name: 'record' })).toBeInTheDocument()
+      })
+
+      // Recording is a Live Source act: a Source Image has no elapsing time to record.
+      it('does not offer Record for a Source Image', () => {
+        render(<App />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+        expect(screen.queryByRole('button', { name: 'record' })).not.toBeInTheDocument()
+      })
+
+      // ADR 0007: no GIF fallback — where MediaRecorder can't serve, the control is simply absent.
+      it('hides Record on a browser that cannot record', async () => {
+        recording.isSupported = false
+
+        await goLive()
+
+        expect(screen.queryByRole('button', { name: 'record' })).not.toBeInTheDocument()
+      })
+
+      it('starts a Recording on Record', async () => {
+        await goLive()
+
+        fireEvent.click(screen.getByRole('button', { name: 'record' }))
+
+        expect(recording.startRecording).toHaveBeenCalledOnce()
+      })
+
+      it('marks the preview as recording while a Recording runs', async () => {
+        recording.isRecording = true
+
+        await goLive()
+
+        expect(screen.getByText('REC')).toBeInTheDocument()
+      })
+
+      // Clearing releases the camera, so the Recording has nothing left to record — leaving the
+      // MediaRecorder running would strand the file the user already earned.
+      it('stops the Recording when the Source is cleared', async () => {
+        recording.isRecording = true
+        await goLive()
+
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'clear' }))
+        })
+
+        expect(recording.stopRecording).toHaveBeenCalledOnce()
+      })
+
+      it('leaves the Recording alone when a Source is cleared with nothing recording', async () => {
+        await goLive()
+
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'clear' }))
+        })
+
+        expect(recording.stopRecording).not.toHaveBeenCalled()
+      })
     })
 
     // A Source is only ever chosen from the empty state, which no Source is showing behind — so

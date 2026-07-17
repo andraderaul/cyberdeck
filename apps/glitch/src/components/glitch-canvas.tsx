@@ -19,6 +19,7 @@ interface Props {
   seed: Seed
   canvasRef: RefObject<HTMLCanvasElement>
   onClearSource: () => void
+  isRecording?: boolean
 }
 
 /**
@@ -33,6 +34,7 @@ export default function GlitchCanvas({
   seed,
   canvasRef,
   onClearSource,
+  isRecording,
 }: Props) {
   const hiddenRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
 
@@ -91,6 +93,16 @@ export default function GlitchCanvas({
               ◉
             </span>{' '}
             LIVE
+          </span>
+        )}
+        {/* Decorative: the ExportBar's timer is the announced one, so this must not double it. */}
+        {isRecording && (
+          <span
+            data-testid="rec-indicator"
+            className="flex items-center gap-2xs font-mono text-xs text-hot-pink border border-hot-pink px-sm py-2xs rounded-xs select-none"
+            aria-hidden="true"
+          >
+            <span className="motion-safe:animate-pulse">●</span> REC
           </span>
         )}
         <button

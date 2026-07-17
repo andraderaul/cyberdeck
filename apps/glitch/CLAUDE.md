@@ -9,12 +9,12 @@ layout, the deck-wide comment convention, and the release ritual. Paths below ar
 ## Status
 
 Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80), Block Displacement with
-Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83) and the advanced panel (#84). All five
-v1 Effects are live — Source Image *or* Live Source → Block Displacement → Pixel Sort → Channel
-Shift → Scanlines → Noise → PNG Export / Capture / Copy — the pure-core / imperative-shell seam is
-established, and the Pipeline is deterministic in GlitchSettings + Seed. Every Effect's params are
-reachable behind the advanced affordance. Presets and Recording are not built yet; see `CONTEXT.md`
-for the v1 scope they belong to.
+Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced panel (#84) and
+Recording (#85). All five v1 Effects are live — Source Image *or* Live Source → Block Displacement →
+Pixel Sort → Channel Shift → Scanlines → Noise → PNG Export / Capture / Copy / Recording — the
+pure-core / imperative-shell seam is established, and the Pipeline is deterministic in
+GlitchSettings + Seed. Every Effect's params are reachable behind the advanced affordance. Presets
+are not built yet; see `CONTEXT.md` for the v1 scope they belong to.
 
 ## Commands
 
@@ -82,6 +82,22 @@ pattern still instead of boiling. Animating it is explicitly v2 (`CONTEXT.md`).
 **Capture** is PNG Export on a different Source: it reads the pixels the loop last painted and never
 touches the loop, so the feed keeps running.
 
+### Recording
+
+`useRecording` wraps `canvas.captureStream(15)` + `MediaRecorder` with runtime format detection
+(vp9 → vp8 → webm → mp4). It is a hand-copy of ASCII//Convert's hook (ADR 0011) with one divergence:
+the file is named through this app's `outputFilename`, and glitch filenames carry no timestamp — so
+`mimeToExtension` moved across with it, but the injected `timestamp` did not.
+
+Like Capture, it records the **output canvas** the Pipeline already painted — it is *not* datamosh
+(`CONTEXT.md`), and it never touches the rAF loop. The capture rate matches that loop's ~15fps
+(ADR 0002); a higher rate would only duplicate frames.
+
+The Record control is hidden entirely where `MediaRecorder` + `captureStream` are unsupported — no
+GIF fallback (ADR 0007) — and only ever appears for a Live Source: a Source Image has no elapsing
+time to record. On stop, `shareOrDownloadBlob` opens the native share sheet on mobile or downloads
+on desktop. Clearing the Source stops a running Recording first, since the camera is about to go.
+
 ### Sampling cap
 
 `sampleDimensions()` scales the Source to fit inside 800×800 (aspect-preserving) before any pixel
@@ -117,6 +133,7 @@ Use these terms precisely — avoid the listed alternatives:
 | **Export** | Taking the result out (PNG) | download, save |
 | **Capture** | One frame of a Live Source taken out as PNG | screenshot, snapshot |
 | **Copy** | The result written to the clipboard as a PNG | copy to clipboard, paste |
+| **Recording** | The glitched Live Source taken out as a video, via MediaRecorder | video export, screen record |
 
 `Preset` is the one domain term the code hasn't reached yet (#75). The Seed landed with Block
 Displacement: `createSeed()` is the single place the app draws real randomness, and everything
@@ -155,23 +172,27 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 
 **Errors & utilities**
 - `src/errors/app-error.ts` — `AppError`, `createError`, `normalizeError`, `Errors`
-- `src/export/output.ts` — `outputFilename()`
+- `src/export/output.ts` — `outputFilename()`, `mimeToExtension()`
+- `src/hooks/use-recording.ts` — `useRecording()`, `isRecordingSupported()`, `detectMimeType()`,
+  `formatElapsedTime()`: the Recording's MediaRecorder lifecycle — see ADR 0007
 - `src/hooks/use-toast.ts` — toast queue state
 - `src/hooks/use-webcam-state.ts` — `useWebcamState()`, `planCommands()`, `reducer()`: the Live
   Source's MediaStream lifecycle
 - `src/utils/cn.ts` — `cn()` (clsx + tailwind-merge)
 - `src/utils/copy.ts` — `copyCanvasToClipboard()` (canvas → PNG on the clipboard)
 - `src/utils/load-image-file.ts` — `loadImageFile()` (File → HTMLImageElement)
-- `src/utils/share.ts` — `shareOrDownloadCanvas()` (Web Share API with download fallback)
+- `src/utils/share.ts` — `shareOrDownloadCanvas()`, `shareOrDownloadBlob()` (Web Share API with
+  download fallback)
 
 **Components**
 - `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render, and owns the
-  ~15fps rAF loop for a Live Source
+  ~15fps rAF loop for a Live Source. Carries the LIVE / REC badges
 - `src/components/control-panel.tsx` — GlitchSettings controls, in Pipeline order, plus the Re-roll
   control (its own callback — the Seed is not part of the look). Sits behind the `advanced`
   Disclosure in `app.tsx` (#84) — the tweak layer, not the front door
 - `src/components/empty-state-hero.tsx` — initial empty state with the upload and webcam entry points
-- `src/components/export-bar.tsx` — PNG Export / Capture / Copy controls
+- `src/components/export-bar.tsx` — PNG Export / Capture / Copy / Record controls and the
+  recording timer
 - `src/components/toast-provider.tsx` — renders the toast queue
 - `src/components/error-boundary.tsx` — generic React error boundary
 - `src/components/ui/` — design system primitives: `button`, `disclosure`, `label`, `slider`,

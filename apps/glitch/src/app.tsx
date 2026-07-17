@@ -15,6 +15,7 @@ import {
   type GlitchSettings,
   type Seed,
 } from './glitch/types'
+import { useRecording } from './hooks/use-recording'
 import { useWebcamState } from './hooks/use-webcam-state'
 
 // Every Effect starts active: a casual creator has to see the point on the first screen, not a
@@ -43,6 +44,13 @@ export default function App() {
   const showError = useToastError()
 
   const { state: webcam, switchMode } = useWebcamState(setLiveSource)
+  const {
+    isSupported: canRecord,
+    isRecording,
+    elapsedSeconds,
+    startRecording,
+    stopRecording,
+  } = useRecording(canvasRef)
 
   useEffect(() => {
     if (webcam.error) {
@@ -62,11 +70,15 @@ export default function App() {
 
   // Covers both Sources: a Live Source needs the camera released, a Source Image needs dropping.
   // Either way this lands back on the empty state, which is the only place a Source is chosen —
-  // so the two can never be set at once.
+  // so the two can never be set at once. A Recording is stopped first: the camera is about to go,
+  // and a stop is what hands the user the file they already earned.
   const handleClearSource = useCallback(() => {
+    if (isRecording) {
+      stopRecording()
+    }
     setSourceImage(null)
     void switchMode('image')
-  }, [switchMode])
+  }, [isRecording, stopRecording, switchMode])
 
   const isLive = liveSource !== null
   const hasSource = sourceImage !== null || isLive
@@ -98,6 +110,7 @@ export default function App() {
                   seed={seed}
                   canvasRef={canvasRef}
                   onClearSource={handleClearSource}
+                  isRecording={isRecording}
                 />
               ) : (
                 <EmptyStateHero onImage={setSourceImage} onUseWebcam={handleUseWebcam} />
@@ -106,7 +119,15 @@ export default function App() {
           </div>
           {hasSource && (
             <div className="flex flex-col gap-xs py-sm px-md border-t border-base shrink-0">
-              <ExportBar canvasRef={canvasRef} isLive={isLive} />
+              <ExportBar
+                canvasRef={canvasRef}
+                isLive={isLive}
+                canRecord={canRecord}
+                isRecording={isRecording}
+                elapsedSeconds={elapsedSeconds}
+                onStartRecording={startRecording}
+                onStopRecording={stopRecording}
+              />
             </div>
           )}
         </main>

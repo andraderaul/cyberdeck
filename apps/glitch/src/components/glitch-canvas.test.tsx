@@ -141,4 +141,16 @@ describe('GlitchCanvas', () => {
     renderCanvas({ sourceImage: { naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement })
     expect(screen.queryByText('LIVE')).toBeNull()
   })
+
+  it('marks the preview as recording while a Recording runs', () => {
+    renderCanvas({ liveSource: liveSource(), isRecording: true })
+
+    expect(screen.getByTestId('rec-indicator')).toBeTruthy()
+  })
+
+  it('shows no recording marker when nothing is being recorded', () => {
+    renderCanvas({ liveSource: liveSource() })
+
+    expect(screen.queryByTestId('rec-indicator')).toBeNull()
+  })
 })
