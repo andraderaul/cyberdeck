@@ -8,11 +8,11 @@ layout, the deck-wide comment convention, and the release ritual. Paths below ar
 
 ## Status
 
-Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79) and Noise (#80). The end-to-end path is
-live — Source Image → Pixel Sort → Channel Shift → Scanlines → Noise → PNG Export — and the
-pure-core / imperative-shell seam is established. The remaining Effect (Block Displacement),
-Presets, Seed / Re-roll, Live Source, Capture and Recording are not built yet; see `CONTEXT.md`
-for the v1 scope they belong to.
+Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80) and Block Displacement with
+Seed / Re-roll (#81). All five v1 Effects are live — Source Image → Block Displacement → Pixel Sort
+→ Channel Shift → Scanlines → Noise → PNG Export — the pure-core / imperative-shell seam is
+established, and the Pipeline is deterministic in GlitchSettings + Seed. Presets, Live Source,
+Capture and Recording are not built yet; see `CONTEXT.md` for the v1 scope they belong to.
 
 ## Commands
 
@@ -36,8 +36,10 @@ Single-page React/TS/Vite app. Fully client-side — no backend, no network.
 ### Glitch pipeline
 
 1. `EmptyStateHero` → `SourceImageDropZone` hands an `HTMLImageElement` (Source Image) to `App`
-2. `App` holds `GlitchSettings` state and passes it, with the Source Image, to `GlitchCanvas`
-3. `GlitchCanvas` decides *when* to render: once per Source Image or GlitchSettings change via
+2. `App` holds `GlitchSettings` state and, **beside** it, the `Seed` — two separate pieces of state,
+   which is what lets Re-roll draw a new Seed and leave the look alone. Both go to `GlitchCanvas`
+   with the Source Image
+3. `GlitchCanvas` decides *when* to render: once per Source Image, GlitchSettings or Seed change via
    `useEffect`. It keeps the **hidden off-screen sampling canvas** (`hiddenRef`) that the shell
    draws into — kept separate from the visible canvas per ADR 0001
 4. `renderGlitchFrame()` in `src/glitch/render-frame.ts` is the imperative shell: draws the
@@ -45,8 +47,9 @@ Single-page React/TS/Vite app. Fully client-side — no backend, no network.
    `PixelBuffer` → `applyPipeline()` → wraps back into `ImageData` → `putImageData` onto the
    visible canvas. Returns `false` (skips) if there's no 2D context or the Source has no
    intrinsic size yet
-5. `applyPipeline()` is **pure** — `PixelBuffer` + `GlitchSettings` in, `PixelBuffer` out, no DOM
-   (ADR 0005). It is the only place Effects run
+5. `applyPipeline()` is **pure** — `PixelBuffer` + `GlitchSettings` + `Seed` in, `PixelBuffer` out,
+   no DOM (ADR 0005). It is the only place Effects run, and it holds no randomness of its own: every
+   draw comes off the Seed's stream (`createRng`) or a Seed-fed positional hash
 6. The visible canvas is sized to the **sampled** dimensions, so the canvas *is* the output —
    PNG Export takes it as-is and CSS `object-contain` handles the on-screen fit
 
@@ -83,10 +86,12 @@ Use these terms precisely — avoid the listed alternatives:
 | **Source Image** | Static uploaded image; immutable during session | uploadedImage, input image |
 | **Export** | Taking the result out (PNG) | download, save |
 
-`Seed` and `Preset` are domain terms the code hasn't reached yet — every Effect built so far is
-fully deterministic, so `applyPipeline` takes no Seed. It gains one when Block Displacement lands.
-Noise is the first Effect that *looks* random: its grain derives from a positional hash rather than
-`Math.random`, and that hash takes the Seed as a second input once there is one.
+`Preset` is the one domain term the code hasn't reached yet (#75). The Seed landed with Block
+Displacement: `createSeed()` is the single place the app draws real randomness, and everything
+downstream derives from the Seed it returns. Block Displacement pulls its blocks off the Seed's rng
+stream; Noise's grain comes from a positional hash the Seed feeds, so it re-rolls with the
+arrangement while staying a function of where a pixel sits rather than of how many draws ran before
+it.
 
 ### Design system
 
@@ -102,12 +107,16 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 ## Key files
 
 **Glitch core**
-- `src/glitch/types.ts` — `PixelBuffer`, `GlitchSettings`, `ChannelName`, `ChannelShiftParams`,
-  `SortDirection`, `PixelSortParams`, `DEFAULT_PIXEL_SORT`, `ScanlinesParams`, `DEFAULT_SCANLINES`,
-  `SPARSEST_SCANLINE_PERIOD`, `TIGHTEST_SCANLINE_PERIOD`, `SCANLINES_DENSITY_STEP`, `NoiseParams`,
-  `NoiseTint`, `DEFAULT_NOISE`, `MAX_NOISE_DELTA`
-- `src/glitch/pipeline.ts` — `applyPipeline()` (pure), `pixelSort()`, `channelShift()`,
-  `scanlines()`, `noise()` — see ADR 0005
+- `src/glitch/types.ts` — `PixelBuffer`, `GlitchSettings`, `Seed`, `ChannelName`,
+  `ChannelShiftParams`, `SortDirection`, `PixelSortParams`, `DEFAULT_PIXEL_SORT`, `ScanlinesParams`,
+  `DEFAULT_SCANLINES`, `SPARSEST_SCANLINE_PERIOD`, `TIGHTEST_SCANLINE_PERIOD`,
+  `SCANLINES_DENSITY_STEP`, `NoiseParams`, `NoiseTint`, `DEFAULT_NOISE`, `MAX_NOISE_DELTA`,
+  `BlockDisplacementParams`, `DEFAULT_BLOCK_DISPLACEMENT`, `MAX_DISPLACEMENT_BLOCKS`,
+  `MAX_BLOCK_SHIFT_RATIO`, `MAX_BLOCK_HEIGHT_RATIO`, `MIN_BLOCK_WIDTH_RATIO`
+- `src/glitch/pipeline.ts` — `applyPipeline()` (pure), `blockDisplacement()`, `pixelSort()`,
+  `channelShift()`, `scanlines()`, `noise()` — see ADR 0005
+- `src/glitch/rng.ts` — `createRng()` (pure, Seed → draw stream), `createSeed()` (impure — the app's
+  only real randomness), `Rng`
 - `src/glitch/image-utils.ts` — `sampleDimensions()` (800×800 cap), `sourceDimensions()`
 - `src/glitch/render-frame.ts` — `renderGlitchFrame()`: the imperative shell
 
@@ -121,7 +130,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 
 **Components**
 - `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render
-- `src/components/control-panel.tsx` — GlitchSettings controls
+- `src/components/control-panel.tsx` — GlitchSettings controls, in Pipeline order, plus the Re-roll
+  control (its own callback — the Seed is not part of the look)
 - `src/components/empty-state-hero.tsx` — initial empty state with the upload entry point
 - `src/components/export-bar.tsx` — PNG Export control
 - `src/components/toast-provider.tsx` — renders the toast queue

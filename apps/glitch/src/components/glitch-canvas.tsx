@@ -1,16 +1,26 @@
 import { type RefObject, useEffect, useRef } from 'react'
 import { renderGlitchFrame } from '../glitch/render-frame'
-import type { GlitchSettings } from '../glitch/types'
+import type { GlitchSettings, Seed } from '../glitch/types'
 
 interface Props {
   sourceImage: HTMLImageElement
   settings: GlitchSettings
+  seed: Seed
   canvasRef: RefObject<HTMLCanvasElement>
   onClearSource: () => void
 }
 
-/** Lifecycle coordinator: decides *when* to render — once per Source Image or GlitchSettings change. */
-export default function GlitchCanvas({ sourceImage, settings, canvasRef, onClearSource }: Props) {
+/**
+ * Lifecycle coordinator: decides *when* to render — once per Source Image, GlitchSettings or Seed
+ * change. The Seed is its own trigger, which is what makes a Re-roll a re-render on its own.
+ */
+export default function GlitchCanvas({
+  sourceImage,
+  settings,
+  seed,
+  canvasRef,
+  onClearSource,
+}: Props) {
   const hiddenRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
 
   useEffect(() => {
@@ -18,8 +28,8 @@ export default function GlitchCanvas({ sourceImage, settings, canvasRef, onClear
     if (!canvas) {
       return
     }
-    renderGlitchFrame(sourceImage, canvas, hiddenRef.current, settings)
-  }, [sourceImage, settings, canvasRef])
+    renderGlitchFrame(sourceImage, canvas, hiddenRef.current, settings, seed)
+  }, [sourceImage, settings, seed, canvasRef])
 
   return (
     <div className="relative w-full h-full">

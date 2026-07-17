@@ -4,16 +4,20 @@ import EmptyStateHero from './components/empty-state-hero'
 import ErrorBoundary from './components/error-boundary'
 import ExportBar from './components/export-bar'
 import GlitchCanvas from './components/glitch-canvas'
+import { createSeed } from './glitch/rng'
 import {
+  DEFAULT_BLOCK_DISPLACEMENT,
   DEFAULT_NOISE,
   DEFAULT_PIXEL_SORT,
   DEFAULT_SCANLINES,
   type GlitchSettings,
+  type Seed,
 } from './glitch/types'
 
 // Every Effect starts active: a casual creator has to see the point on the first screen, not a
 // near-untouched image. Presets will take this job over once they land (#75).
 const DEFAULT_SETTINGS: GlitchSettings = {
+  blockDisplacement: DEFAULT_BLOCK_DISPLACEMENT,
   pixelSort: DEFAULT_PIXEL_SORT,
   channelShift: { channel: 'r', amount: 8 },
   scanlines: DEFAULT_SCANLINES,
@@ -22,12 +26,19 @@ const DEFAULT_SETTINGS: GlitchSettings = {
 
 export default function App() {
   const [settings, setSettings] = useState<GlitchSettings>(DEFAULT_SETTINGS)
+  // Beside the GlitchSettings, never inside them: the look and the arrangement are separate pieces
+  // of state, which is what lets Re-roll move one and leave the other alone. Drawn once per session
+  // rather than fixed, so two people opening the same default look land on arrangements of their
+  // own — the same reason applying a Preset will roll a fresh Seed (#75).
+  const [seed, setSeed] = useState<Seed>(createSeed)
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const patchSettings = useCallback((patch: Partial<GlitchSettings>) => {
     setSettings((prev) => ({ ...prev, ...patch }))
   }, [])
+
+  const handleReroll = useCallback(() => setSeed(createSeed()), [])
 
   const handleClearSource = useCallback(() => setSourceImage(null), [])
 
@@ -54,6 +65,7 @@ export default function App() {
                 <GlitchCanvas
                   sourceImage={sourceImage}
                   settings={settings}
+                  seed={seed}
                   canvasRef={canvasRef}
                   onClearSource={handleClearSource}
                 />
@@ -70,7 +82,7 @@ export default function App() {
         </main>
 
         <aside className="border-t sm:border-t-0 sm:border-r border-base p-md overflow-y-auto flex flex-col gap-lg sm:order-first">
-          <ControlPanel settings={settings} onChange={patchSettings} />
+          <ControlPanel settings={settings} onChange={patchSettings} onReroll={handleReroll} />
         </aside>
       </div>
     </div>

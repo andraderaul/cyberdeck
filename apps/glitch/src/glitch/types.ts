@@ -7,6 +7,13 @@ export interface PixelBuffer {
   height: number
 }
 
+/**
+ * Seeds every pseudo-random draw the Pipeline makes — the arrangement, one particular roll of a
+ * look. Travels *beside* GlitchSettings rather than inside it: that separation is what lets Re-roll
+ * change the arrangement without touching the look, and a Preset carry a look with no arrangement.
+ */
+export type Seed = number
+
 /** The colour channels Channel Shift can displace. Alpha is never shifted. */
 export type ChannelName = 'r' | 'g' | 'b'
 
@@ -129,8 +136,56 @@ export const DEFAULT_NOISE: NoiseParams = Object.freeze({
   tint: 'mono',
 })
 
+export interface BlockDisplacementParams {
+  /**
+   * How many blocks get carved out and displaced, on the normalised 0..1 scale. Like Noise and
+   * Channel Shift, its zero reads as "off" on its own — no blocks is no displacement — so no
+   * separate flag carries the off state.
+   */
+  density: number
+  /** How far the blocks travel, on the normalised 0..1 scale. */
+  amount: number
+}
+
+/**
+ * The most blocks density 1 carves. Curated: past ~24 the displaced blocks overlap so heavily that
+ * the image reads as horizontal static rather than as data breaking up, and the next block along
+ * mostly re-cuts pixels the last one already moved.
+ */
+export const MAX_DISPLACEMENT_BLOCKS = 24
+
+/**
+ * The farthest a block travels at amount 1, as a fraction of the buffer width. Curated below the
+ * full width: a block that lands most of a width from home stops reading as *that* block torn out
+ * of place and starts reading as unrelated pixels dropped on top.
+ */
+export const MAX_BLOCK_SHIFT_RATIO = 0.35
+
+/**
+ * The tallest a block gets, as a fraction of the buffer height. A block spanning much more than a
+ * sixth of the frame reads as the whole image sliding, not as a band of it corrupting.
+ */
+export const MAX_BLOCK_HEIGHT_RATIO = 0.16
+
+/**
+ * The narrowest a block gets, as a fraction of the buffer width. Floored well above zero: a block
+ * only a few pixels wide is invisible at any shift, so the draws that produced it are spent on
+ * nothing.
+ */
+export const MIN_BLOCK_WIDTH_RATIO = 0.25
+
+/**
+ * The default Block Displacement look, and the value the sliders reset to on double-click. Lives in
+ * the core for the same reason as DEFAULT_PIXEL_SORT, and is frozen for the same reason.
+ */
+export const DEFAULT_BLOCK_DISPLACEMENT: BlockDisplacementParams = Object.freeze({
+  density: 0.4,
+  amount: 0.5,
+})
+
 /** The flat object holding every Effect's params — the look, and nothing else. Carries no Seed. */
 export interface GlitchSettings {
+  blockDisplacement: BlockDisplacementParams
   pixelSort: PixelSortParams
   channelShift: ChannelShiftParams
   scanlines: ScanlinesParams
