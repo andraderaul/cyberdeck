@@ -1,14 +1,8 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './app'
-import {
-  DEFAULT_BLOCK_DISPLACEMENT,
-  DEFAULT_NOISE,
-  DEFAULT_PIXEL_SORT,
-  DEFAULT_SCANLINES,
-  type GlitchSettings,
-  type Seed,
-} from './glitch/types'
+import { DEFAULT_PRESET, glitchSettingsMatch, PRESETS } from './glitch/presets'
+import type { GlitchSettings, Seed } from './glitch/types'
 
 const toastError = vi.hoisted(() => vi.fn())
 vi.mock('./components/toast-provider', () => ({
@@ -251,11 +245,8 @@ describe('App', () => {
     // Exhaustive by design: patching Channel Shift must leave Pixel Sort's params exactly as they
     // were, and only a whole-object match catches a patch that drops a sibling Effect.
     expect(renderedSettings).toHaveBeenLastCalledWith({
-      blockDisplacement: DEFAULT_BLOCK_DISPLACEMENT,
-      pixelSort: DEFAULT_PIXEL_SORT,
-      channelShift: { channel: 'r', amount: 20 },
-      scanlines: DEFAULT_SCANLINES,
-      noise: DEFAULT_NOISE,
+      ...DEFAULT_PRESET.settings,
+      channelShift: { ...DEFAULT_PRESET.settings.channelShift, amount: 20 },
     })
   })
 
@@ -322,6 +313,134 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 're-roll' }))
 
     expect(renderedSettings).toHaveBeenLastCalledWith(before)
+  })
+
+  describe('Presets', () => {
+    // A Preset other than the one the app opens on, so a test can tell an applied look from the
+    // starting one without pinning which Preset is which.
+    const OTHER_PRESET = PRESETS.find((p) => p.id !== DEFAULT_PRESET.id) as (typeof PRESETS)[number]
+
+    function chip(name: string) {
+      return screen.getByRole('button', { name })
+    }
+
+    it('opens on a Preset, applied and highlighted', () => {
+      render(<App />)
+      fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+      expect(chip(DEFAULT_PRESET.name)).toHaveAttribute('aria-pressed', 'true')
+      expect(renderedSettings).toHaveBeenLastCalledWith(DEFAULT_PRESET.settings)
+    })
+
+    // The Presets are the front door, not part of the tweak layer — they must be reachable without
+    // opening the advanced affordance.
+    it('offers the Presets without the advanced affordance opened', () => {
+      render(<App />)
+
+      for (const preset of PRESETS) {
+        expect(chip(preset.name)).toBeInTheDocument()
+      }
+      expect(screen.getByRole('button', { name: /randomize/i })).toBeInTheDocument()
+    })
+
+    it('applies a Preset’s look and highlights it when it is picked', () => {
+      render(<App />)
+      fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+      fireEvent.click(chip(OTHER_PRESET.name))
+
+      expect(renderedSettings).toHaveBeenLastCalledWith(OTHER_PRESET.settings)
+      expect(chip(OTHER_PRESET.name)).toHaveAttribute('aria-pressed', 'true')
+      expect(chip(DEFAULT_PRESET.name)).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    // A Preset carries no Seed: each user gets their own arrangement of a shared look rather than
+    // the byte-identical image.
+    it('draws a fresh Seed when a Preset is applied', () => {
+      render(<App />)
+      fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+      const before = renderedSeed.mock.lastCall?.[0]
+
+      fireEvent.click(chip(OTHER_PRESET.name))
+
+      expect(renderedSeed.mock.lastCall?.[0]).not.toBe(before)
+    })
+
+    it('marks the Preset modified — not deselected — once a slider is edited', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.change(screen.getByLabelText('grain'), { target: { value: '0.9' } })
+
+      expect(chip(`${DEFAULT_PRESET.name} (modified)`)).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    // The whole reason the Seed sits outside GlitchSettings: a Re-roll is a new arrangement, not a
+    // customisation, so it must not move the user off their Preset or mark it modified.
+    it('keeps the Preset highlighted and unmodified through a Re-roll', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.click(screen.getByRole('button', { name: 're-roll' }))
+
+      expect(chip(DEFAULT_PRESET.name)).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.queryByRole('button', { name: /\(modified\)/ })).not.toBeInTheDocument()
+    })
+
+    it('re-applying a Preset drops the modified mark', () => {
+      renderWithAdvancedOpen()
+      fireEvent.change(screen.getByLabelText('grain'), { target: { value: '0.9' } })
+
+      fireEvent.click(chip(`${DEFAULT_PRESET.name} (modified)`))
+
+      expect(chip(DEFAULT_PRESET.name)).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    describe('Randomize', () => {
+      // Pins Randomize's whole stream to the bottom of its range: the base Preset is then the one
+      // the app opened on, perturbed to one extreme — so a look that came back unjittered can't pass
+      // as a fresh one. Left off the Seed tests, which need the draws to actually differ.
+      function pinRandomness() {
+        vi.spyOn(Math, 'random').mockReturnValue(0)
+      }
+
+      afterEach(() => {
+        vi.restoreAllMocks()
+      })
+
+      it('hands the canvas a fresh look', () => {
+        pinRandomness()
+        render(<App />)
+        fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+        fireEvent.click(screen.getByRole('button', { name: /randomize/i }))
+
+        const settings = renderedSettings.mock.lastCall?.[0] as GlitchSettings
+        expect(glitchSettingsMatch(settings, DEFAULT_PRESET.settings)).toBe(false)
+      })
+
+      it('draws a fresh Seed with the look', () => {
+        render(<App />)
+        fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+        const before = renderedSeed.mock.lastCall?.[0]
+
+        fireEvent.click(screen.getByRole('button', { name: /randomize/i }))
+
+        expect(renderedSeed.mock.lastCall?.[0]).not.toBe(before)
+      })
+
+      // A jittered look is one the user discovered, not an edit to the Preset it started from —
+      // marking that base as modified would claim they had been tweaking it.
+      it('leaves no Preset highlighted', () => {
+        pinRandomness()
+        render(<App />)
+        fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+        fireEvent.click(screen.getByRole('button', { name: /randomize/i }))
+
+        for (const preset of PRESETS) {
+          expect(chip(preset.name)).toHaveAttribute('aria-pressed', 'false')
+        }
+      })
+    })
   })
 
   it('holds the Seed steady across a look change — only Re-roll re-rolls it', () => {

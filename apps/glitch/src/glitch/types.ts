@@ -26,6 +26,13 @@ export interface ChannelShiftParams {
   amount: number
 }
 
+/**
+ * The displacement the control offers and Randomize must stay inside — a property of the Effect,
+ * so it lives in the core beside the param it bounds rather than in the UI that happens to slide
+ * it. Symmetric: a shift reads the same torn left as right.
+ */
+export const CHANNEL_SHIFT_AMOUNT_RANGE = { min: -40, max: 40 } as const
+
 /** The axis Pixel Sort walks: rows left-to-right, or columns top-to-bottom. */
 export type SortDirection = 'horizontal' | 'vertical'
 
@@ -47,12 +54,23 @@ export interface PixelSortParams {
 }
 
 /**
+ * The run lengths the control offers and Randomize must stay inside — a property of the Effect,
+ * held in the core beside the param it bounds. Floored at 1 rather than 0: a run of 1 is already
+ * sorted, so 0 would read as the Effect off (pipeline.ts).
+ */
+export const PIXEL_SORT_RUN_LENGTH_RANGE = { min: 1, max: 200 } as const
+
+/**
  * The default Pixel Sort look, and the value the sliders reset to on double-click. Lives in the
  * core rather than beside the controls: it is a property of the Effect, not of the UI that
- * happens to edit it (ADR 0005). Becomes a Preset's business once Presets land (#75).
+ * happens to edit it (ADR 0005).
  *
- * Frozen because every session's initial settings alias this one object — an accidental
- * downstream mutation would rewrite the default look for the whole app.
+ * Distinct from a Preset, which is a whole curated look (`presets.ts`) — this is one Effect's
+ * neutral starting point, and it is what a double-click resets to. Resetting to the active Preset's
+ * value instead would leave a user who had wandered off every Preset with no way back to neutral.
+ *
+ * Frozen because a look can alias this object rather than copy it — an accidental downstream
+ * mutation would rewrite the Effect's default for the whole app.
  */
 export const DEFAULT_PIXEL_SORT: PixelSortParams = Object.freeze({
   enabled: true,

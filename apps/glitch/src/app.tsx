@@ -4,36 +4,23 @@ import EmptyStateHero from './components/empty-state-hero'
 import ErrorBoundary from './components/error-boundary'
 import ExportBar from './components/export-bar'
 import GlitchCanvas from './components/glitch-canvas'
+import PresetPicker from './components/preset-picker'
 import { useToastError } from './components/toast-provider'
 import Disclosure from './components/ui/disclosure'
+import { DEFAULT_PRESET, type Preset, randomizeGlitchSettings } from './glitch/presets'
 import { createSeed } from './glitch/rng'
-import {
-  DEFAULT_BLOCK_DISPLACEMENT,
-  DEFAULT_NOISE,
-  DEFAULT_PIXEL_SORT,
-  DEFAULT_SCANLINES,
-  type GlitchSettings,
-  type Seed,
-} from './glitch/types'
+import type { GlitchSettings, Seed } from './glitch/types'
 import { useRecording } from './hooks/use-recording'
 import { useWebcamState } from './hooks/use-webcam-state'
 
-// Every Effect starts active: a casual creator has to see the point on the first screen, not a
-// near-untouched image. Presets will take this job over once they land (#75).
-const DEFAULT_SETTINGS: GlitchSettings = {
-  blockDisplacement: DEFAULT_BLOCK_DISPLACEMENT,
-  pixelSort: DEFAULT_PIXEL_SORT,
-  channelShift: { channel: 'r', amount: 8 },
-  scanlines: DEFAULT_SCANLINES,
-  noise: DEFAULT_NOISE,
-}
-
 export default function App() {
-  const [settings, setSettings] = useState<GlitchSettings>(DEFAULT_SETTINGS)
+  // The app opens on a Preset rather than a raw look: a casual creator has to see the point on the
+  // first screen, not a near-untouched image.
+  const [settings, setSettings] = useState<GlitchSettings>(DEFAULT_PRESET.settings)
+  const [activePresetId, setActivePresetId] = useState<string | null>(DEFAULT_PRESET.id)
   // Beside the GlitchSettings, never inside them: the look and the arrangement are separate pieces
-  // of state, which is what lets Re-roll move one and leave the other alone. Drawn once per session
-  // rather than fixed, so two people opening the same default look land on arrangements of their
-  // own — the same reason applying a Preset will roll a fresh Seed (#75).
+  // of state, which is what lets Re-roll move one and leave the other alone. Drawn fresh here for
+  // the same reason applying a Preset rolls one: a look is shared, an arrangement of it is yours.
   const [seed, setSeed] = useState<Seed>(createSeed)
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
   // The Live Source lives beside the Source Image rather than in one `source` slot: the two are
@@ -58,11 +45,31 @@ export default function App() {
     }
   }, [webcam.error, showError])
 
+  // Leaves activePresetId alone: an edited look still belongs to the Preset it started from, which
+  // the picker marks as modified rather than deselecting — the user keeps their bearings.
   const patchSettings = useCallback((patch: Partial<GlitchSettings>) => {
     setSettings((prev) => ({ ...prev, ...patch }))
   }, [])
 
+  // The Seed is not part of the look, so a Re-roll leaves both the GlitchSettings and the active
+  // Preset exactly where they were — a new arrangement is not a customisation.
   const handleReroll = useCallback(() => setSeed(createSeed()), [])
+
+  // A Preset carries no Seed, so applying one draws its own arrangement: everyone shares the look,
+  // nobody gets handed the byte-identical image.
+  const handlePresetSelect = useCallback((preset: Preset) => {
+    setSettings(preset.settings)
+    setActivePresetId(preset.id)
+    setSeed(createSeed())
+  }, [])
+
+  // Clears the active Preset rather than marking its base modified: a jittered look is a new one the
+  // user discovered, not an edit they made to the Preset it happened to start from.
+  const handleRandomize = useCallback(() => {
+    setSettings(randomizeGlitchSettings(Math.random))
+    setActivePresetId(null)
+    setSeed(createSeed())
+  }, [])
 
   const handleUseWebcam = useCallback(() => {
     void switchMode('live')
@@ -132,10 +139,15 @@ export default function App() {
           )}
         </main>
 
-        {/* Progressive disclosure: the sliders are the tweak layer, not the front door. The
-            primary surface is the Presets, which take this slot above the panel once they land
-            (#86) — until then the aside opens holding the affordance alone. */}
+        {/* Progressive disclosure: the Presets are the front door — one click to a good-looking
+            result — and the sliders are the tweak layer, folded away behind the affordance. */}
         <aside className="border-t sm:border-t-0 sm:border-r border-base p-md overflow-y-auto flex flex-col gap-lg sm:order-first">
+          <PresetPicker
+            settings={settings}
+            activePresetId={activePresetId}
+            onSelect={handlePresetSelect}
+            onRandomize={handleRandomize}
+          />
           <Disclosure label="advanced">
             <ControlPanel settings={settings} onChange={patchSettings} onReroll={handleReroll} />
           </Disclosure>
