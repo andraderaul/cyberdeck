@@ -1,8 +1,10 @@
 import {
   type ChannelName,
+  DEFAULT_NOISE,
   DEFAULT_PIXEL_SORT,
   DEFAULT_SCANLINES,
   type GlitchSettings,
+  type NoiseTint,
   SCANLINES_DENSITY_STEP,
   type SortDirection,
 } from '../glitch/types'
@@ -20,7 +22,11 @@ export const SCANLINES_DENSITY_RANGE = { min: 0, max: 1 } as const
 
 export const SCANLINES_INTENSITY_RANGE = { min: 0, max: 1 } as const
 
+export const NOISE_AMOUNT_RANGE = { min: 0, max: 1 } as const
+
 const CHANNELS: readonly ChannelName[] = ['r', 'g', 'b']
+
+const NOISE_TINTS: readonly NoiseTint[] = ['mono', 'color']
 
 const CHANNEL_LABELS: Record<ChannelName, string> = { r: 'red', g: 'green', b: 'blue' }
 
@@ -40,7 +46,7 @@ interface Props {
 }
 
 export default function ControlPanel({ settings, onChange }: Props) {
-  const { channelShift, pixelSort, scanlines } = settings
+  const { channelShift, pixelSort, scanlines, noise } = settings
 
   return (
     <div className="flex flex-col gap-lg">
@@ -142,6 +148,31 @@ export default function ControlPanel({ settings, onChange }: Props) {
             />
           </>
         )}
+      </div>
+
+      {/* No power toggle: Noise is off at amount 0, the same way Channel Shift is off at amount 0. */}
+      <div className="flex flex-col gap-sm">
+        <Label>noise</Label>
+        <ToggleGroup
+          ariaLabel="noise tint"
+          options={NOISE_TINTS}
+          value={noise.tint}
+          fullWidth
+          onChange={(tint) => onChange({ noise: { ...noise, tint } })}
+        />
+        {/* Labelled "grain", not "amount" after the param it edits: the section headings are visual
+            only, so a second slider named "amount" would reach a screen reader indistinguishable
+            from Channel Shift's. */}
+        <Slider
+          label="grain"
+          value={noise.amount}
+          min={NOISE_AMOUNT_RANGE.min}
+          max={NOISE_AMOUNT_RANGE.max}
+          step={0.01}
+          defaultValue={DEFAULT_NOISE.amount}
+          format={(v) => `${Math.round(v * 100)}%`}
+          onChange={(amount) => onChange({ noise: { ...noise, amount } })}
+        />
       </div>
     </div>
   )

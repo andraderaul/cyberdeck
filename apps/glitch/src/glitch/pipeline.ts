@@ -2,6 +2,8 @@ import {
   CHANNEL_OFFSET,
   type ChannelShiftParams,
   type GlitchSettings,
+  MAX_NOISE_DELTA,
+  type NoiseParams,
   type PixelBuffer,
   type PixelSortParams,
   type ScanlinesParams,
@@ -169,13 +171,73 @@ export function scanlines(pixels: PixelBuffer, params: ScanlinesParams): PixelBu
   return { data: out, width, height }
 }
 
+const HASH_MIX = 0x45d9f3b
+
+/**
+ * Golden-ratio constant, displacing the hash's fixed point at zero — without it the first pixel
+ * would draw a flat 0 and sit pinned to the strongest negative grain on every render.
+ */
+const HASH_DISPLACEMENT = 0x9e3779b9
+
+const UINT32_MAX = 0xffffffff
+
+/**
+ * A perturbation in -range..range, drawn by hashing `key` rather than by `Math.random`, so Noise
+ * stays a pure function of its input (ADR 0005) and the Pipeline keeps its promise that no
+ * randomness is hidden — every draw here derives from the pixel's own position in the buffer.
+ *
+ * Signed and centred on zero, so grain darkens as often as it brightens and the image keeps its
+ * overall exposure. Folds in the Seed once Block Displacement lands and the Pipeline gains one.
+ */
+function signedDraw(key: number, range: number): number {
+  let hash = (key + HASH_DISPLACEMENT) | 0
+  hash = Math.imul(hash ^ (hash >>> 16), HASH_MIX)
+  hash = Math.imul(hash ^ (hash >>> 16), HASH_MIX)
+  hash = hash ^ (hash >>> 16)
+  return ((hash >>> 0) / UINT32_MAX) * 2 * range - range
+}
+
+/**
+ * Effect: speckles the image with grain — the static lying over everything underneath. Pure:
+ * builds a new PixelBuffer, never touches the input. See ADR 0005.
+ *
+ * Out-of-range grain clamps at black and white rather than wrapping — Uint8ClampedArray's own
+ * behaviour, and the reason the darkest grain on a black pixel stays black instead of coming back
+ * round as a bright speckle. Alpha is left alone: grain speckles a pixel, it does not punch a hole.
+ */
+export function noise(pixels: PixelBuffer, params: NoiseParams): PixelBuffer {
+  const { width, height, data } = pixels
+  const out = new Uint8ClampedArray(data)
+  if (params.amount <= 0) {
+    return { data: out, width, height }
+  }
+
+  const range = Math.min(params.amount, 1) * MAX_NOISE_DELTA
+  const mono = params.tint === 'mono'
+
+  for (let pixel = 0; pixel < width * height; pixel++) {
+    const offset = pixel * 4
+    // One draw for the whole pixel is what mono *is*: an equal move on every channel shifts
+    // brightness and leaves hue where it was. Colour draws again per channel to break them apart.
+    const shared = mono ? signedDraw(pixel, range) : 0
+
+    for (let channel = 0; channel < 3; channel++) {
+      const delta = mono ? shared : signedDraw(offset + channel, range)
+      out[offset + channel] = data[offset + channel] + delta
+    }
+  }
+
+  return { data: out, width, height }
+}
+
 /**
  * The fixed, canonical Effect order applied to produce the output — pure in GlitchSettings.
- * v1 carries Pixel Sort, Channel Shift and Scanlines; the remaining Effects slot in around them in
- * the order documented in CONTEXT.md (structural before surface).
+ * v1 carries Pixel Sort, Channel Shift, Scanlines and Noise; Block Displacement slots in ahead of
+ * them in the order documented in CONTEXT.md (structural before surface).
  */
 export function applyPipeline(pixels: PixelBuffer, settings: GlitchSettings): PixelBuffer {
   const sorted = pixelSort(pixels, settings.pixelSort)
   const shifted = channelShift(sorted, settings.channelShift)
-  return scanlines(shifted, settings.scanlines)
+  const rastered = scanlines(shifted, settings.scanlines)
+  return noise(rastered, settings.noise)
 }

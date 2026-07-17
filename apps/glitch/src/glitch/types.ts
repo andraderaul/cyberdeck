@@ -97,9 +97,42 @@ export const DEFAULT_SCANLINES: ScanlinesParams = Object.freeze({
   intensity: 0.35,
 })
 
+/**
+ * How Noise tints its grain: `mono` draws one delta per pixel and moves every channel by it,
+ * leaving hue alone; `color` draws per channel, pulling them apart into chroma static.
+ */
+export type NoiseTint = 'mono' | 'color'
+
+export interface NoiseParams {
+  /**
+   * How heavy the grain is, on the normalised 0..1 scale. Unlike Pixel Sort and Scanlines, Noise's
+   * zero reads as "off" on its own — grain of nothing is no grain — so the off state is encoded in
+   * the param, as Channel Shift does with amount, rather than carried by a separate flag.
+   */
+  amount: number
+  tint: NoiseTint
+}
+
+/**
+ * The heaviest perturbation, in 0..255 channel steps, that amount 1 reaches. Curated below the
+ * full 255: at that range nearly every grain clamps to black or white, and the Effect reads as
+ * salt-and-pepper speckle instead of static lying over the image underneath.
+ */
+export const MAX_NOISE_DELTA = 128
+
+/**
+ * The default Noise look, and the value the slider resets to on double-click. Lives in the core
+ * for the same reason as DEFAULT_PIXEL_SORT, and is frozen for the same reason.
+ */
+export const DEFAULT_NOISE: NoiseParams = Object.freeze({
+  amount: 0.25,
+  tint: 'mono',
+})
+
 /** The flat object holding every Effect's params — the look, and nothing else. Carries no Seed. */
 export interface GlitchSettings {
   pixelSort: PixelSortParams
   channelShift: ChannelShiftParams
   scanlines: ScanlinesParams
+  noise: NoiseParams
 }

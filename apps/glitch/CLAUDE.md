@@ -8,9 +8,9 @@ layout, the deck-wide comment convention, and the release ritual. Paths below ar
 
 ## Status
 
-Tracer bullet (#77) plus Pixel Sort (#78) and Scanlines (#79). The end-to-end path is live —
-Source Image → Pixel Sort → Channel Shift → Scanlines → PNG Export — and the pure-core /
-imperative-shell seam is established. The remaining two Effects (Block Displacement, Noise),
+Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79) and Noise (#80). The end-to-end path is
+live — Source Image → Pixel Sort → Channel Shift → Scanlines → Noise → PNG Export — and the
+pure-core / imperative-shell seam is established. The remaining Effect (Block Displacement),
 Presets, Seed / Re-roll, Live Source, Capture and Recording are not built yet; see `CONTEXT.md`
 for the v1 scope they belong to.
 
@@ -83,9 +83,10 @@ Use these terms precisely — avoid the listed alternatives:
 | **Source Image** | Static uploaded image; immutable during session | uploadedImage, input image |
 | **Export** | Taking the result out (PNG) | download, save |
 
-`Seed` and `Preset` are domain terms the code hasn't reached yet — Pixel Sort, Channel Shift and
-Scanlines are all fully deterministic, so `applyPipeline` takes no Seed. It gains one when Block
-Displacement lands.
+`Seed` and `Preset` are domain terms the code hasn't reached yet — every Effect built so far is
+fully deterministic, so `applyPipeline` takes no Seed. It gains one when Block Displacement lands.
+Noise is the first Effect that *looks* random: its grain derives from a positional hash rather than
+`Math.random`, and that hash takes the Seed as a second input once there is one.
 
 ### Design system
 
@@ -103,9 +104,10 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 **Glitch core**
 - `src/glitch/types.ts` — `PixelBuffer`, `GlitchSettings`, `ChannelName`, `ChannelShiftParams`,
   `SortDirection`, `PixelSortParams`, `DEFAULT_PIXEL_SORT`, `ScanlinesParams`, `DEFAULT_SCANLINES`,
-  `SPARSEST_SCANLINE_PERIOD`, `TIGHTEST_SCANLINE_PERIOD`, `SCANLINES_DENSITY_STEP`
+  `SPARSEST_SCANLINE_PERIOD`, `TIGHTEST_SCANLINE_PERIOD`, `SCANLINES_DENSITY_STEP`, `NoiseParams`,
+  `NoiseTint`, `DEFAULT_NOISE`, `MAX_NOISE_DELTA`
 - `src/glitch/pipeline.ts` — `applyPipeline()` (pure), `pixelSort()`, `channelShift()`,
-  `scanlines()` — see ADR 0005
+  `scanlines()`, `noise()` — see ADR 0005
 - `src/glitch/image-utils.ts` — `sampleDimensions()` (800×800 cap), `sourceDimensions()`
 - `src/glitch/render-frame.ts` — `renderGlitchFrame()`: the imperative shell
 
