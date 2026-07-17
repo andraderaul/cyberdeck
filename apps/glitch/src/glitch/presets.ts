@@ -1,6 +1,8 @@
 import type { Rng } from './rng'
 import {
+  CHANNEL_SHIFT_AMOUNT_RANGE,
   type GlitchSettings,
+  PIXEL_SORT_RUN_LENGTH_RANGE,
   SCANLINES_DENSITY_STEP,
   SPARSEST_SCANLINE_PERIOD,
   TIGHTEST_SCANLINE_PERIOD,
@@ -160,10 +162,6 @@ const NOISE_AMOUNT_SPREAD = 0.06
 const UNIT_MIN = 0
 const UNIT_MAX = 1
 
-// A run below this is already sorted, which switches Pixel Sort off (pipeline.ts). Load-bearing
-// rather than defensive: CORRUPTED's run of 25 sits exactly one spread above it.
-const MIN_RUN_LENGTH = 1
-
 const SCANLINE_NOTCH_COUNT = SPARSEST_SCANLINE_PERIOD - TIGHTEST_SCANLINE_PERIOD
 
 function clamp(value: number, min: number, max: number): number {
@@ -190,6 +188,10 @@ function jitterUnit(source: Rng, base: number, spread: number): number {
  * whether an Effect is on at all — ride through untouched: flipping one isn't a perturbation of the
  * curated look, it's a jump to a look outside everything the base promised.
  *
+ * Every jittered number is clamped back to the range its own control offers, so the "narrower than
+ * the sliders, never the ugly extremes" promise is enforced here rather than left riding on the
+ * curated values — a future curator can move a base without a jitter sailing off the end of a range.
+ *
  * Pure: the randomness is injected, so a test can pin both the base and the perturbation (the same
  * reason `outputFilename` takes its timestamp). The app passes `Math.random`; the caller draws the
  * fresh Seed that goes with the look, since the look carries no arrangement.
@@ -207,14 +209,19 @@ export function randomizeGlitchSettings(source: Rng): GlitchSettings {
     pixelSort: {
       ...base.pixelSort,
       threshold: jitterUnit(source, base.pixelSort.threshold, SORT_THRESHOLD_SPREAD),
-      runLength: Math.max(
-        MIN_RUN_LENGTH,
+      runLength: clamp(
         Math.round(jitter(source, base.pixelSort.runLength, SORT_RUN_LENGTH_SPREAD)),
+        PIXEL_SORT_RUN_LENGTH_RANGE.min,
+        PIXEL_SORT_RUN_LENGTH_RANGE.max,
       ),
     },
     channelShift: {
       ...base.channelShift,
-      amount: Math.round(jitter(source, base.channelShift.amount, CHANNEL_AMOUNT_SPREAD)),
+      amount: clamp(
+        Math.round(jitter(source, base.channelShift.amount, CHANNEL_AMOUNT_SPREAD)),
+        CHANNEL_SHIFT_AMOUNT_RANGE.min,
+        CHANNEL_SHIFT_AMOUNT_RANGE.max,
+      ),
     },
     scanlines: {
       ...base.scanlines,

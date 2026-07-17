@@ -1,4 +1,5 @@
 import {
+  CHANNEL_SHIFT_AMOUNT_RANGE,
   type ChannelName,
   DEFAULT_BLOCK_DISPLACEMENT,
   DEFAULT_NOISE,
@@ -6,6 +7,7 @@ import {
   DEFAULT_SCANLINES,
   type GlitchSettings,
   type NoiseTint,
+  PIXEL_SORT_RUN_LENGTH_RANGE,
   SCANLINES_DENSITY_STEP,
   type SortDirection,
 } from '../glitch/types'
@@ -18,11 +20,7 @@ export const BLOCK_DISPLACEMENT_DENSITY_RANGE = { min: 0, max: 1 } as const
 
 export const BLOCK_DISPLACEMENT_AMOUNT_RANGE = { min: 0, max: 1 } as const
 
-export const CHANNEL_SHIFT_AMOUNT_RANGE = { min: -40, max: 40 } as const
-
 export const PIXEL_SORT_THRESHOLD_RANGE = { min: 0, max: 1 } as const
-
-export const PIXEL_SORT_RUN_LENGTH_RANGE = { min: 1, max: 200 } as const
 
 export const SCANLINES_DENSITY_RANGE = { min: 0, max: 1 } as const
 

@@ -211,7 +211,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   `DEFAULT_SCANLINES`, `SPARSEST_SCANLINE_PERIOD`, `TIGHTEST_SCANLINE_PERIOD`,
   `SCANLINES_DENSITY_STEP`, `NoiseParams`, `NoiseTint`, `DEFAULT_NOISE`, `MAX_NOISE_DELTA`,
   `BlockDisplacementParams`, `DEFAULT_BLOCK_DISPLACEMENT`, `MAX_DISPLACEMENT_BLOCKS`,
-  `MAX_BLOCK_SHIFT_RATIO`, `MAX_BLOCK_HEIGHT_RATIO`, `MIN_BLOCK_WIDTH_RATIO`
+  `MAX_BLOCK_SHIFT_RATIO`, `MAX_BLOCK_HEIGHT_RATIO`, `MIN_BLOCK_WIDTH_RATIO`,
+  `CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE` (the two params with no natural 0..1
+  bound — in the core so the sliders and Randomize's clamp share one source of truth)
 - `src/glitch/presets.ts` — `PRESETS` (the six curated looks), `DEFAULT_PRESET` (applied on open),
   `Preset`, `glitchSettingsMatch()` (total), `randomizeGlitchSettings()` (preset + jitter, injected
   randomness)

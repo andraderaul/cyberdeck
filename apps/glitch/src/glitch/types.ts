@@ -26,6 +26,13 @@ export interface ChannelShiftParams {
   amount: number
 }
 
+/**
+ * The displacement the control offers and Randomize must stay inside — a property of the Effect,
+ * so it lives in the core beside the param it bounds rather than in the UI that happens to slide
+ * it. Symmetric: a shift reads the same torn left as right.
+ */
+export const CHANNEL_SHIFT_AMOUNT_RANGE = { min: -40, max: 40 } as const
+
 /** The axis Pixel Sort walks: rows left-to-right, or columns top-to-bottom. */
 export type SortDirection = 'horizontal' | 'vertical'
 
@@ -45,6 +52,13 @@ export interface PixelSortParams {
   /** Longest run the sort will order at once; a longer band breaks into chunks of this size. */
   runLength: number
 }
+
+/**
+ * The run lengths the control offers and Randomize must stay inside — a property of the Effect,
+ * held in the core beside the param it bounds. Floored at 1 rather than 0: a run of 1 is already
+ * sorted, so 0 would read as the Effect off (pipeline.ts).
+ */
+export const PIXEL_SORT_RUN_LENGTH_RANGE = { min: 1, max: 200 } as const
 
 /**
  * The default Pixel Sort look, and the value the sliders reset to on double-click. Lives in the

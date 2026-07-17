@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_PRESET, glitchSettingsMatch, PRESETS, randomizeGlitchSettings } from './presets'
+import type { GlitchSettings } from './types'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
   PIXEL_SORT_RUN_LENGTH_RANGE,
-} from '../components/control-panel'
-import { DEFAULT_PRESET, glitchSettingsMatch, PRESETS, randomizeGlitchSettings } from './presets'
-import type { GlitchSettings } from './types'
-import { SCANLINES_DENSITY_STEP } from './types'
+  SCANLINES_DENSITY_STEP,
+} from './types'
 
 // 0.5 is the one draw that perturbs nothing: the spread is applied signed, around the base.
 const NO_JITTER = 0.5
