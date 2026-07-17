@@ -10,8 +10,9 @@ import {
   type Seed,
 } from './glitch/types'
 
+const toastError = vi.hoisted(() => vi.fn())
 vi.mock('./components/toast-provider', () => ({
-  useToastError: vi.fn(() => vi.fn()),
+  useToastError: () => toastError,
   ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
@@ -49,7 +50,8 @@ vi.mock('./components/glitch-canvas', () => ({
 }))
 
 // The hook is covered at its own seam; here it stands in as a probe so these tests can stay about
-// the app's wiring — which controls a Recording reaches, and what a cleared Source does to it.
+// the app's wiring — which controls a Recording reaches, what a cleared Source does to it, and
+// where its failures land.
 const recording = vi.hoisted(() => ({
   isSupported: true,
   isRecording: false,
@@ -57,7 +59,13 @@ const recording = vi.hoisted(() => ({
   startRecording: vi.fn(),
   stopRecording: vi.fn(),
 }))
-vi.mock('./hooks/use-recording', () => ({ useRecording: () => recording }))
+const recordingOnError = vi.hoisted(() => vi.fn())
+vi.mock('./hooks/use-recording', () => ({
+  useRecording: (_ref: unknown, onError?: (m: string) => void) => {
+    recordingOnError(onError)
+    return recording
+  },
+}))
 
 vi.mock('./components/export-bar', () => ({
   default: ({
@@ -488,6 +496,19 @@ describe('App', () => {
         })
 
         expect(recording.stopRecording).toHaveBeenCalledOnce()
+      })
+
+      // ADR 0006: operational failures surface as toasts, and Recording is an output path like
+      // Export and Copy — it doesn't get to fail quietly.
+      it('surfaces a Recording failure as a toast', async () => {
+        await goLive()
+        const onError = recordingOnError.mock.lastCall?.[0]
+
+        act(() => {
+          onError?.('recording broke')
+        })
+
+        expect(toastError).toHaveBeenCalledWith('recording broke')
       })
 
       it('leaves the Recording alone when a Source is cleared with nothing recording', async () => {

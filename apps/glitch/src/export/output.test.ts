@@ -12,8 +12,20 @@ describe('outputFilename', () => {
   })
 
   it('names a Recording with the container the browser actually gave us', () => {
-    expect(outputFilename('recording', { ext: 'webm' })).toBe('glitch-recording.webm')
-    expect(outputFilename('recording', { ext: 'mp4' })).toBe('glitch-recording.mp4')
+    expect(outputFilename('recording', { timestamp: 1750000000000, ext: 'webm' })).toBe(
+      'glitch-recording-1750000000000.webm',
+    )
+    expect(outputFilename('recording', { timestamp: 1750000000000, ext: 'mp4' })).toBe(
+      'glitch-recording-1750000000000.mp4',
+    )
+  })
+
+  // Unlike a Capture, a take can't be casually redone — two of them must not land on one name and
+  // leave the browser to disambiguate with " (1)".
+  it('gives two Recordings from one session distinct names', () => {
+    expect(outputFilename('recording', { timestamp: 1750000000000, ext: 'webm' })).not.toBe(
+      outputFilename('recording', { timestamp: 1750000005000, ext: 'webm' }),
+    )
   })
 })
 

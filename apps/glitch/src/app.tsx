@@ -50,7 +50,7 @@ export default function App() {
     elapsedSeconds,
     startRecording,
     stopRecording,
-  } = useRecording(canvasRef)
+  } = useRecording(canvasRef, showError)
 
   useEffect(() => {
     if (webcam.error) {

@@ -1,9 +1,11 @@
-// Hand-copied from ASCII//Convert (ADR 0011 — there is deliberately no shared `packages/`), with
-// one divergence: the Recording is named through this app's `outputFilename`, and glitch filenames
-// carry no timestamp.
+// Hand-copied from ASCII//Convert (ADR 0011 — there is deliberately no shared `packages/`), with one
+// divergence: failures are reported through `onError` rather than swallowed, since ADR 0006 wants
+// every operational failure surfaced and Recording is one of this app's four output paths. The
+// naming goes through this app's own `outputFilename`, but lands on the same stamped shape.
 
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Errors } from '../errors/app-error'
 import { mimeToExtension, outputFilename } from '../export/output'
 import { shareOrDownloadBlob } from '../utils/share'
 
@@ -48,9 +50,12 @@ export function isRecordingSupported(): boolean {
 /**
  * Records the output canvas — the pixels the Pipeline already painted, so this is not datamosh
  * (CONTEXT.md). Like Capture, it only reads the visible canvas and never touches the rAF loop
- * that paints it.
+ * that paints it. `onError` receives an already-worded message, ready for a toast (ADR 0006).
  */
-export function useRecording(canvasRef: RefObject<HTMLCanvasElement | null>) {
+export function useRecording(
+  canvasRef: RefObject<HTMLCanvasElement | null>,
+  onError?: (message: string) => void,
+) {
   const [isSupported] = useState(() => isRecordingSupported())
   const [isRecording, setIsRecording] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -68,21 +73,26 @@ export function useRecording(canvasRef: RefObject<HTMLCanvasElement | null>) {
       return
     }
 
+    // Every way this can fail is the same story to the user — the take never began, and pressing
+    // record again is the whole of the advice. A browser with no supported format shouldn't be
+    // reachable at all (ADR 0007 hides the control), so it lands here rather than in its own branch.
     const mimeType = detectMimeType()
     if (!mimeType) {
+      onError?.(Errors.recordingFailed().message)
       return
     }
 
-    let stream: MediaStream
+    let recorder: MediaRecorder
     try {
-      stream = (
+      const stream = (
         canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }
       ).captureStream(RECORDING_FPS)
+      recorder = new MediaRecorder(stream, { mimeType })
     } catch {
+      onError?.(Errors.recordingFailed().message)
       return
     }
 
-    const recorder = new MediaRecorder(stream, { mimeType })
     chunksRef.current = []
 
     recorder.ondataavailable = (e) => {
@@ -98,10 +108,13 @@ export function useRecording(canvasRef: RefObject<HTMLCanvasElement | null>) {
       }
 
       const blob = new Blob(chunksRef.current, { type: mimeType })
-      void shareOrDownloadBlob(
-        blob,
-        outputFilename('recording', { ext: mimeToExtension(mimeType) }),
-      )
+      const filename = outputFilename('recording', {
+        timestamp: Date.now(),
+        ext: mimeToExtension(mimeType),
+      })
+      void shareOrDownloadBlob(blob, filename).catch(() => {
+        onError?.(Errors.recordingExportFailed().message)
+      })
 
       recorderRef.current = null
       chunksRef.current = []
@@ -109,15 +122,23 @@ export function useRecording(canvasRef: RefObject<HTMLCanvasElement | null>) {
       setElapsedSeconds(0)
     }
 
+    // Started only once the handlers are attached: a chunk arriving before `ondataavailable` is set
+    // would be dropped from the take.
+    try {
+      recorder.start()
+    } catch {
+      onError?.(Errors.recordingFailed().message)
+      return
+    }
+
     recorderRef.current = recorder
-    recorder.start()
     setIsRecording(true)
     setElapsedSeconds(0)
 
     timerRef.current = setInterval(() => {
       setElapsedSeconds((s) => s + 1)
     }, 1000)
-  }, [canvasRef])
+  }, [canvasRef, onError])
 
   useEffect(() => {
     return () => {

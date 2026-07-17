@@ -85,9 +85,16 @@ touches the loop, so the feed keeps running.
 ### Recording
 
 `useRecording` wraps `canvas.captureStream(15)` + `MediaRecorder` with runtime format detection
-(vp9 → vp8 → webm → mp4). It is a hand-copy of ASCII//Convert's hook (ADR 0011) with one divergence:
-the file is named through this app's `outputFilename`, and glitch filenames carry no timestamp — so
-`mimeToExtension` moved across with it, but the injected `timestamp` did not.
+(vp9 → vp8 → webm → mp4). It is a hand-copy of ASCII//Convert's hook (ADR 0011) with one divergence,
+noted in the file: failures go to an `onError` callback instead of being swallowed. ADR 0006 wants
+every operational failure surfaced, and Recording is one of this app's four output paths
+(`CONTEXT.md`) — the ASCII original returns silently on all three start failures. `app.tsx` hands
+it the toast.
+
+A Recording is the one output this app timestamps (`glitch-recording-<ms>.webm`), where PNG Export
+and Capture keep stable names. The asymmetry is deliberate: a Capture is one click to redo, but a
+take is minutes of someone's performance, and a second one must not collide and leave the browser
+to disambiguate with " (1)".
 
 Like Capture, it records the **output canvas** the Pipeline already painted — it is *not* datamosh
 (`CONTEXT.md`), and it never touches the rAF loop. The capture rate matches that loop's ~15fps
@@ -111,7 +118,8 @@ whatever the Source's height. Here the sampled buffer *is* what `applyPipeline` 
 
 ### Error handling
 
-Operational errors (Export) use the `AppError` plain-object shape (`type`, `message`, `cause?`),
+Operational errors (Export, Copy, Recording) use the `AppError` plain-object shape
+(`type`, `message`, `cause?`),
 surfaced via the toast system (`use-toast` + `ToastProvider`) — see ADR 0006. The typed-error-class
 half of ADR 0006 has no counterpart here; this app has no AI surface. Image-load failures surface
 through `loadImageFile`'s `onError` callback straight to the same toast.
@@ -174,7 +182,7 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/errors/app-error.ts` — `AppError`, `createError`, `normalizeError`, `Errors`
 - `src/export/output.ts` — `outputFilename()`, `mimeToExtension()`
 - `src/hooks/use-recording.ts` — `useRecording()`, `isRecordingSupported()`, `detectMimeType()`,
-  `formatElapsedTime()`: the Recording's MediaRecorder lifecycle — see ADR 0007
+  `formatElapsedTime()`: the Recording's MediaRecorder lifecycle — see ADR 0007 and ADR 0006
 - `src/hooks/use-toast.ts` — toast queue state
 - `src/hooks/use-webcam-state.ts` — `useWebcamState()`, `planCommands()`, `reducer()`: the Live
   Source's MediaStream lifecycle

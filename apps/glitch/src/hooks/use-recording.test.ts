@@ -109,6 +109,8 @@ class MockMediaRecorder {
 
 describe('useRecording', () => {
   let captureStream: ReturnType<typeof vi.fn>
+  // What the download anchor was actually told to save the take as — the end of the Video Export.
+  let downloadedNames: string[]
 
   beforeEach(() => {
     vi.stubGlobal('MediaRecorder', MockMediaRecorder)
@@ -120,9 +122,14 @@ describe('useRecording', () => {
       writable: true,
     })
 
+    downloadedNames = []
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock')
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
-    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloadedNames.push(this.download)
+    })
   })
 
   afterEach(() => {
@@ -174,6 +181,33 @@ describe('useRecording', () => {
     expect(result.current.isRecording).toBe(false)
     expect(URL.createObjectURL).toHaveBeenCalledOnce()
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledOnce()
+  })
+
+  it('stamps the take so two Recordings in one session never collide', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1750000000000)
+    const canvasRef = { current: document.createElement('canvas') }
+    const { result } = renderHook(() => useRecording(canvasRef))
+
+    await act(async () => {
+      result.current.startRecording()
+    })
+    await act(async () => {
+      result.current.stopRecording()
+    })
+    vi.setSystemTime(1750000009000)
+    await act(async () => {
+      result.current.startRecording()
+    })
+    await act(async () => {
+      result.current.stopRecording()
+    })
+
+    expect(downloadedNames).toEqual([
+      'glitch-recording-1750000000000.webm',
+      'glitch-recording-1750000009000.webm',
+    ])
+    vi.useRealTimers()
   })
 
   it('stopRecording resets elapsedSeconds to zero', async () => {
@@ -236,5 +270,97 @@ describe('useRecording', () => {
     })
 
     expect(result.current.isRecording).toBe(false)
+  })
+
+  // ADR 0006: an output path failing without feedback is a broken experience. Recording is one of
+  // the four (CONTEXT.md), so none of its failures may pass in silence.
+  describe('failures', () => {
+    it('reports a refused stream rather than failing silently', async () => {
+      captureStream.mockImplementation(() => {
+        throw new Error('nope')
+      })
+      const onError = vi.fn()
+      const canvasRef = { current: document.createElement('canvas') }
+      const { result } = renderHook(() => useRecording(canvasRef, onError))
+
+      await act(async () => {
+        result.current.startRecording()
+      })
+
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('try again'))
+    })
+
+    it('reports a browser that cannot encode any supported format', async () => {
+      vi.stubGlobal('MediaRecorder', { isTypeSupported: () => false })
+      const onError = vi.fn()
+      const canvasRef = { current: document.createElement('canvas') }
+      const { result } = renderHook(() => useRecording(canvasRef, onError))
+
+      await act(async () => {
+        result.current.startRecording()
+      })
+
+      expect(onError).toHaveBeenCalledOnce()
+      expect(result.current.isRecording).toBe(false)
+    })
+
+    it('reports a MediaRecorder that refuses to start', async () => {
+      vi.stubGlobal(
+        'MediaRecorder',
+        class extends MockMediaRecorder {
+          start() {
+            throw new Error('nope')
+          }
+        },
+      )
+      const onError = vi.fn()
+      const canvasRef = { current: document.createElement('canvas') }
+      const { result } = renderHook(() => useRecording(canvasRef, onError))
+
+      await act(async () => {
+        result.current.startRecording()
+      })
+
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('try again'))
+      expect(result.current.isRecording).toBe(false)
+    })
+
+    // The take is already lost here, so the message must not promise a retry that can't bring it back
+    it('reports a Video Export that fails after a good take', async () => {
+      vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {
+        throw new Error('nope')
+      })
+      const onError = vi.fn()
+      const canvasRef = { current: document.createElement('canvas') }
+      const { result } = renderHook(() => useRecording(canvasRef, onError))
+
+      await act(async () => {
+        result.current.startRecording()
+      })
+      await act(async () => {
+        result.current.stopRecording()
+      })
+
+      await vi.waitFor(() => {
+        expect(onError).toHaveBeenCalledWith(expect.not.stringContaining('try again'))
+      })
+      // A failed hand-off still ends the take — the timer must not keep running
+      expect(result.current.isRecording).toBe(false)
+    })
+
+    it('says nothing when a Recording runs and lands cleanly', async () => {
+      const onError = vi.fn()
+      const canvasRef = { current: document.createElement('canvas') }
+      const { result } = renderHook(() => useRecording(canvasRef, onError))
+
+      await act(async () => {
+        result.current.startRecording()
+      })
+      await act(async () => {
+        result.current.stopRecording()
+      })
+
+      expect(onError).not.toHaveBeenCalled()
+    })
   })
 })
