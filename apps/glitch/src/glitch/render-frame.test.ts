@@ -1,16 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MAX_SAMPLE_DIM } from './image-utils'
 import { renderGlitchFrame } from './render-frame'
-import type { GlitchSettings } from './types'
+import type { GlitchSettings, Seed } from './types'
 
 // Channel Shift is the only Effect left on: these tests exercise the shell's canvas glue, and a
 // second active Effect would only obscure whether the pure core ran at all.
 const SETTINGS: GlitchSettings = {
+  blockDisplacement: { density: 0, amount: 0 },
   pixelSort: { enabled: false, direction: 'horizontal', threshold: 0, runLength: 64 },
   channelShift: { channel: 'r', amount: 2 },
   scanlines: { enabled: false, density: 0.5, intensity: 0.5 },
   noise: { amount: 0, tint: 'mono' },
 }
+
+/** No Effect here draws on the Seed, so any fixed one does — the shell only has to pass it along. */
+const SEED: Seed = 1234
 
 /**
  * happy-dom has no real 2D context, so the shell is exercised against a fake that records the
@@ -43,7 +47,7 @@ describe('renderGlitchFrame', () => {
     const hidden = fakeCanvas(hiddenCtx)
     const canvas = fakeCanvas(fakeContext())
 
-    renderGlitchFrame(fakeSource(100, 50), canvas, hidden, SETTINGS)
+    renderGlitchFrame(fakeSource(100, 50), canvas, hidden, SETTINGS, SEED)
 
     expect(hidden.width).toBe(100)
     expect(hidden.height).toBe(50)
@@ -55,7 +59,7 @@ describe('renderGlitchFrame', () => {
     const hidden = fakeCanvas(hiddenCtx)
     const canvas = fakeCanvas(fakeContext())
 
-    renderGlitchFrame(fakeSource(4000, 2000), canvas, hidden, SETTINGS)
+    renderGlitchFrame(fakeSource(4000, 2000), canvas, hidden, SETTINGS, SEED)
 
     expect(hidden.width).toBe(MAX_SAMPLE_DIM)
     expect(hidden.height).toBe(400)
@@ -69,10 +73,13 @@ describe('renderGlitchFrame', () => {
     const visibleCtx = fakeContext()
     const canvas = fakeCanvas(visibleCtx)
 
-    renderGlitchFrame(fakeSource(2, 1), canvas, hidden, {
-      ...SETTINGS,
-      channelShift: { channel: 'r', amount: 1 },
-    })
+    renderGlitchFrame(
+      fakeSource(2, 1),
+      canvas,
+      hidden,
+      { ...SETTINGS, channelShift: { channel: 'r', amount: 1 } },
+      SEED,
+    )
 
     expect(canvas.width).toBe(2)
     expect(canvas.height).toBe(1)
@@ -90,6 +97,7 @@ describe('renderGlitchFrame', () => {
       fakeCanvas(visibleCtx),
       fakeCanvas(hiddenCtx),
       SETTINGS,
+      SEED,
     )
 
     expect(painted).toBe(false)
@@ -102,6 +110,7 @@ describe('renderGlitchFrame', () => {
       fakeCanvas(null),
       fakeCanvas(null),
       SETTINGS,
+      SEED,
     )
 
     expect(painted).toBe(false)
@@ -110,8 +119,8 @@ describe('renderGlitchFrame', () => {
   it('reports a painted frame', () => {
     const hidden = fakeCanvas(fakeContext(new ImageData(4, 4)))
 
-    expect(renderGlitchFrame(fakeSource(4, 4), fakeCanvas(fakeContext()), hidden, SETTINGS)).toBe(
-      true,
-    )
+    expect(
+      renderGlitchFrame(fakeSource(4, 4), fakeCanvas(fakeContext()), hidden, SETTINGS, SEED),
+    ).toBe(true)
   })
 })

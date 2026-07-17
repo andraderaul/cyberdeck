@@ -1,15 +1,81 @@
+import { createRng } from './rng'
 import {
+  type BlockDisplacementParams,
   CHANNEL_OFFSET,
   type ChannelShiftParams,
   type GlitchSettings,
+  MAX_BLOCK_HEIGHT_RATIO,
+  MAX_BLOCK_SHIFT_RATIO,
+  MAX_DISPLACEMENT_BLOCKS,
   MAX_NOISE_DELTA,
+  MIN_BLOCK_WIDTH_RATIO,
   type NoiseParams,
   type PixelBuffer,
   type PixelSortParams,
   type ScanlinesParams,
+  type Seed,
   SPARSEST_SCANLINE_PERIOD,
   TIGHTEST_SCANLINE_PERIOD,
 } from './types'
+
+/** Normalises a param that rides the 0..1 scale, so a value off the end lands on the curated end. */
+function clampUnit(value: number): number {
+  return Math.min(Math.max(value, 0), 1)
+}
+
+/**
+ * Effect: shifts rectangular blocks horizontally — the data-corruption tear. Pure given a Seed:
+ * every block's size, position and travel is drawn from the Seed's own stream, so the same Seed
+ * reproduces the arrangement exactly and a new one rolls a fresh arrangement of the same look
+ * (ADR 0005).
+ *
+ * A block reads through the source it was handed, not the buffer being written, so two overlapping
+ * blocks each tear the original image. Letting the second sample the first would compound the tears
+ * into mush, and would make a block's look depend on how many earlier blocks happened to land on it.
+ */
+export function blockDisplacement(
+  pixels: PixelBuffer,
+  params: BlockDisplacementParams,
+  seed: Seed,
+): PixelBuffer {
+  const { width, height, data } = pixels
+  const out = new Uint8ClampedArray(data)
+  if (params.density <= 0 || params.amount <= 0) {
+    return { data: out, width, height }
+  }
+
+  const rng = createRng(seed)
+  const blocks = Math.round(clampUnit(params.density) * MAX_DISPLACEMENT_BLOCKS)
+  const farthest = clampUnit(params.amount) * MAX_BLOCK_SHIFT_RATIO * width
+  const tallest = Math.max(1, Math.round(height * MAX_BLOCK_HEIGHT_RATIO))
+  const narrowest = Math.max(1, Math.round(width * MIN_BLOCK_WIDTH_RATIO))
+
+  for (let block = 0; block < blocks; block++) {
+    const blockHeight = 1 + Math.floor(rng() * tallest)
+    const top = Math.floor(rng() * (height - blockHeight + 1))
+    const blockWidth = narrowest + Math.floor(rng() * (width - narrowest + 1))
+    const left = Math.floor(rng() * (width - blockWidth + 1))
+    const shift = Math.round((rng() * 2 - 1) * farthest)
+
+    for (let y = top; y < top + blockHeight; y++) {
+      for (let x = left; x < left + blockWidth; x++) {
+        // Wraps around the row rather than clamping at the edge the way Channel Shift does: a
+        // clamped block fills with repeats of its edge column, which reads as a stretch smear.
+        // A wrapped block pulls in the far side of the row — the row's data re-cut, which is the
+        // tear this Effect is after.
+        const sourceX = (((x - shift) % width) + width) % width
+        const from = (y * width + sourceX) * 4
+        const to = (y * width + x) * 4
+        out[to] = data[from]
+        out[to + 1] = data[from + 1]
+        out[to + 2] = data[from + 2]
+        out[to + 3] = data[from + 3]
+      }
+    }
+  }
+
+  return { data: out, width, height }
+}
 
 const BT601_RED_LUMA_WEIGHT = 0.299
 const BT601_GREEN_LUMA_WEIGHT = 0.587
@@ -135,7 +201,7 @@ export function channelShift(pixels: PixelBuffer, params: ChannelShiftParams): P
 
 /** Maps normalised density onto the pixel period between dark rows — inverted, so 1 is tightest. */
 function scanlinePeriod(density: number): number {
-  const clamped = Math.min(Math.max(density, 0), 1)
+  const clamped = clampUnit(density)
   return Math.round(
     SPARSEST_SCANLINE_PERIOD + (TIGHTEST_SCANLINE_PERIOD - SPARSEST_SCANLINE_PERIOD) * clamped,
   )
@@ -184,13 +250,16 @@ const UINT32_MAX = 0xffffffff
 /**
  * A perturbation in -range..range, drawn by hashing `key` rather than by `Math.random`, so Noise
  * stays a pure function of its input (ADR 0005) and the Pipeline keeps its promise that no
- * randomness is hidden — every draw here derives from the pixel's own position in the buffer.
+ * randomness is hidden — every draw here derives from the pixel's own position and the Seed.
+ *
+ * Positional rather than streamed from the Seed's rng, so the grain on a pixel depends on where it
+ * sits and not on how many draws the Effects before it happened to make.
  *
  * Signed and centred on zero, so grain darkens as often as it brightens and the image keeps its
- * overall exposure. Folds in the Seed once Block Displacement lands and the Pipeline gains one.
+ * overall exposure.
  */
-function signedDraw(key: number, range: number): number {
-  let hash = (key + HASH_DISPLACEMENT) | 0
+function signedDraw(key: number, seed: Seed, range: number): number {
+  let hash = ((key + HASH_DISPLACEMENT) | 0) ^ seed
   hash = Math.imul(hash ^ (hash >>> 16), HASH_MIX)
   hash = Math.imul(hash ^ (hash >>> 16), HASH_MIX)
   hash = hash ^ (hash >>> 16)
@@ -205,7 +274,7 @@ function signedDraw(key: number, range: number): number {
  * behaviour, and the reason the darkest grain on a black pixel stays black instead of coming back
  * round as a bright speckle. Alpha is left alone: grain speckles a pixel, it does not punch a hole.
  */
-export function noise(pixels: PixelBuffer, params: NoiseParams): PixelBuffer {
+export function noise(pixels: PixelBuffer, params: NoiseParams, seed: Seed): PixelBuffer {
   const { width, height, data } = pixels
   const out = new Uint8ClampedArray(data)
   if (params.amount <= 0) {
@@ -219,10 +288,10 @@ export function noise(pixels: PixelBuffer, params: NoiseParams): PixelBuffer {
     const offset = pixel * 4
     // One draw for the whole pixel is what mono *is*: an equal move on every channel shifts
     // brightness and leaves hue where it was. Colour draws again per channel to break them apart.
-    const shared = mono ? signedDraw(pixel, range) : 0
+    const shared = mono ? signedDraw(pixel, seed, range) : 0
 
     for (let channel = 0; channel < 3; channel++) {
-      const delta = mono ? shared : signedDraw(offset + channel, range)
+      const delta = mono ? shared : signedDraw(offset + channel, seed, range)
       out[offset + channel] = data[offset + channel] + delta
     }
   }
@@ -231,13 +300,21 @@ export function noise(pixels: PixelBuffer, params: NoiseParams): PixelBuffer {
 }
 
 /**
- * The fixed, canonical Effect order applied to produce the output — pure in GlitchSettings.
- * v1 carries Pixel Sort, Channel Shift, Scanlines and Noise; Block Displacement slots in ahead of
- * them in the order documented in CONTEXT.md (structural before surface).
+ * The fixed, canonical Effect order applied to produce the output — pure in GlitchSettings and Seed
+ * together, with no hidden randomness: a settings+seed pair always produces the same output. The
+ * order runs structural before surface, as documented in CONTEXT.md.
+ *
+ * The Seed rides beside GlitchSettings rather than inside it, which is what lets Re-roll hand the
+ * same look a new arrangement.
  */
-export function applyPipeline(pixels: PixelBuffer, settings: GlitchSettings): PixelBuffer {
-  const sorted = pixelSort(pixels, settings.pixelSort)
+export function applyPipeline(
+  pixels: PixelBuffer,
+  settings: GlitchSettings,
+  seed: Seed,
+): PixelBuffer {
+  const displaced = blockDisplacement(pixels, settings.blockDisplacement, seed)
+  const sorted = pixelSort(displaced, settings.pixelSort)
   const shifted = channelShift(sorted, settings.channelShift)
   const rastered = scanlines(shifted, settings.scanlines)
-  return noise(rastered, settings.noise)
+  return noise(rastered, settings.noise, seed)
 }

@@ -2,10 +2,12 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import App from './app'
 import {
+  DEFAULT_BLOCK_DISPLACEMENT,
   DEFAULT_NOISE,
   DEFAULT_PIXEL_SORT,
   DEFAULT_SCANLINES,
   type GlitchSettings,
+  type Seed,
 } from './glitch/types'
 
 vi.mock('./components/toast-provider', () => ({
@@ -16,16 +18,20 @@ vi.mock('./components/toast-provider', () => ({
 // The canvas and its render shell are covered at their own seams; here they stand in as probes
 // so this test can stay about the app's wiring.
 const renderedSettings = vi.fn<(s: GlitchSettings) => void>()
+const renderedSeed = vi.fn<(s: Seed) => void>()
 
 vi.mock('./components/glitch-canvas', () => ({
   default: ({
     settings,
+    seed,
     onClearSource,
   }: {
     settings: GlitchSettings
+    seed: Seed
     onClearSource?: () => void
   }) => {
     renderedSettings(settings)
+    renderedSeed(seed)
     return (
       <>
         <canvas aria-label="glitched preview" />
@@ -157,6 +163,7 @@ describe('App', () => {
     // Exhaustive by design: patching Channel Shift must leave Pixel Sort's params exactly as they
     // were, and only a whole-object match catches a patch that drops a sibling Effect.
     expect(renderedSettings).toHaveBeenLastCalledWith({
+      blockDisplacement: DEFAULT_BLOCK_DISPLACEMENT,
       pixelSort: DEFAULT_PIXEL_SORT,
       channelShift: { channel: 'r', amount: 20 },
       scanlines: DEFAULT_SCANLINES,
@@ -184,5 +191,64 @@ describe('App', () => {
     expect(renderedSettings).toHaveBeenLastCalledWith(
       expect.objectContaining({ noise: expect.objectContaining({ tint: 'color' }) }),
     )
+  })
+
+  it('passes an updated Block Displacement density down to the canvas', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+    fireEvent.change(screen.getByLabelText('blocks'), { target: { value: '0.8' } })
+
+    expect(renderedSettings).toHaveBeenLastCalledWith(
+      expect.objectContaining({ blockDisplacement: expect.objectContaining({ density: 0.8 }) }),
+    )
+  })
+
+  it('passes an updated Block Displacement amount down to the canvas', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+    fireEvent.change(screen.getByLabelText('displace'), { target: { value: '0.9' } })
+
+    expect(renderedSettings).toHaveBeenLastCalledWith(
+      expect.objectContaining({ blockDisplacement: expect.objectContaining({ amount: 0.9 }) }),
+    )
+  })
+
+  it('passes a Seed down to the canvas alongside the GlitchSettings', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+    expect(renderedSeed).toHaveBeenLastCalledWith(expect.any(Number))
+  })
+
+  it('hands the canvas a new Seed on Re-roll', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    const before = renderedSeed.mock.lastCall?.[0]
+
+    fireEvent.click(screen.getByRole('button', { name: 're-roll' }))
+
+    expect(renderedSeed.mock.lastCall?.[0]).not.toBe(before)
+  })
+
+  it('leaves the look untouched on Re-roll — a new arrangement, the same GlitchSettings', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    const before = renderedSettings.mock.lastCall?.[0]
+
+    fireEvent.click(screen.getByRole('button', { name: 're-roll' }))
+
+    expect(renderedSettings).toHaveBeenLastCalledWith(before)
+  })
+
+  it('holds the Seed steady across a look change — only Re-roll re-rolls it', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+    const before = renderedSeed.mock.lastCall?.[0]
+
+    fireEvent.click(screen.getByRole('button', { name: 'green' }))
+
+    expect(renderedSeed).toHaveBeenLastCalledWith(before)
   })
 })

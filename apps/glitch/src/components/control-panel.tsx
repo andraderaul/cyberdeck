@@ -1,5 +1,6 @@
 import {
   type ChannelName,
+  DEFAULT_BLOCK_DISPLACEMENT,
   DEFAULT_NOISE,
   DEFAULT_PIXEL_SORT,
   DEFAULT_SCANLINES,
@@ -8,9 +9,14 @@ import {
   SCANLINES_DENSITY_STEP,
   type SortDirection,
 } from '../glitch/types'
+import Button from './ui/button'
 import Label from './ui/label'
 import Slider from './ui/slider'
 import ToggleGroup from './ui/toggle-group'
+
+export const BLOCK_DISPLACEMENT_DENSITY_RANGE = { min: 0, max: 1 } as const
+
+export const BLOCK_DISPLACEMENT_AMOUNT_RANGE = { min: 0, max: 1 } as const
 
 export const CHANNEL_SHIFT_AMOUNT_RANGE = { min: -40, max: 40 } as const
 
@@ -42,14 +48,55 @@ const EFFECT_POWER = ['off', 'on'] as const
 
 interface Props {
   settings: GlitchSettings
+  // Re-roll rides its own callback rather than an onChange patch: the Seed is not part of the look,
+  // and the panel edits the look. Threading it as a patch would put the arrangement inside
+  // GlitchSettings by the back door.
+  onReroll: () => void
   onChange: (patch: Partial<GlitchSettings>) => void
 }
 
-export default function ControlPanel({ settings, onChange }: Props) {
-  const { channelShift, pixelSort, scanlines, noise } = settings
+export default function ControlPanel({ settings, onChange, onReroll }: Props) {
+  const { blockDisplacement, channelShift, pixelSort, scanlines, noise } = settings
 
+  // Sections run in the Pipeline's canonical order — the panel reads top to bottom the way the
+  // Effects apply.
   return (
     <div className="flex flex-col gap-lg">
+      <div className="flex flex-col gap-sm">
+        <Label>seed</Label>
+        <Button variant="ghost" onClick={onReroll} aria-label="re-roll" className="w-full">
+          ⟳ re-roll
+        </Button>
+      </div>
+
+      <div className="flex flex-col gap-sm">
+        <Label>block displacement</Label>
+        {/* No power toggle: the Effect is off at density 0, the way Noise is off at amount 0. */}
+        {/* Labelled "blocks" and "displace" rather than after the params they edit: a screen reader
+            reaches these labels with no section heading around them, and "density" alone would be
+            indistinguishable from Scanlines'. */}
+        <Slider
+          label="blocks"
+          value={blockDisplacement.density}
+          min={BLOCK_DISPLACEMENT_DENSITY_RANGE.min}
+          max={BLOCK_DISPLACEMENT_DENSITY_RANGE.max}
+          step={0.01}
+          defaultValue={DEFAULT_BLOCK_DISPLACEMENT.density}
+          format={(v) => `${Math.round(v * 100)}%`}
+          onChange={(density) => onChange({ blockDisplacement: { ...blockDisplacement, density } })}
+        />
+        <Slider
+          label="displace"
+          value={blockDisplacement.amount}
+          min={BLOCK_DISPLACEMENT_AMOUNT_RANGE.min}
+          max={BLOCK_DISPLACEMENT_AMOUNT_RANGE.max}
+          step={0.01}
+          defaultValue={DEFAULT_BLOCK_DISPLACEMENT.amount}
+          format={(v) => `${Math.round(v * 100)}%`}
+          onChange={(amount) => onChange({ blockDisplacement: { ...blockDisplacement, amount } })}
+        />
+      </div>
+
       <div className="flex flex-col gap-sm">
         <Label>pixel sort</Label>
         <ToggleGroup

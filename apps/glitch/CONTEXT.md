@@ -43,10 +43,12 @@ arranjo são coisas distintas.
 _Avoid_: options, config, filters
 
 **Seed**:
-O valor que semeia toda a pseudo-aleatoriedade do Pipeline (hoje, o Block Displacement) —
-**o arranjo**, uma rolagem específica de um look. Vive ao lado dos GlitchSettings, não
-dentro: é o que permite que o Re-roll troque o arranjo sem alterar o look. Fixo por padrão
-tanto na imagem quanto na webcam; **Re-roll** gera um novo Seed.
+O valor que semeia toda a pseudo-aleatoriedade do Pipeline — **o arranjo**, uma rolagem
+específica de um look. Alimenta o Block Displacement (que sorteia seus blocos do stream do
+Seed) e o Noise (cujo grão sai de um hash posicional que recebe o Seed), de modo que um
+Re-roll move os dois. Vive ao lado dos GlitchSettings, não dentro: é o que permite que o
+Re-roll troque o arranjo sem alterar o look. Fixo por padrão tanto na imagem quanto na
+webcam; **Re-roll** gera um novo Seed.
 _Avoid_: random, rng
 
 **Preset**:

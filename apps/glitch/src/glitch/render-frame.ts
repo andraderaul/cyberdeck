@@ -1,6 +1,6 @@
 import { sampleDimensions, sourceDimensions } from './image-utils'
 import { applyPipeline } from './pipeline'
-import type { GlitchSettings, PixelBuffer } from './types'
+import type { GlitchSettings, PixelBuffer, Seed } from './types'
 
 /**
  * Impure: the shell around the pure Pipeline. Draws the Source onto the hidden sampling canvas
@@ -19,6 +19,7 @@ export function renderGlitchFrame(
   canvasEl: HTMLCanvasElement,
   hiddenEl: HTMLCanvasElement,
   settings: GlitchSettings,
+  seed: Seed,
 ): boolean {
   const ctx = canvasEl.getContext('2d')
   const hiddenCtx = hiddenEl.getContext('2d')
@@ -40,6 +41,7 @@ export function renderGlitchFrame(
   const glitched: PixelBuffer = applyPipeline(
     { data: imageData.data, width: w, height: h },
     settings,
+    seed,
   )
 
   canvasEl.width = w
