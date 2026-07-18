@@ -202,13 +202,13 @@ function parseString(text: string): number[] | string {
     }
 
     if (char === '\\') {
-      const escape = text[index + 1]
-      if (escape === undefined) {
+      const escaped = text[index + 1]
+      if (escaped === undefined) {
         return 'String ends in a dangling backslash'
       }
-      const decoded = ESCAPES[escape]
+      const decoded = ESCAPES[escaped]
       if (decoded === undefined) {
-        return `Unknown escape "\\${escape}" in string`
+        return `Unknown escape "\\${escaped}" in string`
       }
       bytes.push(decoded.charCodeAt(0))
       index += 2
