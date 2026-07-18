@@ -2,7 +2,7 @@
   "name": "@cyberdeck/ascii",
   "description": "Client-side tool that converts images and webcam into interactive ASCII art with real-time preview and export.",
   "private": true,
-  "version": "1.27.0",
+  "version": "1.27.1",
   "license": "MIT",
   "type": "module",
   "scripts": {

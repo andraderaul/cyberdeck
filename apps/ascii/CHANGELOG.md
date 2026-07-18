@@ -1,5 +1,13 @@
 ## [1.25.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.24.0...v1.25.0) (2026-07-16)
 
+## 1.27.1
+
+### Patch Changes
+
+- 2c5869d: mirror now flips the sampled pixels instead of the visible canvas, so the PNG and TXT Exports match
+  the mirrored preview (ADR 0016). A mirrored TXT Export has each row's characters reversed — the
+  honest WYSIWYG result of a real flip.
+
 ## 1.27.0
 
 ### Minor Changes
