@@ -73,6 +73,39 @@ Each app is its own Vercel project, both pointing at this repo:
 GOLEM//Console follows the GLITCH pattern — its own Vercel project with **Root Directory** set to
 `apps/golem`, driven by [`apps/golem/vercel.json`](./apps/golem/vercel.json). Not yet deployed.
 
+### Skipping preview deploys
+
+Each project carries an `ignoreCommand` so a PR only redeploys the projects it can actually
+affect — a docs-only PR builds nothing. Vercel skips the build when the command exits `0` and
+builds when it exits non-zero, and `git diff --quiet` matches that polarity exactly.
+
+Two things about the path set are deliberate and must not be trimmed:
+
+- **`packages/deck-kit` is in every project's list.** All three apps consume Deck Kit as source
+  ([ADR 0014](./docs/adr/0014-deck-kit-shared-package.md)), so a Deck Kit change has to redeploy
+  all of them. Watching only the project's own `apps/` directory would silently stop shipping
+  Deck Kit changes — and a stale deploy looks like nothing is wrong.
+- **`package.json` / `package-lock.json` are in every list**, so a dependency bump redeploys.
+
+The trailing `':(exclude)**/*.md'` pathspec is what makes a genuinely docs-only PR skip even when
+the markdown lives *inside* an app — `apps/glitch/CLAUDE.md` ships nothing. A commit touching both
+markdown and source still builds, since the source path still matches.
+
+Two safety properties, both verified before these commands landed:
+
+- **Production always builds.** The `VERCEL_ENV != production` guard exits non-zero on production
+  deploys, so `main` never skips regardless of the diff.
+- **It fails toward deploying.** If the git command errors — a shallow clone with no `HEAD^`, say
+  — it exits non-zero and the build proceeds. The dangerous direction is a false skip, not a
+  false build.
+
+Paths are relative to where the command runs: the repo root for ASCII//Convert, and `apps/glitch`
+/ `apps/golem` for the other two, which is why those `cd ../..` first (the same idiom their
+install and build commands already use).
+
+This is a different mechanism from `.github/workflows/ci.yml`, which has its own `paths-ignore` —
+Vercel does not read the workflow file.
+
 ## Contributing
 
 Commits follow [conventional commits](https://www.conventionalcommits.org/) (enforced by
