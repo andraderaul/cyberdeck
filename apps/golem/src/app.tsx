@@ -18,12 +18,18 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div className="flex h-full flex-col gap-3 p-3">
-        <header className="shrink-0">
-          <h1 className="font-bold text-lg tracking-widest">
-            GOLEM<span className="text-violet">//</span>Console
-          </h1>
-          <p className="text-fg-muted text-xs">
-            a 32-bit fantasy computer — watch the machine think
+        <header className="flex shrink-0 items-baseline justify-between gap-3">
+          <div>
+            <h1 className="font-bold text-lg tracking-widest">
+              GOLEM<span className="text-violet">//</span>Console
+            </h1>
+            <p className="text-fg-muted text-xs">
+              a 32-bit fantasy computer — watch the machine think
+            </p>
+          </div>
+          <p className="font-mono text-fg-muted text-xs" aria-live="polite">
+            {console.running ? <span className="text-violet">running</span> : 'idle'} · clock{' '}
+            {console.rate === 'max' ? 'max' : `${console.rate}/s`}
           </p>
         </header>
 
