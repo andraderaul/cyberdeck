@@ -1,0 +1,43 @@
+/* Design tokens (the :root custom properties) live in the deck kit (ADR 0014). Imported first so
+   they are defined before the base utilities below reference them. */
+@import "@cyberdeck/deck-kit/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   BASE UTILITIES
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-normal);
+  color: var(--fg);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--violet);
+  color: var(--white);
+}
+
+::placeholder {
+  color: var(--muted);
+}

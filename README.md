@@ -11,6 +11,7 @@ No backend server — everything runs in the browser.
 |---------|------|--------------|
 | **[ASCII//Convert](./apps/ascii)** | `apps/ascii` | Turns an image or your webcam into interactive ASCII art. **[Live demo →](https://ascii-art-converter-tawny.vercel.app/)** |
 | **GLITCH//Studio** | `apps/glitch` | Runs a fixed pipeline of glitch effects over an image or webcam — real-time preview, curated presets, and PNG / video export. **[Live demo →](https://cyberdeck-glitch-studio.vercel.app/)** |
+| **GOLEM//Console** | `apps/golem` | A 32-bit fantasy computer: write assembly, assemble it, and drive execution from a command line while registers, memory and the machine's Terminal update live. *In progress — scaffold only.* |
 
 ## Running locally
 
@@ -32,7 +33,8 @@ Scope any app script with `--workspace @cyberdeck/ascii`.
 ```
 apps/ascii         ASCII//Convert
 apps/glitch        GLITCH//Studio
-packages/deck-kit  the shared shell both programs build on
+apps/golem         GOLEM//Console
+packages/deck-kit  the shared shell every program builds on
 docs/adr           architectural decisions, deck-wide
 CONTEXT-MAP.md     how the programs relate
 ```
@@ -48,6 +50,16 @@ seams obvious, so the proven-shared surface was extracted into
 generic browser plumbing. It's consumed as source (no build step) and is deliberately *not* a
 domain core: each app's pipeline stays in the app ([ADR 0014](./docs/adr/0014-deck-kit-shared-package.md)).
 
+## Credits
+
+GOLEM//Console's instruction set is inherited from **Poxim**, the didactic 32-bit architecture
+used in the Arquitetura de Computadores course at **UFS (Universidade Federal de Sergipe)**, 2017.
+The encoding, register file, and 42 mnemonics are Poxim's; the reference programs under
+`apps/golem/src/golem/__fixtures__/` are the course's example project, kept verbatim as test
+oracles. Credit to the course and its instructor —
+[ADR 0019](./docs/adr/0019-golem-isa-inherited-from-poxim.md) explains why the ISA was inherited
+rather than designed.
+
 ## Deploys
 
 Each app is its own Vercel project, both pointing at this repo:
@@ -58,7 +70,8 @@ Each app is its own Vercel project, both pointing at this repo:
   [`apps/glitch/vercel.json`](./apps/glitch/vercel.json). Install and build `cd` to the repo root
   so the `@cyberdeck/deck-kit` workspace dependency resolves.
 
-A third app follows the GLITCH pattern — its own project and `vercel.json`, not another entry here.
+GOLEM//Console follows the GLITCH pattern — its own Vercel project with **Root Directory** set to
+`apps/golem`, driven by [`apps/golem/vercel.json`](./apps/golem/vercel.json). Not yet deployed.
 
 ## Contributing
 

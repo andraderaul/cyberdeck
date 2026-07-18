@@ -14,7 +14,10 @@ verified before this was decided:
 
 - **Emulator oracle** — the original C emulator (three programs, one per course unit) still compiles
   clean under clang in 2026 and emits a line-by-line trace with register state. Any GOLEM program can
-  be diffed against it.
+  be diffed against it. It is our own coursework and lives at
+  [andraderaul/projeto-de-arquitetura-de-computadores](https://github.com/andraderaul/projeto-de-arquitetura-de-computadores),
+  so the ability to *generate* new oracle coverage survives independently of any local copy —
+  `apps/golem/src/golem/__fixtures__/PROVENANCE.md` has the invocation.
 - **Assembler oracle** — the course ships 10+ programs as paired `.s` / `.hex` / `.out` files. The
   assembler is the half that never existed and must be written from scratch; these pairs are its
   fixtures.
@@ -35,8 +38,24 @@ and new GOLEM programs are written in legible names.
 
 ## Consequences
 
-- **The course material is never versioned.** It is third-party work and contains other students'
-  submissions with names and enrolment numbers. `.gitignore` excludes it; it is a local reference only.
+- **The course material is not versioned, except the five unit-1 fixtures.** The original wording here
+  fused two separate concerns under one rule, and they turned out to apply to different files:
+
+  - **Other students' submissions** — a folder of complete Poxim emulators, some named with enrolment
+    numbers. Personal data, no oracle value. These were deleted from the local copy, not merely ignored.
+  - **The professor's example project** — the `.s` / `.hex` / `.out` sets. No personal data in them at
+    all; the concern was redistribution, and it does not apply: UFS is a public university and the
+    material is published on the course site. The five unit-1 programs are versioned under
+    `apps/golem/src/golem/__fixtures__/`, with a provenance note beside them and credit in the README.
+  - **Everything else** — slides, other units, working files. No oracle value; `.gitignore` still
+    excludes the whole directory.
+
+  Versioning the fixtures is not a convenience. The `.s`/`.hex` pairs were produced by the professor's
+  assembler, and ours is the half that never existed — regenerating that pair would mean assembling
+  with the very assembler under test, which is circular. **They cannot be reconstructed by anyone.**
+  The `.out` traces are different: they can be regenerated for as long as the reference emulator still
+  compiles, which is also the window in which new oracle coverage can be manufactured for the branches
+  no fixture exercises.
 - **`ISA.md` is written in our own words.** `formato_de_saida.txt` already specifies all 42
   instructions formally, but it is the professor's text — the published spec restates it rather than
   redistributing it, and the README credits the origin.

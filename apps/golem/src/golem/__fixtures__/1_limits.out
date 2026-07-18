@@ -1,0 +1,48 @@
+[START OF SIMULATION]
+bun 0x00000004
+[S] PC = 0x00000010
+ldw r1, r0, 0x001A
+[F] R1 = MEM[(R0 + 0x001A) << 2] = 0xFFFFFFFF
+ldw r2, r0, 0x001B
+[F] R2 = MEM[(R0 + 0x001B) << 2] = 0x0000AAAA
+ldw r3, r0, 0x001C
+[F] R3 = MEM[(R0 + 0x001C) << 2] = 0xBBBB0000
+addi r4, r1, 2
+[F] FR = 0x00000010, R4 = R1 + 0x0002 = 0x00000001
+divi r4, r1, 0
+[F] FR = 0x00000018, ER = 0x00000000, R4 = R1 / 0x0000 = 0x00000001
+cmp pc, pc
+[U] FR = 0x00000019
+cmpi r4, 0
+[F] FR = 0x0000001C
+cmpi r4, 1
+[F] FR = 0x00000019
+cmpi r4, 2
+[F] FR = 0x0000001A
+shl r0, r1, 47
+[U] ER = 0xFFFF0000, R0 = R1 << 48 = 0x00000000
+shl r2, r2, 15
+[U] ER = 0x00000000, R2 = R2 << 16 = 0xAAAA0000
+shl r3, r3, 7
+[U] ER = 0x000000BB, R3 = R3 << 8 = 0xBB000000
+shr r3, r3, 23
+[U] ER = 0x00000000, R3 = R3 >> 24 = 0x0000BBBB
+addi r5, r0, 29
+[F] FR = 0x0000000A, R5 = R0 + 0x001D = 0x0000001D
+shl r5, r5, 1
+[U] ER = 0x00000000, R5 = R5 << 2 = 0x00000074
+ldb r6, r5, 0x0000
+[F] R6 = MEM[R5 + 0x0000] = 0x41
+ldb r7, r5, 0x0002
+[F] R7 = MEM[R5 + 0x0002] = 0x43
+stb r5, 0x0000, r7
+[F] MEM[R5 + 0x0000] = R7 = 0x43
+stb r5, 0x0002, r6
+[F] MEM[R5 + 0x0002] = R6 = 0x41
+muli r10, r1, 11
+[F] FR = 0x0000001A, ER = 0x0000000A, R10 = R1 * 0x000B = 0xFFFFFFF5
+add r31, r0, fr
+[U] FR = 0x0000000A, R31 = R0 + FR = 0x0000001A
+int 0
+[S] CR = 0x00000000, PC = 0x00000000
+[END OF SIMULATION]
