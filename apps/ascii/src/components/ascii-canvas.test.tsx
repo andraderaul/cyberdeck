@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { useRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ConversionSettings } from '../ascii/types'
@@ -15,9 +15,15 @@ const SETTINGS: ConversionSettings = {
 function Wrapper({
   sourceImage = null,
   isRecording,
+  isLive,
+  isMirrored,
+  onMirrorToggle,
 }: {
   sourceImage?: HTMLImageElement | null
   isRecording?: boolean
+  isLive?: boolean
+  isMirrored?: boolean
+  onMirrorToggle?: () => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   return (
@@ -28,6 +34,9 @@ function Wrapper({
       onConverted={vi.fn()}
       canvasRef={canvasRef}
       isRecording={isRecording}
+      isLive={isLive}
+      isMirrored={isMirrored}
+      onMirrorToggle={onMirrorToggle}
     />
   )
 }
@@ -69,5 +78,24 @@ describe('AsciiCanvas', () => {
     render(<Wrapper />)
 
     expect(screen.queryByTestId('rec-indicator')).not.toBeInTheDocument()
+  })
+
+  // ADR 0015: live source-tuning chrome (mirror) is homed on the canvas overlay, not a sidebar.
+  it('shows the mirror toggle only while live', () => {
+    const { rerender } = render(<Wrapper onMirrorToggle={vi.fn()} isLive={false} />)
+    expect(screen.queryByRole('button', { name: /mirror/i })).not.toBeInTheDocument()
+
+    rerender(<Wrapper onMirrorToggle={vi.fn()} isLive={true} />)
+    expect(screen.getByRole('button', { name: /mirror/i })).toBeInTheDocument()
+  })
+
+  it('reflects mirror state via aria-pressed', () => {
+    const onMirrorToggle = vi.fn()
+    render(<Wrapper isLive={true} isMirrored={true} onMirrorToggle={onMirrorToggle} />)
+    const btn = screen.getByRole('button', { name: /disable mirror/i })
+    expect(btn).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(btn)
+    expect(onMirrorToggle).toHaveBeenCalledOnce()
   })
 })

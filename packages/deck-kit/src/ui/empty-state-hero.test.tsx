@@ -1,7 +1,7 @@
-import { ToastProvider } from '@cyberdeck/deck-kit/ui'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import EmptyStateHero from './empty-state-hero'
+import { ToastProvider } from './toast-provider'
 
 let lastImg: { onload: (() => void) | null; onerror: (() => void) | null; src: string } | null =
   null
@@ -22,7 +22,7 @@ function makeFile(name: string, type: string) {
 function renderHero(props: Partial<Parameters<typeof EmptyStateHero>[0]> = {}) {
   render(
     <ToastProvider>
-      <EmptyStateHero onImage={vi.fn()} onStartWebcam={vi.fn()} {...props} />
+      <EmptyStateHero onImage={vi.fn()} onUseWebcam={vi.fn()} tagline="test tagline" {...props} />
     </ToastProvider>,
   )
 }
@@ -34,20 +34,26 @@ describe('EmptyStateHero', () => {
     vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:mock'), revokeObjectURL: vi.fn() })
   })
 
-  it('renders upload drop zone and webcam CTA', () => {
+  it('renders the per-app tagline', () => {
+    renderHero({ tagline: 'nothing leaves your browser' })
+    expect(screen.getByText('nothing leaves your browser')).toBeInTheDocument()
+  })
+
+  // Both ways in must be present and reachable — the empty state is where the Source is chosen.
+  it('offers both the upload drop zone and the webcam entry point', () => {
     renderHero()
     expect(screen.getByText(/drag & drop/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /use webcam/i })).toBeInTheDocument()
   })
 
-  it('calls onStartWebcam when webcam button is clicked', () => {
-    const onStartWebcam = vi.fn()
-    renderHero({ onStartWebcam })
+  it('goes to the Live Source when the webcam entry point is clicked', () => {
+    const onUseWebcam = vi.fn()
+    renderHero({ onUseWebcam })
     fireEvent.click(screen.getByRole('button', { name: /use webcam/i }))
-    expect(onStartWebcam).toHaveBeenCalledOnce()
+    expect(onUseWebcam).toHaveBeenCalledOnce()
   })
 
-  it('calls onImage when a valid image file is dropped onto the drop zone', () => {
+  it('hands up a Source Image once a valid image is dropped', () => {
     const onImage = vi.fn()
     renderHero({ onImage })
 
@@ -66,7 +72,7 @@ describe('EmptyStateHero', () => {
     expect(onImage.mock.calls[0][0]).toBeInstanceOf(MockImage)
   })
 
-  it('does not call onImage for non-image files', () => {
+  it('ignores non-image files', () => {
     const onImage = vi.fn()
     renderHero({ onImage })
 
@@ -81,7 +87,8 @@ describe('EmptyStateHero', () => {
     expect(onImage).not.toHaveBeenCalled()
   })
 
-  it('shows a toast when a dropped image fails to load', () => {
+  // ADR 0006: an image that fails to load is an operational failure, so it surfaces as a toast.
+  it('surfaces a failed image load as a toast', () => {
     renderHero()
 
     const dropLabel = screen.getByText(/drag & drop/i).closest('label')

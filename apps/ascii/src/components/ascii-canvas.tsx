@@ -1,9 +1,17 @@
+import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
 import { type RefObject, useEffect, useRef } from 'react'
 import { resizeImage } from '../ascii/image-utils'
 import { renderFrame } from '../ascii/render-frame'
 import type { ConversionSettings } from '../ascii/types'
 
 const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
+
+// Shared shape for the overlay's source-tuning buttons (mirror, switch-camera, clear). No bg-bg
+// unlike GLITCH's CANVAS_OVERLAY_CHROME — ASCII's canvas is filled, so the border reads without an
+// opaque backdrop.
+const OVERLAY_BUTTON =
+  'font-mono text-xs border px-sm py-2xs rounded-xs cursor-pointer transition-colors duration-fast'
+const OVERLAY_BUTTON_REST = 'text-fg-muted border-base hover:text-fg hover:border-strong'
 
 interface Props {
   sourceImage: HTMLImageElement | null
@@ -15,6 +23,8 @@ interface Props {
   isRecording?: boolean
   isLive?: boolean
   onClearSource?: () => void
+  onMirrorToggle?: () => void
+  onSwitchCamera?: () => void | Promise<void>
   onDimensionsChange?: (w: number, h: number) => void
 }
 
@@ -28,6 +38,8 @@ export default function AsciiCanvas({
   isRecording,
   isLive,
   onClearSource,
+  onMirrorToggle,
+  onSwitchCamera,
   onDimensionsChange,
 }: Props) {
   const hiddenRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
@@ -144,13 +156,40 @@ export default function AsciiCanvas({
             <span className="motion-safe:animate-pulse">●</span> REC
           </span>
         )}
+        {/* Live source-tuning chrome, homed here beside clear (ADR 0015): same family as clear —
+            it acts on the Source, not the export. Icon-only on mobile to hold the row. */}
+        {isLive && onMirrorToggle && (
+          <button
+            type="button"
+            onClick={onMirrorToggle}
+            aria-pressed={isMirrored}
+            aria-label={isMirrored ? 'disable mirror' : 'enable mirror'}
+            className={cn(
+              OVERLAY_BUTTON,
+              isMirrored ? 'border-violet text-violet bg-accent-ghost' : OVERLAY_BUTTON_REST,
+            )}
+          >
+            ⇋{!isTouchDevice && ' mirror'}
+          </button>
+        )}
+        {/* Front/rear only makes sense on a device that has both — the same gate the old UploadZone used. */}
+        {isLive && isTouchDevice && onSwitchCamera && (
+          <button
+            type="button"
+            onClick={() => void onSwitchCamera()}
+            aria-label="switch camera"
+            className={cn(OVERLAY_BUTTON, OVERLAY_BUTTON_REST)}
+          >
+            ⇄
+          </button>
+        )}
         {onClearSource && (
           <button
             type="button"
             onClick={onClearSource}
             title="clear source"
             aria-label="clear source"
-            className="font-mono text-xs text-fg-muted border border-base px-sm py-2xs rounded-xs cursor-pointer transition-colors duration-fast hover:text-fg hover:border-strong"
+            className={cn(OVERLAY_BUTTON, OVERLAY_BUTTON_REST)}
           >
             ✕ clear
           </button>

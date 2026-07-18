@@ -1,4 +1,4 @@
-import { Button, Label, Slider, ToggleGroup } from '@cyberdeck/deck-kit/ui'
+import { Button, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
   type ChannelName,
@@ -58,14 +58,26 @@ export default function ControlPanel({ settings, onChange, onReroll }: Props) {
   return (
     <div className="flex flex-col gap-lg">
       <div className="flex flex-col gap-sm">
-        <Label>seed</Label>
+        <div className="flex items-center gap-2xs">
+          <Label>seed</Label>
+          <Tooltip
+            id="tooltip-seed"
+            content="the arrangement, not the look — re-roll rolls a new one"
+          />
+        </div>
         <Button variant="ghost" onClick={onReroll} aria-label="re-roll" className="w-full">
           ⟳ re-roll
         </Button>
       </div>
 
       <div className="flex flex-col gap-sm">
-        <Label>block displacement</Label>
+        <div className="flex items-center gap-2xs">
+          <Label>block displacement</Label>
+          <Tooltip
+            id="tooltip-block-displacement"
+            content="shoves rectangular blocks sideways — the data-corruption look"
+          />
+        </div>
         {/* No power toggle: the Effect is off at density 0, the way Noise is off at amount 0. */}
         {/* Labelled "blocks" and "displace" rather than after the params they edit: a screen reader
             reaches these labels with no section heading around them, and "density" alone would be
@@ -93,7 +105,13 @@ export default function ControlPanel({ settings, onChange, onReroll }: Props) {
       </div>
 
       <div className="flex flex-col gap-sm">
-        <Label>pixel sort</Label>
+        <div className="flex items-center gap-2xs">
+          <Label>pixel sort</Label>
+          <Tooltip
+            id="tooltip-pixel-sort"
+            content="sorts contiguous pixel runs by brightness — the melted look"
+          />
+        </div>
         <ToggleGroup
           ariaLabel="pixel sort"
           options={EFFECT_POWER}
@@ -136,7 +154,13 @@ export default function ControlPanel({ settings, onChange, onReroll }: Props) {
       </div>
 
       <div className="flex flex-col gap-sm">
-        <Label>channel shift</Label>
+        <div className="flex items-center gap-2xs">
+          <Label>channel shift</Label>
+          <Tooltip
+            id="tooltip-channel-shift"
+            content="offsets one r/g/b channel by a constant — rgb split"
+          />
+        </div>
         <ToggleGroup
           ariaLabel="channel"
           options={CHANNELS}
@@ -158,7 +182,13 @@ export default function ControlPanel({ settings, onChange, onReroll }: Props) {
       </div>
 
       <div className="flex flex-col gap-sm">
-        <Label>scanlines</Label>
+        <div className="flex items-center gap-2xs">
+          <Label>scanlines</Label>
+          <Tooltip
+            id="tooltip-scanlines"
+            content="dark horizontal lines over the image — crt raster"
+          />
+        </div>
         <ToggleGroup
           ariaLabel="scanlines"
           options={EFFECT_POWER}
@@ -194,7 +224,10 @@ export default function ControlPanel({ settings, onChange, onReroll }: Props) {
 
       {/* No power toggle: Noise is off at amount 0, the same way Channel Shift is off at amount 0. */}
       <div className="flex flex-col gap-sm">
-        <Label>noise</Label>
+        <div className="flex items-center gap-2xs">
+          <Label>noise</Label>
+          <Tooltip id="tooltip-noise" content="grain / static laid over the image" />
+        </div>
         <ToggleGroup
           ariaLabel="noise tint"
           options={NOISE_TINTS}

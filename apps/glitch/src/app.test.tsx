@@ -6,10 +6,27 @@ import { DEFAULT_PRESET, glitchSettingsMatch, PRESETS } from './glitch/presets'
 import type { GlitchSettings, Seed } from './glitch/types'
 
 const toastError = vi.hoisted(() => vi.fn())
+// EmptyStateHero now lives in the kit (ADR 0015); stub it here as the app's Source entry probe.
 vi.mock('@cyberdeck/deck-kit/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@cyberdeck/deck-kit/ui')>()),
   useToastError: () => toastError,
   ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  EmptyStateHero: ({
+    onImage,
+    onUseWebcam,
+  }: {
+    onImage: (img: HTMLImageElement) => void
+    onUseWebcam: () => void
+  }) => (
+    <>
+      <button type="button" onClick={() => onImage(new Image())}>
+        upload
+      </button>
+      <button type="button" onClick={onUseWebcam}>
+        use webcam
+      </button>
+    </>
+  ),
 }))
 
 // The canvas and its render shell are covered at their own seams; here they stand in as probes
@@ -84,25 +101,6 @@ vi.mock('./components/export-bar', () => ({
           {isRecording ? 'stop' : 'record'}
         </button>
       )}
-    </>
-  ),
-}))
-
-vi.mock('./components/empty-state-hero', () => ({
-  default: ({
-    onImage,
-    onUseWebcam,
-  }: {
-    onImage: (img: HTMLImageElement) => void
-    onUseWebcam: () => void
-  }) => (
-    <>
-      <button type="button" onClick={() => onImage(new Image())}>
-        upload
-      </button>
-      <button type="button" onClick={onUseWebcam}>
-        use webcam
-      </button>
     </>
   ),
 }))
