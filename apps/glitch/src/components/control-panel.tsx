@@ -1,4 +1,6 @@
 import { Button, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
+import { cn } from '@cyberdeck/deck-kit/utils'
+import { useState } from 'react'
 import type { Chain, EffectType, Link } from '../glitch/chain'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
@@ -239,6 +241,7 @@ interface Props {
   // Chain by the back door.
   onReroll: () => void
   onLinkChange: (id: string, params: Link['params']) => void
+  onReorder: (from: number, to: number) => void
 }
 
 /**
@@ -249,18 +252,83 @@ interface Props {
  * one section fewer (ADR 0017). Keyed by Link id, not by Effect: a Chain may hold the same Effect
  * twice, and keying by type would collapse the repeats into one row.
  */
-export default function ControlPanel({ chain, onLinkChange, onReroll }: Props) {
+export default function ControlPanel({ chain, onLinkChange, onReroll, onReorder }: Props) {
+  // Which Link the pointer is currently carrying. Held here rather than in the drag event because
+  // `dataTransfer` is unreadable during dragover — the moment the drop target has to be decided.
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
+
+  const moveBy = (index: number, offset: number) => {
+    const target = index + offset
+    if (target >= 0 && target < chain.length) {
+      onReorder(index, target)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-lg">
-      {chain.map((link) => (
-        <div key={link.id} className="flex flex-col gap-sm">
+      {chain.map((link, index) => (
+        // The row is a *drop target*, which is a pointer-only gesture by nature — keyboard
+        // reordering is the handle's arrow keys, a separate and complete path. Giving this div an
+        // interactive role to satisfy the rule would announce every Link row to a screen reader as
+        // a control it cannot operate.
+        // biome-ignore lint/a11y/noStaticElementInteractions: pointer-only drop target, see above
+        <div
+          key={link.id}
+          className="flex flex-col gap-sm"
+          onDragOver={(event) => {
+            // Without this the drop is never allowed and the row silently refuses every pointer.
+            event.preventDefault()
+          }}
+          onDrop={(event) => {
+            event.preventDefault()
+            if (draggingIndex !== null) {
+              onReorder(draggingIndex, index)
+            }
+            setDraggingIndex(null)
+          }}
+        >
           <div className="flex items-center gap-2xs">
+            {/* A real button, not a bare drag affordance: pointer reordering is unreachable by
+                keyboard, and the arrow keys here are the whole of that alternative (#127). */}
+            <button
+              type="button"
+              draggable
+              onDragStart={() => setDraggingIndex(index)}
+              onDragEnd={() => setDraggingIndex(null)}
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowUp') {
+                  event.preventDefault()
+                  moveBy(index, -1)
+                }
+                if (event.key === 'ArrowDown') {
+                  event.preventDefault()
+                  moveBy(index, 1)
+                }
+              }}
+              // Spells the position out: the visual order is the only other cue, and it is exactly
+              // what a screen-reader user is trying to change.
+              aria-label={`reorder ${EFFECT_LABELS[link.type]}, position ${index + 1} of ${chain.length}`}
+              aria-describedby="reorder-hint"
+              className={cn(
+                'cursor-grab text-dim hover:text-fg focus-visible:text-fg px-2xs -ml-2xs rounded-sm',
+                'focus-visible:outline focus-visible:outline-1 focus-visible:outline-electric',
+                draggingIndex === index && 'opacity-50 cursor-grabbing',
+              )}
+            >
+              <span aria-hidden="true">⠿</span>
+            </button>
             <Label>{EFFECT_LABELS[link.type]}</Label>
             <Tooltip id={`tooltip-${link.id}`} content={EFFECT_TOOLTIPS[link.type]} />
           </div>
           <LinkControls link={link} onChange={(params) => onLinkChange(link.id, params)} />
         </div>
       ))}
+
+      {/* Referenced by every handle rather than repeated into each accessible name, which would
+          make the instructions the loudest part of a list the user is trying to scan. */}
+      <p id="reorder-hint" className="sr-only">
+        Press the up and down arrow keys to move this effect earlier or later in the chain.
+      </p>
 
       {/* The Seed sits outside the Chain, so its control sits outside the Link list rather than
           becoming a seventh row that looks editable like the rest. */}
