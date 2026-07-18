@@ -1,5 +1,11 @@
 ## [1.25.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.24.0...v1.25.0) (2026-07-16)
 
+## 1.27.0
+
+### Minor Changes
+
+- 4148beb: Converge the control panel onto GLITCH//Studio's presets-first model (ADR 0016). Presets are now the front door, always visible, and the per-setting controls (resolution, color mode, charset, brightness, contrast) fold away behind an `advanced` disclosure that starts closed — matching GLITCH on both the desktop sidebar and the mobile controls sheet. The presets move into their own `PresetPicker` component and the modified marker now spells "(modified)" into the chip's accessible name.
+
 ## 1.26.0
 
 ### Minor Changes
