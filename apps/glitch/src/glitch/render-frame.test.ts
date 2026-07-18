@@ -33,6 +33,22 @@ function fakeCanvas(ctx: unknown): HTMLCanvasElement {
   return { width: 0, height: 0, getContext: () => ctx } as unknown as HTMLCanvasElement
 }
 
+/** Like fakeContext, but also records the transform calls in order so a flip can be asserted. */
+function fakeMirrorContext(imageData?: ImageData) {
+  const calls: string[] = []
+  return {
+    calls,
+    canvas: { width: 0, height: 0 },
+    save: vi.fn(() => calls.push('save')),
+    translate: vi.fn((x: number, y: number) => calls.push(`translate(${x},${y})`)),
+    scale: vi.fn((x: number, y: number) => calls.push(`scale(${x},${y})`)),
+    restore: vi.fn(() => calls.push('restore')),
+    drawImage: vi.fn(() => calls.push('drawImage')),
+    putImageData: vi.fn(),
+    getImageData: vi.fn(() => imageData ?? new ImageData(1, 1)),
+  }
+}
+
 function fakeSource(naturalWidth: number, naturalHeight: number): HTMLImageElement {
   return { naturalWidth, naturalHeight } as unknown as HTMLImageElement
 }
@@ -153,6 +169,34 @@ describe('renderGlitchFrame', () => {
 
     expect(painted).toBe(false)
     expect(visibleCtx.putImageData).not.toHaveBeenCalled()
+  })
+
+  // Mirror flips the pixels, not the preview (ADR 0016): the flip happens on the sampling draw,
+  // before the Pipeline, so Effects apply on top and the painted (exported) canvas carries it.
+  it('flips the Source horizontally around the sampling draw when mirrored', () => {
+    const ctx = fakeMirrorContext(new ImageData(100, 50))
+    const hidden = fakeCanvas(ctx)
+
+    renderGlitchFrame(fakeSource(100, 50), fakeCanvas(fakeContext()), hidden, SETTINGS, SEED, true)
+
+    expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 100, 50)
+    expect(ctx.calls).toEqual(['save', 'translate(100,0)', 'scale(-1,1)', 'drawImage', 'restore'])
+  })
+
+  it('draws the Source un-flipped when not mirrored', () => {
+    const ctx = fakeMirrorContext(new ImageData(100, 50))
+
+    renderGlitchFrame(
+      fakeSource(100, 50),
+      fakeCanvas(fakeContext()),
+      fakeCanvas(ctx),
+      SETTINGS,
+      SEED,
+    )
+
+    expect(ctx.translate).not.toHaveBeenCalled()
+    expect(ctx.scale).not.toHaveBeenCalled()
+    expect(ctx.calls).toEqual(['drawImage'])
   })
 
   // The Seed is what keeps a Live Source's corruption from boiling frame to frame (#82).

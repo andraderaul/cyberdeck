@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_NOISE, DEFAULT_SCANLINES, type GlitchSettings } from '../glitch/types'
 import GlitchCanvas, { HAVE_ENOUGH_DATA, LIVE_SOURCE_FRAME_INTERVAL_MS } from './glitch-canvas'
 
-const renderGlitchFrame = vi.hoisted(() => vi.fn(() => true))
+const renderGlitchFrame = vi.hoisted(() => vi.fn((..._args: unknown[]) => true))
 vi.mock('../glitch/render-frame', () => ({ renderGlitchFrame }))
 
 const SETTINGS: GlitchSettings = {
@@ -81,7 +81,16 @@ describe('GlitchCanvas', () => {
       expect.anything(),
       SETTINGS,
       SEED,
+      false,
     )
+  })
+
+  it('passes the mirror flag through to the render, so the flip lands in the exported pixels', () => {
+    renderCanvas({ liveSource: liveSource(), isMirrored: true, onMirrorToggle: vi.fn() })
+
+    flushFrame(0)
+
+    expect(renderGlitchFrame.mock.calls[0][5]).toBe(true)
   })
 
   it('throttles the loop to ~15fps, dropping frames that arrive early', () => {
@@ -152,6 +161,49 @@ describe('GlitchCanvas', () => {
     renderCanvas({ liveSource: liveSource() })
 
     expect(screen.queryByTestId('rec-indicator')).toBeNull()
+  })
+
+  describe('mirror toggle (ADR 0016)', () => {
+    it('offers the mirror toggle only for a Live Source', () => {
+      const { unmount } = renderCanvas({ liveSource: liveSource(), onMirrorToggle: vi.fn() })
+      expect(screen.getByRole('button', { name: /mirror/i })).toBeInTheDocument()
+      unmount()
+
+      renderCanvas({
+        sourceImage: { naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement,
+        onMirrorToggle: vi.fn(),
+      })
+      expect(screen.queryByRole('button', { name: /mirror/i })).toBeNull()
+    })
+
+    it('reflects the mirror state on aria-pressed', () => {
+      const { unmount } = renderCanvas({ liveSource: liveSource(), onMirrorToggle: vi.fn() })
+      expect(screen.getByRole('button', { name: 'enable mirror' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      )
+      unmount()
+
+      renderCanvas({ liveSource: liveSource(), isMirrored: true, onMirrorToggle: vi.fn() })
+      expect(screen.getByRole('button', { name: 'disable mirror' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+    })
+
+    it('calls onMirrorToggle when clicked', () => {
+      const onMirrorToggle = vi.fn()
+      renderCanvas({ liveSource: liveSource(), onMirrorToggle })
+
+      screen.getByRole('button', { name: /mirror/i }).click()
+
+      expect(onMirrorToggle).toHaveBeenCalledOnce()
+    })
+
+    it('stands on its own opaque surface, like the rest of the overlay (ADR 0013)', () => {
+      renderCanvas({ liveSource: liveSource(), onMirrorToggle: vi.fn() })
+      expect(screen.getByRole('button', { name: /mirror/i }).className).toContain('bg-bg')
+    })
   })
 
   // Unlike every other surface in the app, what sits behind these is the user's artwork — the

@@ -141,4 +141,19 @@ describe('useWebcamState', () => {
     expect(mockTrack.stop).toHaveBeenCalled()
     expect(result.current.state.mode).toBe('image')
   })
+
+  // ADR 0016: the front camera auto-mirrors, matching ASCII's felt default.
+  it('reports isMirrored true when the stream starts on the front (user) camera', async () => {
+    // Stable references: an inline callback changes identity each render, retriggering the hook's
+    // teardown effect in a loop.
+    const onLiveSource = vi.fn()
+    const onFacingModeChange = vi.fn()
+    const { result } = renderHook(() => useWebcamState(onLiveSource, onFacingModeChange))
+
+    await act(async () => {
+      await result.current.switchMode('live')
+    })
+
+    expect(onFacingModeChange).toHaveBeenCalledWith(true)
+  })
 })
