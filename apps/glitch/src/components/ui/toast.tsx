@@ -1,5 +1,5 @@
+import type { ToastVariant } from '@cyberdeck/deck-kit/hooks'
 import { cn } from '@cyberdeck/deck-kit/utils'
-import type { ToastVariant } from '../../hooks/use-toast'
 
 interface Props {
   message: string
