@@ -3,14 +3,43 @@ import Console from './components/console'
 import Panel from './components/panel'
 import Registers from './components/registers'
 import SourceEditor from './components/source-editor'
+import Terminal from './components/terminal'
 import { useConsole } from './hooks/use-console'
 
-// The Terminal, Flags and Memory panels stay shells until #141, #143 and #138 fill them.
+// The Flags and Memory panels stay shells until #143 fills them.
 const PLACEHOLDER = 'not wired yet'
 
-// A program narrow enough for the slice this ticket supports, and enough to watch a register
-// change. The example that teaches the syntax properly arrives with #140.
-const STARTER_SOURCE = ['addi r1, r0, 20', 'addi r2, r0, 22', 'add r3, r1, r2', 'int 0'].join('\n')
+// Prints a string a byte at a time, so the Terminal has something to show on first load. The
+// example that teaches the syntax properly, with its own tour, arrives with #140.
+const STARTER_SOURCE = [
+  '// GOLEM//Console — type `run` to watch it work.',
+  'init:',
+  '\tbun main',
+  '\tnop',
+  '\tnop',
+  '\tnop',
+  '',
+  'main:',
+  '\taddi r1, r0, message\t// word index of the text',
+  '\tshl r1, r1, 2\t\t// word index -> byte address',
+  '\taddi r2, r0, 8738\t// the Terminal, at byte 0x0000888B',
+  '\tshl r2, r2, 2',
+  '\taddi r2, r2, 3',
+  '',
+  'print:',
+  '\tldb r3, r1, 0\t\t// next character',
+  '\tcmpi r3, 0\t\t// the assembler NUL-terminated it',
+  '\tbeq done',
+  '\tstb r2, 0, r3\t\t// writing here emits a character',
+  '\taddi r1, r1, 1',
+  '\tbun print',
+  '',
+  'done:',
+  '\tint 0',
+  '',
+  'message:',
+  '\t"Hello from GOLEM\\n"',
+].join('\n')
 
 export default function App() {
   const console = useConsole(STARTER_SOURCE)
@@ -49,7 +78,7 @@ export default function App() {
             <Registers machine={console.machine} />
             <Panel title="Flags">{PLACEHOLDER}</Panel>
             <Panel title="Memory">{PLACEHOLDER}</Panel>
-            <Panel title="Terminal">{PLACEHOLDER}</Panel>
+            <Terminal machine={console.machine} />
           </div>
         </main>
       </div>

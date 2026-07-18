@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import App from './app'
@@ -10,6 +10,41 @@ async function type(command: string) {
 }
 
 const editor = () => screen.getByRole('textbox', { name: 'Assembly source' })
+
+/** Replaces the starter program, so a test does not depend on what the example happens to be. */
+function write(source: string) {
+  fireEvent.change(editor(), { target: { value: source } })
+}
+
+const TINY = ['addi r1, r0, 20', 'addi r2, r0, 22', 'add r3, r1, r2', 'int 0'].join('\n')
+
+/** Walks a NUL-terminated string out to the Terminal, a byte at a time. Halts in ~27 steps. */
+const PRINT_HI = [
+  'addi r1, r0, message',
+  'shl r1, r1, 2',
+  'addi r2, r0, 8738', // the Terminal, at byte 0x0000888B
+  'shl r2, r2, 2',
+  'addi r2, r2, 3',
+  'loop:',
+  'ldb r3, r1, 0',
+  'cmpi r3, 0',
+  'beq done',
+  'stb r2, 0, r3',
+  'addi r1, r1, 1',
+  'bun loop',
+  'done:',
+  'int 0',
+  'message:',
+  '"Hi\\n"',
+].join('\n')
+
+/** Sequential by necessity — each step depends on the machine the one before left behind. */
+function stepTimes(count: number): Promise<void> {
+  return Array.from({ length: count }).reduce<Promise<void>>(
+    (previous) => previous.then(() => type('step')),
+    Promise.resolve(),
+  )
+}
 
 describe('App', () => {
   it('renders a region for each surface the program needs', () => {
@@ -34,7 +69,7 @@ describe('the three-state model', () => {
     render(<App />)
 
     expect(editor()).not.toHaveAttribute('readonly')
-    expect(screen.getByText(/No machine/)).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Registers' })).toHaveTextContent(/No machine/)
   })
 
   it('locks the editor once asm creates a Machine, and says why', async () => {
@@ -60,12 +95,13 @@ describe('the three-state model', () => {
 describe('stepping', () => {
   it('advances one instruction and shows the register change', async () => {
     render(<App />)
+    write(TINY)
 
     await type('asm')
     await type('step')
 
-    // The starter program's first instruction is `addi r1, r0, 20`.
-    expect(screen.getByText('0x00000014')).toBeInTheDocument()
+    // `addi r1, r0, 20` — the register panel shows the 20 land in r1.
+    expect(screen.getByRole('region', { name: 'Registers' })).toHaveTextContent('0x00000014')
   })
 
   it('reports that there is no machine rather than failing silently', async () => {
@@ -78,9 +114,10 @@ describe('stepping', () => {
 
   it('does something sensible when the machine has halted', async () => {
     render(<App />)
+    write(TINY)
 
     await type('asm')
-    // Sequential by design — the starter program is four instructions, then one step too many.
+    // Sequential by design — four instructions, then one step too many.
     await type('step')
     await type('step')
     await type('step')
@@ -96,6 +133,67 @@ describe('stepping', () => {
     await type('stepp')
 
     expect(screen.getByText(/did you mean "step"/)).toBeInTheDocument()
+  })
+})
+
+describe('the Terminal', () => {
+  it('explains itself before a machine exists', () => {
+    render(<App />)
+
+    expect(screen.getByText(/Anything your program prints appears here/)).toBeInTheDocument()
+  })
+
+  it('shows what the running program printed, newline included', async () => {
+    render(<App />)
+    write(PRINT_HI)
+
+    await type('asm')
+    await stepTimes(30)
+
+    // `toHaveTextContent` collapses whitespace, so the newline is checked on the raw text.
+    const terminal = screen.getByRole('region', { name: 'Terminal' })
+    expect(terminal).toHaveTextContent('Hi')
+    expect(terminal.textContent).toContain('Hi\n')
+  })
+
+  it('accumulates output across steps rather than replacing it', async () => {
+    render(<App />)
+    write(PRINT_HI)
+
+    await type('asm')
+    await stepTimes(12)
+    const early = screen.getByRole('region', { name: 'Terminal' }).textContent
+
+    await stepTimes(18)
+    const later = screen.getByRole('region', { name: 'Terminal' }).textContent
+
+    expect(early).toContain('H')
+    expect(later?.startsWith(early ?? '')).toBe(true)
+    expect(later?.length).toBeGreaterThan(early?.length ?? 0)
+  })
+
+  it('clears along with the machine on reset', async () => {
+    render(<App />)
+    write(PRINT_HI)
+
+    await type('asm')
+    await stepTimes(30)
+    expect(screen.getByRole('region', { name: 'Terminal' })).toHaveTextContent('Hi')
+
+    await type('reset')
+
+    expect(screen.getByText(/Anything your program prints appears here/)).toBeInTheDocument()
+  })
+
+  // The separation is the feature: the Console is the tool talking, the Terminal is the program.
+  it('keeps the program’s output out of the Console', async () => {
+    render(<App />)
+    write(PRINT_HI)
+
+    await type('asm')
+    await stepTimes(30)
+
+    expect(screen.getByRole('region', { name: 'Console' })).not.toHaveTextContent('Hi\n')
   })
 })
 
