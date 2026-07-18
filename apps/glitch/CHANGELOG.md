@@ -1,5 +1,33 @@
 # @cyberdeck/glitch
 
+## 0.1.1
+
+### Patch Changes
+
+- 681f750: Extract the operational-error mechanism into `@cyberdeck/deck-kit/errors` (ADR 0014, Candidate B):
+  `AppError`, `createError`, `isAppError`, `normalizeError` (including the generic `unknown_error`
+  fallback). Each app keeps its own `Errors` catalog, now importing `createError` from the kit — the
+  vocabulary never crosses the seam. Internal refactor — no behavior change.
+- 8aeaaa1: Migrate the framework-neutral hooks `use-dialog` and `use-toast` into
+  `@cyberdeck/deck-kit/hooks` (ADR 0014). Both apps import them from the kit; the copies are deleted.
+  Internal refactor — no behavior change.
+- a1d41d6: Extract the vocabulary-neutral canvas Recording core into `@cyberdeck/deck-kit/recording` (ADR 0014,
+  Candidate C1): `useRecording`, `detectMimeType`, `isRecordingSupported`, `formatElapsedTime`,
+  `mimeToExtension`, and the `PREFERRED_MIME_TYPES` / `RECORDING_FPS` constants. The interface is
+  reshaped to `useRecording(canvasRef, { onError?(reason), filename(ext) })` — the core emits a neutral
+  `'start' | 'export'` reason each app words itself, and the filename is injected, so the MediaRecorder
+  plumbing is shared while every string stays app-side. `mimeToExtension` is removed from both apps'
+  `output.ts`. GLITCH still surfaces recording failures via toast; ASCII behaves as before. Internal
+  refactor — no behavior change.
+- 76be5f2: Extract the first shared package on the deck, `@cyberdeck/deck-kit` (ADR 0014). The visual language
+  (`tokens.css` + Tailwind preset), the `cn` / `share` / `device` / `load-image-file` utils, and the
+  `Button` primitive now live in the kit and are consumed as source by both apps. Internal refactor —
+  no behavior change.
+- 147fe0a: Migrate the remaining byte-identical `ui/` primitives into `@cyberdeck/deck-kit/ui` (ADR 0014):
+  `chip`, `label`, `slider`, `toast`, `toggle-group`, `source-image-drop-zone`, `error-boundary`,
+  `toast-provider`, and `mobile-bottom-sheet`, with their colocated tests. Both apps import them from
+  the kit; the copies are deleted. Internal refactor — no behavior change.
+
 ## 0.1.0
 
 ### Minor Changes
