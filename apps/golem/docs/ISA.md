@@ -99,8 +99,8 @@ não são usados.
 | `0x03` | `subi` | — | F | `Rx = Ry − N`; afeta `OV` |
 | `0x04` | `mul` | — | U | `Rz = Rx × Ry`, parte alta em `ER`; afeta `OV` |
 | `0x05` | `muli` | — | F | `Rx = Ry × N`, parte alta em `ER`; afeta `OV` |
-| `0x06` | `div` | — | U | `Rz = Rx ÷ Ry`, resto em `ER`; afeta `ZD`, `OV` |
-| `0x07` | `divi` | — | F | `Rx = Ry ÷ N`, resto em `ER`; afeta `ZD`, `OV` |
+| `0x06` | `div` | — | U | `Rz = Rx ÷ Ry`, resto em `ER`; afeta `ZD` — ver "Divergências" |
+| `0x07` | `divi` | — | F | `Rx = Ry ÷ N`, resto em `ER`; afeta `ZD` — ver "Divergências" |
 | `0x08` | `cmp` | — | U | compara `Rx` e `Ry`; só escreve `FR` |
 | `0x09` | `cmpi` | — | F | compara `Rx` e `N`; só escreve `FR` |
 
@@ -252,6 +252,25 @@ na máquina — um `ble` que não desvia em "menor" é uma armadilha, não um co
 Divergir aqui não custa cobertura de oráculo alguma. Essa ausência é também a causa do bug — o
 `ble` nunca foi exercitado, então nada o pegou.
 
+### `div`/`divi` — o GOLEM não mexe em `OV`
+
+As duas revisões do emulador de referência discordam aqui, e a divergência é visível em
+`1_limits`: o `.out` commitado preserva `OV` através do `divi` (`FR = 0x18`), o emulador público
+de hoje limpa (`FR = 0x08`).
+
+A causa é uma cláusula morta no `setarFR`: `if (x < 0 || y < 0)` com `x` e `y` `uint32_t` nunca é
+verdadeira, então a revisão pública sempre cai no `else` e limpa `OV`. A revisão que gerou o trace
+commitado tinha operandos com sinal, onde `0xFFFFFFFF` é `-1` e a condição vale.
+
+**O GOLEM implementa `div`/`divi` como: põe `ZD` na divisão por zero, e não toca em `OV`.** Bate
+com o `.out` commitado — que é o oráculo que este repo versiona — sem importar a regra que estaria
+por trás dele. "Dividir com operando negativo é overflow" não está no ISA, não é semântica que
+alguém escrevendo programa aqui deva aprender, e replicá-la seria o mesmo erro que replicar o
+`ble` quebrado.
+
+Os outros quatro programas herdados batem com as duas revisões: nenhum deles tem `OV` posto na
+hora de dividir. Detalhes em `src/golem/__fixtures__/PROVENANCE.md`.
+
 ### Outros achados, sem impacto
 
 - **`bge` está certo por acidente**, escrito com um literal octal (`00000004`) que calha de valer 4.
@@ -263,21 +282,28 @@ Divergir aqui não custa cobertura de oráculo alguma. Essa ausência é também
 
 ## Onde o oráculo não protege
 
-As fixtures exercitam 7 dos 11 branches. Estes **nunca são executados** por nenhum programa de
-referência:
+As fixtures herdadas exercitam 7 dos 11 branches. `2_blt` e `2_bnz`, fabricados em #135 enquanto o
+emulador de referência ainda compila, levam a 9:
 
 | branch | cobertura |
 |---|---|
-| `blt`, `ble`, `bnz`, `bni` | **nenhuma** |
+| `ble`, `bni` | **nenhuma** — só teste escrito à mão |
+| `blt`, `bnz` | fixture gerada (`2_blt`, `2_bnz`), as duas direções |
 | `bzd`, `biv` | 1 uso cada |
 | `beq`, `bgt` | 3 usos cada |
 | `bge` | 4 usos |
 | `bne` | 7 usos |
 | `bun` | 21 usos |
 
-Os quatro sem cobertura precisam de **testes escritos à mão** — o oráculo não vai pegar erro
-neles, e o `ble` quebrado é a prova de que isso acontece na prática. `blt`, `bnz` e `bni` foram
-auditados por leitura e estão corretos, mas leitura não é teste.
+Sobram dois sem oráculo, cada um por um motivo diferente:
+
+- **`ble`** — o emulador de referência está errado ali (typo `0x20`/`0x02`) e o GOLEM diverge de
+  propósito, então não existe oráculo a favor da versão certa.
+- **`bni`** — pôr `IV` exige instrução inválida, e instrução inválida joga o emulador de
+  referência num laço que não termina em vez de levantar a flag. Não dá para fabricar.
+
+Esses dois precisam de **teste escrito à mão**, e o `ble` quebrado é a prova de que fazem falta:
+ele sobreviveu justamente porque nada o exercitava. Leitura não é teste.
 
 A mesma lógica vale além dos branches: qualquer instrução ausente das fixtures está fora do
 alcance do oráculo, e vale conferir a cobertura antes de confiar num diff verde.
