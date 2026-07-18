@@ -69,6 +69,16 @@ describe('EFFECT_REGISTRY', () => {
     expect(EFFECT_REGISTRY[type].apply).toBeTypeOf('function')
     expect(EFFECT_REGISTRY[type].defaults).toBeDefined()
   })
+
+  it('flags exactly the Effects a repeat of cannot change', () => {
+    // Measured, not assumed: only Pixel Sort is a fixed point. The two tests below this describe
+    // block prove the flag matches the pixels, so a wrong entry here is caught rather than trusted.
+    const idempotent = (Object.keys(EFFECT_REGISTRY) as EffectType[]).filter(
+      (type) => EFFECT_REGISTRY[type].idempotent,
+    )
+
+    expect(idempotent).toEqual(['pixelSort'])
+  })
 })
 
 describe('applyChain', () => {
@@ -375,6 +385,13 @@ describe('duplicateLink', () => {
     expect(duplicateLink(full, full[0].id)).toBe(full)
   })
 
+  it('still copies an idempotent Link when asked directly', () => {
+    // The refusal lives in the control, not here: two identical Pixel Sorts are a *pointless*
+    // Chain, not an invalid one, and the same state is reachable by adding a Link and tuning it
+    // to match. Enforcing the UI's judgement in the core would forbid a legal Chain.
+    expect(duplicateLink([SORT], SORT.id)).toHaveLength(2)
+  })
+
   it('renders the repeat distinctly from its source', () => {
     // The occurrence sub-seed at work: a duplicated seeded Link must not redraw the original's
     // arrangement, or the repeat would be an invisible no-op.
@@ -386,7 +403,7 @@ describe('duplicateLink', () => {
     )
   })
 
-  it('leaves the image alone when an idempotent Effect is duplicated unedited', () => {
+  it('leaves the image alone when the flagged Effect is duplicated unedited', () => {
     // Pixel Sort is a fixed point: sorting an already-sorted run returns it unchanged, so two
     // adjacent Pixel Sorts with *identical* params render exactly as one. Not a defect in the
     // Chain — it is what the Effect means — but it is the one duplicate that shows the user
@@ -395,8 +412,24 @@ describe('duplicateLink', () => {
     const pixels = gradient(24, 18)
     const doubled = duplicateLink([SORT], SORT.id)
 
+    expect(EFFECT_REGISTRY.pixelSort.idempotent).toBe(true)
     expect(bytesOf(applyChain(pixels, doubled, SEED))).toEqual(
       bytesOf(applyChain(pixels, [SORT], SEED)),
+    )
+  })
+
+  it.each([
+    BLOCKS,
+    SHIFT,
+    GRAIN,
+  ])('renders a duplicated $type visibly, and leaves it unflagged', (link) => {
+    // The other side of the flag: every Effect the editor still offers duplicate for has to
+    // actually change the image, or the control is lying in the other direction.
+    const pixels = gradient(24, 18)
+
+    expect(EFFECT_REGISTRY[link.type].idempotent).toBeFalsy()
+    expect(bytesOf(applyChain(pixels, duplicateLink([link], link.id), SEED))).not.toEqual(
+      bytesOf(applyChain(pixels, [link], SEED)),
     )
   })
 

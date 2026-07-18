@@ -340,12 +340,12 @@ describe('App', () => {
     it('duplicates a Link directly after itself', () => {
       renderWithAdvancedOpen()
 
-      fireEvent.click(screen.getByRole('button', { name: 'duplicate pixel sort' }))
+      fireEvent.click(screen.getByRole('button', { name: 'duplicate channel shift' }))
 
       expect(lastChain().map((link) => link.type)).toEqual([
         'blockDisplacement',
         'pixelSort',
-        'pixelSort',
+        'channelShift',
         'channelShift',
         'chromaticAberration',
         'scanlines',
@@ -356,10 +356,46 @@ describe('App', () => {
     it('gives a duplicated Link its own editable row', () => {
       renderWithAdvancedOpen()
 
-      fireEvent.click(screen.getByRole('button', { name: 'duplicate pixel sort' }))
+      fireEvent.click(screen.getByRole('button', { name: 'duplicate channel shift' }))
 
       // Two rows, not one reused — the ids are what keep them apart.
-      expect(screen.getAllByRole('group', { name: 'sort direction' })).toHaveLength(2)
+      expect(screen.getAllByRole('group', { name: 'channel' })).toHaveLength(2)
+    })
+
+    // Pixel Sort is a fixed point, so an unedited copy of it renders nothing. Offering the control
+    // anyway would spend a click on a change the user cannot see.
+    it('offers no duplicate for an Effect a repeat of would change nothing', () => {
+      renderWithAdvancedOpen()
+
+      expect(screen.getByRole('button', { name: /^duplicate pixel sort/ })).toBeDisabled()
+    })
+
+    it('says why that duplicate is unavailable', () => {
+      renderWithAdvancedOpen()
+
+      expect(
+        screen.getByRole('button', {
+          name: 'duplicate pixel sort — unavailable, a second pixel sort with the same settings changes nothing',
+        }),
+      ).toBeInTheDocument()
+    })
+
+    it('still offers duplicate for every other Effect', () => {
+      renderWithAdvancedOpen()
+
+      for (const label of ['block displacement', 'channel shift', 'scanlines', 'noise']) {
+        expect(screen.getByRole('button', { name: `duplicate ${label}` })).toBeEnabled()
+      }
+    })
+
+    // The Effect can still appear twice — it is the *identical* copy that is refused, not the
+    // repeat. Crossing a horizontal pass with a vertical one is the "double melt" ADR 0017 wants.
+    it('still lets a second Pixel Sort be added from the palette', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.click(screen.getByRole('button', { name: '+ pixel sort' }))
+
+      expect(lastChain().filter((link) => link.type === 'pixelSort')).toHaveLength(2)
     })
 
     it.each([

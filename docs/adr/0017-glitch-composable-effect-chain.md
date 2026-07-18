@@ -75,6 +75,15 @@ Chain editor lives behind the existing advanced disclosure.
   that objection does not reach this scheme, whose stability is **derived** from the Chain rather than
   stored beside it. The residual cost is narrower: two Links of the same type swap arrangements when
   reordered past each other, since it is their relative order that names them.
+- **A repeat has to differ to be worth anything.** Pixel Sort is idempotent — a sorted run is a
+  fixed point — so two adjacent Pixel Sorts with *identical* params render exactly as one. The
+  "double melt" above is still reachable, but it takes two sorts tuned differently (a horizontal
+  pass crossed with a vertical one), not a straight copy. Discovered while building the editor
+  (#128): the registry carries an `idempotent` flag, and the editor withholds *duplicate* for the
+  Effects it marks while still offering them from the add palette. The refusal is a UI judgement
+  and lives there — the Chain itself accepts the copy, because two identical sorts are pointless
+  rather than invalid, and the same state is reachable by adding a Link and tuning it to match.
+
 - **On/off collapses into presence.** The `enabled` booleans (Pixel Sort, Scanlines) and the
   encode-zero idiom (Channel Shift, Noise, CA) are *deleted* — an Effect is on because its Link is in
   the Chain. A genuine simplification the restructure earns.

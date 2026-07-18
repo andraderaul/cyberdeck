@@ -1,7 +1,13 @@
 import { Button, Chip, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import { useState } from 'react'
-import { type Chain, type EffectType, type Link, MAX_CHAIN_LENGTH } from '../glitch/chain'
+import {
+  type Chain,
+  EFFECT_REGISTRY,
+  type EffectType,
+  type Link,
+  MAX_CHAIN_LENGTH,
+} from '../glitch/chain'
 import { EFFECT_ORDER } from '../glitch/presets'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
@@ -62,6 +68,17 @@ const EFFECT_TOOLTIPS: Record<EffectType, string> = {
   chromaticAberration: 'splits r/b outward from the centre — lens fringe',
   scanlines: 'dark horizontal lines over the image — crt raster',
   noise: 'grain / static laid over the image',
+}
+
+/**
+ * Whether duplicating this Link would render nothing — an idempotent Effect copied unedited.
+ *
+ * The copy is refused at the control rather than in `duplicateLink`, because the Chain it would
+ * produce is *pointless*, not invalid: the same state is reachable by adding a second Link and
+ * tuning it to match. Forbidding it in the core would push a UI judgement into the domain.
+ */
+function isIdempotent(link: Link): boolean {
+  return EFFECT_REGISTRY[link.type].idempotent === true
 }
 
 interface LinkProps {
@@ -338,8 +355,16 @@ export default function ControlPanel({
               <button
                 type="button"
                 onClick={() => onDuplicate(link.id)}
-                disabled={isFull}
-                aria-label={`duplicate ${EFFECT_LABELS[link.type]}`}
+                disabled={isFull || isIdempotent(link)}
+                // Spells out *which* reason it is unavailable for. A disabled control with no
+                // explanation reads as a bug, and the two reasons want different answers from the
+                // user: the cap asks them to remove a Link, idempotence asks them to add a
+                // differently-tuned one instead.
+                aria-label={
+                  isIdempotent(link)
+                    ? `duplicate ${EFFECT_LABELS[link.type]} — unavailable, a second ${EFFECT_LABELS[link.type]} with the same settings changes nothing`
+                    : `duplicate ${EFFECT_LABELS[link.type]}`
+                }
                 className="text-dim hover:text-fg disabled:opacity-40 disabled:hover:text-dim px-2xs rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-electric"
               >
                 <span aria-hidden="true">⧉</span>

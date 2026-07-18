@@ -76,6 +76,15 @@ export type Chain = readonly Link[]
 interface EffectDefinition<K extends EffectType> {
   apply: (pixels: PixelBuffer, params: EffectParams[K], seed: Seed) => PixelBuffer
   defaults: EffectParams[K]
+  /**
+   * True when running this Effect twice with the same params is identical to running it once — so a
+   * second Link of it, unedited and adjacent, is a no-op.
+   *
+   * A property of the transform, not of the UI, which is why it lives here rather than as a list of
+   * Effect names in the control panel: the editor hides the duplicate control for these, and any
+   * future surface that offers repeats gets the same answer from the same place.
+   */
+  idempotent?: boolean
 }
 
 /**
@@ -85,7 +94,11 @@ interface EffectDefinition<K extends EffectType> {
  */
 export const EFFECT_REGISTRY: { [K in EffectType]: EffectDefinition<K> } = {
   blockDisplacement: { apply: blockDisplacement, defaults: DEFAULT_BLOCK_DISPLACEMENT },
-  pixelSort: { apply: pixelSort, defaults: DEFAULT_PIXEL_SORT },
+  // Idempotent: a sorted run is a fixed point, so sorting it again returns it unchanged. Two
+  // adjacent Pixel Sorts with identical params therefore render exactly as one. A *different*
+  // second sort still composes — crossing a horizontal pass with a vertical one is the "double
+  // melt" ADR 0017 wants — which is why only the identical copy is refused, not the repeat itself.
+  pixelSort: { apply: pixelSort, defaults: DEFAULT_PIXEL_SORT, idempotent: true },
   channelShift: { apply: channelShift, defaults: DEFAULT_CHANNEL_SHIFT },
   chromaticAberration: { apply: chromaticAberration, defaults: DEFAULT_CHROMATIC_ABERRATION },
   scanlines: { apply: scanlines, defaults: DEFAULT_SCANLINES },
