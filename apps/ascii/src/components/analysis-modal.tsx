@@ -1,7 +1,7 @@
+import { Button } from '@cyberdeck/deck-kit/ui'
+import { cn } from '@cyberdeck/deck-kit/utils'
 import type { AnalysisState, ThreatLevel } from '../ai/types'
-import { cn } from '../utils/cn'
 import Badge from './ui/badge'
-import Button from './ui/button'
 import Modal from './ui/modal'
 
 interface Props {

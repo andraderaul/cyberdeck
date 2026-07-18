@@ -1,7 +1,5 @@
+import { cn, isTouchDevice, loadImageFile } from '@cyberdeck/deck-kit/utils'
 import { useId, useState } from 'react'
-import { cn } from '../../utils/cn'
-import { isTouchDevice } from '../../utils/device'
-import { loadImageFile } from '../../utils/load-image-file'
 
 interface Props {
   size: 'sm' | 'lg'

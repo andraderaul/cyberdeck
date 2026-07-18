@@ -1,4 +1,4 @@
-import { cn } from '../../utils/cn'
+import { cn } from '@cyberdeck/deck-kit/utils'
 
 export default function ToggleGroup<T extends string>({
   options,

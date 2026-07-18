@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
+    "@cyberdeck/deck-kit": "*",
     "@google/generative-ai": "^0.24.1",
     "clsx": "^2.1.1",
     "openai": "^6.35.0",

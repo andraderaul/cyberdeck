@@ -1,7 +1,7 @@
+import { shareOrDownloadBlob } from '@cyberdeck/deck-kit/utils'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { mimeToExtension, outputFilename } from '../export/output'
-import { shareOrDownloadBlob } from '../utils/share'
 
 const PREFERRED_MIME_TYPES = [
   'video/webm;codecs=vp9',

@@ -1,15 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../../utils/load-image-file', () => ({
+// Mock the kit barrel, preserving the real cn (the tests assert on generated class names).
+vi.mock('@cyberdeck/deck-kit/utils', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@cyberdeck/deck-kit/utils')>()),
   loadImageFile: vi.fn(),
-}))
-
-vi.mock('../../utils/device', () => ({
   isTouchDevice: false,
 }))
 
-import { loadImageFile } from '../../utils/load-image-file'
+import { loadImageFile } from '@cyberdeck/deck-kit/utils'
 import SourceImageDropZone from './source-image-drop-zone'
 
 const mockLoadImageFile = vi.mocked(loadImageFile)

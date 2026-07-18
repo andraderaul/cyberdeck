@@ -4,7 +4,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import ExportBar from './export-bar'
 
 const shareOrDownloadCanvas = vi.hoisted(() => vi.fn(() => Promise.resolve()))
-vi.mock('../utils/share', () => ({ shareOrDownloadCanvas }))
+// Mock the kit barrel, preserving the real cn (the component uses it for class names).
+vi.mock('@cyberdeck/deck-kit/utils', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@cyberdeck/deck-kit/utils')>()),
+  shareOrDownloadCanvas,
+}))
 
 const copyCanvasToClipboard = vi.hoisted(() => vi.fn(() => Promise.resolve()))
 const isClipboardImageSupported = vi.hoisted(() => vi.fn(() => true))

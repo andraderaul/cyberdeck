@@ -1,3 +1,4 @@
+import { Button } from '@cyberdeck/deck-kit/ui'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
   type ChannelName,
@@ -11,7 +12,6 @@ import {
   SCANLINES_DENSITY_STEP,
   type SortDirection,
 } from '../glitch/types'
-import Button from './ui/button'
 import Label from './ui/label'
 import Slider from './ui/slider'
 import ToggleGroup from './ui/toggle-group'

@@ -1,5 +1,5 @@
+import { Button } from '@cyberdeck/deck-kit/ui'
 import { useId, useState } from 'react'
-import Button from './button'
 import Label from './label'
 
 /**

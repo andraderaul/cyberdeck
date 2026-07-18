@@ -1,4 +1,4 @@
-import { cn } from '../../utils/cn'
+import { cn } from '../utils/cn'
 
 const VARIANT_CLASSES = {
   primary: 'border-2 border-violet bg-accent-bg text-violet font-bold',

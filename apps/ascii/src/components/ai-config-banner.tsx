@@ -1,5 +1,5 @@
+import { Button } from '@cyberdeck/deck-kit/ui'
 import { useState } from 'react'
-import Button from './ui/button'
 
 const SESSION_KEY = 'ai-config-banner-dismissed'
 

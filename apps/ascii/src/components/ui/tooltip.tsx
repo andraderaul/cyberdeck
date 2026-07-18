@@ -1,5 +1,5 @@
+import { cn } from '@cyberdeck/deck-kit/utils'
 import { useEffect, useRef, useState } from 'react'
-import { cn } from '../../utils/cn'
 
 interface Props {
   id: string

@@ -1,5 +1,5 @@
+import { cn } from '@cyberdeck/deck-kit/utils'
 import type { ReactNode } from 'react'
-import { cn } from '../../utils/cn'
 import Label from './label'
 
 interface Props {

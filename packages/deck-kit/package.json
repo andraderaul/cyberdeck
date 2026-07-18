@@ -1,25 +1,29 @@
 {
-  "name": "@cyberdeck/glitch",
-  "description": "Client-side tool that applies a pipeline of glitch effects over an image with real-time preview and export.",
+  "name": "@cyberdeck/deck-kit",
+  "description": "The shared shell every program on the deck builds on — visual language, ui/ primitives, framework-neutral hooks and utils, and generic browser plumbing. Consumed as source (ADR 0014).",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.0.0",
   "license": "MIT",
   "type": "module",
+  "exports": {
+    "./utils": "./src/utils/index.ts",
+    "./ui": "./src/ui/index.ts",
+    "./tokens.css": "./src/tokens.css",
+    "./tailwind-preset": "./src/tailwind-preset.js"
+  },
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@cyberdeck/deck-kit": "*",
     "clsx": "^2.1.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "tailwind-merge": "^3.5.0"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
@@ -29,10 +33,9 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "@vitest/coverage-v8": "^2.1.9",
-    "autoprefixer": "^10.4.20",
     "happy-dom": "^20.9.0",
-    "postcss": "^8.4.45",
-    "tailwindcss": "^3.4.10",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "typescript": "^5.5.3",
     "vite": "^5.4.2",
     "vitest": "^2.0.5"

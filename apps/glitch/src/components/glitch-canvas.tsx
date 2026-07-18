@@ -1,7 +1,7 @@
+import { cn } from '@cyberdeck/deck-kit/utils'
 import { type RefObject, useEffect, useRef } from 'react'
 import { renderGlitchFrame } from '../glitch/render-frame'
 import type { GlitchSettings, Seed } from '../glitch/types'
-import { cn } from '../utils/cn'
 
 /** ~15fps — enough for a glitched feed, and cheap enough to stay on the main thread (ADR 0002). */
 export const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15

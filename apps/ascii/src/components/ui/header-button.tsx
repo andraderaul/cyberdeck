@@ -1,4 +1,4 @@
-import { cn } from '../../utils/cn'
+import { cn } from '@cyberdeck/deck-kit/utils'
 
 const VARIANT_CLASSES = {
   neutral: 'border-transparent text-fg-subtle hover:border-base hover:text-ghost',

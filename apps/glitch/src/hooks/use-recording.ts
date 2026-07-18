@@ -3,11 +3,11 @@
 // every operational failure surfaced and Recording is one of this app's four output paths. The
 // naming goes through this app's own `outputFilename`, but lands on the same stamped shape.
 
+import { shareOrDownloadBlob } from '@cyberdeck/deck-kit/utils'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Errors } from '../errors/app-error'
 import { mimeToExtension, outputFilename } from '../export/output'
-import { shareOrDownloadBlob } from '../utils/share'
 
 /** Preference order, best-quality first — the browser picks the first it can honour (ADR 0007). */
 const PREFERRED_MIME_TYPES = [
