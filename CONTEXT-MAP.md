@@ -13,8 +13,8 @@ código, mas é versionado e deployado de forma independente (ver ADR 0011 e ADR
   preview em tempo real, presets e Export.
 - [GOLEM//Console](./apps/golem/CONTEXT.md) — um *fantasy computer* de 32 bits: assembler,
   emulador e um Console de linha de comando, com registradores, memória e Terminal visíveis
-  ao vivo durante a execução. **Ainda não implementado** — o modelo está fixado, o código não
-  existe.
+  ao vivo durante a execução. **Em construção** — o modelo está fixado e o scaffold existe; o
+  assembler, a Machine e o Console ainda não.
 
 ## Shared package
 
