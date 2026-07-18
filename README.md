@@ -79,6 +79,15 @@ Each project carries an `ignoreCommand` so a PR only redeploys the projects it c
 affect — a docs-only PR builds nothing. Vercel skips the build when the command exits `0` and
 builds when it exits non-zero, and `git diff --quiet` matches that polarity exactly.
 
+**The diff range is `$VERCEL_GIT_PREVIOUS_SHA..HEAD`, not `HEAD^..HEAD`.** That variable is the
+SHA of the last *successful deploy of this project on this branch*, and Vercel exposes it only
+when an Ignored Build Step is configured. `HEAD^` would compare against the previous *commit*,
+which silently breaks the multi-commit case: push `feat: rewrite the pipeline` followed by
+`docs: typo`, and every project skips, because the one commit it looked at touched only markdown.
+Diffing from the last successful deploy means nothing can slip through a later commit's shadow,
+and it's per-project — a project that skipped keeps its old SHA, so the next push still sees
+everything that accumulated since it last actually built.
+
 Two things about the path set are deliberate and must not be trimmed:
 
 - **`packages/deck-kit` is in every project's list.** All three apps consume Deck Kit as source
@@ -95,9 +104,12 @@ Two safety properties, both verified before these commands landed:
 
 - **Production always builds.** The `VERCEL_ENV != production` guard exits non-zero on production
   deploys, so `main` never skips regardless of the diff.
-- **It fails toward deploying.** If the git command errors — a shallow clone with no `HEAD^`, say
-  — it exits non-zero and the build proceeds. The dangerous direction is a false skip, not a
-  false build.
+- **The first deploy on a branch always builds.** `VERCEL_GIT_PREVIOUS_SHA` is empty when the
+  project has never deployed this branch, and the `-n` guard turns that into a build. There is no
+  baseline to diff against, so the only safe answer is to build.
+- **It fails toward deploying.** If the git command errors — a shallow clone that lacks the
+  previous SHA, say — it exits non-zero and the build proceeds. The dangerous direction is a
+  false skip, not a false build.
 
 Paths are relative to where the command runs: the repo root for ASCII//Convert, and `apps/glitch`
 / `apps/golem` for the other two, which is why those `cd ../..` first (the same idiom their
