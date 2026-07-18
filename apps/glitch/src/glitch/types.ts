@@ -33,6 +33,18 @@ export interface ChannelShiftParams {
  */
 export const CHANNEL_SHIFT_AMOUNT_RANGE = { min: -40, max: 40 } as const
 
+/**
+ * The default Channel Shift look, and the value the slider resets to on double-click. Lives in the
+ * core for the same reason as DEFAULT_PIXEL_SORT, and is frozen for the same reason.
+ *
+ * Zero amount, matching the reset the control already offered before the registry needed a default
+ * to name (ADR 0017) — Slice 1 introduces the Chain without changing a single rendered pixel.
+ */
+export const DEFAULT_CHANNEL_SHIFT: ChannelShiftParams = Object.freeze({
+  channel: 'r',
+  amount: 0,
+})
+
 /** The axis Pixel Sort walks: rows left-to-right, or columns top-to-bottom. */
 export type SortDirection = 'horizontal' | 'vertical'
 

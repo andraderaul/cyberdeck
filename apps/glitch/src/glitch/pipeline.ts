@@ -4,7 +4,6 @@ import {
   CHANNEL_OFFSET,
   type ChannelShiftParams,
   type ChromaticAberrationParams,
-  type GlitchSettings,
   MAX_BLOCK_HEIGHT_RATIO,
   MAX_BLOCK_SHIFT_RATIO,
   MAX_CHROMATIC_ABERRATION_MAGNIFICATION,
@@ -399,25 +398,4 @@ export function noise(pixels: PixelBuffer, params: NoiseParams, seed: Seed): Pix
   }
 
   return { data: out, width, height }
-}
-
-/**
- * The fixed, canonical Effect order applied to produce the output — pure in GlitchSettings and Seed
- * together, with no hidden randomness: a settings+seed pair always produces the same output. The
- * order runs structural before surface, as documented in CONTEXT.md.
- *
- * The Seed rides beside GlitchSettings rather than inside it, which is what lets Re-roll hand the
- * same look a new arrangement.
- */
-export function applyPipeline(
-  pixels: PixelBuffer,
-  settings: GlitchSettings,
-  seed: Seed,
-): PixelBuffer {
-  const displaced = blockDisplacement(pixels, settings.blockDisplacement, seed)
-  const sorted = pixelSort(displaced, settings.pixelSort)
-  const shifted = channelShift(sorted, settings.channelShift)
-  const fringed = chromaticAberration(shifted, settings.chromaticAberration)
-  const rastered = scanlines(fringed, settings.scanlines)
-  return noise(rastered, settings.noise, seed)
 }
