@@ -73,6 +73,24 @@ Each app is its own Vercel project, both pointing at this repo:
 GOLEM//Console follows the GLITCH pattern — its own Vercel project with **Root Directory** set to
 `apps/golem`, driven by [`apps/golem/vercel.json`](./apps/golem/vercel.json). Not yet deployed.
 
+### Skipping preview deploys
+
+Each project's `ignoreCommand` skips its build (exit `0`) when the diff touches nothing that
+project ships. Four details are load-bearing:
+
+- **`packages/deck-kit` is in every project's list** — all three apps consume it as source
+  ([ADR 0014](./docs/adr/0014-deck-kit-shared-package.md)). Watching only an app's own directory
+  would silently stop deploying Deck Kit changes.
+- **The range is `$VERCEL_GIT_PREVIOUS_SHA..HEAD`** — the last successful deploy of *that project
+  on that branch*. `HEAD^` would see only the newest commit, so a code commit pushed ahead of a
+  docs commit would skip.
+- **`':(exclude)**/*.md'`** — markdown inside an app (`apps/glitch/CLAUDE.md`) ships nothing.
+- **It fails toward deploying.** Production, a branch's first deploy (empty previous SHA), and any
+  git error all build. A false skip hides; a false build costs a minute.
+
+Paths are relative to where the command runs, hence the `cd ../..` in the nested configs. Vercel
+does not read `.github/workflows/ci.yml` — that has its own `paths-ignore`.
+
 ## Contributing
 
 Commits follow [conventional commits](https://www.conventionalcommits.org/) (enforced by
