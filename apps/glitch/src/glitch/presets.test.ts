@@ -93,6 +93,7 @@ describe('glitchSettingsMatch', () => {
       }),
     ],
     ['channelShift.amount', withPatch({ channelShift: { ...base.channelShift, amount: 39 } })],
+    ['chromaticAberration.strength', withPatch({ chromaticAberration: { strength: 0.99 } })],
     [
       'scanlines.enabled',
       withPatch({ scanlines: { ...base.scanlines, enabled: !base.scanlines.enabled } }),
@@ -144,6 +145,34 @@ describe('randomizeGlitchSettings', () => {
     const high = randomizeGlitchSettings(basedOn(0, 1))
 
     expect(glitchSettingsMatch(low, high)).toBe(false)
+  })
+
+  // Pins the ride-through. Chromatic Aberration is copied from the base and never jittered, and
+  // nothing else in this file would catch a future reader tidying it into the jitter set — the same
+  // class of lock as glitchSettingsMatch's exhaustive param list above.
+  it.each([
+    ['lowest', 0],
+    ['unperturbing', NO_JITTER],
+    ['highest', 1],
+  ])('copies Chromatic Aberration through untouched on the %s draw', (_label, draw) => {
+    PRESETS.forEach((preset, index) => {
+      expect(randomizeGlitchSettings(basedOn(index, draw)).chromaticAberration.strength).toBe(
+        preset.settings.chromaticAberration.strength,
+      )
+    })
+  })
+
+  it('never hands a fringe to a Preset curated without one', () => {
+    // The concrete failure a symmetric jitter around zero would cause: it clamps back up, switching
+    // Chromatic Aberration on for the five Presets whose curator deliberately left it off.
+    const unfringed = PRESETS.map((_preset, index) => index).filter(
+      (index) => PRESETS[index].settings.chromaticAberration.strength === 0,
+    )
+
+    expect(unfringed.length).toBeGreaterThan(0)
+    unfringed.forEach((index) => {
+      expect(randomizeGlitchSettings(basedOn(index, 1)).chromaticAberration.strength).toBe(0)
+    })
   })
 
   // The whole point of preset + jitter: the sliders must reach the ugly extremes, Randomize must

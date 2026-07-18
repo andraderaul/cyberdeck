@@ -201,11 +201,43 @@ export const DEFAULT_BLOCK_DISPLACEMENT: BlockDisplacementParams = Object.freeze
   amount: 0.5,
 })
 
+export interface ChromaticAberrationParams {
+  /**
+   * How far the channels pull apart at the frame's corners, on the normalised 0..1 scale. Like
+   * Channel Shift's amount and Noise's amount, its zero reads as "off" on its own — no separation
+   * is no fringe — so no separate flag carries the off state.
+   */
+  strength: number
+}
+
+/**
+ * The scale delta `k` between neighbouring channels at strength 1: R is sampled at `1 + k`, G at
+ * `1`, B at `1 - k`. Lives in the core beside the param it bounds, for the same reason as
+ * CHANNEL_SHIFT_AMOUNT_RANGE — the slider and the Effect share one source of truth.
+ *
+ * Curated small. Because the displacement this produces is a *fraction of the half-diagonal*, even
+ * 0.05 pulls the corners of an 800×800 frame apart by ~27px, which is already past where the fringe
+ * stops reading as a lens and starts reading as three offset copies of the image.
+ */
+export const MAX_CHROMATIC_ABERRATION_MAGNIFICATION = 0.05
+
+/**
+ * The default Chromatic Aberration look, and the value the slider resets to on double-click. Lives
+ * in the core for the same reason as DEFAULT_PIXEL_SORT, and is frozen for the same reason.
+ *
+ * Defaults to off, unlike the other Effects: CA is the one Effect added after the Presets were
+ * curated, so a non-zero neutral would be a fringe on every look that predates it.
+ */
+export const DEFAULT_CHROMATIC_ABERRATION: ChromaticAberrationParams = Object.freeze({
+  strength: 0,
+})
+
 /** The flat object holding every Effect's params — the look, and nothing else. Carries no Seed. */
 export interface GlitchSettings {
   blockDisplacement: BlockDisplacementParams
   pixelSort: PixelSortParams
   channelShift: ChannelShiftParams
+  chromaticAberration: ChromaticAberrationParams
   scanlines: ScanlinesParams
   noise: NoiseParams
 }

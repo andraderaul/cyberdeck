@@ -43,6 +43,11 @@ export const PRESETS: Preset[] = [
       blockDisplacement: { density: 0.1, amount: 0.2 },
       pixelSort: { enabled: true, direction: 'horizontal', threshold: 0.65, runLength: 70 },
       channelShift: { channel: 'b', amount: 14 },
+      // The only Preset that carries a fringe, and the reason it's this one: VAPORWAVE is
+      // DEFAULT_PRESET, so a casual creator meets Chromatic Aberration on the first screen without
+      // opening the advanced panel. Kept low enough that the corners bloom while the subject in the
+      // middle stays sharp — past ~0.5 the fringe reads as a third RGB split rather than a lens.
+      chromaticAberration: { strength: 0.3 },
       scanlines: { enabled: true, density: notchedDensity(4), intensity: 0.25 },
       noise: { amount: 0.08, tint: 'color' },
     },
@@ -56,6 +61,7 @@ export const PRESETS: Preset[] = [
       blockDisplacement: { density: 0.15, amount: 0.3 },
       pixelSort: { enabled: false, direction: 'horizontal', threshold: 0.6, runLength: 40 },
       channelShift: { channel: 'r', amount: 6 },
+      chromaticAberration: { strength: 0 },
       scanlines: { enabled: true, density: notchedDensity(9), intensity: 0.4 },
       noise: { amount: 0.18, tint: 'mono' },
     },
@@ -69,6 +75,7 @@ export const PRESETS: Preset[] = [
       blockDisplacement: { density: 0.05, amount: 0.4 },
       pixelSort: { enabled: true, direction: 'vertical', threshold: 0.25, runLength: 160 },
       channelShift: { channel: 'b', amount: -8 },
+      chromaticAberration: { strength: 0 },
       scanlines: { enabled: false, density: notchedDensity(7), intensity: 0.3 },
       noise: { amount: 0.15, tint: 'color' },
     },
@@ -82,6 +89,7 @@ export const PRESETS: Preset[] = [
       blockDisplacement: { density: 0.7, amount: 0.65 },
       pixelSort: { enabled: true, direction: 'horizontal', threshold: 0.7, runLength: 25 },
       channelShift: { channel: 'g', amount: -10 },
+      chromaticAberration: { strength: 0 },
       scanlines: { enabled: false, density: notchedDensity(7), intensity: 0.3 },
       noise: { amount: 0.12, tint: 'color' },
     },
@@ -95,6 +103,7 @@ export const PRESETS: Preset[] = [
       blockDisplacement: { density: 0.5, amount: 0.9 },
       pixelSort: { enabled: false, direction: 'horizontal', threshold: 0.5, runLength: 60 },
       channelShift: { channel: 'r', amount: 3 },
+      chromaticAberration: { strength: 0 },
       scanlines: { enabled: true, density: notchedDensity(12), intensity: 0.5 },
       noise: { amount: 0.6, tint: 'mono' },
     },
@@ -108,6 +117,7 @@ export const PRESETS: Preset[] = [
       blockDisplacement: { density: 0.85, amount: 0.75 },
       pixelSort: { enabled: true, direction: 'vertical', threshold: 0.35, runLength: 120 },
       channelShift: { channel: 'r', amount: -22 },
+      chromaticAberration: { strength: 0 },
       scanlines: { enabled: true, density: notchedDensity(13), intensity: 0.25 },
       noise: { amount: 0.3, tint: 'color' },
     },
@@ -139,6 +149,7 @@ export function glitchSettingsMatch(a: GlitchSettings, b: GlitchSettings): boole
     a.pixelSort.runLength === b.pixelSort.runLength &&
     a.channelShift.channel === b.channelShift.channel &&
     a.channelShift.amount === b.channelShift.amount &&
+    a.chromaticAberration.strength === b.chromaticAberration.strength &&
     a.scanlines.enabled === b.scanlines.enabled &&
     a.scanlines.density === b.scanlines.density &&
     a.scanlines.intensity === b.scanlines.intensity &&
@@ -223,6 +234,12 @@ export function randomizeGlitchSettings(source: Rng): GlitchSettings {
         CHANNEL_SHIFT_AMOUNT_RANGE.max,
       ),
     },
+    // Copied through, never jittered — do not move this into the jitter set above. Chromatic
+    // Aberration is curated *off* in five of the six Presets, so a symmetric jitter around zero
+    // would clamp back up and switch a fringe on wherever the curator vouched it off. That deals a
+    // combination nobody ever approved, which is exactly the promise "preset + jitter" exists to
+    // keep. It rides through for the same reason a Preset's channel choice and on/off flags do.
+    chromaticAberration: { ...base.chromaticAberration },
     scanlines: {
       ...base.scanlines,
       density: notchedDensity(

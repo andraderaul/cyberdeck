@@ -3,9 +3,11 @@ import {
   type BlockDisplacementParams,
   CHANNEL_OFFSET,
   type ChannelShiftParams,
+  type ChromaticAberrationParams,
   type GlitchSettings,
   MAX_BLOCK_HEIGHT_RATIO,
   MAX_BLOCK_SHIFT_RATIO,
+  MAX_CHROMATIC_ABERRATION_MAGNIFICATION,
   MAX_DISPLACEMENT_BLOCKS,
   MAX_NOISE_DELTA,
   MIN_BLOCK_WIDTH_RATIO,
@@ -199,6 +201,106 @@ export function channelShift(pixels: PixelBuffer, params: ChannelShiftParams): P
   return { data: out, width, height }
 }
 
+/**
+ * One channel read at a fractional position, blended from the four pixels around it.
+ *
+ * Bilinear rather than nearest-neighbour specifically because Chromatic Aberration's displacement
+ * is well under a pixel near the centre — exactly where rounding would collapse it to zero and then
+ * snap into a visible stair-step ring instead of the smooth centre-to-edge gradient the
+ * magnification model exists to produce.
+ *
+ * Reads clamp at the edges, matching `channelShift`: a wrapped sample would drag the far side's
+ * colour into the corner, which reads as a bug instead of a lens.
+ */
+function sampleBilinear(
+  data: Uint8ClampedArray<ArrayBuffer>,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  channel: number,
+): number {
+  const clampedX = Math.min(Math.max(x, 0), width - 1)
+  const clampedY = Math.min(Math.max(y, 0), height - 1)
+
+  const left = Math.floor(clampedX)
+  const top = Math.floor(clampedY)
+  const right = Math.min(left + 1, width - 1)
+  const bottom = Math.min(top + 1, height - 1)
+  const fractionX = clampedX - left
+  const fractionY = clampedY - top
+
+  const topLeft = data[(top * width + left) * 4 + channel]
+  const topRight = data[(top * width + right) * 4 + channel]
+  const bottomLeft = data[(bottom * width + left) * 4 + channel]
+  const bottomRight = data[(bottom * width + right) * 4 + channel]
+
+  const above = topLeft + (topRight - topLeft) * fractionX
+  const below = bottomLeft + (bottomRight - bottomLeft) * fractionX
+  return above + (below - above) * fractionY
+}
+
+/**
+ * Effect: magnifies each colour channel by a slightly different scale about the image centre — the
+ * radial "lens fringe". Pure: builds a new PixelBuffer, never touches the input. See ADR 0005.
+ *
+ * Distinct from `channelShift`, and deliberately so: Channel Shift's displacement is a constant
+ * vector, so it fringes the centre as hard as the corners. Here displacement *grows with radius* —
+ * zero in the middle, widest at the corners — which is the whole reason the two are separate
+ * Effects rather than two modes of one (issue #116).
+ *
+ * R is sampled at scale `1 + k`, G at `1` (a straight copy), B at `1 - k`. Because the sample runs
+ * *inverse* — an output pixel reads the source at its own offset divided by the scale — magnifying
+ * R pulls its sample toward the centre while B's runs outward, splitting them apart by a distance
+ * proportional to the pixel's own radius. Alpha is left alone: a fringe tints a pixel, it does not
+ * punch a hole in it.
+ */
+export function chromaticAberration(
+  pixels: PixelBuffer,
+  params: ChromaticAberrationParams,
+): PixelBuffer {
+  const { width, height, data } = pixels
+  const out = new Uint8ClampedArray(data)
+  if (params.strength <= 0) {
+    return { data: out, width, height }
+  }
+
+  const k = clampUnit(params.strength) * MAX_CHROMATIC_ABERRATION_MAGNIFICATION
+  const centerX = (width - 1) / 2
+  const centerY = (height - 1) / 2
+  // G rides scale 1, and `out` already carries it from the copy above — so the loop writes only
+  // R and B, and G's "straight copy" costs no work.
+  const redScale = 1 + k
+  const blueScale = 1 - k
+
+  for (let y = 0; y < height; y++) {
+    const offsetY = y - centerY
+    for (let x = 0; x < width; x++) {
+      const offsetX = x - centerX
+      const target = (y * width + x) * 4
+
+      out[target] = sampleBilinear(
+        data,
+        width,
+        height,
+        centerX + offsetX / redScale,
+        centerY + offsetY / redScale,
+        CHANNEL_OFFSET.r,
+      )
+      out[target + 2] = sampleBilinear(
+        data,
+        width,
+        height,
+        centerX + offsetX / blueScale,
+        centerY + offsetY / blueScale,
+        CHANNEL_OFFSET.b,
+      )
+    }
+  }
+
+  return { data: out, width, height }
+}
+
 /** Maps normalised density onto the pixel period between dark rows — inverted, so 1 is tightest. */
 function scanlinePeriod(density: number): number {
   const clamped = clampUnit(density)
@@ -315,6 +417,7 @@ export function applyPipeline(
   const displaced = blockDisplacement(pixels, settings.blockDisplacement, seed)
   const sorted = pixelSort(displaced, settings.pixelSort)
   const shifted = channelShift(sorted, settings.channelShift)
-  const rastered = scanlines(shifted, settings.scanlines)
+  const fringed = chromaticAberration(shifted, settings.chromaticAberration)
+  const rastered = scanlines(fringed, settings.scanlines)
   return noise(rastered, settings.noise, seed)
 }

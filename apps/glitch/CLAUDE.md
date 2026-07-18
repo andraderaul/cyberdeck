@@ -10,11 +10,12 @@ layout, the deck-wide comment convention, and the release ritual. Paths below ar
 
 Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80), Block Displacement with
 Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced panel (#84), Recording
-(#85) and Presets + Randomize (#86). All five v1 Effects are live — Source Image *or* Live Source →
-Block Displacement → Pixel Sort → Channel Shift → Scanlines → Noise → PNG Export / Capture / Copy /
-Recording — the pure-core / imperative-shell seam is established, and the Pipeline is deterministic
-in GlitchSettings + Seed. The front door is the six Presets plus Randomize; every Effect's params
-are reachable behind the advanced affordance. The v1 scope in `CONTEXT.md` is complete.
+(#85) and Presets + Randomize (#86), plus Chromatic Aberration (#116). All six Effects are live —
+Source Image *or* Live Source → Block Displacement → Pixel Sort → Channel Shift → Chromatic
+Aberration → Scanlines → Noise → PNG Export / Capture / Copy / Recording — the pure-core /
+imperative-shell seam is established, and the Pipeline is deterministic in GlitchSettings + Seed.
+The front door is the six Presets plus Randomize; every Effect's params are reachable behind the
+advanced affordance. The v1 scope in `CONTEXT.md` is complete.
 
 The Preset **values** are taste, not derivation: they are the one thing here a human curates, and
 re-curating a number in `presets.ts` is a design change, not a bug fix.
@@ -212,13 +213,15 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   `SCANLINES_DENSITY_STEP`, `NoiseParams`, `NoiseTint`, `DEFAULT_NOISE`, `MAX_NOISE_DELTA`,
   `BlockDisplacementParams`, `DEFAULT_BLOCK_DISPLACEMENT`, `MAX_DISPLACEMENT_BLOCKS`,
   `MAX_BLOCK_SHIFT_RATIO`, `MAX_BLOCK_HEIGHT_RATIO`, `MIN_BLOCK_WIDTH_RATIO`,
+  `ChromaticAberrationParams`, `DEFAULT_CHROMATIC_ABERRATION`,
+  `MAX_CHROMATIC_ABERRATION_MAGNIFICATION`,
   `CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE` (the two params with no natural 0..1
   bound — in the core so the sliders and Randomize's clamp share one source of truth)
 - `src/glitch/presets.ts` — `PRESETS` (the six curated looks), `DEFAULT_PRESET` (applied on open),
   `Preset`, `glitchSettingsMatch()` (total), `randomizeGlitchSettings()` (preset + jitter, injected
   randomness)
 - `src/glitch/pipeline.ts` — `applyPipeline()` (pure), `blockDisplacement()`, `pixelSort()`,
-  `channelShift()`, `scanlines()`, `noise()` — see ADR 0005
+  `channelShift()`, `chromaticAberration()`, `scanlines()`, `noise()` — see ADR 0005
 - `src/glitch/rng.ts` — `createRng()` (pure, Seed → draw stream), `createSeed()` (impure — the app's
   only real randomness), `Rng`
 - `src/glitch/image-utils.ts` — `sampleDimensions()` (800×800 cap), `sourceDimensions()`,

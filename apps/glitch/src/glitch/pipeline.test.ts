@@ -3,12 +3,14 @@ import {
   applyPipeline,
   blockDisplacement,
   channelShift,
+  chromaticAberration,
   noise,
   pixelSort,
   scanlines,
 } from './pipeline'
 import {
   type BlockDisplacementParams,
+  type ChromaticAberrationParams,
   DEFAULT_SCANLINES,
   type GlitchSettings,
   MAX_BLOCK_SHIFT_RATIO,
@@ -46,6 +48,10 @@ const NOISE_OFF: NoiseParams = {
 const BLOCKS_OFF: BlockDisplacementParams = {
   density: 0,
   amount: 0,
+}
+
+const CHROMATIC_ABERRATION_OFF: ChromaticAberrationParams = {
+  strength: 0,
 }
 
 /** An arbitrary fixed Seed — every test that isn't about the Seed itself rolls this one. */
@@ -730,11 +736,174 @@ describe('blockDisplacement', () => {
   })
 })
 
+describe('chromaticAberration', () => {
+  /**
+   * A single row of greys rising with x. Every channel starts equal, so any inequality in the
+   * output is displacement this Effect introduced — and an odd width puts the centre on a pixel.
+   */
+  function ramp(width: number): PixelBuffer {
+    return buildPixels(
+      width,
+      1,
+      Array.from({ length: width }, (_, x) => grey(x * 10)),
+    )
+  }
+
+  /** As `ramp`, but rising with y instead of x — the fixture that exercises the sampler's y term. */
+  function verticalRamp(size: number): PixelBuffer {
+    return buildPixels(
+      size,
+      size,
+      Array.from({ length: size * size }, (_, i) => grey(Math.floor(i / size) * 10)),
+    )
+  }
+
+  /** Rises along both axes at once, so displacement on either axis moves the value. */
+  function diagonalRamp(size: number): PixelBuffer {
+    return buildPixels(
+      size,
+      size,
+      Array.from({ length: size * size }, (_, i) => grey(((i % size) + Math.floor(i / size)) * 8)),
+    )
+  }
+
+  /** The Effect at the top of the slider's travel — the strength most assertions here read. */
+  function fringed(pixels: PixelBuffer): PixelBuffer {
+    return chromaticAberration(pixels, { strength: 1 })
+  }
+
+  it('returns an equivalent buffer at zero strength', () => {
+    const pixels = ramp(9)
+
+    const out = chromaticAberration(pixels, { strength: 0 })
+
+    expect(Array.from(out.data)).toEqual(Array.from(pixels.data))
+  })
+
+  it('never mutates the input buffer', () => {
+    const pixels = ramp(9)
+    const before = Array.from(pixels.data)
+
+    chromaticAberration(pixels, { strength: 1 })
+
+    expect(Array.from(pixels.data)).toEqual(before)
+  })
+
+  it('leaves the centre pixel unfringed', () => {
+    // The whole reason CA is a separate Effect from Channel Shift: displacement is zero at the
+    // centre and grows outward, so the middle stays sharp however strong the fringe gets.
+    const pixels = ramp(9)
+
+    const out = chromaticAberration(pixels, { strength: 1 })
+
+    expect(pixelAt(out, 4, 0)).toEqual(grey(40))
+  })
+
+  it('pulls R and B apart at the edge while leaving G alone', () => {
+    // R is magnified, so it samples nearer the centre (a lower value on a rising ramp); B is
+    // shrunk, so it samples further out. G is the reference copy and never moves.
+    const pixels = ramp(9)
+
+    const [r, g, b] = pixelAt(fringed(pixels), 8, 0)
+
+    expect(g).toBe(80)
+    expect(r).toBeLessThan(g)
+    expect(b).toBeGreaterThanOrEqual(g)
+  })
+
+  it('grows the displacement with radius', () => {
+    const pixels = ramp(9)
+
+    const out = fringed(pixels)
+    const nearCentre = 50 - pixelAt(out, 5, 0)[0]
+    const atEdge = 80 - pixelAt(out, 8, 0)[0]
+
+    expect(atEdge).toBeGreaterThan(nearCentre)
+  })
+
+  it('blends neighbouring pixels on a fractional displacement', () => {
+    // Proves the sampling is bilinear rather than a rounded hard copy. Sub-pixel accuracy matters
+    // *here* specifically: near the centre the displacement is well under a pixel, and rounding it
+    // to zero would snap the smooth centre-to-edge gradient into a visible stair-step ring.
+    const pixels = ramp(9)
+
+    const r = pixelAt(fringed(pixels), 8, 0)[0]
+
+    // Lands strictly between two ramp steps — no source pixel carries this value.
+    expect(r).toBeGreaterThan(70)
+    expect(r).toBeLessThan(80)
+  })
+
+  it('displaces along the vertical axis too', () => {
+    // `ramp` is a single row, so every assertion above leaves the sampler's y term at zero. This
+    // fixture varies with y alone and reads directly below the centre, where the x term is zero
+    // instead — so a transposed or dropped y term shows up as an unfringed pixel.
+    const pixels = verticalRamp(9)
+
+    const [r, g, b] = pixelAt(fringed(pixels), 4, 8)
+
+    expect(g).toBe(80)
+    expect(r).toBeLessThan(g)
+    expect(b).toBeGreaterThanOrEqual(g)
+  })
+
+  it('grows the displacement with the 2-D radius, not one axis of it', () => {
+    // The corner is further from the centre than the edge midpoint on the diagonal, so it must
+    // fringe harder — which only holds if both offsets feed the sample position.
+    const pixels = diagonalRamp(9)
+
+    const out = fringed(pixels)
+    const atCorner = (8 + 8) * 8 - pixelAt(out, 8, 8)[0]
+    const atEdgeMidpoint = (8 + 4) * 8 - pixelAt(out, 8, 4)[0]
+
+    expect(atCorner).toBeGreaterThan(atEdgeMidpoint)
+  })
+
+  it('clamps a sample that falls outside the buffer', () => {
+    // B is shrunk, so at the outermost pixel it reads past the end of the row. Clamping matches
+    // channelShift's edge policy, so "displacement Effects clamp at the edge" holds as a family
+    // rule; a wrap here would drag the far side's colour into the corner.
+    const pixels = ramp(9)
+
+    expect(pixelAt(fringed(pixels), 8, 0)[2]).toBe(80)
+  })
+
+  it('leaves alpha untouched', () => {
+    const pixels = buildPixels(3, 1, [
+      [10, 10, 10, 0],
+      [20, 20, 20, 128],
+      [30, 30, 30, 255],
+    ])
+
+    const out = chromaticAberration(pixels, { strength: 1 })
+
+    expect([pixelAt(out, 0, 0)[3], pixelAt(out, 1, 0)[3], pixelAt(out, 2, 0)[3]]).toEqual([
+      0, 128, 255,
+    ])
+  })
+
+  it('preserves the buffer dimensions', () => {
+    const out = chromaticAberration(ramp(9), { strength: 1 })
+
+    expect([out.width, out.height]).toEqual([9, 1])
+  })
+
+  it('fringes harder as strength rises', () => {
+    const pixels = ramp(9)
+
+    const subtle = pixelAt(chromaticAberration(pixels, { strength: 0.2 }), 8, 0)[0]
+    const strong = pixelAt(chromaticAberration(pixels, { strength: 1 }), 8, 0)[0]
+
+    expect(strong).toBeLessThan(subtle)
+  })
+})
+
 describe('applyPipeline', () => {
   const settings: GlitchSettings = {
     blockDisplacement: BLOCKS_OFF,
     pixelSort: SORT_OFF,
     channelShift: { channel: 'r', amount: 1 },
+    chromaticAberration: CHROMATIC_ABERRATION_OFF,
     scanlines: SCANLINES_OFF,
     noise: NOISE_OFF,
   }
@@ -991,6 +1160,7 @@ describe('applyPipeline', () => {
       blockDisplacement: { density: 1, amount: 1 },
       pixelSort: { ...SORT_OFF, enabled: true },
       channelShift: { channel: 'r', amount: 2 },
+      chromaticAberration: { strength: 0.5 },
       scanlines: DEFAULT_SCANLINES,
       noise: { amount: 0.5, tint: 'color' },
     }
@@ -1009,6 +1179,47 @@ describe('applyPipeline', () => {
     const second = applyPipeline(pixels, rolled, SEED + 1)
 
     expect(Array.from(first.data)).not.toEqual(Array.from(second.data))
+  })
+
+  it('runs Chromatic Aberration after Channel Shift — the canonical order', () => {
+    // The two channel-displacement Effects don't commute: shifting R by a constant and *then*
+    // resampling it radially is not the same as resampling first and shifting the result. Composing
+    // both orders by hand is what pins which one the Pipeline runs.
+    const pixels = wideGradient(9, 1)
+    const rolled: GlitchSettings = {
+      ...settings,
+      channelShift: { channel: 'r', amount: 3 },
+      chromaticAberration: { strength: 1 },
+    }
+
+    const out = applyPipeline(pixels, rolled, SEED)
+
+    expect(Array.from(out.data)).toEqual(
+      Array.from(
+        chromaticAberration(channelShift(pixels, rolled.channelShift), { strength: 1 }).data,
+      ),
+    )
+    expect(Array.from(out.data)).not.toEqual(
+      Array.from(
+        channelShift(chromaticAberration(pixels, { strength: 1 }), rolled.channelShift).data,
+      ),
+    )
+  })
+
+  it('leaves Chromatic Aberration untouched by the Seed', () => {
+    // CA is purely geometric — deterministic from strength alone, with no draw off the Seed's
+    // stream. That's why Re-roll leaves it where it is (CONTEXT.md: the Seed is the arrangement).
+    const pixels = wideGradient(9, 3)
+    const rolled: GlitchSettings = {
+      ...settings,
+      channelShift: { channel: 'r', amount: 0 },
+      chromaticAberration: { strength: 1 },
+    }
+
+    const first = applyPipeline(pixels, rolled, SEED)
+    const second = applyPipeline(pixels, rolled, SEED + 99)
+
+    expect(Array.from(first.data)).toEqual(Array.from(second.data))
   })
 
   it('preserves the buffer dimensions', () => {

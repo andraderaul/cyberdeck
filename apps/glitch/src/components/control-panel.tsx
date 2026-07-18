@@ -3,6 +3,7 @@ import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
   type ChannelName,
   DEFAULT_BLOCK_DISPLACEMENT,
+  DEFAULT_CHROMATIC_ABERRATION,
   DEFAULT_NOISE,
   DEFAULT_PIXEL_SORT,
   DEFAULT_SCANLINES,
@@ -24,6 +25,8 @@ export const SCANLINES_DENSITY_RANGE = { min: 0, max: 1 } as const
 export const SCANLINES_INTENSITY_RANGE = { min: 0, max: 1 } as const
 
 export const NOISE_AMOUNT_RANGE = { min: 0, max: 1 } as const
+
+export const CHROMATIC_ABERRATION_STRENGTH_RANGE = { min: 0, max: 1 } as const
 
 const CHANNELS: readonly ChannelName[] = ['r', 'g', 'b']
 
@@ -51,7 +54,8 @@ interface Props {
 }
 
 export default function ControlPanel({ settings, onChange, onReroll }: Props) {
-  const { blockDisplacement, channelShift, pixelSort, scanlines, noise } = settings
+  const { blockDisplacement, channelShift, chromaticAberration, pixelSort, scanlines, noise } =
+    settings
 
   // Sections run in the Pipeline's canonical order — the panel reads top to bottom the way the
   // Effects apply.
@@ -178,6 +182,29 @@ export default function ControlPanel({ settings, onChange, onReroll }: Props) {
           defaultValue={0}
           format={(v) => `${v}px`}
           onChange={(amount) => onChange({ channelShift: { ...channelShift, amount } })}
+        />
+      </div>
+
+      {/* No power toggle: Chromatic Aberration is off at strength 0, the same way Channel Shift is
+          off at amount 0. One knob only — the centre, the falloff and the r/b pairing are fixed core
+          constants, not surfaced (issue #116). */}
+      <div className="flex flex-col gap-sm">
+        <div className="flex items-center gap-2xs">
+          <Label>chromatic aberration</Label>
+          <Tooltip
+            id="tooltip-chromatic-aberration"
+            content="splits r/b outward from the centre — lens fringe"
+          />
+        </div>
+        <Slider
+          label="strength"
+          value={chromaticAberration.strength}
+          min={CHROMATIC_ABERRATION_STRENGTH_RANGE.min}
+          max={CHROMATIC_ABERRATION_STRENGTH_RANGE.max}
+          step={0.01}
+          defaultValue={DEFAULT_CHROMATIC_ABERRATION.strength}
+          format={(v) => `${Math.round(v * 100)}%`}
+          onChange={(strength) => onChange({ chromaticAberration: { strength } })}
         />
       </div>
 
