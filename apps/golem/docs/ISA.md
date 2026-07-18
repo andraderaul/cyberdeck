@@ -71,12 +71,21 @@ tipo S │ opcode │              im26 (25–0)                      │   salt
 | `opcode` | 31–26 | 6 |
 | `im26` | 25–0 | 26 |
 | `im16` | 25–10 | 16 |
-| `z` | 14–10 | 5 |
-| `x` | 9–5 | 5 |
-| `y` | 4–0 | 5 |
+| `z` | 14–10 **+ bit 17** | 6 |
+| `x` | 9–5 **+ bit 16** | 6 |
+| `y` | 4–0 **+ bit 15** | 6 |
 
-`z` e `im16` se sobrepõem: `z` só é lido no tipo U, `im16` só no tipo F. No tipo U os bits 25–15
-não são usados.
+> **⚠ Os campos de registrador têm 6 bits no tipo U, não 5.** O sexto bit de cada um fica
+> **separado** do resto: bit 17 para `z`, 16 para `x`, 15 para `y`. É esse bit que permite nomear
+> um registrador especial — índice 32 ou mais — e é por ele que `cmp pc, pc` monta.
+>
+> **No tipo F não existe esse bit.** O `im16` ocupa 25–10, o que engole os três. Instrução tipo F
+> endereça só `r0`–`r31`; escrever `addi pc, r0, 0` não tem encoding.
+>
+> Verificado contra as fixtures: em `1_limits`, `cmp pc, pc` monta como `x = 32, y = 32` com os
+> bits 16 e 15 postos, e `add r31, r0, fr` como `y = 35`.
+
+`z` e `im16` se sobrepõem: `z` só é lido no tipo U, `im16` só no tipo F.
 
 > **⚠ Armadilha de ordem dos operandos.** No tipo U, **`z` é o destino** — `add rz, rx, ry`. Não é
 > a ordem dos campos no encoding, e não é a ordem que o nome das funções do emulador de referência
@@ -121,8 +130,15 @@ não são usados.
 | `0x12` | `xor` | — | U | `Rz = Rx ^ Ry` |
 | `0x13` | `xori` | — | F | `Rx = Ry ^ N` |
 
-> **⚠ O deslocamento é `N+1`, não `N`.** `shl rz, rx, 0` desloca **uma** posição. Não existe
-> deslocamento de zero. O assembler codifica o literal escrito; quem soma 1 é a execução.
+> **⚠ O deslocamento é `N+1`, não `N`.** Não existe deslocamento de zero: o campo conta a partir
+> de um.
+>
+> **O assembler codifica `N-1`, e a execução soma 1 de volta.** Quem escreve `shl r2, r2, 16`
+> desloca 16 posições, e o campo guarda 15. Verificado nas fixtures: `1_limits` monta
+> `shl r2, r2, 16` com `y = 15`, e `shl r0, r1, 48` com `y = 47` — 47 só cabe porque `y` tem
+> **6 bits** no tipo U (ver "Encoding").
+>
+> Como `y` tem 6 bits, o deslocamento escrito vai de **1 a 64**.
 
 ### Memória
 

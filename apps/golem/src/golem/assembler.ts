@@ -1,7 +1,14 @@
-// Source → Image. The tracer bullet's slice: `add`, `addi` and `int`, with no labels, data or
-// strings — #137 widens this against the same structure and the same error vocabulary.
+// Source → Image. The deepest module here, and the half that never existed in the reference
+// material. Two passes: the first fixes every label to a word index, the second encodes.
 
-import { canonicalMnemonic, INSTRUCTIONS, registerIndex } from './isa'
+import {
+  canonicalMnemonic,
+  INSTRUCTIONS,
+  type Operand,
+  packU,
+  registerIndex,
+  type Spec,
+} from './isa'
 
 /** An assemble failure, carrying the 1-based source line so the Console can point at it. */
 export interface AssembleError {
@@ -24,6 +31,17 @@ export type AssembleResult = { ok: true; image: Image } | { ok: false; errors: A
 // Immediates are unsigned: the machine reads im16 with no sign extension, which is why the ISA
 // carries `subi` rather than negative immediates. Writing -1 here would silently mean 65535.
 const IMMEDIATE_MAX = 0xffff
+const IM26_MAX = 0x3ffffff
+
+// A shift is stored as `N - 1` in a six-bit field, so it displaces 1..64 and never zero.
+const SHIFT_MIN = 1
+const SHIFT_MAX = 64
+
+/** One source line, already classified by the first pass. */
+type Piece =
+  | { kind: 'instruction'; line: number; mnemonic: string; spec: Spec; operands: string[] }
+  | { kind: 'data'; line: number; words: number[] }
+  | { kind: 'error'; line: number; message: string }
 
 /**
  * Assembles source into an Image, or returns every error found rather than the first — a program
@@ -31,24 +49,61 @@ const IMMEDIATE_MAX = 0xffff
  */
 export function assemble(source: string): AssembleResult {
   const errors: AssembleError[] = []
-  const words: number[] = []
-  const lineForWord: number[] = []
+  const labels = new Map<string, number>()
+  const pieces: Piece[] = []
 
+  // Pass 1 — classify each line and fix every label to the word index it sits at, so a jump
+  // forward resolves as readily as a jump back.
+  let wordIndex = 0
   source.split('\n').forEach((rawLine, index) => {
     const line = index + 1
-    const text = stripComment(rawLine).trim()
+    let text = stripComment(rawLine).trim()
+
+    let label = /^([A-Za-z_]\w*)\s*:/.exec(text)
+    while (label) {
+      const name = label[1].toLowerCase()
+      if (labels.has(name)) {
+        errors.push({ line, message: `Label "${label[1]}" is defined twice` })
+      }
+      labels.set(name, wordIndex)
+      text = text.slice(label[0].length).trim()
+      label = /^([A-Za-z_]\w*)\s*:/.exec(text)
+    }
+
     if (text === '') {
       return
     }
 
-    const word = encodeInstruction(text, line, errors)
-    if (word === null) {
-      return
+    const piece = classify(text, line)
+    pieces.push(piece)
+    wordIndex += pieceWidth(piece)
+  })
+
+  // Pass 2 — encode, now that every label has a value.
+  const words: number[] = []
+  const lineForWord: number[] = []
+
+  for (const piece of pieces) {
+    if (piece.kind === 'error') {
+      errors.push({ line: piece.line, message: piece.message })
+      continue
     }
 
+    if (piece.kind === 'data') {
+      for (const word of piece.words) {
+        words.push(word)
+        lineForWord.push(piece.line)
+      }
+      continue
+    }
+
+    const word = encode(piece, labels, errors)
+    if (word === null) {
+      continue
+    }
     words.push(word)
-    lineForWord.push(line)
-  })
+    lineForWord.push(piece.line)
+  }
 
   if (errors.length > 0) {
     return { ok: false, errors }
@@ -56,154 +111,290 @@ export function assemble(source: string): AssembleResult {
   return { ok: true, image: { words, lineForWord } }
 }
 
+/** Maps each source line to the first word index it assembles to — breakpoints resolve through it. */
+export function wordIndexForLine(image: Image): Map<number, number> {
+  const map = new Map<number, number>()
+  image.lineForWord.forEach((line, index) => {
+    if (!map.has(line)) {
+      map.set(line, index)
+    }
+  })
+  return map
+}
+
 function stripComment(line: string): string {
   const comment = line.indexOf('//')
   return comment === -1 ? line : line.slice(0, comment)
 }
 
-function encodeInstruction(text: string, line: number, errors: AssembleError[]): number | null {
+function pieceWidth(piece: Piece): number {
+  if (piece.kind === 'data') {
+    return piece.words.length
+  }
+  return piece.kind === 'instruction' ? 1 : 0
+}
+
+function classify(text: string, line: number): Piece {
+  // `nop` is a pseudo-instruction for the zero word, not an opcode of its own.
+  if (text.toLowerCase() === 'nop') {
+    return { kind: 'data', line, words: [0] }
+  }
+
   const [rawMnemonic, ...rest] = text.split(/\s+/)
-  const mnemonic = canonicalMnemonic(rawMnemonic)
-  const spec = INSTRUCTIONS[mnemonic]
+  const spec = INSTRUCTIONS[canonicalMnemonic(rawMnemonic)]
 
-  if (!spec) {
-    errors.push({ line, message: `Unknown instruction "${rawMnemonic}"` })
-    return null
+  if (spec) {
+    const operands = rest
+      .join(' ')
+      .split(',')
+      .map((operand) => operand.trim())
+      .filter((operand) => operand !== '')
+    return {
+      kind: 'instruction',
+      line,
+      mnemonic: canonicalMnemonic(rawMnemonic),
+      spec,
+      operands,
+    }
   }
 
-  const operands = rest
-    .join(' ')
-    .split(',')
-    .map((operand) => operand.trim())
-    .filter((operand) => operand !== '')
-
-  switch (spec.form) {
-    case 'U':
-      return encodeU(spec.opcode, operands, mnemonic, line, errors)
-    case 'F':
-      return encodeF(spec.opcode, operands, mnemonic, line, errors)
-    case 'S':
-      return encodeS(spec.opcode, operands, mnemonic, line, errors)
-  }
+  return classifyData(text, line)
 }
 
-// `z` is the destination in type U — the trap ISA.md calls out. `add rz, rx, ry`.
-function encodeU(
-  opcode: number,
-  operands: string[],
-  mnemonic: string,
-  line: number,
+// Data is written bare, one word per line: decimal, hex, or a quoted string packed into bytes.
+function classifyData(text: string, line: number): Piece {
+  if (text.startsWith('"')) {
+    const bytes = parseString(text)
+    return typeof bytes === 'string'
+      ? { kind: 'error', line, message: bytes }
+      : { kind: 'data', line, words: packBytes(bytes) }
+  }
+
+  const value = parseNumber(text)
+  if (value === null) {
+    return { kind: 'error', line, message: `Unknown instruction "${text.split(/\s+/)[0]}"` }
+  }
+  return { kind: 'data', line, words: [value >>> 0] }
+}
+
+const ESCAPES: Record<string, string> = {
+  n: '\n',
+  t: '\t',
+  r: '\r',
+  '0': '\0',
+  '\\': '\\',
+  '"': '"',
+}
+
+/** Parses a quoted string to its bytes, NUL terminator included. Returns a message on failure. */
+function parseString(text: string): number[] | string {
+  const bytes: number[] = []
+  let index = 1
+  let closed = false
+
+  while (index < text.length) {
+    const char = text[index]
+
+    if (char === '"') {
+      closed = true
+      index++
+      break
+    }
+
+    if (char === '\\') {
+      const escaped = text[index + 1]
+      if (escaped === undefined) {
+        return 'String ends in a dangling backslash'
+      }
+      const decoded = ESCAPES[escaped]
+      if (decoded === undefined) {
+        return `Unknown escape "\\${escaped}" in string`
+      }
+      bytes.push(decoded.charCodeAt(0))
+      index += 2
+      continue
+    }
+
+    const code = char.codePointAt(0) ?? 0
+    if (code > 0xff) {
+      return `Character "${char}" does not fit in a byte`
+    }
+    bytes.push(code)
+    index++
+  }
+
+  if (!closed) {
+    return 'String is missing its closing quote'
+  }
+
+  const trailing = text.slice(index).trim()
+  if (trailing !== '') {
+    return `Unexpected "${trailing}" after string`
+  }
+
+  bytes.push(0)
+  return bytes
+}
+
+// Little-endian within the word, matching how `ldb`/`stb` index bytes inside a word.
+function packBytes(bytes: number[]): number[] {
+  const words: number[] = []
+  for (let index = 0; index < bytes.length; index += 4) {
+    let word = 0
+    for (let offset = 0; offset < 4; offset++) {
+      word |= (bytes[index + offset] ?? 0) << (offset * 8)
+    }
+    words.push(word >>> 0)
+  }
+  return words
+}
+
+function parseNumber(text: string): number | null {
+  if (/^-?0x[0-9a-f]+$/i.test(text)) {
+    return Number.parseInt(text, 16)
+  }
+  if (/^-?\d+$/.test(text)) {
+    return Number.parseInt(text, 10)
+  }
+  return null
+}
+
+function encode(
+  piece: Extract<Piece, { kind: 'instruction' }>,
+  labels: Map<string, number>,
   errors: AssembleError[],
 ): number | null {
-  if (!expectArity(operands, 3, mnemonic, line, errors)) {
+  const { spec, operands, mnemonic, line } = piece
+
+  if (operands.length !== spec.operands.length) {
+    const expected = spec.operands.length
+    errors.push({
+      line,
+      message: `"${mnemonic}" takes ${expected} operand${expected === 1 ? '' : 's'}, got ${operands.length}`,
+    })
     return null
   }
 
-  const z = parseRegister(operands[0], line, errors)
-  const x = parseRegister(operands[1], line, errors)
-  const y = parseRegister(operands[2], line, errors)
-  if (z === null || x === null || y === null) {
-    return null
-  }
+  let word = (spec.opcode << 26) >>> 0
+  let failed = false
 
-  return ((opcode << 26) | (z << 10) | (x << 5) | y) >>> 0
-}
-
-// `addi rx, ry, N` — the destination is `x` and the immediate rides in bits 25–10.
-function encodeF(
-  opcode: number,
-  operands: string[],
-  mnemonic: string,
-  line: number,
-  errors: AssembleError[],
-): number | null {
-  if (!expectArity(operands, 3, mnemonic, line, errors)) {
-    return null
-  }
-
-  const x = parseRegister(operands[0], line, errors)
-  const y = parseRegister(operands[1], line, errors)
-  const immediate = parseImmediate(operands[2], line, errors)
-  if (x === null || y === null || immediate === null) {
-    return null
-  }
-
-  return ((opcode << 26) | ((immediate & 0xffff) << 10) | (x << 5) | y) >>> 0
-}
-
-function encodeS(
-  opcode: number,
-  operands: string[],
-  mnemonic: string,
-  line: number,
-  errors: AssembleError[],
-): number | null {
-  if (!expectArity(operands, 1, mnemonic, line, errors)) {
-    return null
-  }
-
-  const immediate = parseImmediate(operands[0], line, errors)
-  if (immediate === null) {
-    return null
-  }
-
-  return ((opcode << 26) | (immediate & 0x3ffffff)) >>> 0
-}
-
-function expectArity(
-  operands: string[],
-  arity: number,
-  mnemonic: string,
-  line: number,
-  errors: AssembleError[],
-): boolean {
-  if (operands.length === arity) {
-    return true
-  }
-  errors.push({
-    line,
-    message: `"${mnemonic}" takes ${arity} operand${arity === 1 ? '' : 's'}, got ${operands.length}`,
+  spec.operands.forEach((slot, index) => {
+    const encoded = encodeOperand(slot, operands[index], spec, mnemonic, labels, line, errors)
+    if (encoded === null) {
+      failed = true
+      return
+    }
+    word = (word | encoded) >>> 0
   })
-  return false
+
+  return failed ? null : word
 }
 
-function parseRegister(operand: string, line: number, errors: AssembleError[]): number | null {
-  const index = registerIndex(operand)
+function encodeOperand(
+  slot: Operand,
+  written: string,
+  spec: Spec,
+  mnemonic: string,
+  labels: Map<string, number>,
+  line: number,
+  errors: AssembleError[],
+): number | null {
+  if (slot === 'shift') {
+    const amount = resolveValue(written, labels, line, errors)
+    if (amount === null) {
+      return null
+    }
+    if (amount < SHIFT_MIN || amount > SHIFT_MAX) {
+      errors.push({
+        line,
+        message: `Shift of ${written} is out of range (${SHIFT_MIN}..${SHIFT_MAX})`,
+      })
+      return null
+    }
+    // Stored as N-1: there is no shift of zero, so the field starts counting at one.
+    return packU('y', amount - 1)
+  }
+
+  if (slot === 'imm') {
+    return encodeImmediate(written, spec, labels, line, errors)
+  }
+
+  const index = registerIndex(written)
   if (index === null) {
-    errors.push({ line, message: `"${operand}" is not a register` })
+    errors.push({ line, message: `"${written}" is not a register` })
     return null
   }
-  return index
+
+  if (spec.form === 'U') {
+    return packU(slot, index)
+  }
+
+  // Type F has no room for a sixth register bit — im16 occupies bits 25–10.
+  if (index > 31) {
+    errors.push({
+      line,
+      message: `"${written}" is a special register, and "${mnemonic}" has no field wide enough for one`,
+    })
+    return null
+  }
+  return (index << (slot === 'x' ? 5 : 0)) >>> 0
 }
 
-// Rejected here rather than truncated silently, so nobody debugs a value that shrank at runtime.
-function parseImmediate(operand: string, line: number, errors: AssembleError[]): number | null {
-  const value = /^-?0x[0-9a-f]+$/i.test(operand)
-    ? Number.parseInt(operand, 16)
-    : /^-?\d+$/.test(operand)
-      ? Number.parseInt(operand, 10)
-      : Number.NaN
-
-  if (Number.isNaN(value)) {
-    errors.push({ line, message: `"${operand}" is not a number` })
+function encodeImmediate(
+  written: string,
+  spec: Spec,
+  labels: Map<string, number>,
+  line: number,
+  errors: AssembleError[],
+): number | null {
+  const value = resolveValue(written, labels, line, errors)
+  if (value === null) {
     return null
   }
 
   if (value < 0) {
     errors.push({
       line,
-      message: `Immediate ${operand} is negative — immediates are unsigned here, use subi instead`,
+      message: `Immediate ${written} is negative — immediates are unsigned here, use subi instead`,
     })
     return null
+  }
+
+  if (spec.form === 'S') {
+    if (value > IM26_MAX) {
+      errors.push({ line, message: `Immediate ${written} does not fit in 26 bits` })
+      return null
+    }
+    return value >>> 0
   }
 
   if (value > IMMEDIATE_MAX) {
     errors.push({
       line,
-      message: `Immediate ${operand} does not fit in 16 bits (0..${IMMEDIATE_MAX})`,
+      message: `Immediate ${written} does not fit in 16 bits (0..${IMMEDIATE_MAX})`,
     })
     return null
   }
+  return ((value & 0xffff) << 10) >>> 0
+}
 
-  return value
+/** A written value is either a literal or a label, and a label evaluates to its word index. */
+function resolveValue(
+  written: string,
+  labels: Map<string, number>,
+  line: number,
+  errors: AssembleError[],
+): number | null {
+  const literal = parseNumber(written)
+  if (literal !== null) {
+    return literal
+  }
+
+  const label = labels.get(written.toLowerCase())
+  if (label !== undefined) {
+    return label
+  }
+
+  errors.push({ line, message: `Undefined label "${written}"` })
+  return null
 }
