@@ -749,6 +749,24 @@ describe('chromaticAberration', () => {
     )
   }
 
+  /** As `ramp`, but rising with y instead of x — the fixture that exercises the sampler's y term. */
+  function verticalRamp(size: number): PixelBuffer {
+    return buildPixels(
+      size,
+      size,
+      Array.from({ length: size * size }, (_, i) => grey(Math.floor(i / size) * 10)),
+    )
+  }
+
+  /** Rises along both axes at once, so displacement on either axis moves the value. */
+  function diagonalRamp(size: number): PixelBuffer {
+    return buildPixels(
+      size,
+      size,
+      Array.from({ length: size * size }, (_, i) => grey(((i % size) + Math.floor(i / size)) * 8)),
+    )
+  }
+
   /** The Effect at the top of the slider's travel — the strength most assertions here read. */
   function fringed(pixels: PixelBuffer): PixelBuffer {
     return chromaticAberration(pixels, { strength: 1 })
@@ -757,9 +775,9 @@ describe('chromaticAberration', () => {
   it('returns an equivalent buffer at zero strength', () => {
     const pixels = ramp(9)
 
-    const fringed = chromaticAberration(pixels, { strength: 0 })
+    const out = chromaticAberration(pixels, { strength: 0 })
 
-    expect(Array.from(fringed.data)).toEqual(Array.from(pixels.data))
+    expect(Array.from(out.data)).toEqual(Array.from(pixels.data))
   })
 
   it('never mutates the input buffer', () => {
@@ -776,9 +794,9 @@ describe('chromaticAberration', () => {
     // centre and grows outward, so the middle stays sharp however strong the fringe gets.
     const pixels = ramp(9)
 
-    const fringed = chromaticAberration(pixels, { strength: 1 })
+    const out = chromaticAberration(pixels, { strength: 1 })
 
-    expect(pixelAt(fringed, 4, 0)).toEqual(grey(40))
+    expect(pixelAt(out, 4, 0)).toEqual(grey(40))
   })
 
   it('pulls R and B apart at the edge while leaving G alone', () => {
@@ -814,6 +832,31 @@ describe('chromaticAberration', () => {
     // Lands strictly between two ramp steps — no source pixel carries this value.
     expect(r).toBeGreaterThan(70)
     expect(r).toBeLessThan(80)
+  })
+
+  it('displaces along the vertical axis too', () => {
+    // `ramp` is a single row, so every assertion above leaves the sampler's y term at zero. This
+    // fixture varies with y alone and reads directly below the centre, where the x term is zero
+    // instead — so a transposed or dropped y term shows up as an unfringed pixel.
+    const pixels = verticalRamp(9)
+
+    const [r, g, b] = pixelAt(fringed(pixels), 4, 8)
+
+    expect(g).toBe(80)
+    expect(r).toBeLessThan(g)
+    expect(b).toBeGreaterThanOrEqual(g)
+  })
+
+  it('grows the displacement with the 2-D radius, not one axis of it', () => {
+    // The corner is further from the centre than the edge midpoint on the diagonal, so it must
+    // fringe harder — which only holds if both offsets feed the sample position.
+    const pixels = diagonalRamp(9)
+
+    const out = fringed(pixels)
+    const atCorner = (8 + 8) * 8 - pixelAt(out, 8, 8)[0]
+    const atEdgeMidpoint = (8 + 4) * 8 - pixelAt(out, 8, 4)[0]
+
+    expect(atCorner).toBeGreaterThan(atEdgeMidpoint)
   })
 
   it('clamps a sample that falls outside the buffer', () => {

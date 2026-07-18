@@ -13,8 +13,9 @@ Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced pane
 (#85) and Presets + Randomize (#86), plus Chromatic Aberration (#116). All six Effects are live —
 Source Image *or* Live Source → Block Displacement → Pixel Sort → Channel Shift → Chromatic
 Aberration → Scanlines → Noise → PNG Export / Capture / Copy / Recording — the pure-core /
-imperative-shell seam is established, and the Pipeline is deterministic in GlitchSettings + Seed. The front door is the six Presets plus Randomize; every Effect's params
-are reachable behind the advanced affordance. The v1 scope in `CONTEXT.md` is complete.
+imperative-shell seam is established, and the Pipeline is deterministic in GlitchSettings + Seed.
+The front door is the six Presets plus Randomize; every Effect's params are reachable behind the
+advanced affordance. The v1 scope in `CONTEXT.md` is complete.
 
 The Preset **values** are taste, not derivation: they are the one thing here a human curates, and
 re-curating a number in `presets.ts` is a design change, not a bug fix.
