@@ -1,3 +1,4 @@
+import { normalizeError } from '@cyberdeck/deck-kit/errors'
 import { ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { analyzeCanvas, toAnalysisState } from './ai/analysis-service'
@@ -17,7 +18,6 @@ import LiveSourceBar from './components/live-source-bar'
 import MobileControls from './components/mobile-controls'
 import HeaderButton from './components/ui/header-button'
 import UploadZone from './components/upload-zone'
-import { normalizeError } from './errors/app-error'
 import { useRecording } from './hooks/use-recording'
 import { useWebcamState } from './hooks/use-webcam-state'
 

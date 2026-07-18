@@ -9,6 +9,7 @@
     "./utils": "./src/utils/index.ts",
     "./ui": "./src/ui/index.ts",
     "./hooks": "./src/hooks/index.ts",
+    "./errors": "./src/errors/app-error.ts",
     "./tokens.css": "./src/tokens.css",
     "./tailwind-preset": "./src/tailwind-preset.js"
   },
