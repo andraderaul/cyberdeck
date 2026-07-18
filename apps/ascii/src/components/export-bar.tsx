@@ -1,11 +1,9 @@
-import { Button } from '@cyberdeck/deck-kit/ui'
+import { Button, Chip, useToastError } from '@cyberdeck/deck-kit/ui'
 import { isTouchDevice, shareOrDownloadCanvas } from '@cyberdeck/deck-kit/utils'
 import type { RefObject } from 'react'
 import { useState } from 'react'
 import { Errors } from '../errors/app-error'
 import { outputFilename, type PngScale, planPngExport } from '../export/output'
-import { useToastError } from './toast-provider'
-import Chip from './ui/chip'
 
 interface Props {
   canvasRef: RefObject<HTMLCanvasElement | null>

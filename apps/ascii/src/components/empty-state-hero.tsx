@@ -1,5 +1,4 @@
-import { useToastError } from '../components/toast-provider'
-import SourceImageDropZone from './ui/source-image-drop-zone'
+import { SourceImageDropZone, useToastError } from '@cyberdeck/deck-kit/ui'
 
 interface Props {
   onImage: (img: HTMLImageElement) => void

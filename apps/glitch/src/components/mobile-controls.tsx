@@ -1,8 +1,8 @@
+import { MobileBottomSheet } from '@cyberdeck/deck-kit/ui'
 import { useRef, useState } from 'react'
 import type { Preset } from '../glitch/presets'
 import type { GlitchSettings } from '../glitch/types'
 import ControlPanel from './control-panel'
-import MobileBottomSheet from './mobile-bottom-sheet'
 import PresetPicker from './preset-picker'
 import Disclosure from './ui/disclosure'
 

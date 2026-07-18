@@ -1,14 +1,14 @@
 import { render, renderHook, screen } from '@testing-library/react'
 import { useContext } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import Toast from './toast'
 import {
   ToastContext,
   ToastProvider,
   useToastError,
   useToastInfo,
   useToastWarn,
-} from '../toast-provider'
-import Toast from './toast'
+} from './toast-provider'
 
 // ── Toast component ──────────────────────────────────────────────────────────
 

@@ -1,6 +1,5 @@
-import { Button } from '@cyberdeck/deck-kit/ui'
+import { Button, Label } from '@cyberdeck/deck-kit/ui'
 import { useId, useState } from 'react'
-import Label from './label'
 
 /**
  * Owns its own open state — what's inside is the caller's business, and no caller so far needs to

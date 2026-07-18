@@ -1,9 +1,7 @@
-import { Button } from '@cyberdeck/deck-kit/ui'
+import { Button, Chip, Label } from '@cyberdeck/deck-kit/ui'
 import type { Preset } from '../glitch/presets'
 import { glitchSettingsMatch, PRESETS } from '../glitch/presets'
 import type { GlitchSettings } from '../glitch/types'
-import Chip from './ui/chip'
-import Label from './ui/label'
 
 interface Props {
   settings: GlitchSettings

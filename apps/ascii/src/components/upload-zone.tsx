@@ -1,10 +1,8 @@
-import { Button } from '@cyberdeck/deck-kit/ui'
+import { Button, SourceImageDropZone, ToggleGroup } from '@cyberdeck/deck-kit/ui'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
 import { useState } from 'react'
 import type { SourceMode, WebcamState } from '../hooks/use-webcam-state'
 import ErrorText from './ui/error-text'
-import SourceImageDropZone from './ui/source-image-drop-zone'
-import ToggleGroup from './ui/toggle-group'
 
 interface Props {
   onImage: (img: HTMLImageElement) => void

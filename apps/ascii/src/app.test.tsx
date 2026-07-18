@@ -28,9 +28,11 @@ vi.mock('./hooks/use-recording', () => ({
   })),
 }))
 
-vi.mock('./components/toast-provider', () => ({
+vi.mock('@cyberdeck/deck-kit/ui', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@cyberdeck/deck-kit/ui')>()),
   useToastError: vi.fn(() => vi.fn()),
   ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
 vi.mock('./components/ascii-canvas', () => ({ default: () => <canvas /> }))
@@ -57,9 +59,6 @@ vi.mock('./components/empty-state-hero', () => ({
   ),
 }))
 vi.mock('./components/mobile-controls', () => ({ default: () => <div>mobile</div> }))
-vi.mock('./components/error-boundary', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}))
 
 import { useAIConfig } from './ai/use-ai-config'
 import { useWebcamState } from './hooks/use-webcam-state'

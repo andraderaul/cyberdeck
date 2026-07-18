@@ -16,7 +16,8 @@ vi.mock('../utils/copy', () => ({ copyCanvasToClipboard, isClipboardImageSupport
 
 const toastError = vi.hoisted(() => vi.fn())
 const toastInfo = vi.hoisted(() => vi.fn())
-vi.mock('./toast-provider', () => ({
+vi.mock('@cyberdeck/deck-kit/ui', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@cyberdeck/deck-kit/ui')>()),
   useToastError: () => toastError,
   useToastInfo: () => toastInfo,
 }))

@@ -1,4 +1,4 @@
-import { Button } from '@cyberdeck/deck-kit/ui'
+import { Button, Label, Slider, ToggleGroup } from '@cyberdeck/deck-kit/ui'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
   type ChannelName,
@@ -12,9 +12,6 @@ import {
   SCANLINES_DENSITY_STEP,
   type SortDirection,
 } from '../glitch/types'
-import Label from './ui/label'
-import Slider from './ui/slider'
-import ToggleGroup from './ui/toggle-group'
 
 export const BLOCK_DISPLACEMENT_DENSITY_RANGE = { min: 0, max: 1 } as const
 

@@ -1,10 +1,9 @@
-import { Button } from '@cyberdeck/deck-kit/ui'
+import { Button, useToastError } from '@cyberdeck/deck-kit/ui'
 import { cn, isTouchDevice, shareOrDownloadCanvas } from '@cyberdeck/deck-kit/utils'
 import type { RefObject } from 'react'
 import { Errors } from '../errors/app-error'
 import { outputFilename } from '../export/output'
 import { formatElapsedTime } from '../hooks/use-recording'
-import { useToastError } from './toast-provider'
 
 interface Props {
   canvasRef: RefObject<HTMLCanvasElement | null>
