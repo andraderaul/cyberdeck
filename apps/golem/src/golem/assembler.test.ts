@@ -113,13 +113,13 @@ describe('data', () => {
     expect(wordsOf('10\n0x0000888B')).toEqual([10, 0x0000888b])
   })
 
+  // Big-endian within the word, so `ldb` reads the characters back in written order.
   it('packs a string into bytes and NUL-terminates it', () => {
-    // "AB" -> bytes 0x41 0x42 0x00, little-endian within the word.
-    expect(wordsOf('"AB"')).toEqual([0x00004241])
+    expect(wordsOf('"AB"')).toEqual([0x41420000])
   })
 
   it('honours escapes', () => {
-    expect(wordsOf('"A\\n"')).toEqual([0x00000a41])
+    expect(wordsOf('"A\\n"')).toEqual([0x410a0000])
   })
 
   it('spills a long string across words', () => {
