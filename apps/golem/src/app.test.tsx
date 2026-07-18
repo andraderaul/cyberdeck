@@ -93,8 +93,69 @@ describe('stepping', () => {
   it('suggests the nearest command for a typo', async () => {
     render(<App />)
 
-    await type('stp')
+    await type('stepp')
 
     expect(screen.getByText(/did you mean "step"/)).toBeInTheDocument()
+  })
+})
+
+// The driver itself is verified by running the app — testing rAF scheduling would test the
+// browser. What is worth asserting here is the grammar around it and the state it leaves behind.
+describe('the clock', () => {
+  it('reports the default rate before anything runs', () => {
+    render(<App />)
+
+    expect(screen.getByText(/clock 8\/s/)).toBeInTheDocument()
+  })
+
+  it('changes the rate on command', async () => {
+    render(<App />)
+
+    await type('clock 40')
+
+    expect(screen.getByText(/clock 40\/s/)).toBeInTheDocument()
+  })
+
+  it('accepts max', async () => {
+    render(<App />)
+
+    await type('clock max')
+
+    expect(screen.getByText('clock set to max')).toBeInTheDocument()
+  })
+
+  it('explains the usage rather than guessing at a bad rate', async () => {
+    render(<App />)
+
+    await type('clock fast')
+
+    expect(screen.getByText(/steps per second/)).toBeInTheDocument()
+  })
+
+  // The Clock is presentation state, not part of the Machine.
+  it('keeps the rate across a reset', async () => {
+    render(<App />)
+
+    await type('clock 40')
+    await type('asm')
+    await type('reset')
+
+    expect(screen.getByText(/clock 40\/s/)).toBeInTheDocument()
+  })
+
+  it('says so when stop is typed with nothing running', async () => {
+    render(<App />)
+
+    await type('stop')
+
+    expect(screen.getByText('not running')).toBeInTheDocument()
+  })
+
+  it('assembles on run, so the editor locks without a separate asm', async () => {
+    render(<App />)
+
+    await type('run')
+
+    expect(editor()).toHaveAttribute('readonly')
   })
 })
