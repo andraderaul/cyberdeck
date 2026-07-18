@@ -11,7 +11,7 @@ Uma ordem **fixa** de Effects, cada um uma função pura sobre um **PixelBuffer*
 canônica porque os Presets dependem dela — estruturais (reorganizam pixels) antes de
 superfície (sobrepõem textura):
 
-`Block Displacement → Pixel Sort → Channel Shift → Scanlines → Noise`
+`Block Displacement → Pixel Sort → Channel Shift → Chromatic Aberration → Scanlines → Noise`
 
 O Pipeline é uma função pura de **GlitchSettings** + **Seed** → saída. Não há nenhuma fonte
 de aleatoriedade oculta: toda aleatoriedade deriva do Seed, que é passado ao lado dos
@@ -27,8 +27,8 @@ _Avoid_: ImageData (é o tipo do DOM que a casca embrulha/desembrulha), bitmap, 
 
 **Effect**:
 Uma transformação nomeada e isolada do pipeline; função pura `PixelBuffer → PixelBuffer`
-parametrizada pelos seus próprios params. Os cinco Effects do v1 são Block Displacement,
-Pixel Sort, Channel Shift, Scanlines e Noise.
+parametrizada pelos seus próprios params. Os seis Effects são Block Displacement,
+Pixel Sort, Channel Shift, Chromatic Aberration, Scanlines e Noise.
 _Avoid_: filter, layer, camada
 
 **Pipeline**:
@@ -71,7 +71,8 @@ _Avoid_: shuffle, aleatorizar (mecanismo, não intenção)
 |---|---|
 | **Block Displacement** | Desloca blocos retangulares (semeados pelo Seed) horizontalmente — o sabor "corrupção de dados". Único Effect com aleatoriedade |
 | **Pixel Sort** | Ordena faixas contíguas de pixels por luminância dentro de uma banda de threshold — o efeito "derretido" icônico |
-| **Channel Shift** | Desloca os canais R/G/B espacialmente (o "RGB split" uniforme). Não confundir com chromatic aberration (deslocamento radial, ótico) — fora do v1 |
+| **Channel Shift** | Desloca os canais R/G/B por um vetor **uniforme** — o "RGB split". O deslocamento **constante** (o mesmo em toda a imagem) é o que o separa do Chromatic Aberration: são dois Effects distintos, não um com modos |
+| **Chromatic Aberration** | Amplia cada canal em torno do centro por uma fração diferente (R para fora, B para dentro), de modo que o deslocamento **cresce com o raio** — centro nítido, franjas coloridas nas bordas: o sabor de **lente óptica**. Amostragem bilinear, bordas em clamp; puramente geométrico (não usa Seed) |
 | **Scanlines** | Linhas escuras horizontais / raster de CRT |
 | **Noise** | Granulado/estática sobreposto |
 
@@ -85,8 +86,8 @@ vídeo via `canvas.captureStream()` + `MediaRecorder`). Recording grava o canvas
 
 ## Escopo (v1)
 
-- **Dentro:** imagem estática + Live Source (webcam) em tempo real; pipeline fixo de 5
+- **Dentro:** imagem estática + Live Source (webcam) em tempo real; pipeline fixo de 6
   Effects; presets-first (6 Presets, um já aplicado na abertura) + Randomize; Seed fixo com
   Re-roll; PNG Export + Capture + Copy + Recording.
 - **Fora (v2+):** datamosh real; pilha de Effects componível/reordenável; glitch animado
-  (Seed avançando por frame na webcam); chromatic aberration.
+  (Seed avançando por frame na webcam).
