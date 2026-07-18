@@ -32,9 +32,11 @@ Pixel Sort, Channel Shift, Chromatic Aberration, Scanlines e Noise.
 _Avoid_: filter, layer, camada
 
 **Pipeline**:
-A sequência ordenada e **fixa** de Effects aplicada para produzir a saída. Fixa no v1; um
-caso particular da futura pilha componível.
-_Avoid_: stack, chain (reservados para o modelo componível futuro — não queimar agora)
+A sequência ordenada e **fixa** de Effects aplicada para produzir a saída. Fixa no app atual; um
+caso particular da **Chain** componível — a lista ordenada de **Links** (instâncias de Effect)
+projetada no ADR 0017, ainda **não implementada**.
+_Avoid_: stack (o modelo componível é a **Chain**, não uma "stack" — ver ADR 0017); chain (é o
+nome do modelo componível futuro, não um sinônimo de Pipeline)
 
 **GlitchSettings**:
 O objeto plano que guarda os params de todos os Effects — **o look**, e nada além dele.
