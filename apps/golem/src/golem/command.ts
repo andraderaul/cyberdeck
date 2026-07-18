@@ -2,16 +2,23 @@
 // The Console is the only control grammar on this program (ADR 0018), so this is the entire
 // control surface.
 
+import { MAX_RATE, MIN_RATE } from '../hooks/use-clock'
+
 export type Command =
   | { kind: 'asm' }
   | { kind: 'step' }
   | { kind: 'reset' }
+  | { kind: 'run' }
+  | { kind: 'stop' }
+  | { kind: 'clock'; rate: number | 'max' }
   | { kind: 'empty' }
   | { kind: 'unknown'; input: string; suggestion: string | null }
-  | { kind: 'bad-arity'; name: string; message: string }
+  | { kind: 'bad-usage'; name: string; message: string }
 
 /** Every command name, in the order `help` should list them. */
-export const COMMAND_NAMES = ['asm', 'step', 'reset'] as const
+export const COMMAND_NAMES = ['asm', 'run', 'stop', 'step', 'clock', 'reset'] as const
+
+const NO_ARGUMENT_COMMANDS = ['asm', 'step', 'reset', 'run', 'stop'] as const
 
 /**
  * Parses one Console line. Unknown input resolves to a suggestion rather than an error, so a
@@ -27,18 +34,39 @@ export function parseCommand(input: string): Command {
   const [name, ...args] = trimmed.split(/\s+/)
   const lowered = name.toLowerCase()
 
-  if ((COMMAND_NAMES as readonly string[]).includes(lowered)) {
+  if ((NO_ARGUMENT_COMMANDS as readonly string[]).includes(lowered)) {
     if (args.length > 0) {
-      return {
-        kind: 'bad-arity',
-        name: lowered,
-        message: `"${lowered}" takes no arguments`,
-      }
+      return { kind: 'bad-usage', name: lowered, message: `"${lowered}" takes no arguments` }
     }
-    return { kind: lowered as 'asm' | 'step' | 'reset' }
+    return { kind: lowered as (typeof NO_ARGUMENT_COMMANDS)[number] }
+  }
+
+  if (lowered === 'clock') {
+    return parseClock(args)
   }
 
   return { kind: 'unknown', input: name, suggestion: nearestCommand(lowered) }
+}
+
+function parseClock(args: string[]): Command {
+  if (args.length !== 1) {
+    return { kind: 'bad-usage', name: 'clock', message: 'usage: clock <steps per second | max>' }
+  }
+
+  if (args[0].toLowerCase() === 'max') {
+    return { kind: 'clock', rate: 'max' }
+  }
+
+  const rate = Number(args[0])
+  if (!Number.isInteger(rate) || rate < MIN_RATE || rate > MAX_RATE) {
+    return {
+      kind: 'bad-usage',
+      name: 'clock',
+      message: `clock takes a whole number of steps per second (${MIN_RATE}..${MAX_RATE}) or "max"`,
+    }
+  }
+
+  return { kind: 'clock', rate }
 }
 
 /**
