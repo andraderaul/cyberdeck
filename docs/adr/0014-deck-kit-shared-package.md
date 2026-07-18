@@ -1,3 +1,7 @@
+---
+status: accepted (supersedes the "no shared `packages/`" point of ADR 0011)
+---
+
 # The Deck Kit — first extracted shared package
 
 ADR 0011 deferred every extraction until "a second app makes the real seams obvious," and kept

@@ -12,6 +12,7 @@ versioned and deployed independently.
 |-----|------|------------|
 | **ASCII//Convert** | `apps/ascii` | Image / webcam → interactive ASCII art |
 | **GLITCH//Studio** | `apps/glitch` | Glitch effect pipeline over image / webcam (tracer bullet — image → Channel Shift → PNG Export) |
+| **GOLEM** | `apps/golem` | Third program — **design phase only**: `CONTEXT.md` and `docs/` exist, no code yet (ADRs 0018, 0019) |
 
 Each app owns its `CLAUDE.md` and `CONTEXT.md` — read the one for the app you're working in.
 `CONTEXT-MAP.md` maps the deck; `docs/adr/` holds all architectural decisions, deck-wide.
@@ -22,22 +23,36 @@ Light npm workspaces — **no Nx/Turborepo** by design. Repo-wide tooling (Biome
 commitlint, Changesets) lives at the root; each app owns its own build, test, and framework
 dependencies.
 
-**There is deliberately no shared `packages/`.** Whatever a second app needs is copied by hand
-from ASCII//Convert. The resulting duplication is tolerated as a *signal* of what actually
-repeats — a shared core gets extracted only once a second app makes the real seams obvious
-(ADR 0011). Resist "extract this now" urges; that decision is explicitly deferred.
+ADR 0011 deferred every extraction until a second app made the real seams obvious. GLITCH//Studio
+was that app, and the condition fired: **`packages/deck-kit`** now holds the proven-shared surface
+(ADR 0014).
+
+| Package | What crosses the seam |
+|---------|----------------------|
+| **`@cyberdeck/deck-kit`** | Visual language (`tokens.css` + Tailwind preset), `ui/` primitives, framework-neutral `hooks/` and `utils/`, the operational-error *mechanism*, the Recording core |
+
+Consumed **as source** — `exports` point at `src/*` and each app's Vite transpiles it. No build
+step, no `dist/`, no build ordering, which keeps the light-tooling stance intact. One non-obvious
+constraint: every app must add `../../packages/deck-kit/src/**/*.{ts,tsx}` to its Tailwind
+`content`, or the primitives' classes get purged at build.
+
+The bar for extraction stays high: **an empty diff plus two real callers**, not "any duplication."
+Duplication is still the *signal* of what repeats — `use-webcam-state` and `output.ts` were
+deliberately left copied, and ADR 0014 records why so a future review doesn't re-suggest them. A
+domain core never crosses the seam; each app's pipeline (ASCII conversion, glitch Effects) stays in
+the app.
 
 ## Commands
 
-Root scripts fan out across workspaces; `--workspace` targets one app.
+Root scripts fan out across workspaces (`apps/*` and `packages/*`); `--workspace` targets one.
 
 ```bash
 npm run dev          # start ASCII//Convert's dev server
 npm run dev:glitch   # start GLITCH//Studio's dev server
 npm run build        # build every app
 npm run test         # ASCII//Convert's tests, in watch mode
-npm run test:run     # run every app's tests once (what CI runs)
-npm run typecheck    # tsc -b across apps
+npm run test:run     # run every workspace's tests once, deck-kit included (what CI runs)
+npm run typecheck    # tsc -b across workspaces
 
 npm run check        # biome check . (lint + format) — whole repo
 npm run check:fix    # biome check . --write
