@@ -10,7 +10,7 @@ No backend server — everything runs in the browser.
 | Program | Path | What it does |
 |---------|------|--------------|
 | **[ASCII//Convert](./apps/ascii)** | `apps/ascii` | Turns an image or your webcam into interactive ASCII art. **[Live demo →](https://ascii-art-converter-tawny.vercel.app/)** |
-| **GLITCH//Studio** | `apps/glitch` | Runs a fixed pipeline of glitch effects over an image or webcam — real-time preview, curated presets, and PNG / video export. See [`apps/glitch/CONTEXT.md`](./apps/glitch/CONTEXT.md). |
+| **GLITCH//Studio** | `apps/glitch` | Runs a fixed pipeline of glitch effects over an image or webcam — real-time preview, curated presets, and PNG / video export. **[Live demo →](https://cyberdeck-glitch-studio.vercel.app/)** |
 
 ## Running locally
 
@@ -50,10 +50,15 @@ domain core: each app's pipeline stays in the app ([ADR 0014](./docs/adr/0014-de
 
 ## Deploys
 
-Apps deploy independently. `vercel.json` at the root builds ASCII//Convert
-(`outputDirectory: apps/ascii/dist`), so the existing Vercel project needs no dashboard
-change after the monorepo move. A second app gets its own Vercel project with **Root
-Directory** set to its folder — not another entry here.
+Each app is its own Vercel project, both pointing at this repo:
+
+- **ASCII//Convert** — the root `vercel.json` builds it (`outputDirectory: apps/ascii/dist`), so
+  the existing project needed no dashboard change after the monorepo move.
+- **GLITCH//Studio** — a separate project with **Root Directory** set to `apps/glitch`, driven by
+  [`apps/glitch/vercel.json`](./apps/glitch/vercel.json). Install and build `cd` to the repo root
+  so the `@cyberdeck/deck-kit` workspace dependency resolves.
+
+A third app follows the GLITCH pattern — its own project and `vercel.json`, not another entry here.
 
 ## Contributing
 
