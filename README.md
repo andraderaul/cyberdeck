@@ -10,11 +10,11 @@ No backend server — everything runs in the browser.
 | Program | Path | What it does |
 |---------|------|--------------|
 | **[ASCII//Convert](./apps/ascii)** | `apps/ascii` | Turns an image or your webcam into interactive ASCII art. **[Live demo →](https://ascii-art-converter-tawny.vercel.app/)** |
-| **GLITCH//Studio** | `apps/glitch` | Applies a pipeline of glitch effects over an image or webcam. Tracer bullet only — image → Channel Shift → PNG Export; see [`apps/glitch/CONTEXT.md`](./apps/glitch/CONTEXT.md). |
+| **GLITCH//Studio** | `apps/glitch` | Runs a fixed pipeline of glitch effects over an image or webcam — real-time preview, curated presets, and PNG / video export. See [`apps/glitch/CONTEXT.md`](./apps/glitch/CONTEXT.md). |
 
 ## Running locally
 
-**Requirements:** Node.js 20+ (see `.nvmrc`)
+**Requirements:** Node.js 22+ (see `.nvmrc`)
 
 ```bash
 npm install                 # installs every app (npm workspaces)
@@ -30,19 +30,23 @@ Scope any app script with `--workspace @cyberdeck/ascii`.
 ## Structure
 
 ```
-apps/ascii     ASCII//Convert
-apps/glitch    GLITCH//Studio
-docs/adr       architectural decisions, deck-wide
-CONTEXT-MAP.md how the programs relate
+apps/ascii         ASCII//Convert
+apps/glitch        GLITCH//Studio
+packages/deck-kit  the shared shell both programs build on
+docs/adr           architectural decisions, deck-wide
+CONTEXT-MAP.md     how the programs relate
 ```
 
 Tooling is deliberately light: npm workspaces, no Nx or Turborepo. Repo-wide tooling (Biome,
 lefthook, commitlint, Changesets) sits at the root; each app owns its own build and test
 dependencies.
 
-There is **no shared `packages/`** — code a second app needs is copied by hand, and the
-duplication is kept as a signal of what actually repeats. A shared core gets extracted only
-once a second app makes the seams obvious ([ADR 0011](./docs/adr/0011-monorepo-cyberdeck.md)).
+For a long time there was **no shared `packages/`** — duplication was kept as a signal of what
+actually repeats ([ADR 0011](./docs/adr/0011-monorepo-cyberdeck.md)). GLITCH//Studio made the
+seams obvious, so the proven-shared surface was extracted into
+**[`@cyberdeck/deck-kit`](./packages/deck-kit)** — the visual language, `ui/` primitives, and
+generic browser plumbing. It's consumed as source (no build step) and is deliberately *not* a
+domain core: each app's pipeline stays in the app ([ADR 0014](./docs/adr/0014-deck-kit-shared-package.md)).
 
 ## Deploys
 
