@@ -5,17 +5,18 @@ estática ou uma webcam ao vivo, com preview em tempo real, presets curados e Ex
 Voltada para o **criador casual** — o resultado bonito em um clique importa mais que o
 controle fino. Programa do deck **CYBERDECK** (ver `CONTEXT-MAP.md`).
 
-## Pipeline
+## Chain
 
-Uma ordem **fixa** de Effects, cada um uma função pura sobre um **PixelBuffer**. A ordem é
-canônica porque os Presets dependem dela — estruturais (reorganizam pixels) antes de
-superfície (sobrepõem textura):
+Uma lista **ordenada e editável** de Links, cada um uma instância de Effect — função pura sobre um
+**PixelBuffer**. A ordem em que os Presets são montados continua sendo a canônica — estruturais
+(reorganizam pixels) antes de superfície (sobrepõem textura):
 
 `Block Displacement → Pixel Sort → Channel Shift → Chromatic Aberration → Scanlines → Noise`
 
-O Pipeline é uma função pura de **GlitchSettings** + **Seed** → saída. Não há nenhuma fonte
-de aleatoriedade oculta: toda aleatoriedade deriva do Seed, que é passado ao lado dos
-GlitchSettings.
+`applyChain` é uma função pura de **Chain** + **Seed** → saída. Não há nenhuma fonte de
+aleatoriedade oculta: toda aleatoriedade deriva do Seed, passado ao lado da Chain. Cada Link
+sorteia a partir da *ocorrência* do seu Effect na Chain, de modo que repetições recebem arranjos
+distintos e mover um Link não re-sorteia o arranjo dele.
 
 ## Language
 
@@ -31,22 +32,20 @@ parametrizada pelos seus próprios params. Os seis Effects são Block Displaceme
 Pixel Sort, Channel Shift, Chromatic Aberration, Scanlines e Noise.
 _Avoid_: filter, layer, camada
 
-**Pipeline**:
-A sequência ordenada e **fixa** de Effects aplicada para produzir a saída. Ainda é o que o app
-expõe; um caso particular da **Chain** componível — a lista ordenada de **Links** (instâncias de
-Effect) projetada no ADR 0017. A Chain já existe no núcleo (`chain.ts`, #125) e `applyPipeline` é
-hoje um adaptador fino sobre `applyChain`, mas o **GlitchSettings** segue sendo a fonte da verdade
-até a Slice 2 (#126) — nenhuma superfície de usuário mudou e nenhum pixel também: cada Link
-sorteia a partir da *ocorrência* do seu Effect, então uma Chain de um-de-cada reproduz a Pipeline
-fixa byte a byte.
-_Avoid_: stack (o modelo componível é a **Chain**, não uma "stack" — ver ADR 0017); chain como
-sinônimo de Pipeline (a Chain é o modelo componível, a Pipeline é o caso fixo dela)
+**Chain**:
+A lista **ordenada** de **Links** aplicada para produzir a saída — **o look** (ADR 0017). A ordem
+é significativa: o PixelBuffer flui de um Link para o próximo. Repetições são permitidas — o mesmo
+Effect pode aparecer mais de uma vez. Não contém o Seed: o look e o arranjo são coisas distintas.
+A ordem canônica (`Block Displacement → Pixel Sort → Channel Shift → Chromatic Aberration →
+Scanlines → Noise`) deixou de ser lei e passou a ser só como as Chains dos Presets são montadas.
+_Avoid_: stack (o modelo é uma **Chain**, não uma "stack" — ver ADR 0017); pipeline (a Pipeline
+fixa era o caso particular que a Chain substituiu); options, config, filters
 
-**GlitchSettings**:
-O objeto plano que guarda os params de todos os Effects — **o look**, e nada além dele.
-Paralelo direto ao ConversionSettings do ASCII//Convert. Não contém o Seed: o look e o
-arranjo são coisas distintas.
-_Avoid_: options, config, filters
+**Link**:
+Uma instância de Effect dentro da Chain: `{ type, params }` mais um `id` que existe só para a UI
+poder distinguir duas ocorrências do mesmo Effect. **Presença na Chain é o liga/desliga** — não há
+flag `enabled` nem zero codificado; um Effect está ligado porque o Link está lá.
+_Avoid_: step, node, camada
 
 **Seed**:
 O valor que semeia toda a pseudo-aleatoriedade do Pipeline — **o arranjo**, uma rolagem
@@ -58,7 +57,7 @@ webcam; **Re-roll** gera um novo Seed.
 _Avoid_: random, rng
 
 **Preset**:
-Um snapshot nomeado de GlitchSettings — um **look** curado para render bonito num clique,
+Uma Chain nomeada — um **look** curado para render bonito num clique,
 ex.: `VHS`, `CORRUPTED`, `VAPORWAVE`, `SIGNAL LOSS`. Não carrega Seed: aplicar um Preset
 gera um Seed novo, de modo que cada usuário recebe um arranjo próprio daquele look. É a
 porta de entrada do app; os sliders ficam no modo avançado.
@@ -67,8 +66,10 @@ termo canônico é Preset)
 
 **Randomize**:
 O ato de descobrir um look novo sorteando um Preset como base e perturbando seus params
-dentro de faixas curadas ("preset + jitter"). Parte de um ponto conhecidamente bom, em vez
-de amostrar cada param independentemente — é assim que o "sempre bonito" é garantido.
+dentro de faixas curadas ("preset + jitter"). Só os números mudam: a **estrutura da Chain**
+(quais Links, quantos, em que ordem) passa intacta, porque estrutura ruim afunda um look mais
+rápido que número ruim. Parte de um ponto conhecidamente bom, em vez de amostrar cada param
+independentemente — é assim que o "sempre bonito" é garantido.
 _Avoid_: shuffle, aleatorizar (mecanismo, não intenção)
 
 ## Effects
@@ -95,5 +96,5 @@ vídeo via `canvas.captureStream()` + `MediaRecorder`). Recording grava o canvas
 - **Dentro:** imagem estática + Live Source (webcam) em tempo real; pipeline fixo de 6
   Effects; presets-first (6 Presets, um já aplicado na abertura) + Randomize; Seed fixo com
   Re-roll; PNG Export + Capture + Copy + Recording.
-- **Fora (v2+):** datamosh real; pilha de Effects componível/reordenável; glitch animado
+- **Fora (v2+):** datamosh real; glitch animado
   (Seed avançando por frame na webcam).

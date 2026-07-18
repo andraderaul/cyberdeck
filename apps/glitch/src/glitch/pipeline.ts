@@ -132,10 +132,6 @@ function sortRun(
 export function pixelSort(pixels: PixelBuffer, params: PixelSortParams): PixelBuffer {
   const { width, height, data } = pixels
   const out = new Uint8ClampedArray(data)
-  if (!params.enabled) {
-    return { data: out, width, height }
-  }
-
   const horizontal = params.direction === 'horizontal'
   const lineCount = horizontal ? height : width
   const lineLength = horizontal ? width : height
@@ -319,7 +315,7 @@ function scanlinePeriod(density: number): number {
 export function scanlines(pixels: PixelBuffer, params: ScanlinesParams): PixelBuffer {
   const { width, height, data } = pixels
   const out = new Uint8ClampedArray(data)
-  if (!params.enabled || params.intensity <= 0) {
+  if (params.intensity <= 0) {
     return { data: out, width, height }
   }
 

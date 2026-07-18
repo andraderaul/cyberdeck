@@ -1,7 +1,8 @@
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
 import { type RefObject, useEffect, useRef } from 'react'
+import type { Chain } from '../glitch/chain'
 import { renderGlitchFrame } from '../glitch/render-frame'
-import type { GlitchSettings, Seed } from '../glitch/types'
+import type { Seed } from '../glitch/types'
 
 /** ~15fps — enough for a glitched feed, and cheap enough to stay on the main thread (ADR 0002). */
 export const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
@@ -25,7 +26,7 @@ export const HAVE_ENOUGH_DATA = 4
 interface Props {
   sourceImage: HTMLImageElement | null
   liveSource: HTMLVideoElement | null
-  settings: GlitchSettings
+  chain: Chain
   seed: Seed
   canvasRef: RefObject<HTMLCanvasElement>
   onClearSource: () => void
@@ -42,7 +43,7 @@ interface Props {
 export default function GlitchCanvas({
   sourceImage,
   liveSource,
-  settings,
+  chain,
   seed,
   canvasRef,
   onClearSource,
@@ -57,8 +58,8 @@ export default function GlitchCanvas({
     if (!canvas || !sourceImage) {
       return
     }
-    renderGlitchFrame(sourceImage, canvas, hiddenRef.current, settings, seed, isMirrored)
-  }, [sourceImage, settings, seed, isMirrored, canvasRef])
+    renderGlitchFrame(sourceImage, canvas, hiddenRef.current, chain, seed, isMirrored)
+  }, [sourceImage, chain, seed, isMirrored, canvasRef])
 
   // rAF loop throttled to ~15fps — see ADR 0002 for the Web Worker upgrade path. The Seed is held
   // across frames rather than re-rolled per frame: that's what keeps the corruption pattern from
@@ -82,13 +83,13 @@ export default function GlitchCanvas({
       }
       lastTime = now
       if (video.readyState >= HAVE_ENOUGH_DATA) {
-        renderGlitchFrame(video, canvas, hiddenRef.current, settings, seed, isMirrored)
+        renderGlitchFrame(video, canvas, hiddenRef.current, chain, seed, isMirrored)
       }
     }
 
     rafId = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafId)
-  }, [liveSource, settings, seed, isMirrored, canvasRef])
+  }, [liveSource, chain, seed, isMirrored, canvasRef])
 
   const isLive = liveSource !== null
 

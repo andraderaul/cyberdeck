@@ -20,7 +20,6 @@ import {
   DEFAULT_NOISE,
   DEFAULT_PIXEL_SORT,
   DEFAULT_SCANLINES,
-  type GlitchSettings,
   type NoiseParams,
   type PixelBuffer,
   type PixelSortParams,
@@ -46,12 +45,18 @@ export interface EffectParams {
 export type EffectType = keyof EffectParams
 
 /**
- * One Effect instance in the Chain: a type and the params that go with it. A discriminated union
- * rather than `{ type: EffectType; params: SomeUnion }`, so narrowing on `type` gives the caller
- * the matching params and a mismatched pair can't be constructed.
+ * One Effect instance in the Chain: a type, the params that go with it, and an identity.
+ *
+ * A discriminated union rather than `{ type: EffectType; params: SomeUnion }`, so narrowing on
+ * `type` gives the caller the matching params and a mismatched pair can't be constructed.
+ *
+ * The `id` is **plumbing, not part of the look**: it exists so React can key a list whose entries
+ * are no longer unique by type — two Pixel Sorts are a legal Chain — and `chainMatch` ignores it for
+ * the same reason look-equality ignores the Seed. Comparing it would mark a Preset modified the
+ * instant it was applied, since the copy in state would carry freshly minted ids.
  */
 export type Link = {
-  [K in EffectType]: { type: K; params: EffectParams[K] }
+  [K in EffectType]: { id: string; type: K; params: EffectParams[K] }
 }[EffectType]
 
 /**
@@ -85,6 +90,23 @@ export const EFFECT_REGISTRY: { [K in EffectType]: EffectDefinition<K> } = {
   chromaticAberration: { apply: chromaticAberration, defaults: DEFAULT_CHROMATIC_ABERRATION },
   scanlines: { apply: scanlines, defaults: DEFAULT_SCANLINES },
   noise: { apply: noise, defaults: DEFAULT_NOISE },
+}
+
+let linkCounter = 0
+
+/**
+ * Mints a Link of `type`, seeded with that Effect's defaults unless params are supplied.
+ *
+ * Impure only in the id, which is deliberately *not* derived from the Link's content: duplicating a
+ * Link has to produce a distinct row even though every field it copies is identical.
+ */
+export function createLink<K extends EffectType>(type: K, params?: EffectParams[K]): Link {
+  linkCounter += 1
+  return {
+    id: `link-${linkCounter}`,
+    type,
+    params: params ?? EFFECT_REGISTRY[type].defaults,
+  } as Link
 }
 
 /**
@@ -139,44 +161,4 @@ export function applyChain(pixels: PixelBuffer, chain: Chain, seed: Seed): Pixel
     seenOfType.set(link.type, occurrence + 1)
     return applyLink(buffer, link, linkSeed(seed, occurrence))
   }, pixels)
-}
-
-/**
- * The canonical Effect order, as a Chain — one Link per Effect, in the order CONTEXT.md documents
- * (structural before surface). The fixed Pipeline is exactly this Chain, which is what ADR 0017
- * means by calling it "um caso particular" of the composable model.
- *
- * Every Effect gets a Link here, including the ones a look has turned off: while GlitchSettings is
- * still the source of truth, "off" lives in the params (`enabled`, or an encoded zero) rather than
- * in the Link's absence. Slice 2 (#126) inverts that — presence in the Chain becomes the on/off,
- * and these six stop being unconditional.
- */
-export function chainFromSettings(settings: GlitchSettings): Chain {
-  return [
-    { type: 'blockDisplacement', params: settings.blockDisplacement },
-    { type: 'pixelSort', params: settings.pixelSort },
-    { type: 'channelShift', params: settings.channelShift },
-    { type: 'chromaticAberration', params: settings.chromaticAberration },
-    { type: 'scanlines', params: settings.scanlines },
-    { type: 'noise', params: settings.noise },
-  ]
-}
-
-/**
- * The fixed, canonical Effect order applied to produce the output — pure in GlitchSettings and Seed
- * together, with no hidden randomness: a settings+seed pair always produces the same output.
- *
- * Now a thin adapter over `applyChain` (ADR 0017): the flat model and the Chain share one evaluator,
- * so there is no second copy of the fold to drift. It survives Slice 1 only as the bridge that keeps
- * GlitchSettings the source of truth; Slice 2 (#126) retires it along with GlitchSettings itself.
- *
- * The Seed rides beside GlitchSettings rather than inside it, which is what lets Re-roll hand the
- * same look a new arrangement.
- */
-export function applyPipeline(
-  pixels: PixelBuffer,
-  settings: GlitchSettings,
-  seed: Seed,
-): PixelBuffer {
-  return applyChain(pixels, chainFromSettings(settings), seed)
 }

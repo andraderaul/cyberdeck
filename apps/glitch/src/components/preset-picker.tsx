@@ -1,11 +1,11 @@
 import { Button, Chip, Label } from '@cyberdeck/deck-kit/ui'
+import type { Chain } from '../glitch/chain'
 import type { Preset } from '../glitch/presets'
-import { glitchSettingsMatch, PRESETS } from '../glitch/presets'
-import type { GlitchSettings } from '../glitch/types'
+import { chainMatch, PRESETS } from '../glitch/presets'
 
 interface Props {
-  settings: GlitchSettings
-  // The active Preset is tracked rather than derived from the settings: a slider edit has to leave
+  chain: Chain
+  // The active Preset is tracked rather than derived from the Chain: a slider edit has to leave
   // the user standing on the Preset they started from, marked modified, and a look alone can't say
   // which Preset it was edited away from.
   activePresetId: string | null
@@ -13,7 +13,7 @@ interface Props {
   onRandomize: () => void
 }
 
-export default function PresetPicker({ settings, activePresetId, onSelect, onRandomize }: Props) {
+export default function PresetPicker({ chain, activePresetId, onSelect, onRandomize }: Props) {
   return (
     <fieldset className="flex flex-col gap-sm border-none p-0 m-0">
       <legend className="w-full mb-2xs">
@@ -22,7 +22,7 @@ export default function PresetPicker({ settings, activePresetId, onSelect, onRan
       <div className="flex flex-wrap gap-2xs">
         {PRESETS.map((preset) => {
           const isActive = preset.id === activePresetId
-          const isModified = isActive && !glitchSettingsMatch(settings, preset.settings)
+          const isModified = isActive && !chainMatch(chain, preset.chain)
           return (
             <Chip
               key={preset.id}

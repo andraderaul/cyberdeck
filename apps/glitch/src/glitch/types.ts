@@ -8,9 +8,9 @@ export interface PixelBuffer {
 }
 
 /**
- * Seeds every pseudo-random draw the Pipeline makes — the arrangement, one particular roll of a
- * look. Travels *beside* GlitchSettings rather than inside it: that separation is what lets Re-roll
- * change the arrangement without touching the look, and a Preset carry a look with no arrangement.
+ * Seeds every pseudo-random draw the Chain makes — the arrangement, one particular roll of a look.
+ * Travels *beside* the Chain rather than inside it: that separation is what lets Re-roll change the
+ * arrangement without touching the look, and a Preset carry a look with no arrangement.
  */
 export type Seed = number
 
@@ -37,23 +37,19 @@ export const CHANNEL_SHIFT_AMOUNT_RANGE = { min: -40, max: 40 } as const
  * The default Channel Shift look, and the value the slider resets to on double-click. Lives in the
  * core for the same reason as DEFAULT_PIXEL_SORT, and is frozen for the same reason.
  *
- * Zero amount, matching the reset the control already offered before the registry needed a default
- * to name (ADR 0017) — Slice 1 introduces the Chain without changing a single rendered pixel.
+ * Visibly non-zero, like every other DEFAULT_* since Slice 2 (#126): presence in the Chain is now
+ * the on/off, so a Link added from the palette has already been asked for. Seeding it with an
+ * invisible zero would add a row to the editor that renders nothing and read as a broken control.
  */
 export const DEFAULT_CHANNEL_SHIFT: ChannelShiftParams = Object.freeze({
   channel: 'r',
-  amount: 0,
+  amount: 12,
 })
 
 /** The axis Pixel Sort walks: rows left-to-right, or columns top-to-bottom. */
 export type SortDirection = 'horizontal' | 'vertical'
 
 export interface PixelSortParams {
-  /**
-   * Pixel Sort has no param whose zero reads as "off" — a threshold of 0 sorts the whole line —
-   * so the off state is explicit rather than encoded, as Channel Shift does with amount.
-   */
-  enabled: boolean
   direction: SortDirection
   /**
    * Luminance floor on the normalised 0..1 scale the Pipeline computes brightness on. Contiguous
@@ -85,18 +81,12 @@ export const PIXEL_SORT_RUN_LENGTH_RANGE = { min: 1, max: 200 } as const
  * mutation would rewrite the Effect's default for the whole app.
  */
 export const DEFAULT_PIXEL_SORT: PixelSortParams = Object.freeze({
-  enabled: true,
   direction: 'horizontal',
   threshold: 0.55,
   runLength: 60,
 })
 
 export interface ScanlinesParams {
-  /**
-   * Like Pixel Sort, Scanlines has no param whose zero reads as "off" — density 0 still rasters,
-   * just sparsely — so the off state is explicit rather than encoded.
-   */
-  enabled: boolean
   /**
    * How tight the raster is, on the normalised 0..1 scale: 0 is the sparsest, 1 the tightest.
    * Curated onto a pixel period inside the Effect rather than exposed as raw pixels, so the param
@@ -129,7 +119,6 @@ export const SCANLINES_DENSITY_STEP = 1 / (SPARSEST_SCANLINE_PERIOD - TIGHTEST_S
  * slider snapped away from it.
  */
 export const DEFAULT_SCANLINES: ScanlinesParams = Object.freeze({
-  enabled: true,
   density: 0.5,
   intensity: 0.35,
 })
@@ -141,11 +130,7 @@ export const DEFAULT_SCANLINES: ScanlinesParams = Object.freeze({
 export type NoiseTint = 'mono' | 'color'
 
 export interface NoiseParams {
-  /**
-   * How heavy the grain is, on the normalised 0..1 scale. Unlike Pixel Sort and Scanlines, Noise's
-   * zero reads as "off" on its own — grain of nothing is no grain — so the off state is encoded in
-   * the param, as Channel Shift does with amount, rather than carried by a separate flag.
-   */
+  /** How heavy the grain is, on the normalised 0..1 scale. */
   amount: number
   tint: NoiseTint
 }
@@ -167,11 +152,7 @@ export const DEFAULT_NOISE: NoiseParams = Object.freeze({
 })
 
 export interface BlockDisplacementParams {
-  /**
-   * How many blocks get carved out and displaced, on the normalised 0..1 scale. Like Noise and
-   * Channel Shift, its zero reads as "off" on its own — no blocks is no displacement — so no
-   * separate flag carries the off state.
-   */
+  /** How many blocks get carved out and displaced, on the normalised 0..1 scale. */
   density: number
   /** How far the blocks travel, on the normalised 0..1 scale. */
   amount: number
@@ -214,11 +195,7 @@ export const DEFAULT_BLOCK_DISPLACEMENT: BlockDisplacementParams = Object.freeze
 })
 
 export interface ChromaticAberrationParams {
-  /**
-   * How far the channels pull apart at the frame's corners, on the normalised 0..1 scale. Like
-   * Channel Shift's amount and Noise's amount, its zero reads as "off" on its own — no separation
-   * is no fringe — so no separate flag carries the off state.
-   */
+  /** How far the channels pull apart at the frame's corners, on the normalised 0..1 scale. */
   strength: number
 }
 
@@ -237,19 +214,9 @@ export const MAX_CHROMATIC_ABERRATION_MAGNIFICATION = 0.05
  * The default Chromatic Aberration look, and the value the slider resets to on double-click. Lives
  * in the core for the same reason as DEFAULT_PIXEL_SORT, and is frozen for the same reason.
  *
- * Defaults to off, unlike the other Effects: CA is the one Effect added after the Presets were
- * curated, so a non-zero neutral would be a fringe on every look that predates it.
+ * Was zero while the encode-zero idiom carried "off"; visible now that a Link's absence does
+ * (#126) — see DEFAULT_CHANNEL_SHIFT for why every default has to render something.
  */
 export const DEFAULT_CHROMATIC_ABERRATION: ChromaticAberrationParams = Object.freeze({
-  strength: 0,
+  strength: 0.3,
 })
-
-/** The flat object holding every Effect's params — the look, and nothing else. Carries no Seed. */
-export interface GlitchSettings {
-  blockDisplacement: BlockDisplacementParams
-  pixelSort: PixelSortParams
-  channelShift: ChannelShiftParams
-  chromaticAberration: ChromaticAberrationParams
-  scanlines: ScanlinesParams
-  noise: NoiseParams
-}

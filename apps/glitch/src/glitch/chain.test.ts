@@ -1,23 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import {
-  applyChain,
-  applyPipeline,
-  type Chain,
-  chainFromSettings,
-  EFFECT_REGISTRY,
-  type EffectType,
-} from './chain'
-import {
-  blockDisplacement,
-  channelShift,
-  chromaticAberration,
-  noise,
-  pixelSort,
-  scanlines,
-} from './pipeline'
-import { DEFAULT_PRESET, PRESETS } from './presets'
+import { applyChain, type Chain, createLink, EFFECT_REGISTRY, type EffectType } from './chain'
+import { blockDisplacement } from './pipeline'
 import { deriveSeed } from './rng'
-import type { BlockDisplacementParams, GlitchSettings, PixelBuffer, Seed } from './types'
+import type { BlockDisplacementParams, PixelBuffer } from './types'
 
 /** An arbitrary fixed Seed — every test that isn't about the Seed itself rolls this one. */
 const SEED = 4242
@@ -48,19 +33,13 @@ function bytesOf(buffer: PixelBuffer): number[] {
   return Array.from(buffer.data)
 }
 
-const SORT: Chain[number] = {
-  type: 'pixelSort',
-  params: { enabled: true, direction: 'horizontal', threshold: 0.2, runLength: 8 },
-}
+const SORT = createLink('pixelSort', { direction: 'horizontal', threshold: 0.2, runLength: 8 })
 
-const SHIFT: Chain[number] = { type: 'channelShift', params: { channel: 'r', amount: 5 } }
+const SHIFT = createLink('channelShift', { channel: 'r', amount: 5 })
 
-const BLOCKS: Chain[number] = {
-  type: 'blockDisplacement',
-  params: { density: 0.8, amount: 0.6 },
-}
+const BLOCKS = createLink('blockDisplacement', { density: 0.8, amount: 0.6 })
 
-const GRAIN: Chain[number] = { type: 'noise', params: { amount: 0.4, tint: 'color' } }
+const GRAIN = createLink('noise', { amount: 0.4, tint: 'color' })
 
 describe('EFFECT_REGISTRY', () => {
   // The registry is the single source of the Effect set (ADR 0017) — the Slice 4 palette builds
@@ -148,14 +127,8 @@ describe('applyChain', () => {
     // same index, same incoming pixels, therefore byte-identical grain. A Link that streamed its
     // randomness would fail this the moment the predecessor changed.
     const pixels = gradient(16, 12)
-    const identityShift: Chain[number] = {
-      type: 'channelShift',
-      params: { channel: 'r', amount: 0 },
-    }
-    const identityFringe: Chain[number] = {
-      type: 'chromaticAberration',
-      params: { strength: 0 },
-    }
+    const identityShift = createLink('channelShift', { channel: 'r', amount: 0 })
+    const identityFringe = createLink('chromaticAberration', { strength: 0 })
 
     const afterShift = applyChain(pixels, [identityShift, GRAIN], SEED)
     const afterFringe = applyChain(pixels, [identityFringe, GRAIN], SEED)
@@ -169,7 +142,7 @@ describe('applyChain', () => {
     // fail this, and with it Slice 2's migration — dropping a Preset's off-Links shifts every later
     // Link's index and would silently re-roll the whole look.
     const pixels = gradient(24, 18)
-    const identity: Chain[number] = { type: 'channelShift', params: { channel: 'r', amount: 0 } }
+    const identity = createLink('channelShift', { channel: 'r', amount: 0 })
 
     const alone = applyChain(pixels, [BLOCKS], SEED)
     const behindAnIdentity = applyChain(pixels, [identity, BLOCKS], SEED)
@@ -186,57 +159,6 @@ describe('applyChain', () => {
     const direct = blockDisplacement(pixels, BLOCKS.params as BlockDisplacementParams, SEED)
 
     expect(bytesOf(throughTheChain)).toEqual(bytesOf(direct))
-  })
-})
-
-describe('chainFromSettings', () => {
-  it('lays the six Effects out in the canonical order', () => {
-    expect(chainFromSettings(DEFAULT_PRESET.settings).map((link) => link.type)).toEqual([
-      'blockDisplacement',
-      'pixelSort',
-      'channelShift',
-      'chromaticAberration',
-      'scanlines',
-      'noise',
-    ])
-  })
-
-  it.each(PRESETS)('carries $name’s params through unchanged', ({ settings }) => {
-    const chain = chainFromSettings(settings)
-
-    expect(chain.map((link) => link.params)).toEqual([
-      settings.blockDisplacement,
-      settings.pixelSort,
-      settings.channelShift,
-      settings.chromaticAberration,
-      settings.scanlines,
-      settings.noise,
-    ])
-  })
-})
-
-describe('the Chain reproduces the fixed Pipeline', () => {
-  /**
-   * The Effect order as it stood before the Chain existed, with the global Seed handed to both
-   * seeded Effects — a verbatim copy of the old `applyPipeline` body, kept here as the golden
-   * reference #125 asks the Chain to match. It is deliberately *not* built from `chainFromSettings`:
-   * a reference derived from the thing under test would pass no matter what either one did.
-   */
-  function legacyPipeline(pixels: PixelBuffer, settings: GlitchSettings, seed: Seed): PixelBuffer {
-    const displaced = blockDisplacement(pixels, settings.blockDisplacement, seed)
-    const sorted = pixelSort(displaced, settings.pixelSort)
-    const shifted = channelShift(sorted, settings.channelShift)
-    const fringed = chromaticAberration(shifted, settings.chromaticAberration)
-    const rastered = scanlines(fringed, settings.scanlines)
-    return noise(rastered, settings.noise, seed)
-  }
-
-  it.each(PRESETS)('renders $name byte-for-byte as the old Pipeline did', ({ settings }) => {
-    const pixels = gradient(40, 30)
-
-    expect(bytesOf(applyPipeline(pixels, settings, SEED))).toEqual(
-      bytesOf(legacyPipeline(pixels, settings, SEED)),
-    )
   })
 })
 

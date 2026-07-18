@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { applyPipeline } from './chain'
 import {
   blockDisplacement,
   channelShift,
@@ -10,9 +9,7 @@ import {
 } from './pipeline'
 import {
   type BlockDisplacementParams,
-  type ChromaticAberrationParams,
   DEFAULT_SCANLINES,
-  type GlitchSettings,
   MAX_BLOCK_SHIFT_RATIO,
   MAX_NOISE_DELTA,
   type NoiseParams,
@@ -27,31 +24,16 @@ function grey(value: number): number[] {
   return [value, value, value, 255]
 }
 
-const SORT_OFF: PixelSortParams = {
-  enabled: false,
+/** Sorts every run it meets: threshold 0 puts the whole line in band, and the run spans it. */
+const SORT_PARAMS: PixelSortParams = {
   direction: 'horizontal',
   threshold: 0,
   runLength: 64,
 }
 
-const SCANLINES_OFF: ScanlinesParams = {
-  enabled: false,
-  density: 0.5,
-  intensity: 0.5,
-}
-
 const NOISE_OFF: NoiseParams = {
   amount: 0,
   tint: 'mono',
-}
-
-const BLOCKS_OFF: BlockDisplacementParams = {
-  density: 0,
-  amount: 0,
-}
-
-const CHROMATIC_ABERRATION_OFF: ChromaticAberrationParams = {
-  strength: 0,
 }
 
 /** An arbitrary fixed Seed — every test that isn't about the Seed itself rolls this one. */
@@ -177,7 +159,7 @@ describe('channelShift', () => {
 })
 
 describe('pixelSort', () => {
-  const params: PixelSortParams = { ...SORT_OFF, enabled: true }
+  const params: PixelSortParams = SORT_PARAMS
 
   it('orders a run by luminance', () => {
     const pixels = buildPixels(3, 1, [grey(90), grey(10), grey(50)])
@@ -261,18 +243,10 @@ describe('pixelSort', () => {
 
     expect(Array.from(pixels.data)).toEqual(before)
   })
-
-  it('returns an equivalent buffer when disabled', () => {
-    const pixels = buildPixels(2, 1, [grey(90), grey(10)])
-
-    const sorted = pixelSort(pixels, SORT_OFF)
-
-    expect(Array.from(sorted.data)).toEqual(Array.from(pixels.data))
-  })
 })
 
 describe('scanlines', () => {
-  const params: ScanlinesParams = { enabled: true, density: TIGHTEST_DENSITY, intensity: 0.5 }
+  const params: ScanlinesParams = { density: TIGHTEST_DENSITY, intensity: 0.5 }
 
   /** A column of identical greys — every row is a candidate line, so only the raster shows. */
   function greyColumn(height: number, value: number): PixelBuffer {
@@ -357,14 +331,6 @@ describe('scanlines', () => {
     scanlines(pixels, params)
 
     expect(Array.from(pixels.data)).toEqual(before)
-  })
-
-  it('returns an equivalent buffer when disabled', () => {
-    const pixels = greyColumn(4, 200)
-
-    const dimmed = scanlines(pixels, SCANLINES_OFF)
-
-    expect(Array.from(dimmed.data)).toEqual(Array.from(pixels.data))
   })
 
   it('returns an equivalent buffer at zero intensity', () => {
@@ -895,343 +861,5 @@ describe('chromaticAberration', () => {
     const strong = pixelAt(chromaticAberration(pixels, { strength: 1 }), 8, 0)[0]
 
     expect(strong).toBeLessThan(subtle)
-  })
-})
-
-describe('applyPipeline', () => {
-  const settings: GlitchSettings = {
-    blockDisplacement: BLOCKS_OFF,
-    pixelSort: SORT_OFF,
-    channelShift: { channel: 'r', amount: 1 },
-    chromaticAberration: CHROMATIC_ABERRATION_OFF,
-    scanlines: SCANLINES_OFF,
-    noise: NOISE_OFF,
-  }
-
-  /** A gradient wide enough for a block to have somewhere to travel to. */
-  function wideGradient(width: number, height: number): PixelBuffer {
-    return buildPixels(
-      width,
-      height,
-      Array.from({ length: width * height }, (_, i) => grey((i % width) * 4)),
-    )
-  }
-
-  it('applies Pixel Sort when enabled', () => {
-    const pixels = buildPixels(2, 1, [grey(90), grey(10)])
-
-    const out = applyPipeline(
-      pixels,
-      {
-        ...settings,
-        pixelSort: { ...SORT_OFF, enabled: true },
-        channelShift: { channel: 'r', amount: 0 },
-      },
-      SEED,
-    )
-
-    expect(pixelAt(out, 0, 0)).toEqual(grey(10))
-    expect(pixelAt(out, 1, 0)).toEqual(grey(90))
-  })
-
-  it('skips Pixel Sort when disabled', () => {
-    const pixels = buildPixels(2, 1, [grey(90), grey(10)])
-
-    const out = applyPipeline(
-      pixels,
-      {
-        ...settings,
-        pixelSort: SORT_OFF,
-        channelShift: { channel: 'r', amount: 0 },
-      },
-      SEED,
-    )
-
-    expect(Array.from(out.data)).toEqual(Array.from(pixels.data))
-  })
-
-  it('runs Pixel Sort before Channel Shift — the canonical order', () => {
-    // Sorting first pushes the lone red pixel to x=1, leaving x=0 with no red for the
-    // shift to carry; the reverse order would smear red across both pixels instead.
-    const pixels = buildPixels(2, 1, [
-      [255, 0, 0, 255],
-      [0, 0, 0, 255],
-    ])
-
-    const out = applyPipeline(
-      pixels,
-      {
-        ...settings,
-        pixelSort: { ...SORT_OFF, enabled: true },
-        channelShift: { channel: 'r', amount: 1 },
-      },
-      SEED,
-    )
-
-    expect(pixelAt(out, 0, 0)).toEqual([0, 0, 0, 255])
-    expect(pixelAt(out, 1, 0)).toEqual([0, 0, 0, 255])
-  })
-
-  it('applies Scanlines when enabled', () => {
-    const pixels = buildPixels(1, 2, [grey(200), grey(200)])
-
-    const out = applyPipeline(
-      pixels,
-      {
-        ...settings,
-        channelShift: { channel: 'r', amount: 0 },
-        scanlines: { enabled: true, density: TIGHTEST_DENSITY, intensity: 0.5 },
-      },
-      SEED,
-    )
-
-    expect(pixelAt(out, 0, 0)).toEqual(grey(100))
-    expect(pixelAt(out, 0, 1)).toEqual(grey(200))
-  })
-
-  // Pins Scanlines against Pixel Sort rather than against its actual Pipeline neighbour: Scanlines
-  // and Channel Shift commute, so their relative order is unobservable and no test can pin it. A
-  // per-row uniform scale and a within-row horizontal shift never see each other — scaling then
-  // shifting a row equals shifting then scaling it. Pixel Sort is the nearest Effect the order is
-  // observable against, and it's the one that matters: it proves surface runs after structural.
-  it('runs Scanlines last — surface texture lays over the arrangement', () => {
-    const pixels = buildPixels(1, 2, [grey(200), grey(10)])
-
-    const out = applyPipeline(
-      pixels,
-      {
-        ...settings,
-        pixelSort: { ...SORT_OFF, enabled: true, direction: 'vertical' },
-        channelShift: { channel: 'r', amount: 0 },
-        scanlines: { enabled: true, density: TIGHTEST_DENSITY, intensity: 0.5 },
-      },
-      SEED,
-    )
-
-    // The sort lifts grey(10) to row 0, and only then does the scanline dim it to 5. Darkening
-    // first would have sunk grey(200) to 100 and left the sort to order 10 above it instead.
-    expect(pixelAt(out, 0, 0)).toEqual(grey(5))
-    expect(pixelAt(out, 0, 1)).toEqual(grey(200))
-  })
-
-  it('applies Noise when the amount is above zero', () => {
-    const pixels = buildPixels(
-      8,
-      1,
-      Array.from({ length: 8 }, () => grey(128)),
-    )
-
-    const out = applyPipeline(
-      pixels,
-      {
-        ...settings,
-        channelShift: { channel: 'r', amount: 0 },
-        noise: { amount: 0.5, tint: 'color' },
-      },
-      SEED,
-    )
-
-    expect(Array.from(out.data)).not.toEqual(Array.from(pixels.data))
-  })
-
-  it('skips Noise at zero amount', () => {
-    const pixels = buildPixels(
-      8,
-      1,
-      Array.from({ length: 8 }, () => grey(128)),
-    )
-
-    const out = applyPipeline(
-      pixels,
-      {
-        ...settings,
-        channelShift: { channel: 'r', amount: 0 },
-        noise: NOISE_OFF,
-      },
-      SEED,
-    )
-
-    expect(Array.from(out.data)).toEqual(Array.from(pixels.data))
-  })
-
-  it('runs Noise last — the grain lies over the raster instead of under it', () => {
-    const pixels = buildPixels(
-      8,
-      1,
-      Array.from({ length: 8 }, () => grey(200)),
-    )
-
-    const out = applyPipeline(
-      pixels,
-      {
-        ...settings,
-        channelShift: { channel: 'r', amount: 0 },
-        scanlines: { enabled: true, density: TIGHTEST_DENSITY, intensity: 1 },
-        noise: { amount: 1, tint: 'color' },
-      },
-      SEED,
-    )
-
-    // Scanlines blacks row 0 out, and the grain then speckles that black back up. Running Noise
-    // first would have left the raster to scale the grain away to nothing along with the image.
-    const lit = Array.from({ length: 8 }, (_, x) => pixelAt(out, x, 0)).filter(
-      ([r, g, b]) => r + g + b > 0,
-    )
-    expect(lit.length).toBeGreaterThan(0)
-  })
-
-  it('applies Channel Shift', () => {
-    const pixels = buildPixels(2, 1, [
-      [255, 0, 0, 255],
-      [0, 0, 0, 255],
-    ])
-
-    const out = applyPipeline(pixels, settings, SEED)
-
-    expect(pixelAt(out, 1, 0)).toEqual([255, 0, 0, 255])
-  })
-
-  it('is a pure function of GlitchSettings — same input, same output', () => {
-    const pixels = buildPixels(3, 1, [
-      [255, 10, 0, 255],
-      [0, 20, 0, 255],
-      [90, 30, 0, 255],
-    ])
-
-    const first = applyPipeline(pixels, settings, SEED)
-    const second = applyPipeline(pixels, settings, SEED)
-
-    expect(Array.from(first.data)).toEqual(Array.from(second.data))
-  })
-
-  it('applies Block Displacement', () => {
-    const pixels = wideGradient(64, 4)
-
-    const out = applyPipeline(
-      pixels,
-      {
-        ...settings,
-        blockDisplacement: { density: 1, amount: 1 },
-        channelShift: { channel: 'r', amount: 0 },
-      },
-      SEED,
-    )
-
-    expect(Array.from(out.data)).not.toEqual(Array.from(pixels.data))
-  })
-
-  it('skips Block Displacement at zero density', () => {
-    const pixels = wideGradient(64, 4)
-
-    const out = applyPipeline(
-      pixels,
-      { ...settings, channelShift: { channel: 'r', amount: 0 } },
-      SEED,
-    )
-
-    expect(Array.from(out.data)).toEqual(Array.from(pixels.data))
-  })
-
-  it('runs Block Displacement first — the structural tear precedes everything', () => {
-    // Pixel Sort orders each whole row here (threshold 0, a run as long as the row), so a row can
-    // only come out unsorted if something moved its pixels afterwards. Displacement running first
-    // leaves every row sorted; the reverse order would re-cut the sorted rows and break them.
-    const width = 64
-    const out = applyPipeline(
-      wideGradient(width, 4),
-      {
-        ...settings,
-        blockDisplacement: { density: 1, amount: 1 },
-        pixelSort: { enabled: true, direction: 'horizontal', threshold: 0, runLength: width },
-        channelShift: { channel: 'r', amount: 0 },
-      },
-      SEED,
-    )
-
-    for (let y = 0; y < 4; y++) {
-      const row = Array.from({ length: width }, (_, x) => pixelAt(out, x, y)[0])
-      expect(row).toEqual([...row].sort((a, b) => a - b))
-    }
-  })
-
-  it('is deterministic for a fixed settings and Seed pair', () => {
-    const pixels = wideGradient(32, 4)
-    const rolled: GlitchSettings = {
-      blockDisplacement: { density: 1, amount: 1 },
-      pixelSort: { ...SORT_OFF, enabled: true },
-      channelShift: { channel: 'r', amount: 2 },
-      chromaticAberration: { strength: 0.5 },
-      scanlines: DEFAULT_SCANLINES,
-      noise: { amount: 0.5, tint: 'color' },
-    }
-
-    const first = applyPipeline(pixels, rolled, SEED)
-    const second = applyPipeline(pixels, rolled, SEED)
-
-    expect(Array.from(first.data)).toEqual(Array.from(second.data))
-  })
-
-  it('arranges the same look differently under a different Seed', () => {
-    const pixels = wideGradient(32, 4)
-    const rolled: GlitchSettings = { ...settings, blockDisplacement: { density: 1, amount: 1 } }
-
-    const first = applyPipeline(pixels, rolled, SEED)
-    const second = applyPipeline(pixels, rolled, SEED + 1)
-
-    expect(Array.from(first.data)).not.toEqual(Array.from(second.data))
-  })
-
-  it('runs Chromatic Aberration after Channel Shift — the canonical order', () => {
-    // The two channel-displacement Effects don't commute: shifting R by a constant and *then*
-    // resampling it radially is not the same as resampling first and shifting the result. Composing
-    // both orders by hand is what pins which one the Pipeline runs.
-    const pixels = wideGradient(9, 1)
-    const rolled: GlitchSettings = {
-      ...settings,
-      channelShift: { channel: 'r', amount: 3 },
-      chromaticAberration: { strength: 1 },
-    }
-
-    const out = applyPipeline(pixels, rolled, SEED)
-
-    expect(Array.from(out.data)).toEqual(
-      Array.from(
-        chromaticAberration(channelShift(pixels, rolled.channelShift), { strength: 1 }).data,
-      ),
-    )
-    expect(Array.from(out.data)).not.toEqual(
-      Array.from(
-        channelShift(chromaticAberration(pixels, { strength: 1 }), rolled.channelShift).data,
-      ),
-    )
-  })
-
-  it('leaves Chromatic Aberration untouched by the Seed', () => {
-    // CA is purely geometric — deterministic from strength alone, with no draw off the Seed's
-    // stream. That's why Re-roll leaves it where it is (CONTEXT.md: the Seed is the arrangement).
-    const pixels = wideGradient(9, 3)
-    const rolled: GlitchSettings = {
-      ...settings,
-      channelShift: { channel: 'r', amount: 0 },
-      chromaticAberration: { strength: 1 },
-    }
-
-    const first = applyPipeline(pixels, rolled, SEED)
-    const second = applyPipeline(pixels, rolled, SEED + 99)
-
-    expect(Array.from(first.data)).toEqual(Array.from(second.data))
-  })
-
-  it('preserves the buffer dimensions', () => {
-    const pixels = buildPixels(
-      3,
-      2,
-      Array.from({ length: 6 }, () => [0, 0, 0, 255]),
-    )
-
-    const out = applyPipeline(pixels, settings, SEED)
-
-    expect(out.width).toBe(3)
-    expect(out.height).toBe(2)
   })
 })

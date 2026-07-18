@@ -1,10 +1,10 @@
-import { applyPipeline } from './chain'
+import { applyChain, type Chain } from './chain'
 import { type GlitchSource, sampleDimensions, sourceDimensions } from './image-utils'
-import type { GlitchSettings, PixelBuffer, Seed } from './types'
+import type { PixelBuffer, Seed } from './types'
 
 /**
  * Impure: the shell around the pure Pipeline. Draws the Source onto the hidden sampling canvas
- * (ADR 0001), unwraps the real ImageData into a PixelBuffer, runs applyPipeline, and wraps the
+ * (ADR 0001), unwraps the real ImageData into a PixelBuffer, runs applyChain, and wraps the
  * result back into ImageData to paint. It is the only place the DOM and the pure core meet
  * (ADR 0005).
  *
@@ -27,7 +27,7 @@ export function renderGlitchFrame(
   source: GlitchSource,
   canvasEl: HTMLCanvasElement,
   hiddenEl: HTMLCanvasElement,
-  settings: GlitchSettings,
+  chain: Chain,
   seed: Seed,
   isMirrored = false,
 ): boolean {
@@ -56,9 +56,9 @@ export function renderGlitchFrame(
   }
 
   const imageData = hiddenCtx.getImageData(0, 0, w, h)
-  const glitched: PixelBuffer = applyPipeline(
+  const glitched: PixelBuffer = applyChain(
     { data: imageData.data, width: w, height: h },
-    settings,
+    chain,
     seed,
   )
 

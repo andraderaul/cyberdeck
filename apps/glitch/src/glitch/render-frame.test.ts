@@ -1,18 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { type Chain, createLink } from './chain'
 import { MAX_SAMPLE_DIM } from './image-utils'
 import { renderGlitchFrame } from './render-frame'
-import type { GlitchSettings, Seed } from './types'
+import type { Seed } from './types'
 
 // Channel Shift is the only Effect left on: these tests exercise the shell's canvas glue, and a
 // second active Effect would only obscure whether the pure core ran at all.
-const SETTINGS: GlitchSettings = {
-  blockDisplacement: { density: 0, amount: 0 },
-  pixelSort: { enabled: false, direction: 'horizontal', threshold: 0, runLength: 64 },
-  channelShift: { channel: 'r', amount: 2 },
-  chromaticAberration: { strength: 0 },
-  scanlines: { enabled: false, density: 0.5, intensity: 0.5 },
-  noise: { amount: 0, tint: 'mono' },
-}
+const CHAIN: Chain = [createLink('channelShift', { channel: 'r', amount: 1 })]
 
 /** No Effect here draws on the Seed, so any fixed one does — the shell only has to pass it along. */
 const SEED: Seed = 1234
@@ -68,7 +62,7 @@ describe('renderGlitchFrame', () => {
     const hidden = fakeCanvas(hiddenCtx)
     const canvas = fakeCanvas(fakeContext())
 
-    renderGlitchFrame(fakeSource(100, 50), canvas, hidden, SETTINGS, SEED)
+    renderGlitchFrame(fakeSource(100, 50), canvas, hidden, CHAIN, SEED)
 
     expect(hidden.width).toBe(100)
     expect(hidden.height).toBe(50)
@@ -80,7 +74,7 @@ describe('renderGlitchFrame', () => {
     const hidden = fakeCanvas(hiddenCtx)
     const canvas = fakeCanvas(fakeContext())
 
-    renderGlitchFrame(fakeSource(4000, 2000), canvas, hidden, SETTINGS, SEED)
+    renderGlitchFrame(fakeSource(4000, 2000), canvas, hidden, CHAIN, SEED)
 
     expect(hidden.width).toBe(MAX_SAMPLE_DIM)
     expect(hidden.height).toBe(400)
@@ -94,13 +88,7 @@ describe('renderGlitchFrame', () => {
     const visibleCtx = fakeContext()
     const canvas = fakeCanvas(visibleCtx)
 
-    renderGlitchFrame(
-      fakeSource(2, 1),
-      canvas,
-      hidden,
-      { ...SETTINGS, channelShift: { channel: 'r', amount: 1 } },
-      SEED,
-    )
+    renderGlitchFrame(fakeSource(2, 1), canvas, hidden, CHAIN, SEED)
 
     expect(canvas.width).toBe(2)
     expect(canvas.height).toBe(1)
@@ -117,7 +105,7 @@ describe('renderGlitchFrame', () => {
       fakeSource(0, 0),
       fakeCanvas(visibleCtx),
       fakeCanvas(hiddenCtx),
-      SETTINGS,
+      CHAIN,
       SEED,
     )
 
@@ -130,7 +118,7 @@ describe('renderGlitchFrame', () => {
       fakeSource(10, 10),
       fakeCanvas(null),
       fakeCanvas(null),
-      SETTINGS,
+      CHAIN,
       SEED,
     )
 
@@ -141,7 +129,7 @@ describe('renderGlitchFrame', () => {
     const hidden = fakeCanvas(fakeContext(new ImageData(4, 4)))
 
     expect(
-      renderGlitchFrame(fakeSource(4, 4), fakeCanvas(fakeContext()), hidden, SETTINGS, SEED),
+      renderGlitchFrame(fakeSource(4, 4), fakeCanvas(fakeContext()), hidden, CHAIN, SEED),
     ).toBe(true)
   })
 
@@ -150,7 +138,7 @@ describe('renderGlitchFrame', () => {
     const hidden = fakeCanvas(hiddenCtx)
     const video = fakeLiveSource(1280, 720)
 
-    expect(renderGlitchFrame(video, fakeCanvas(fakeContext()), hidden, SETTINGS, SEED)).toBe(true)
+    expect(renderGlitchFrame(video, fakeCanvas(fakeContext()), hidden, CHAIN, SEED)).toBe(true)
 
     expect(hidden.width).toBe(MAX_SAMPLE_DIM)
     expect(hidden.height).toBe(450)
@@ -164,7 +152,7 @@ describe('renderGlitchFrame', () => {
       fakeLiveSource(0, 0),
       fakeCanvas(visibleCtx),
       fakeCanvas(fakeContext()),
-      SETTINGS,
+      CHAIN,
       SEED,
     )
 
@@ -178,7 +166,7 @@ describe('renderGlitchFrame', () => {
     const ctx = fakeMirrorContext(new ImageData(100, 50))
     const hidden = fakeCanvas(ctx)
 
-    renderGlitchFrame(fakeSource(100, 50), fakeCanvas(fakeContext()), hidden, SETTINGS, SEED, true)
+    renderGlitchFrame(fakeSource(100, 50), fakeCanvas(fakeContext()), hidden, CHAIN, SEED, true)
 
     expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 100, 50)
     expect(ctx.calls).toEqual(['save', 'translate(100,0)', 'scale(-1,1)', 'drawImage', 'restore'])
@@ -187,13 +175,7 @@ describe('renderGlitchFrame', () => {
   it('draws the Source un-flipped when not mirrored', () => {
     const ctx = fakeMirrorContext(new ImageData(100, 50))
 
-    renderGlitchFrame(
-      fakeSource(100, 50),
-      fakeCanvas(fakeContext()),
-      fakeCanvas(ctx),
-      SETTINGS,
-      SEED,
-    )
+    renderGlitchFrame(fakeSource(100, 50), fakeCanvas(fakeContext()), fakeCanvas(ctx), CHAIN, SEED)
 
     expect(ctx.translate).not.toHaveBeenCalled()
     expect(ctx.scale).not.toHaveBeenCalled()
@@ -212,11 +194,10 @@ describe('renderGlitchFrame', () => {
         fakeLiveSource(4, 2),
         fakeCanvas(visibleCtx),
         fakeCanvas(fakeContext(source)),
-        {
-          ...SETTINGS,
-          blockDisplacement: { density: 0.8, amount: 0.5 },
-          noise: { amount: 0.5, tint: 'mono' },
-        },
+        [
+          createLink('blockDisplacement', { density: 0.8, amount: 0.5 }),
+          createLink('noise', { amount: 0.5, tint: 'mono' }),
+        ],
         SEED,
       )
       return Array.from((visibleCtx.putImageData.mock.calls[0][0] as ImageData).data)
