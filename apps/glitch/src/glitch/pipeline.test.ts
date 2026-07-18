@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { applyPipeline } from './chain'
 import {
-  applyPipeline,
   blockDisplacement,
   channelShift,
   chromaticAberration,

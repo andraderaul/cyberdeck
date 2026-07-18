@@ -28,6 +28,31 @@ export function createRng(seed: Seed): Rng {
   }
 }
 
+const HASH_MIX = 0x45d9f3b
+
+/** Golden-ratio constant, so index 0 still displaces the Seed instead of hashing it toward itself. */
+const HASH_DISPLACEMENT = 0x9e3779b9
+
+/**
+ * The Seed one Link in the Chain draws on — the global Seed mixed with the Link's own position
+ * (ADR 0017). Two Links of the same type therefore get unrelated draws, which is what lets a Chain
+ * carry the same Effect twice without the repeats collapsing into an identical arrangement.
+ *
+ * Derived from the *index* rather than drawn from a stream running along the Chain: a stream would
+ * make every Link's arrangement depend on how many draws the Links before it happened to make, so
+ * inserting or reordering one Link would scramble every Link downstream. ADR 0017 rejected that
+ * explicitly, for the same reason Noise hashes a pixel's position instead of streaming.
+ *
+ * The accepted cost, recorded in the ADR: moving a Link to a new index gives it a new arrangement.
+ * A reorder is already a deliberate edit to the look, so the reshuffle rides along with it.
+ */
+export function deriveSeed(seed: Seed, index: number): Seed {
+  let hash = (seed ^ Math.imul(index + 1, HASH_DISPLACEMENT)) | 0
+  hash = Math.imul(hash ^ (hash >>> 16), HASH_MIX)
+  hash = Math.imul(hash ^ (hash >>> 13), HASH_MIX)
+  return (hash ^ (hash >>> 16)) | 0
+}
+
 /**
  * Impure: draws a fresh Seed. The one place the app reaches for real randomness — every draw
  * downstream of it derives from the Seed it returns, so the Pipeline stays pure and a render can

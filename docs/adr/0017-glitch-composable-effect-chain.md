@@ -55,12 +55,26 @@ Chain editor lives behind the existing advanced disclosure.
 - **`applyPipeline` → `applyChain(pixels, chain, seed)`**, a pure fold over the Links. This requires
   an **Effect registry** (type → pure fn + `DEFAULT_*` params + param-UI) that the hardcoded
   `applyPipeline` calls do not have today.
-- **Determinism via global Seed + per-Link index sub-seed.** One Seed still sits *beside* the Chain;
-  each Link derives its randomness from `hash(Seed, linkIndex)`, so repeats get distinct draws and
-  Re-roll re-rolls the whole arrangement. Noise stays positional *within* a Link. The one cost:
-  reordering a Link reshuffles its arrangement — acceptable, since reorder is already a deliberate
-  look edit. (A stable per-Link randomness salt was considered and deferred; it buys reorder-stable
-  arrangements at the price of hidden per-Link state and salt-minting on Preset apply.)
+- **Determinism via global Seed + per-Link occurrence sub-seed.** One Seed still sits *beside* the
+  Chain. Each Link derives its randomness from **its type and which occurrence of that type it is** —
+  the *first* Block Displacement in a Chain draws on the global Seed untouched, the second on
+  `hash(Seed, 1)`, and so on. Repeats therefore get distinct draws, and Re-roll still re-rolls the
+  whole arrangement. Noise stays positional *within* a Link.
+
+  **Amended during Slice 1 (#125)** — this originally read `hash(Seed, linkIndex)`, keyed on the
+  Link's absolute position. That was found to be unimplementable alongside two acceptance criteria
+  the slices also carry: a position-keyed sub-seed changes what the seeded Effects draw the moment
+  any Link is added, removed, or moved, so neither "pixel-identical to the fixed Pipeline" (#125) nor
+  the migration golden tests (#126) can pass. Keying on occurrence satisfies all of them — verified
+  empirically across all six Presets — because a one-of-each Chain leaves every Link at occurrence 0
+  and so reproduces the old Pipeline byte for byte.
+
+  It also **removes** the cost the index scheme accepted: reordering a Link no longer reshuffles its
+  arrangement, because position is no longer an input. The "stable per-Link salt" this ADR considered
+  and deferred was rejected for costing *hidden per-Link state and salt-minting on Preset apply* —
+  that objection does not reach this scheme, whose stability is **derived** from the Chain rather than
+  stored beside it. The residual cost is narrower: two Links of the same type swap arrangements when
+  reordered past each other, since it is their relative order that names them.
 - **On/off collapses into presence.** The `enabled` booleans (Pixel Sort, Scanlines) and the
   encode-zero idiom (Channel Shift, Noise, CA) are *deleted* — an Effect is on because its Link is in
   the Chain. A genuine simplification the restructure earns.
@@ -77,4 +91,4 @@ Chain editor lives behind the existing advanced disclosure.
   session and must keep describing the shipped flat Pipeline. Only the reserved-term note is updated.
   The implementing work rewrites the glossary when the code lands.
 - A future reader should read this ADR before "tidying" any of the load-bearing quirks — the
-  order-sensitive `chainMatch`, the index sub-seed, or Randomize's structure-rides-through rule.
+  order-sensitive `chainMatch`, the occurrence sub-seed, or Randomize's structure-rides-through rule.
