@@ -117,12 +117,12 @@ describe('convertImage mirror', () => {
   })
 
   it('flips about the fit region, not the grid, so a pillarboxed Source stays in its bands', () => {
-    // x' = (2 * offsetX + dCols) - x maps the region onto itself, reversed — an off-centre
-    // region would spill outside its bands if the flip were taken about the whole grid.
-    const region = { offsetX: 0, offsetY: 0, dCols: 2, dRows: 4 }
-    const { ctx, calls } = recordingCtx(4, 4)
-    convertImage(ctx, img, 4, 4, options, region, true)
+    // x' = (2 * offsetX + dCols) - x maps the region onto itself, reversed. A flip taken about
+    // the whole grid would translate by 6 here and slide the Source out of its bands.
+    const region = { offsetX: 1, offsetY: 0, dCols: 2, dRows: 4 }
+    const { ctx, calls } = recordingCtx(6, 4)
+    convertImage(ctx, img, 6, 4, options, region, true)
 
-    expect(calls).toEqual(['save', 'translate:2', 'scale:-1', 'drawImage', 'restore'])
+    expect(calls).toEqual(['save', 'translate:4', 'scale:-1', 'drawImage', 'restore'])
   })
 })

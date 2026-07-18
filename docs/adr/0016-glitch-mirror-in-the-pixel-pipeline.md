@@ -13,10 +13,12 @@ Recording sample is the mirrored image. What you see is the file you get.
 
 This landed as a deliberate *implementation* divergence from ASCII, which mirrored with a cosmetic
 CSS `transform: scaleX(-1)` on the visible canvas — flipping the preview but not the exported
-PNG/ASCII text. **That divergence is now closed (#124):** ASCII flips the Source on its own sampling
-`drawImage` inside `renderFrame`, before `convertImage` reads a pixel, and the CSS transform is
-gone. The flip is taken about the contain-fit region (ADR 0010), so a letterboxed Source stays
-inside its own bands.
+PNG/ASCII text. **That divergence is now closed (#124):** `renderFrame` threads an `isMirrored` flag
+down to the sampling `drawImage`, which flips the Source before a pixel becomes an `AsciiCell`, and
+the CSS transform is gone. ASCII's flip sits one call deeper than GLITCH's only because that is
+where its sampling draw lives (`convertImage`) — in both programs it happens on the sampling draw,
+ahead of the pure core (ADR 0005). The flip is taken about the contain-fit region (ADR 0010), so a
+letterboxed Source stays inside its own bands.
 
 The two programs therefore share the *feature*, the *interaction* (auto-on for the front camera, an
 `⇋` overlay toggle beside `✕ clear`) **and the mechanism** — a real pixel flip ahead of the domain
