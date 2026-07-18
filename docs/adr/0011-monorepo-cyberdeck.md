@@ -1,3 +1,7 @@
+---
+status: accepted (its "no shared `packages/`" point superseded by ADR 0014)
+---
+
 # Monorepo under the CYBERDECK umbrella
 
 ASCII//Convert is the first of several planned client-side creative tools that share a
@@ -11,6 +15,10 @@ Tooling stays light — npm/pnpm workspaces only, no Nx/Turborepo — and the ap
 app needs is copied by hand from ASCII//Convert; the resulting duplication is tolerated as
 a *signal* of what actually repeats. The shared core is extracted only once a second app
 makes the real seams obvious.
+
+> **Superseded on this point.** GLITCH//Studio made the seams obvious and the condition above
+> fired: `packages/deck-kit` exists — see ADR 0014, which also records what was deliberately left
+> duplicated. The rest of this ADR (monorepo over separate repos, `apps/*`, light tooling) stands.
 
 ## Considered options
 
