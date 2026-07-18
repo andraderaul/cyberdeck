@@ -267,6 +267,11 @@ export default function ControlPanel({ chain, onLinkChange, onReroll, onReorder 
   return (
     <div className="flex flex-col gap-lg">
       {chain.map((link, index) => (
+        // The row is a *drop target*, which is a pointer-only gesture by nature — keyboard
+        // reordering is the handle's arrow keys, a separate and complete path. Giving this div an
+        // interactive role to satisfy the rule would announce every Link row to a screen reader as
+        // a control it cannot operate.
+        // biome-ignore lint/a11y/noStaticElementInteractions: pointer-only drop target, see above
         <div
           key={link.id}
           className="flex flex-col gap-sm"
