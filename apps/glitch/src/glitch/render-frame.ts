@@ -11,6 +11,10 @@ import type { GlitchSettings, PixelBuffer, Seed } from './types'
  * The visible canvas is sized to the sampled dimensions, so the painted buffer *is* the output —
  * PNG Export takes the canvas as-is, with no letterboxing to crop back out. CSS handles the fit.
  *
+ * Mirror flips the Source on this sampling draw, *before* the Pipeline (ADR 0016) — not with a CSS
+ * transform on the visible canvas, which would leave Export disagreeing with the preview. Effects
+ * then apply on top of the already-flipped buffer, and the exported canvas carries the flip.
+ *
  * A Live Source (webcam) goes through the very same path — one frame of video is just another
  * Source to sample. Nothing here is stateful across calls, so the rAF loop re-entering it at
  * ~15fps (ADR 0002) with a fixed Seed repaints the same arrangement rather than boiling.
@@ -25,6 +29,7 @@ export function renderGlitchFrame(
   hiddenEl: HTMLCanvasElement,
   settings: GlitchSettings,
   seed: Seed,
+  isMirrored = false,
 ): boolean {
   const ctx = canvasEl.getContext('2d')
   const hiddenCtx = hiddenEl.getContext('2d')
@@ -40,7 +45,15 @@ export function renderGlitchFrame(
 
   hiddenEl.width = w
   hiddenEl.height = h
-  hiddenCtx.drawImage(source, 0, 0, w, h)
+  if (isMirrored) {
+    hiddenCtx.save()
+    hiddenCtx.translate(w, 0)
+    hiddenCtx.scale(-1, 1)
+    hiddenCtx.drawImage(source, 0, 0, w, h)
+    hiddenCtx.restore()
+  } else {
+    hiddenCtx.drawImage(source, 0, 0, w, h)
+  }
 
   const imageData = hiddenCtx.getImageData(0, 0, w, h)
   const glitched: PixelBuffer = applyPipeline(

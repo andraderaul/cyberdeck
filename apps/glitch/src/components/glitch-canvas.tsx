@@ -1,4 +1,4 @@
-import { cn } from '@cyberdeck/deck-kit/utils'
+import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
 import { type RefObject, useEffect, useRef } from 'react'
 import { renderGlitchFrame } from '../glitch/render-frame'
 import type { GlitchSettings, Seed } from '../glitch/types'
@@ -30,6 +30,8 @@ interface Props {
   canvasRef: RefObject<HTMLCanvasElement>
   onClearSource: () => void
   isRecording?: boolean
+  isMirrored?: boolean
+  onMirrorToggle?: () => void
 }
 
 /**
@@ -45,6 +47,8 @@ export default function GlitchCanvas({
   canvasRef,
   onClearSource,
   isRecording,
+  isMirrored = false,
+  onMirrorToggle,
 }: Props) {
   const hiddenRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
 
@@ -53,8 +57,8 @@ export default function GlitchCanvas({
     if (!canvas || !sourceImage) {
       return
     }
-    renderGlitchFrame(sourceImage, canvas, hiddenRef.current, settings, seed)
-  }, [sourceImage, settings, seed, canvasRef])
+    renderGlitchFrame(sourceImage, canvas, hiddenRef.current, settings, seed, isMirrored)
+  }, [sourceImage, settings, seed, isMirrored, canvasRef])
 
   // rAF loop throttled to ~15fps — see ADR 0002 for the Web Worker upgrade path. The Seed is held
   // across frames rather than re-rolled per frame: that's what keeps the corruption pattern from
@@ -78,13 +82,13 @@ export default function GlitchCanvas({
       }
       lastTime = now
       if (video.readyState >= HAVE_ENOUGH_DATA) {
-        renderGlitchFrame(video, canvas, hiddenRef.current, settings, seed)
+        renderGlitchFrame(video, canvas, hiddenRef.current, settings, seed, isMirrored)
       }
     }
 
     rafId = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafId)
-  }, [liveSource, settings, seed, canvasRef])
+  }, [liveSource, settings, seed, isMirrored, canvasRef])
 
   const isLive = liveSource !== null
 
@@ -122,6 +126,26 @@ export default function GlitchCanvas({
           >
             <span className="motion-safe:animate-pulse">●</span> REC
           </span>
+        )}
+        {/* Live source-tuning chrome, homed beside clear (ADR 0015): same family as clear — it acts
+            on the Source, not the export. A real pixel flip (ADR 0016), so it also toggles the
+            camera's auto-mirror off. Icon-only on mobile to hold the row. */}
+        {isLive && onMirrorToggle && (
+          <button
+            type="button"
+            onClick={onMirrorToggle}
+            aria-pressed={isMirrored}
+            aria-label={isMirrored ? 'disable mirror' : 'enable mirror'}
+            className={cn(
+              CANVAS_OVERLAY_CHROME,
+              'cursor-pointer transition-colors duration-fast',
+              isMirrored
+                ? 'border border-violet text-violet'
+                : 'border border-base text-fg-muted hover:text-fg hover:border-strong',
+            )}
+          >
+            ⇋{!isTouchDevice && ' mirror'}
+          </button>
         )}
         <button
           type="button"

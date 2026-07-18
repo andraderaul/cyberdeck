@@ -1,6 +1,4 @@
 import { Chip, Label, Slider, Tooltip } from '@cyberdeck/deck-kit/ui'
-import type { Preset } from '../ascii/presets'
-import { PRESETS, settingsMatch } from '../ascii/presets'
 import { getModePalette } from '../ascii/renderer'
 import type { Charset, ColorMode, ConversionSettings } from '../ascii/types'
 import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
@@ -8,8 +6,6 @@ import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
 interface Props {
   settings: ConversionSettings
   onChange: (patch: Partial<ConversionSettings>) => void
-  activePresetId?: string | null
-  onPresetSelect?: (preset: Preset) => void
 }
 
 const RESOLUTION_RANGE = { min: 6, max: 24, step: 1 }
@@ -49,32 +45,9 @@ function swatchStyle(colorMode: ColorMode): string {
 const SOLID_MODES = COLOR_MODES.filter((m) => !Array.isArray(getModePalette(m)))
 const GRADIENT_MODES = COLOR_MODES.filter((m) => Array.isArray(getModePalette(m)))
 
-export default function ControlPanel({
-  settings,
-  onChange,
-  activePresetId = null,
-  onPresetSelect,
-}: Props) {
+export default function ControlPanel({ settings, onChange }: Props) {
   return (
     <div className="flex flex-col gap-md">
-      <fieldset className="flex flex-col gap-2xs border-none p-0 m-0">
-        <legend className="text-fg-muted text-xs tracking-wide uppercase w-full flex items-center gap-2xs pb-0 mb-2xs">
-          <Label>presets</Label>
-        </legend>
-        <div className="flex flex-wrap gap-2xs">
-          {PRESETS.map((preset) => {
-            const isActive = preset.id === activePresetId
-            const isModified = isActive && !settingsMatch(settings, preset.settings)
-            return (
-              <Chip key={preset.id} selected={isActive} onClick={() => onPresetSelect?.(preset)}>
-                {preset.name}
-                {isModified && <span className="text-electric">*</span>}
-              </Chip>
-            )
-          })}
-        </div>
-      </fieldset>
-
       <Slider
         label="resolution"
         value={settings.resolution}

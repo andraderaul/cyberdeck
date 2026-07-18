@@ -16,6 +16,8 @@ import ControlPanel from './components/control-panel'
 import ExportBar from './components/export-bar'
 import LiveSourceBar from './components/live-source-bar'
 import MobileControls from './components/mobile-controls'
+import PresetPicker from './components/preset-picker'
+import Disclosure from './components/ui/disclosure'
 import HeaderButton from './components/ui/header-button'
 import { outputFilename } from './export/output'
 import { useWebcamState } from './hooks/use-webcam-state'
@@ -174,13 +176,18 @@ export default function App() {
       </header>
 
       <div className="flex-1 grid grid-cols-1 [grid-template-rows:1fr_auto] sm:grid-cols-[280px_1fr] sm:[grid-template-rows:1fr] overflow-hidden">
+        {/* Progressive disclosure, converged onto GLITCH's model (ADR 0016): Presets are the front
+            door, the per-setting controls fold away behind `advanced`. Hidden on mobile, where
+            MobileControls carries the same stack in a bottom sheet. */}
         <aside className="hidden sm:flex border-r border-base p-md overflow-y-auto flex-col gap-lg sm:order-first">
-          <ControlPanel
+          <PresetPicker
             settings={settings}
-            onChange={patchSettings}
             activePresetId={activePresetId}
-            onPresetSelect={handlePresetSelect}
+            onSelect={handlePresetSelect}
           />
+          <Disclosure label="advanced">
+            <ControlPanel settings={settings} onChange={patchSettings} />
+          </Disclosure>
         </aside>
 
         <main className="flex flex-col overflow-hidden">

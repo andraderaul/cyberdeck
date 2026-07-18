@@ -28,10 +28,26 @@ export default function App() {
   // rendered on different clocks — an image once per change, a webcam on the rAF loop — and each
   // needs its own null to switch off.
   const [liveSource, setLiveSource] = useState<HTMLVideoElement | null>(null)
+  // Beside GlitchSettings, never inside it (ADR 0016): mirror is source-tuning, not part of the
+  // look, so it rides through Presets, Re-roll and Randomize untouched — like ASCII's isMirrored.
+  const [isMirrored, setIsMirrored] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const showError = useToastError()
 
-  const { state: webcam, switchMode } = useWebcamState(setLiveSource)
+  const handleLiveSource = useCallback((video: HTMLVideoElement | null) => {
+    setLiveSource(video)
+    if (!video) {
+      setIsMirrored(false)
+    }
+  }, [])
+
+  const handleFacingModeChange = useCallback((mirrored: boolean) => {
+    setIsMirrored(mirrored)
+  }, [])
+
+  const handleMirrorToggle = useCallback(() => setIsMirrored((prev) => !prev), [])
+
+  const { state: webcam, switchMode } = useWebcamState(handleLiveSource, handleFacingModeChange)
   const {
     isSupported: canRecord,
     isRecording,
@@ -130,6 +146,8 @@ export default function App() {
                   canvasRef={canvasRef}
                   onClearSource={handleClearSource}
                   isRecording={isRecording}
+                  isMirrored={isMirrored}
+                  onMirrorToggle={handleMirrorToggle}
                 />
               ) : (
                 <EmptyStateHero

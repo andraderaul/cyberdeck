@@ -41,12 +41,16 @@ vi.mock('./components/glitch-canvas', () => ({
     liveSource,
     onClearSource,
     isRecording,
+    isMirrored,
+    onMirrorToggle,
   }: {
     settings: GlitchSettings
     seed: Seed
     liveSource: HTMLVideoElement | null
     onClearSource?: () => void
     isRecording?: boolean
+    isMirrored?: boolean
+    onMirrorToggle?: () => void
   }) => {
     renderedSettings(settings)
     renderedSeed(seed)
@@ -54,6 +58,10 @@ vi.mock('./components/glitch-canvas', () => ({
       <>
         <canvas aria-label={liveSource ? 'live glitched preview' : 'glitched preview'} />
         {isRecording && <span>REC</span>}
+        {liveSource && <span>{isMirrored ? 'mirrored' : 'not mirrored'}</span>}
+        <button type="button" onClick={onMirrorToggle}>
+          toggle mirror
+        </button>
         <button type="button" onClick={onClearSource}>
           clear
         </button>
@@ -507,6 +515,50 @@ describe('App', () => {
 
       expect(await screen.findByText('capture')).toBeInTheDocument()
       expect(screen.queryByText('export png')).not.toBeInTheDocument()
+    })
+
+    // ADR 0016: the front camera opens mirrored, matching ASCII's felt default.
+    it('auto-mirrors the front camera when the Live Source starts', async () => {
+      render(<App />)
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'use webcam' }))
+      })
+
+      expect(await screen.findByText('mirrored')).toBeInTheDocument()
+    })
+
+    it('flips the mirror off and on again through the canvas toggle', async () => {
+      render(<App />)
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'use webcam' }))
+      })
+      expect(await screen.findByText('mirrored')).toBeInTheDocument()
+
+      fireEvent.click(screen.getByRole('button', { name: 'toggle mirror' }))
+
+      expect(screen.getByText('not mirrored')).toBeInTheDocument()
+    })
+
+    // A manual mirror-off must not persist across Sources: clearing resets it, so the next live
+    // Source auto-mirrors again rather than inheriting the last session's toggle.
+    it('resets the mirror on clear, so a fresh Live Source auto-mirrors again', async () => {
+      render(<App />)
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'use webcam' }))
+      })
+      await screen.findByText('mirrored')
+      fireEvent.click(screen.getByRole('button', { name: 'toggle mirror' }))
+      expect(screen.getByText('not mirrored')).toBeInTheDocument()
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'clear' }))
+      })
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'use webcam' }))
+      })
+
+      expect(await screen.findByText('mirrored')).toBeInTheDocument()
     })
 
     it('holds the Seed steady while the webcam runs, so the corruption stays put', async () => {
