@@ -1,20 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import { createRef, type RefObject } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_NOISE, DEFAULT_SCANLINES, type GlitchSettings } from '../glitch/types'
+import { type Chain, createLink } from '../glitch/chain'
 import GlitchCanvas, { HAVE_ENOUGH_DATA, LIVE_SOURCE_FRAME_INTERVAL_MS } from './glitch-canvas'
 
 const renderGlitchFrame = vi.hoisted(() => vi.fn((..._args: unknown[]) => true))
 vi.mock('../glitch/render-frame', () => ({ renderGlitchFrame }))
 
-const SETTINGS: GlitchSettings = {
-  blockDisplacement: { density: 0.5, amount: 0.3 },
-  pixelSort: { enabled: false, direction: 'horizontal', threshold: 0, runLength: 64 },
-  channelShift: { channel: 'r', amount: 2 },
-  chromaticAberration: { strength: 0 },
-  scanlines: DEFAULT_SCANLINES,
-  noise: DEFAULT_NOISE,
-}
+const CHAIN: Chain = [createLink('channelShift', { channel: 'r', amount: 1 })]
 
 const SEED = 1234
 
@@ -53,7 +46,7 @@ function renderCanvas(props: Partial<React.ComponentProps<typeof GlitchCanvas>> 
     <GlitchCanvas
       sourceImage={null}
       liveSource={null}
-      settings={SETTINGS}
+      chain={CHAIN}
       seed={SEED}
       canvasRef={createRef<HTMLCanvasElement>() as RefObject<HTMLCanvasElement>}
       onClearSource={vi.fn()}
@@ -80,7 +73,7 @@ describe('GlitchCanvas', () => {
       video,
       expect.anything(),
       expect.anything(),
-      SETTINGS,
+      CHAIN,
       SEED,
       false,
     )

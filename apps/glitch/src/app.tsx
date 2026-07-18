@@ -9,17 +9,18 @@ import PresetPicker from './components/preset-picker'
 import Disclosure from './components/ui/disclosure'
 import { Errors } from './errors/app-error'
 import { outputFilename } from './export/output'
-import { DEFAULT_PRESET, type Preset, randomizeGlitchSettings } from './glitch/presets'
+import type { Chain, Link } from './glitch/chain'
+import { DEFAULT_PRESET, type Preset, randomizeChain } from './glitch/presets'
 import { createSeed } from './glitch/rng'
-import type { GlitchSettings, Seed } from './glitch/types'
+import type { Seed } from './glitch/types'
 import { useWebcamState } from './hooks/use-webcam-state'
 
 export default function App() {
   // The app opens on a Preset rather than a raw look: a casual creator has to see the point on the
   // first screen, not a near-untouched image.
-  const [settings, setSettings] = useState<GlitchSettings>(DEFAULT_PRESET.settings)
+  const [chain, setChain] = useState<Chain>(DEFAULT_PRESET.chain)
   const [activePresetId, setActivePresetId] = useState<string | null>(DEFAULT_PRESET.id)
-  // Beside the GlitchSettings, never inside them: the look and the arrangement are separate pieces
+  // Beside the Chain, never inside it: the look and the arrangement are separate pieces
   // of state, which is what lets Re-roll move one and leave the other alone. Drawn fresh here for
   // the same reason applying a Preset rolls one: a look is shared, an arrangement of it is yours.
   const [seed, setSeed] = useState<Seed>(createSeed)
@@ -28,7 +29,7 @@ export default function App() {
   // rendered on different clocks — an image once per change, a webcam on the rAF loop — and each
   // needs its own null to switch off.
   const [liveSource, setLiveSource] = useState<HTMLVideoElement | null>(null)
-  // Beside GlitchSettings, never inside it (ADR 0016): mirror is source-tuning, not part of the
+  // Beside the Chain, never inside it (ADR 0016): mirror is source-tuning, not part of the
   // look, so it rides through Presets, Re-roll and Randomize untouched — like ASCII's isMirrored.
   const [isMirrored, setIsMirrored] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -74,18 +75,18 @@ export default function App() {
 
   // Leaves activePresetId alone: an edited look still belongs to the Preset it started from, which
   // the picker marks as modified rather than deselecting — the user keeps their bearings.
-  const patchSettings = useCallback((patch: Partial<GlitchSettings>) => {
-    setSettings((prev) => ({ ...prev, ...patch }))
+  const patchLink = useCallback((id: string, params: Link['params']) => {
+    setChain((prev) => prev.map((link) => (link.id === id ? ({ ...link, params } as Link) : link)))
   }, [])
 
-  // The Seed is not part of the look, so a Re-roll leaves both the GlitchSettings and the active
+  // The Seed is not part of the look, so a Re-roll leaves both the Chain and the active
   // Preset exactly where they were — a new arrangement is not a customisation.
   const handleReroll = useCallback(() => setSeed(createSeed()), [])
 
   // A Preset carries no Seed, so applying one draws its own arrangement: everyone shares the look,
   // nobody gets handed the byte-identical image.
   const handlePresetSelect = useCallback((preset: Preset) => {
-    setSettings(preset.settings)
+    setChain(preset.chain)
     setActivePresetId(preset.id)
     setSeed(createSeed())
   }, [])
@@ -93,7 +94,7 @@ export default function App() {
   // Clears the active Preset rather than marking its base modified: a jittered look is a new one the
   // user discovered, not an edit they made to the Preset it happened to start from.
   const handleRandomize = useCallback(() => {
-    setSettings(randomizeGlitchSettings(Math.random))
+    setChain(randomizeChain(Math.random))
     setActivePresetId(null)
     setSeed(createSeed())
   }, [])
@@ -141,7 +142,7 @@ export default function App() {
                 <GlitchCanvas
                   sourceImage={sourceImage}
                   liveSource={liveSource}
-                  settings={settings}
+                  chain={chain}
                   seed={seed}
                   canvasRef={canvasRef}
                   onClearSource={handleClearSource}
@@ -178,13 +179,13 @@ export default function App() {
             Hidden on mobile, where MobileControls carries the same stack in a bottom sheet. */}
         <aside className="hidden sm:flex sm:border-r border-base p-md overflow-y-auto flex-col gap-lg sm:order-first">
           <PresetPicker
-            settings={settings}
+            chain={chain}
             activePresetId={activePresetId}
             onSelect={handlePresetSelect}
             onRandomize={handleRandomize}
           />
           <Disclosure label="advanced">
-            <ControlPanel settings={settings} onChange={patchSettings} onReroll={handleReroll} />
+            <ControlPanel chain={chain} onLinkChange={patchLink} onReroll={handleReroll} />
           </Disclosure>
         </aside>
       </div>
@@ -193,11 +194,11 @@ export default function App() {
           Source to open, not how to glitch it. */}
       {hasSource && (
         <MobileControls
-          settings={settings}
+          chain={chain}
           activePresetId={activePresetId}
           onSelect={handlePresetSelect}
           onRandomize={handleRandomize}
-          onChange={patchSettings}
+          onLinkChange={patchLink}
           onReroll={handleReroll}
         />
       )}

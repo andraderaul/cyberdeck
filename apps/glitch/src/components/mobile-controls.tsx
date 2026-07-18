@@ -1,17 +1,17 @@
 import { MobileBottomSheet } from '@cyberdeck/deck-kit/ui'
 import { useRef, useState } from 'react'
+import type { Chain, Link } from '../glitch/chain'
 import type { Preset } from '../glitch/presets'
-import type { GlitchSettings } from '../glitch/types'
 import ControlPanel from './control-panel'
 import PresetPicker from './preset-picker'
 import Disclosure from './ui/disclosure'
 
 interface Props {
-  settings: GlitchSettings
+  chain: Chain
   activePresetId: string | null
   onSelect: (preset: Preset) => void
   onRandomize: () => void
-  onChange: (patch: Partial<GlitchSettings>) => void
+  onLinkChange: (id: string, params: Link['params']) => void
   onReroll: () => void
 }
 
@@ -22,11 +22,11 @@ interface Props {
  * state and clears it from the canvas, so the sheet is only ever the look's tweak surface.
  */
 export default function MobileControls({
-  settings,
+  chain,
   activePresetId,
   onSelect,
   onRandomize,
-  onChange,
+  onLinkChange,
   onReroll,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false)
@@ -51,13 +51,13 @@ export default function MobileControls({
       <MobileBottomSheet isOpen={isOpen} onClose={() => setIsOpen(false)} triggerRef={triggerRef}>
         <div className="flex flex-col gap-lg">
           <PresetPicker
-            settings={settings}
+            chain={chain}
             activePresetId={activePresetId}
             onSelect={onSelect}
             onRandomize={onRandomize}
           />
           <Disclosure label="advanced">
-            <ControlPanel settings={settings} onChange={onChange} onReroll={onReroll} />
+            <ControlPanel chain={chain} onLinkChange={onLinkChange} onReroll={onReroll} />
           </Disclosure>
         </div>
       </MobileBottomSheet>
