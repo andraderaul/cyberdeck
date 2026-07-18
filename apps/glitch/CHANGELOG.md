@@ -1,5 +1,11 @@
 # @cyberdeck/glitch
 
+## 0.2.0
+
+### Minor Changes
+
+- 29f8558: Add explanatory tooltips at Effect level plus Seed in the advanced panel (ADR 0015), mirroring ASCII//Convert's, and adopt the shared deck-kit empty-state hero.
+
 ## 0.1.1
 
 ### Patch Changes
