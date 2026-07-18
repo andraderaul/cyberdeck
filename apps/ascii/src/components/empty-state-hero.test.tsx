@@ -1,7 +1,7 @@
+import { ToastProvider } from '@cyberdeck/deck-kit/ui'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import EmptyStateHero from './empty-state-hero'
-import { ToastProvider } from './toast-provider'
 
 let lastImg: { onload: (() => void) | null; onerror: (() => void) | null; src: string } | null =
   null

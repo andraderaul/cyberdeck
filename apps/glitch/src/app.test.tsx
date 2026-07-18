@@ -5,7 +5,8 @@ import { DEFAULT_PRESET, glitchSettingsMatch, PRESETS } from './glitch/presets'
 import type { GlitchSettings, Seed } from './glitch/types'
 
 const toastError = vi.hoisted(() => vi.fn())
-vi.mock('./components/toast-provider', () => ({
+vi.mock('@cyberdeck/deck-kit/ui', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@cyberdeck/deck-kit/ui')>()),
   useToastError: () => toastError,
   ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))

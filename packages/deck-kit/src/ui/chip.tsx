@@ -1,4 +1,4 @@
-import { cn } from '@cyberdeck/deck-kit/utils'
+import { cn } from '../utils/cn'
 
 interface Props extends React.ComponentProps<'button'> {
   selected: boolean

@@ -1,7 +1,7 @@
+import { ToastContext } from '@cyberdeck/deck-kit/ui'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import ExportBar from './export-bar'
-import { ToastContext } from './toast-provider'
 
 function makeCanvasRef(canvas?: HTMLCanvasElement | null) {
   return { current: canvas ?? null }

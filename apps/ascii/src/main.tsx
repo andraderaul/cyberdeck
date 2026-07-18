@@ -1,8 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import { ToastProvider } from '@cyberdeck/deck-kit/ui'
 import App from './app'
-import { ToastProvider } from './components/toast-provider'
 
 const rootEl = document.getElementById('root')
 if (!rootEl) {
