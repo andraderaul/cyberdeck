@@ -66,10 +66,11 @@ export default function AsciiCanvas({
         settings,
         fontFamilyRef.current,
         onConverted,
+        isMirrored,
       )
     renderStaticRef.current = fn
     fn()
-  }, [sourceImage, settings, onConverted, canvasRef])
+  }, [sourceImage, settings, onConverted, canvasRef, isMirrored])
 
   // rAF loop throttled to ~15fps — see ADR 0002 for Web Worker upgrade path
   useEffect(() => {
@@ -89,13 +90,21 @@ export default function AsciiCanvas({
       }
       lastTime = now
       if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
-        renderFrame(video, canvas, hiddenRef.current, settings, fontFamilyRef.current)
+        renderFrame(
+          video,
+          canvas,
+          hiddenRef.current,
+          settings,
+          fontFamilyRef.current,
+          undefined,
+          isMirrored,
+        )
       }
     }
 
     rafId = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafId)
-  }, [sourceVideo, settings, canvasRef])
+  }, [sourceVideo, settings, canvasRef, isMirrored])
 
   // Sync canvas pixel buffer to display size — eliminates CSS scaling distortion
   useEffect(() => {
@@ -133,11 +142,7 @@ export default function AsciiCanvas({
 
   return (
     <div className="relative w-full h-full">
-      <canvas
-        ref={canvasRef}
-        className="w-full h-full block bg-bg [image-rendering:pixelated]"
-        style={isMirrored ? { transform: 'scaleX(-1)' } : undefined}
-      />
+      <canvas ref={canvasRef} className="w-full h-full block bg-bg [image-rendering:pixelated]" />
       <div className="absolute top-xs right-xs flex items-center gap-xs">
         {isLive && (
           <span className="flex items-center gap-2xs font-mono text-xs text-hot-pink border border-hot-pink px-sm py-2xs rounded-xs select-none">

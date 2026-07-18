@@ -82,3 +82,47 @@ describe('convertImage void mask', () => {
     expect(cells[1][3].char).toBe(' ')
   })
 })
+
+describe('convertImage mirror', () => {
+  const img = {} as CanvasImageSource
+  const options = { brightness: 1, contrast: 1, charset: 'classic' } as const
+
+  // Records the ordered transform calls so a test can assert the flip wraps the sampling draw.
+  function recordingCtx(cols: number, rows: number) {
+    const calls: string[] = []
+    const ctx = {
+      save: vi.fn(() => calls.push('save')),
+      restore: vi.fn(() => calls.push('restore')),
+      translate: vi.fn((x: number) => calls.push(`translate:${x}`)),
+      scale: vi.fn((x: number) => calls.push(`scale:${x}`)),
+      drawImage: vi.fn(() => calls.push('drawImage')),
+      getImageData: vi.fn(() => ({ data: new Uint8ClampedArray(cols * rows * 4).fill(255) })),
+    }
+    return { ctx: ctx as unknown as CanvasRenderingContext2D, raw: ctx, calls }
+  }
+
+  it('draws the Source untransformed when not mirrored', () => {
+    const { ctx, raw, calls } = recordingCtx(4, 4)
+    convertImage(ctx, img, 4, 4, options)
+
+    expect(calls).toEqual(['drawImage'])
+    expect(raw.scale).not.toHaveBeenCalled()
+  })
+
+  it('flips the Source horizontally on the sampling draw when mirrored', () => {
+    const { ctx, calls } = recordingCtx(4, 4)
+    convertImage(ctx, img, 4, 4, options, undefined, true)
+
+    expect(calls).toEqual(['save', 'translate:4', 'scale:-1', 'drawImage', 'restore'])
+  })
+
+  it('flips about the fit region, not the grid, so a pillarboxed Source stays in its bands', () => {
+    // x' = (2 * offsetX + dCols) - x maps the region onto itself, reversed — an off-centre
+    // region would spill outside its bands if the flip were taken about the whole grid.
+    const region = { offsetX: 0, offsetY: 0, dCols: 2, dRows: 4 }
+    const { ctx, calls } = recordingCtx(4, 4)
+    convertImage(ctx, img, 4, 4, options, region, true)
+
+    expect(calls).toEqual(['save', 'translate:2', 'scale:-1', 'drawImage', 'restore'])
+  })
+})

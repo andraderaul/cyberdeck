@@ -40,8 +40,8 @@ código, mas é versionado e deployado de forma independente (ver ADR 0011 e ADR
   deliberada antes da extração, o `Tooltip` como o "segundo caller" que ADR 0014 já previa. A
   paridade é de *casca e padrão*, não de features: AI Analyze (ASCII) e Presets/Seed (GLITCH)
   divergem de propósito. **Mirror** deixou de ser divergência e virou feature compartilhada
-  (ADR 0016), mas com implementações de propósito diferentes — ASCII espelha só o preview via CSS,
-  GLITCH espelha os pixels no Pipeline porque seu canvas *é* a saída. A convergência do control
+  (ADR 0016) — e desde #124 também no *mecanismo*: os dois espelham os pixels antes do core (no
+  `drawImage` de amostragem), não o preview via CSS, então preview, PNG e TXT saem iguais. A convergência do control
   panel (Presets na frente, tweaks atrás de um `advanced` disclosure) também passou a valer pro
   ASCII, casando com o modelo que o GLITCH já usava.
 - **Mesmo padrão de núcleo** — ambos os pipelines são funções puras sobre `ImageData`

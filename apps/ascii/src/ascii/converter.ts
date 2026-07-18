@@ -33,6 +33,9 @@ function applyBrightnessContrast(value: number, brightness: number, contrast: nu
 /**
  * @param region Contain-fit sub-region the Source is drawn into; cells outside it are void.
  *   Defaults to a full-grid fill. See ADR 0010.
+ * @param isMirrored Flips the Source on this sampling draw, *before* any pixel is read into a
+ *   cell (ADR 0016) — so the preview, the PNG and the TXT rows all carry the same flip. The
+ *   transform is about the fit region, which keeps a letterboxed Source inside its own bands.
  */
 export function convertImage(
   ctx: CanvasRenderingContext2D,
@@ -41,11 +44,20 @@ export function convertImage(
   rows: number,
   options: { brightness: number; contrast: number; charset: Charset },
   region: FitRegion = { offsetX: 0, offsetY: 0, dCols: cols, dRows: rows },
+  isMirrored = false,
 ): AsciiCell[][] {
   const { brightness, contrast, charset } = options
   const { offsetX, offsetY, dCols, dRows } = region
 
-  ctx.drawImage(img, offsetX, offsetY, dCols, dRows)
+  if (isMirrored) {
+    ctx.save()
+    ctx.translate(2 * offsetX + dCols, 0)
+    ctx.scale(-1, 1)
+    ctx.drawImage(img, offsetX, offsetY, dCols, dRows)
+    ctx.restore()
+  } else {
+    ctx.drawImage(img, offsetX, offsetY, dCols, dRows)
+  }
   const data = ctx.getImageData(0, 0, cols, rows).data
 
   const result: AsciiCell[][] = []

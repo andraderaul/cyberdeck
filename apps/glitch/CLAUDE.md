@@ -90,19 +90,19 @@ Three behaviours hang together, and all of them come from the Seed sitting *outs
 
 `useWebcamState` owns the `MediaStream` lifecycle and hands `App` a playing `HTMLVideoElement`; it
 is never rendered, only sampled into the hidden canvas (ADR 0001). It's a hand-copy of
-ASCII//Convert's hook (ADR 0011) with three deliberate divergences, all noted in the file: modes
-carry this app's terms (`'image'` / `'live'`), the lifecycle side-effects are **Commands** rather
+ASCII//Convert's hook (ADR 0011) with two deliberate divergences, both noted in the file: modes
+carry this app's terms (`'image'` / `'live'`), and the lifecycle side-effects are **Commands** rather
 than Effects — `Effect` already means a pure `PixelBuffer` transform here, and the collision would
-be a trap — and there's no `onFacingModeChange`.
+be a trap.
 
 The lifecycle is copied whole, so `switchCamera` / `facingMode` ride along with no control surfacing
 them: #82 scoped in the Live Source, not camera choice. Front camera only until an issue asks
 otherwise.
 
-That last one is the load-bearing difference: **the preview is not mirrored.** ASCII//Convert
-mirrors the selfie view with a CSS transform, which it can afford because its output is the ascii
-text. Here the canvas *is* the output, so a CSS-only mirror would hand back a Capture that disagrees
-with what's on screen. Un-mirrored keeps the two honest.
+`onFacingModeChange` is wired, so the front camera opens mirrored (ADR 0016). Mirror is shared with
+ASCII//Convert in mechanism as well as feature: both flip the Source on the sampling `drawImage`,
+ahead of the pure core. A CSS-only mirror was never an option here, where the canvas *is* the
+output, and ASCII dropped its own (#124) so its PNG and TXT stop disagreeing with the preview.
 
 The Seed is held across frames rather than re-rolled per frame — that's what keeps the corruption
 pattern still instead of boiling. Animating it is explicitly v2 (`CONTEXT.md`).
