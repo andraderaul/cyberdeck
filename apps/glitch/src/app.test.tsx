@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './app'
+import { Errors } from './errors/app-error'
 import { DEFAULT_PRESET, glitchSettingsMatch, PRESETS } from './glitch/presets'
 import type { GlitchSettings, Seed } from './glitch/types'
 
@@ -55,9 +56,9 @@ const recording = vi.hoisted(() => ({
   stopRecording: vi.fn(),
 }))
 const recordingOnError = vi.hoisted(() => vi.fn())
-vi.mock('./hooks/use-recording', () => ({
-  useRecording: (_ref: unknown, onError?: (m: string) => void) => {
-    recordingOnError(onError)
+vi.mock('@cyberdeck/deck-kit/recording', () => ({
+  useRecording: (_ref: unknown, opts?: { onError?: (reason: 'start' | 'export') => void }) => {
+    recordingOnError(opts?.onError)
     return recording
   },
 }))
@@ -638,15 +639,28 @@ describe('App', () => {
 
       // ADR 0006: operational failures surface as toasts, and Recording is an output path like
       // Export and Copy — it doesn't get to fail quietly.
-      it('surfaces a Recording failure as a toast', async () => {
+      // The core emits a neutral reason; this app owns the wording. A 'start' failure can retry.
+      it("words a Recording 'start' failure into a retryable toast", async () => {
         await goLive()
         const onError = recordingOnError.mock.lastCall?.[0]
 
         act(() => {
-          onError?.('recording broke')
+          onError?.('start')
         })
 
-        expect(toastError).toHaveBeenCalledWith('recording broke')
+        expect(toastError).toHaveBeenCalledWith(Errors.recordingFailed().message)
+      })
+
+      // An 'export' failure is past retry — the take is already lost by the time the hand-off fails.
+      it("words a Recording 'export' failure without inviting a retry", async () => {
+        await goLive()
+        const onError = recordingOnError.mock.lastCall?.[0]
+
+        act(() => {
+          onError?.('export')
+        })
+
+        expect(toastError).toHaveBeenCalledWith(Errors.recordingExportFailed().message)
       })
 
       it('leaves the Recording alone when a Source is cleared with nothing recording', async () => {

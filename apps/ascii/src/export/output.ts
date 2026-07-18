@@ -46,10 +46,3 @@ export function outputFilename(
       return `ascii-recording-${opts.timestamp}.${opts.ext}`
   }
 }
-
-export function mimeToExtension(mimeType: string): string {
-  if (mimeType.startsWith('video/mp4')) {
-    return 'mp4'
-  }
-  return 'webm'
-}

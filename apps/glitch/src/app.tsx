@@ -1,3 +1,4 @@
+import { useRecording } from '@cyberdeck/deck-kit/recording'
 import { ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import ControlPanel from './components/control-panel'
@@ -7,10 +8,11 @@ import GlitchCanvas from './components/glitch-canvas'
 import MobileControls from './components/mobile-controls'
 import PresetPicker from './components/preset-picker'
 import Disclosure from './components/ui/disclosure'
+import { Errors } from './errors/app-error'
+import { outputFilename } from './export/output'
 import { DEFAULT_PRESET, type Preset, randomizeGlitchSettings } from './glitch/presets'
 import { createSeed } from './glitch/rng'
 import type { GlitchSettings, Seed } from './glitch/types'
-import { useRecording } from './hooks/use-recording'
 import { useWebcamState } from './hooks/use-webcam-state'
 
 export default function App() {
@@ -37,7 +39,17 @@ export default function App() {
     elapsedSeconds,
     startRecording,
     stopRecording,
-  } = useRecording(canvasRef, showError)
+  } = useRecording(canvasRef, {
+    // The core emits a neutral reason; this app words it. 'start' can retry, 'export' cannot — the
+    // take is already lost by then (ADR 0006).
+    onError: (reason) =>
+      showError(
+        reason === 'start'
+          ? Errors.recordingFailed().message
+          : Errors.recordingExportFailed().message,
+      ),
+    filename: (ext) => outputFilename('recording', { timestamp: Date.now(), ext }),
+  })
 
   useEffect(() => {
     if (webcam.error) {

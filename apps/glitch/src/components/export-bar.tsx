@@ -1,9 +1,9 @@
+import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
 import { Button, useToastError, useToastInfo } from '@cyberdeck/deck-kit/ui'
 import { cn, shareOrDownloadCanvas } from '@cyberdeck/deck-kit/utils'
 import type { RefObject } from 'react'
 import { Errors } from '../errors/app-error'
 import { outputFilename } from '../export/output'
-import { formatElapsedTime } from '../hooks/use-recording'
 import { copyCanvasToClipboard, isClipboardImageSupported } from '../utils/copy'
 
 interface Props {

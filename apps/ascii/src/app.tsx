@@ -1,4 +1,5 @@
 import { normalizeError } from '@cyberdeck/deck-kit/errors'
+import { useRecording } from '@cyberdeck/deck-kit/recording'
 import { ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { analyzeCanvas, toAnalysisState } from './ai/analysis-service'
@@ -18,7 +19,7 @@ import LiveSourceBar from './components/live-source-bar'
 import MobileControls from './components/mobile-controls'
 import HeaderButton from './components/ui/header-button'
 import UploadZone from './components/upload-zone'
-import { useRecording } from './hooks/use-recording'
+import { outputFilename } from './export/output'
 import { useWebcamState } from './hooks/use-webcam-state'
 
 type ActiveModal =
@@ -73,7 +74,11 @@ export default function App() {
     elapsedSeconds,
     startRecording,
     stopRecording,
-  } = useRecording(canvasRef)
+  } = useRecording(canvasRef, {
+    // No onError — ASCII//Convert surfaces no toast for a Recording failure (ADR 0007); the take
+    // simply doesn't start. The vocabulary lives app-side, so opting out is just omitting it.
+    filename: (ext) => outputFilename('recording', { timestamp: Date.now(), ext }),
+  })
 
   const handleVideoStream = useCallback((video: HTMLVideoElement | null) => {
     setSourceImage(null)

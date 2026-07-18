@@ -18,7 +18,7 @@ vi.mock('./hooks/use-webcam-state', () => ({
   })),
 }))
 
-vi.mock('./hooks/use-recording', () => ({
+vi.mock('@cyberdeck/deck-kit/recording', () => ({
   useRecording: vi.fn(() => ({
     isSupported: false,
     isRecording: false,

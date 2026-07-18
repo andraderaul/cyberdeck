@@ -1,13 +1,11 @@
-// Hand-copied from ASCII//Convert (ADR 0011 — there is deliberately no shared `packages/`), with one
-// divergence: failures are reported through `onError` rather than swallowed, since ADR 0006 wants
-// every operational failure surfaced and Recording is one of this app's four output paths. The
-// naming goes through this app's own `outputFilename`, but lands on the same stamped shape.
+// The canvas Recording core, shared across the deck (ADR 0014). Vocabulary-neutral: failures surface
+// as a neutral reason code the app words via its own Errors catalog, and the filename is injected —
+// so the MediaRecorder plumbing is shared while every string stays app-side. Records the canvas the
+// caller already painted (ADR 0007, ADR 0006).
 
-import { shareOrDownloadBlob } from '@cyberdeck/deck-kit/utils'
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Errors } from '../errors/app-error'
-import { mimeToExtension, outputFilename } from '../export/output'
+import { shareOrDownloadBlob } from '../utils/share'
 
 /** Preference order, best-quality first — the browser picks the first it can honour (ADR 0007). */
 const PREFERRED_MIME_TYPES = [
@@ -17,7 +15,7 @@ const PREFERRED_MIME_TYPES = [
   'video/mp4',
 ]
 
-/** Matches the Live Source's ~15fps rAF loop — no point capturing frames the Pipeline never paints. */
+/** Matches the Live Source's ~15fps rAF loop — no point capturing frames the source never painted. */
 const RECORDING_FPS = 15
 
 export function detectMimeType(): string | null {
@@ -38,6 +36,13 @@ export function formatElapsedTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+export function mimeToExtension(mimeType: string): string {
+  if (mimeType.startsWith('video/mp4')) {
+    return 'mp4'
+  }
+  return 'webm'
+}
+
 /** ADR 0007: where this is false the Record control is not rendered at all — no GIF fallback. */
 export function isRecordingSupported(): boolean {
   return (
@@ -47,14 +52,25 @@ export function isRecordingSupported(): boolean {
   )
 }
 
+export interface UseRecordingOptions {
+  // A neutral reason code, worded app-side: 'start' — the take never began, and pressing record
+  // again is the whole of the advice; 'export' — a good take failed to hand off, and no retry
+  // brings it back.
+  onError?: (reason: 'start' | 'export') => void
+  // The core resolves ext from the chosen mime type and asks the app for the name (the app passes
+  // Date.now() and its own outputFilename), so the container-driven extension is shared while the
+  // naming vocabulary stays app-side.
+  filename: (ext: string) => string
+}
+
 /**
- * Records the output canvas — the pixels the Pipeline already painted, so this is not datamosh
- * (CONTEXT.md). Like Capture, it only reads the visible canvas and never touches the rAF loop
- * that paints it. `onError` receives an already-worded message, ready for a toast (ADR 0006).
+ * Records the given canvas — the pixels already painted, so this is never datamosh. Only reads the
+ * visible canvas and never touches the loop that paints it. Failures report a neutral reason via
+ * `onError`; the app maps it to its own wording (ADR 0006).
  */
 export function useRecording(
   canvasRef: RefObject<HTMLCanvasElement | null>,
-  onError?: (message: string) => void,
+  { onError, filename }: UseRecordingOptions,
 ) {
   const [isSupported] = useState(() => isRecordingSupported())
   const [isRecording, setIsRecording] = useState(false)
@@ -78,7 +94,7 @@ export function useRecording(
     // reachable at all (ADR 0007 hides the control), so it lands here rather than in its own branch.
     const mimeType = detectMimeType()
     if (!mimeType) {
-      onError?.(Errors.recordingFailed().message)
+      onError?.('start')
       return
     }
 
@@ -89,7 +105,7 @@ export function useRecording(
       ).captureStream(RECORDING_FPS)
       recorder = new MediaRecorder(stream, { mimeType })
     } catch {
-      onError?.(Errors.recordingFailed().message)
+      onError?.('start')
       return
     }
 
@@ -108,12 +124,8 @@ export function useRecording(
       }
 
       const blob = new Blob(chunksRef.current, { type: mimeType })
-      const filename = outputFilename('recording', {
-        timestamp: Date.now(),
-        ext: mimeToExtension(mimeType),
-      })
-      void shareOrDownloadBlob(blob, filename).catch(() => {
-        onError?.(Errors.recordingExportFailed().message)
+      void shareOrDownloadBlob(blob, filename(mimeToExtension(mimeType))).catch(() => {
+        onError?.('export')
       })
 
       recorderRef.current = null
@@ -127,7 +139,7 @@ export function useRecording(
     try {
       recorder.start()
     } catch {
-      onError?.(Errors.recordingFailed().message)
+      onError?.('start')
       return
     }
 
@@ -138,7 +150,7 @@ export function useRecording(
     timerRef.current = setInterval(() => {
       setElapsedSeconds((s) => s + 1)
     }, 1000)
-  }, [canvasRef, onError])
+  }, [canvasRef, onError, filename])
 
   useEffect(() => {
     return () => {

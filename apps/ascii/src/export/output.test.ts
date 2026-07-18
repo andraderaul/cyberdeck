@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_EXPORT_DIM, mimeToExtension, outputFilename, planPngExport } from './output'
+import { MAX_EXPORT_DIM, outputFilename, planPngExport } from './output'
 
 describe('planPngExport', () => {
   it('reports no cap and no target when dimensions are unknown', () => {
@@ -38,17 +38,5 @@ describe('outputFilename', () => {
     expect(outputFilename('recording', { timestamp: 1234, ext: 'webm' })).toBe(
       'ascii-recording-1234.webm',
     )
-  })
-})
-
-describe('mimeToExtension', () => {
-  it('returns mp4 for video/mp4 variants', () => {
-    expect(mimeToExtension('video/mp4')).toBe('mp4')
-    expect(mimeToExtension('video/mp4;codecs=avc1')).toBe('mp4')
-  })
-
-  it('returns webm for everything else', () => {
-    expect(mimeToExtension('video/webm')).toBe('webm')
-    expect(mimeToExtension('video/webm;codecs=vp9')).toBe('webm')
   })
 })

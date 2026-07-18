@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mimeToExtension, outputFilename } from './output'
+import { outputFilename } from './output'
 
 describe('outputFilename', () => {
   it('names a PNG Export', () => {
@@ -26,23 +26,5 @@ describe('outputFilename', () => {
     expect(outputFilename('recording', { timestamp: 1750000000000, ext: 'webm' })).not.toBe(
       outputFilename('recording', { timestamp: 1750000005000, ext: 'webm' }),
     )
-  })
-})
-
-describe('mimeToExtension', () => {
-  it('maps an mp4 mime type to mp4', () => {
-    expect(mimeToExtension('video/mp4')).toBe('mp4')
-  })
-
-  it('maps every webm codec variant to webm', () => {
-    expect(mimeToExtension('video/webm')).toBe('webm')
-    expect(mimeToExtension('video/webm;codecs=vp9')).toBe('webm')
-    expect(mimeToExtension('video/webm;codecs=vp8')).toBe('webm')
-  })
-
-  // MediaRecorder can hand back a mimeType with codec params we never asked for; webm is the
-  // container every supported path but Safari lands on, so it's the safe default.
-  it('falls back to webm for an unrecognized mime type', () => {
-    expect(mimeToExtension('video/x-matroska;codecs=avc1')).toBe('webm')
   })
 })

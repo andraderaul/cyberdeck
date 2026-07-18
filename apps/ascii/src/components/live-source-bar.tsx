@@ -1,9 +1,9 @@
+import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
 import { Button, useToastError } from '@cyberdeck/deck-kit/ui'
 import { cn, isTouchDevice, shareOrDownloadCanvas } from '@cyberdeck/deck-kit/utils'
 import type { RefObject } from 'react'
 import { Errors } from '../errors/app-error'
 import { outputFilename } from '../export/output'
-import { formatElapsedTime } from '../hooks/use-recording'
 
 interface Props {
   canvasRef: RefObject<HTMLCanvasElement | null>
