@@ -34,8 +34,12 @@ código, mas é versionado e deployado de forma independente (ver ADR 0011 e ADR
   torna canônico e converge o ASCII//Convert nele. A convergência tornou `EmptyStateHero` e
   `Tooltip` diff-vazio, que então cruzaram pro Deck Kit — o `EmptyStateHero` por convergência
   deliberada antes da extração, o `Tooltip` como o "segundo caller" que ADR 0014 já previa. A
-  paridade é de *casca e padrão*, não de features: mirror (ASCII), AI Analyze (ASCII) e
-  Presets/Seed (GLITCH) divergem de propósito.
+  paridade é de *casca e padrão*, não de features: AI Analyze (ASCII) e Presets/Seed (GLITCH)
+  divergem de propósito. **Mirror** deixou de ser divergência e virou feature compartilhada
+  (ADR 0016), mas com implementações de propósito diferentes — ASCII espelha só o preview via CSS,
+  GLITCH espelha os pixels no Pipeline porque seu canvas *é* a saída. A convergência do control
+  panel (Presets na frente, tweaks atrás de um `advanced` disclosure) também passou a valer pro
+  ASCII, casando com o modelo que o GLITCH já usava.
 - **Mesmo padrão de núcleo** — ambos os pipelines são funções puras sobre `ImageData`
   (imperative shell / functional core), com o único ponto de escrita no canvas visível
   isolado no passo de Paint.

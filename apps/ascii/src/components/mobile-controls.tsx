@@ -3,6 +3,8 @@ import { useRef, useState } from 'react'
 import type { Preset } from '../ascii/presets'
 import type { ConversionSettings } from '../ascii/types'
 import ControlPanel from './control-panel'
+import PresetPicker from './preset-picker'
+import Disclosure from './ui/disclosure'
 
 interface Props {
   settings: ConversionSettings
@@ -13,13 +15,14 @@ interface Props {
 
 /**
  * The mobile front door to the controls: a floating trigger opens a bottom sheet holding the same
- * ControlPanel the desktop aside carries. No source/settings tabs (ADR 0015): the Source is chosen
- * from the empty state and cleared from the canvas, so the sheet is only ever the settings surface.
+ * stack the desktop aside carries — Presets first, the per-setting panel folded behind `advanced`
+ * (ADR 0016). No source/settings tabs (ADR 0015): the Source is chosen from the empty state and
+ * cleared from the canvas, so the sheet is only ever the settings surface.
  */
 export default function MobileControls({
   settings,
   onSettingsChange,
-  activePresetId,
+  activePresetId = null,
   onPresetSelect,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false)
@@ -38,12 +41,16 @@ export default function MobileControls({
       </button>
 
       <MobileBottomSheet isOpen={isOpen} onClose={() => setIsOpen(false)} triggerRef={triggerRef}>
-        <ControlPanel
-          settings={settings}
-          onChange={onSettingsChange}
-          activePresetId={activePresetId}
-          onPresetSelect={onPresetSelect}
-        />
+        <div className="flex flex-col gap-lg">
+          <PresetPicker
+            settings={settings}
+            activePresetId={activePresetId}
+            onSelect={(preset) => onPresetSelect?.(preset)}
+          />
+          <Disclosure label="advanced">
+            <ControlPanel settings={settings} onChange={onSettingsChange} />
+          </Disclosure>
+        </div>
       </MobileBottomSheet>
     </>
   )
