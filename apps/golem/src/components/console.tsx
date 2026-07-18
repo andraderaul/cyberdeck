@@ -11,7 +11,7 @@ type ConsoleProps = {
 const LINE_STYLES: Record<ConsoleLine['kind'], string> = {
   echo: 'text-fg-muted',
   info: 'text-fg',
-  error: 'text-red',
+  error: 'text-danger',
 }
 
 /**
