@@ -3,6 +3,7 @@
 // control surface.
 
 import { MAX_RATE, MIN_RATE } from '../hooks/use-clock'
+import type { MemoryUnit } from './inspect'
 
 export type Command =
   | { kind: 'asm' }
@@ -11,14 +12,19 @@ export type Command =
   | { kind: 'run' }
   | { kind: 'stop' }
   | { kind: 'clock'; rate: number | 'max' }
+  | { kind: 'reg'; name: string }
+  | { kind: 'mem'; start: number; count: number; unit: MemoryUnit }
   | { kind: 'empty' }
   | { kind: 'unknown'; input: string; suggestion: string | null }
   | { kind: 'bad-usage'; name: string; message: string }
 
 /** Every command name, in the order `help` should list them. */
-export const COMMAND_NAMES = ['asm', 'run', 'stop', 'step', 'clock', 'reset'] as const
+export const COMMAND_NAMES = ['asm', 'run', 'stop', 'step', 'clock', 'reg', 'mem', 'reset'] as const
 
 const NO_ARGUMENT_COMMANDS = ['asm', 'step', 'reset', 'run', 'stop'] as const
+
+const DEFAULT_DUMP_COUNT = 8
+const MAX_DUMP_COUNT = 256
 
 /**
  * Parses one Console line. Unknown input resolves to a suggestion rather than an error, so a
@@ -45,7 +51,69 @@ export function parseCommand(input: string): Command {
     return parseClock(args)
   }
 
+  if (lowered === 'reg') {
+    return parseReg(args)
+  }
+
+  if (lowered === 'mem') {
+    return parseMem(args)
+  }
+
   return { kind: 'unknown', input: name, suggestion: nearestCommand(lowered) }
+}
+
+function parseReg(args: string[]): Command {
+  if (args.length !== 1) {
+    return { kind: 'bad-usage', name: 'reg', message: 'usage: reg <name>, e.g. reg r1 or reg pc' }
+  }
+  return { kind: 'reg', name: args[0].toLowerCase() }
+}
+
+// `mem <start> [count] [words|bytes]` — the unit is a trailing word rather than a flag, so the
+// command reads as a sentence and needs no flag parsing to guess at.
+function parseMem(args: string[]): Command {
+  const usage = {
+    kind: 'bad-usage' as const,
+    name: 'mem',
+    message: 'usage: mem <start> [count] [words|bytes], e.g. mem 0 16 bytes',
+  }
+
+  if (args.length === 0 || args.length > 3) {
+    return usage
+  }
+
+  let unit: MemoryUnit = 'words'
+  const rest = [...args]
+  const last = rest[rest.length - 1]?.toLowerCase()
+  if (last === 'words' || last === 'bytes') {
+    unit = last
+    rest.pop()
+  }
+
+  if (rest.length === 0 || rest.length > 2) {
+    return usage
+  }
+
+  const start = parseAddress(rest[0])
+  if (start === null) {
+    return usage
+  }
+
+  const count = rest.length === 2 ? parseAddress(rest[1]) : DEFAULT_DUMP_COUNT
+  if (count === null || count < 1 || count > MAX_DUMP_COUNT) {
+    return {
+      kind: 'bad-usage',
+      name: 'mem',
+      message: `count must be between 1 and ${MAX_DUMP_COUNT}`,
+    }
+  }
+
+  return { kind: 'mem', start, count, unit }
+}
+
+function parseAddress(text: string): number | null {
+  const value = /^0x[0-9a-f]+$/i.test(text) ? Number.parseInt(text, 16) : Number(text)
+  return Number.isInteger(value) && value >= 0 ? value : null
 }
 
 function parseClock(args: string[]): Command {

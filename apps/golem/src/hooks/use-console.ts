@@ -4,6 +4,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { assemble, type Image } from '../golem/assembler'
 import { type Command, parseCommand } from '../golem/command'
+import { formatMemoryDump, formatRegister } from '../golem/inspect'
+import { registerIndex } from '../golem/isa'
 import { createMachine, type Machine, step } from '../golem/machine'
 import { type ClockRate, useClock } from './use-clock'
 
@@ -173,6 +175,35 @@ export function useConsole(initialSource: string): ConsoleState {
           setImage(null)
           output.push({ kind: 'info', text: 'machine destroyed — editor unlocked' })
           break
+
+        case 'reg': {
+          const current = machineRef.current
+          if (current === null) {
+            output.push({ kind: 'error', text: 'no machine — run asm first' })
+            break
+          }
+          const index = registerIndex(command.name)
+          if (index === null) {
+            output.push({
+              kind: 'error',
+              text: `no register called "${command.name}" — try r0..r31, or pc, ir, er, fr, cr, ipc`,
+            })
+            break
+          }
+          output.push({ kind: 'info', text: formatRegister(index, current.registers[index]) })
+          break
+        }
+
+        case 'mem': {
+          const current = machineRef.current
+          if (current === null) {
+            output.push({ kind: 'error', text: 'no machine — run asm first' })
+            break
+          }
+          const lines = formatMemoryDump(current.memory, command.start, command.count, command.unit)
+          output.push(...lines.map((text) => ({ kind: 'info' as const, text })))
+          break
+        }
 
         case 'bad-usage':
           output.push({ kind: 'error', text: command.message })

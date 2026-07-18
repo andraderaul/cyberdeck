@@ -1,13 +1,11 @@
 import { ErrorBoundary } from '@cyberdeck/deck-kit/ui'
 import Console from './components/console'
-import Panel from './components/panel'
+import Flags from './components/flags'
+import Memory from './components/memory'
 import Registers from './components/registers'
 import SourceEditor from './components/source-editor'
 import Terminal from './components/terminal'
 import { useConsole } from './hooks/use-console'
-
-// The Flags and Memory panels stay shells until #143 fills them.
-const PLACEHOLDER = 'not wired yet'
 
 // Prints a string a byte at a time, so the Terminal has something to show on first load. The
 // example that teaches the syntax properly, with its own tour, arrives with #140.
@@ -76,8 +74,8 @@ export default function App() {
 
           <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto_minmax(0,1fr)_minmax(0,1fr)] gap-3">
             <Registers machine={console.machine} />
-            <Panel title="Flags">{PLACEHOLDER}</Panel>
-            <Panel title="Memory">{PLACEHOLDER}</Panel>
+            <Flags machine={console.machine} />
+            <Memory machine={console.machine} />
             <Terminal machine={console.machine} />
           </div>
         </main>
