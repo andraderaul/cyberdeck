@@ -1,8 +1,7 @@
 import { useRecording } from '@cyberdeck/deck-kit/recording'
-import { ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
+import { EmptyStateHero, ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import ControlPanel from './components/control-panel'
-import EmptyStateHero from './components/empty-state-hero'
 import ExportBar from './components/export-bar'
 import GlitchCanvas from './components/glitch-canvas'
 import MobileControls from './components/mobile-controls'
@@ -133,7 +132,11 @@ export default function App() {
                   isRecording={isRecording}
                 />
               ) : (
-                <EmptyStateHero onImage={setSourceImage} onUseWebcam={handleUseWebcam} />
+                <EmptyStateHero
+                  onImage={setSourceImage}
+                  onUseWebcam={handleUseWebcam}
+                  tagline="it gets glitched right here — nothing leaves your browser"
+                />
               )}
             </ErrorBoundary>
           </div>

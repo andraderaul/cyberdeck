@@ -1,6 +1,6 @@
 import { normalizeError } from '@cyberdeck/deck-kit/errors'
 import { useRecording } from '@cyberdeck/deck-kit/recording'
-import { ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
+import { EmptyStateHero, ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { analyzeCanvas, toAnalysisState } from './ai/analysis-service'
 import type { AnalysisState } from './ai/types'
@@ -13,12 +13,10 @@ import AnalysisModal from './components/analysis-modal'
 import ApiKeyModal from './components/api-key-modal'
 import AsciiCanvas from './components/ascii-canvas'
 import ControlPanel from './components/control-panel'
-import EmptyStateHero from './components/empty-state-hero'
 import ExportBar from './components/export-bar'
 import LiveSourceBar from './components/live-source-bar'
 import MobileControls from './components/mobile-controls'
 import HeaderButton from './components/ui/header-button'
-import UploadZone from './components/upload-zone'
 import { outputFilename } from './export/output'
 import { useWebcamState } from './hooks/use-webcam-state'
 
@@ -177,15 +175,6 @@ export default function App() {
 
       <div className="flex-1 grid grid-cols-1 [grid-template-rows:1fr_auto] sm:grid-cols-[280px_1fr] sm:[grid-template-rows:1fr] overflow-hidden">
         <aside className="hidden sm:flex border-r border-base p-md overflow-y-auto flex-col gap-lg sm:order-first">
-          <UploadZone
-            onImage={handleImage}
-            webcamState={webcamState}
-            onSwitchMode={switchMode}
-            onSwitchCamera={switchCamera}
-            isMirrored={isMirrored}
-            onMirrorToggle={handleMirrorToggle}
-          />
-          <div className="w-full h-px bg-slate" />
           <ControlPanel
             settings={settings}
             onChange={patchSettings}
@@ -214,12 +203,15 @@ export default function App() {
                   isRecording={isRecording}
                   isLive={!!sourceVideo}
                   onClearSource={handleClearSource}
+                  onMirrorToggle={handleMirrorToggle}
+                  onSwitchCamera={switchCamera}
                   onDimensionsChange={handleDimensionsChange}
                 />
               ) : (
                 <EmptyStateHero
                   onImage={handleImage}
-                  onStartWebcam={() => void switchMode('webcam')}
+                  onUseWebcam={() => void switchMode('webcam')}
+                  tagline="it gets converted right here — nothing leaves your browser"
                 />
               )}
             </ErrorBoundary>
@@ -256,12 +248,6 @@ export default function App() {
       </div>
 
       <MobileControls
-        onImage={handleImage}
-        webcamState={webcamState}
-        onSwitchMode={switchMode}
-        onSwitchCamera={switchCamera}
-        isMirrored={isMirrored}
-        onMirrorToggle={handleMirrorToggle}
         settings={settings}
         onSettingsChange={patchSettings}
         activePresetId={activePresetId}

@@ -1,10 +1,9 @@
-import { Chip, Label, Slider } from '@cyberdeck/deck-kit/ui'
+import { Chip, Label, Slider, Tooltip } from '@cyberdeck/deck-kit/ui'
 import type { Preset } from '../ascii/presets'
 import { PRESETS, settingsMatch } from '../ascii/presets'
 import { getModePalette } from '../ascii/renderer'
 import type { Charset, ColorMode, ConversionSettings } from '../ascii/types'
 import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
-import Tooltip from './ui/tooltip'
 
 interface Props {
   settings: ConversionSettings

@@ -28,36 +28,34 @@ vi.mock('@cyberdeck/deck-kit/recording', () => ({
   })),
 }))
 
+// EmptyStateHero now lives in the kit (ADR 0015); stub it here as the app's Source entry probe.
 vi.mock('@cyberdeck/deck-kit/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@cyberdeck/deck-kit/ui')>()),
   useToastError: vi.fn(() => vi.fn()),
   ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}))
-
-vi.mock('./components/ascii-canvas', () => ({ default: () => <canvas /> }))
-vi.mock('./components/upload-zone', () => ({ default: () => <div>upload</div> }))
-vi.mock('./components/control-panel', () => ({ default: () => <div>control</div> }))
-vi.mock('./components/export-bar', () => ({ default: () => <div>export</div> }))
-vi.mock('./components/live-source-bar', () => ({ default: () => <div>live</div> }))
-vi.mock('./components/empty-state-hero', () => ({
-  default: ({
+  EmptyStateHero: ({
     onImage,
-    onStartWebcam,
+    onUseWebcam,
   }: {
     onImage: (img: HTMLImageElement) => void
-    onStartWebcam: () => void
+    onUseWebcam: () => void
   }) => (
     <>
       <button type="button" onClick={() => onImage(new Image())}>
         hero
       </button>
-      <button type="button" onClick={onStartWebcam}>
+      <button type="button" onClick={onUseWebcam}>
         hero-webcam
       </button>
     </>
   ),
 }))
+
+vi.mock('./components/ascii-canvas', () => ({ default: () => <canvas /> }))
+vi.mock('./components/control-panel', () => ({ default: () => <div>control</div> }))
+vi.mock('./components/export-bar', () => ({ default: () => <div>export</div> }))
+vi.mock('./components/live-source-bar', () => ({ default: () => <div>live</div> }))
 vi.mock('./components/mobile-controls', () => ({ default: () => <div>mobile</div> }))
 
 import { useAIConfig } from './ai/use-ai-config'

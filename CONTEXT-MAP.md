@@ -18,7 +18,8 @@ código, mas é versionado e deployado de forma independente (ver ADR 0011 e ADR
   deck é montado: a linguagem visual (design tokens + Tailwind preset), os primitivos de `ui/`,
   os hooks e utils neutros de framework, e a plumbing genérica de browser (mecanismo de erro
   operacional, core de Recording). **Não** é um core de domínio — o pipeline de cada app (conversão
-  ASCII, Effects de glitch) fica no app. Escopo e fronteiras em ADR 0014.
+  ASCII, Effects de glitch) fica no app. Escopo e fronteiras em ADR 0014; `EmptyStateHero` e
+  `Tooltip` cruzaram numa segunda leva (ADR 0015).
 
 ## Relationships
 
@@ -28,6 +29,13 @@ código, mas é versionado e deployado de forma independente (ver ADR 0011 e ADR
   como sinal até o segundo app tornar as junções óbvias; ADR 0014 registra que o gatilho disparou
   e move só o que estava provado. O que diverge de propósito fica copiado (webcam-state, os nomes
   de `outputFilename`) — sinal, não dívida.
+- **Paridade de interação entre os programas** — GLITCH//Studio provou um modelo de Source mais
+  limpo (entrada única pelo empty state, controles ao vivo no overlay do canvas), e ADR 0015 o
+  torna canônico e converge o ASCII//Convert nele. A convergência tornou `EmptyStateHero` e
+  `Tooltip` diff-vazio, que então cruzaram pro Deck Kit — o `EmptyStateHero` por convergência
+  deliberada antes da extração, o `Tooltip` como o "segundo caller" que ADR 0014 já previa. A
+  paridade é de *casca e padrão*, não de features: mirror (ASCII), AI Analyze (ASCII) e
+  Presets/Seed (GLITCH) divergem de propósito.
 - **Mesmo padrão de núcleo** — ambos os pipelines são funções puras sobre `ImageData`
   (imperative shell / functional core), com o único ponto de escrita no canvas visível
   isolado no passo de Paint.

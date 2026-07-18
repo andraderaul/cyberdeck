@@ -1,22 +1,25 @@
-import { SourceImageDropZone, useToastError } from '@cyberdeck/deck-kit/ui'
+import SourceImageDropZone from './source-image-drop-zone'
+import { useToastError } from './toast-provider'
 
 interface Props {
   onImage: (img: HTMLImageElement) => void
   onUseWebcam: () => void
+  // Per-app privacy line — the one thing that diverges between programs (ADR 0015). Kept as the
+  // client-side value proposition, since this is now the single Source entry point and first screen.
+  tagline: string
 }
 
 /**
- * The two ways in, given equal weight: drop a Source Image, or go to the Live Source. Presented
- * side by side rather than one-then-"or"-the-other so neither reads as the afterthought.
+ * The single Source entry point, shared across the deck (ADR 0015): drop a Source Image, or go to
+ * the Live Source. Presented side by side rather than one-then-"or"-the-other so neither reads as
+ * the afterthought.
  */
-export default function EmptyStateHero({ onImage, onUseWebcam }: Props) {
+export default function EmptyStateHero({ onImage, onUseWebcam, tagline }: Props) {
   const showError = useToastError()
 
   return (
     <div className="h-full flex flex-col items-center justify-center gap-md p-lg">
-      <span className="text-fg-muted text-xs text-center">
-        it gets glitched right here — nothing leaves your browser
-      </span>
+      <span className="text-fg-muted text-xs text-center">{tagline}</span>
       <div className="w-full max-w-[720px] flex flex-col sm:flex-row items-stretch justify-center gap-lg">
         <div className="flex-1 min-h-[160px]">
           <SourceImageDropZone size="lg" onImage={onImage} onError={showError} />
