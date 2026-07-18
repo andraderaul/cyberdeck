@@ -9,7 +9,7 @@ import PresetPicker from './components/preset-picker'
 import Disclosure from './components/ui/disclosure'
 import { Errors } from './errors/app-error'
 import { outputFilename } from './export/output'
-import type { Chain, Link } from './glitch/chain'
+import { type Chain, type Link, moveLink } from './glitch/chain'
 import { DEFAULT_PRESET, type Preset, randomizeChain } from './glitch/presets'
 import { createSeed } from './glitch/rng'
 import type { Seed } from './glitch/types'
@@ -77,6 +77,13 @@ export default function App() {
   // the picker marks as modified rather than deselecting — the user keeps their bearings.
   const patchLink = useCallback((id: string, params: Link['params']) => {
     setChain((prev) => prev.map((link) => (link.id === id ? ({ ...link, params } as Link) : link)))
+  }, [])
+
+  // Leaves activePresetId alone for the same reason a param edit does: a reordered look still
+  // belongs to the Preset it started from, and chainMatch — being order-sensitive — is what marks
+  // it (modified). Reordering back therefore restores the match on its own.
+  const handleReorder = useCallback((from: number, to: number) => {
+    setChain((prev) => moveLink(prev, from, to))
   }, [])
 
   // The Seed is not part of the look, so a Re-roll leaves both the Chain and the active
@@ -185,7 +192,12 @@ export default function App() {
             onRandomize={handleRandomize}
           />
           <Disclosure label="advanced">
-            <ControlPanel chain={chain} onLinkChange={patchLink} onReroll={handleReroll} />
+            <ControlPanel
+              chain={chain}
+              onLinkChange={patchLink}
+              onReorder={handleReorder}
+              onReroll={handleReroll}
+            />
           </Disclosure>
         </aside>
       </div>
@@ -199,6 +211,7 @@ export default function App() {
           onSelect={handlePresetSelect}
           onRandomize={handleRandomize}
           onLinkChange={patchLink}
+          onReorder={handleReorder}
           onReroll={handleReroll}
         />
       )}

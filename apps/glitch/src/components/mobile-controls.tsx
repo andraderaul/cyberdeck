@@ -12,6 +12,7 @@ interface Props {
   onSelect: (preset: Preset) => void
   onRandomize: () => void
   onLinkChange: (id: string, params: Link['params']) => void
+  onReorder: (from: number, to: number) => void
   onReroll: () => void
 }
 
@@ -27,6 +28,7 @@ export default function MobileControls({
   onSelect,
   onRandomize,
   onLinkChange,
+  onReorder,
   onReroll,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false)
@@ -57,7 +59,12 @@ export default function MobileControls({
             onRandomize={onRandomize}
           />
           <Disclosure label="advanced">
-            <ControlPanel chain={chain} onLinkChange={onLinkChange} onReroll={onReroll} />
+            <ControlPanel
+              chain={chain}
+              onLinkChange={onLinkChange}
+              onReorder={onReorder}
+              onReroll={onReroll}
+            />
           </Disclosure>
         </div>
       </MobileBottomSheet>

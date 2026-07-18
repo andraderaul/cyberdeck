@@ -17,6 +17,7 @@ const defaultProps = {
   onSelect: vi.fn(),
   onRandomize: vi.fn(),
   onLinkChange: vi.fn(),
+  onReorder: vi.fn(),
   onReroll: vi.fn(),
 }
 

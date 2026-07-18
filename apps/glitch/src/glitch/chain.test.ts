@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { applyChain, type Chain, createLink, EFFECT_REGISTRY, type EffectType } from './chain'
+import {
+  applyChain,
+  type Chain,
+  createLink,
+  EFFECT_REGISTRY,
+  type EffectType,
+  moveLink,
+} from './chain'
 import { blockDisplacement } from './pipeline'
 import { deriveSeed } from './rng'
 import type { BlockDisplacementParams, PixelBuffer } from './types'
@@ -181,5 +188,69 @@ describe('deriveSeed', () => {
 
   it('sends two Seeds to unrelated places at the same index', () => {
     expect(deriveSeed(SEED, 3)).not.toBe(deriveSeed(SEED + 1, 3))
+  })
+})
+
+describe('moveLink', () => {
+  const chain: Chain = [BLOCKS, SORT, SHIFT, GRAIN]
+  const typesOf = (c: Chain) => c.map((link) => link.type)
+
+  it('moves a Link later in the Chain', () => {
+    expect(typesOf(moveLink(chain, 0, 2))).toEqual([
+      'pixelSort',
+      'channelShift',
+      'blockDisplacement',
+      'noise',
+    ])
+  })
+
+  it('moves a Link earlier in the Chain', () => {
+    expect(typesOf(moveLink(chain, 3, 1))).toEqual([
+      'blockDisplacement',
+      'noise',
+      'pixelSort',
+      'channelShift',
+    ])
+  })
+
+  it('lands a downward move on the index asked for', () => {
+    // Removing before inserting is what makes `to` mean "where it ends up". Computing the insert
+    // against the original list would leave a downward move one position short.
+    expect(moveLink(chain, 0, 2)[2].id).toBe(BLOCKS.id)
+  })
+
+  it('never mutates the Chain it was given', () => {
+    const before = typesOf(chain)
+
+    moveLink(chain, 0, 3)
+
+    expect(typesOf(chain)).toEqual(before)
+  })
+
+  it('keeps every Link — a move is not a delete', () => {
+    const moved = moveLink(chain, 1, 3)
+
+    expect(moved).toHaveLength(chain.length)
+    expect(new Set(moved.map((l) => l.id))).toEqual(new Set(chain.map((l) => l.id)))
+  })
+
+  it.each([
+    ['the same index', 1, 1],
+    ['a negative source', -1, 2],
+    ['a negative target', 1, -1],
+    ['a source past the end', 9, 0],
+    ['a target past the end', 0, 9],
+  ])('returns the Chain unchanged for %s', (_label, from, to) => {
+    // A drag can end anywhere, including off the list — a dropped pointer is not an error.
+    expect(moveLink(chain, from, to)).toBe(chain)
+  })
+
+  it('changes what the Chain renders', () => {
+    // Order is the look: the reorder has to reach the pixels, not just the list.
+    const pixels = gradient(16, 12)
+
+    expect(bytesOf(applyChain(pixels, [SORT, SHIFT], SEED))).not.toEqual(
+      bytesOf(applyChain(pixels, moveLink([SORT, SHIFT], 0, 1), SEED)),
+    )
   })
 })
