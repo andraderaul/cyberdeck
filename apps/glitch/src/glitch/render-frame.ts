@@ -1,5 +1,5 @@
+import { applyPipeline } from './chain'
 import { type GlitchSource, sampleDimensions, sourceDimensions } from './image-utils'
-import { applyPipeline } from './pipeline'
 import type { GlitchSettings, PixelBuffer, Seed } from './types'
 
 /**

@@ -215,15 +215,20 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   `MAX_BLOCK_SHIFT_RATIO`, `MAX_BLOCK_HEIGHT_RATIO`, `MIN_BLOCK_WIDTH_RATIO`,
   `ChromaticAberrationParams`, `DEFAULT_CHROMATIC_ABERRATION`,
   `MAX_CHROMATIC_ABERRATION_MAGNIFICATION`,
+  `DEFAULT_CHANNEL_SHIFT`,
   `CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE` (the two params with no natural 0..1
   bound — in the core so the sliders and Randomize's clamp share one source of truth)
 - `src/glitch/presets.ts` — `PRESETS` (the six curated looks), `DEFAULT_PRESET` (applied on open),
   `Preset`, `glitchSettingsMatch()` (total), `randomizeGlitchSettings()` (preset + jitter, injected
   randomness)
-- `src/glitch/pipeline.ts` — `applyPipeline()` (pure), `blockDisplacement()`, `pixelSort()`,
+- `src/glitch/pipeline.ts` — the six Effects: `blockDisplacement()`, `pixelSort()`,
   `channelShift()`, `chromaticAberration()`, `scanlines()`, `noise()` — see ADR 0005
-- `src/glitch/rng.ts` — `createRng()` (pure, Seed → draw stream), `createSeed()` (impure — the app's
-  only real randomness), `Rng`
+- `src/glitch/chain.ts` — the composable Effect Chain (ADR 0017): `Chain`, `Link`, `EffectType`,
+  `EffectParams`, `EFFECT_REGISTRY` (type → pure fn + `DEFAULT_*`), `applyChain()` (the fold),
+  `chainFromSettings()`, and `applyPipeline()` — now a thin adapter over `applyChain`. Depends on
+  `pipeline.ts` one-way: the Effects don't know the Chain exists
+- `src/glitch/rng.ts` — `createRng()` (pure, Seed → draw stream), `deriveSeed()` (the per-Link occurrence
+  sub-seed — ADR 0017), `createSeed()` (impure — the app's only real randomness), `Rng`
 - `src/glitch/image-utils.ts` — `sampleDimensions()` (800×800 cap), `sourceDimensions()`,
   `GlitchSource` (image | video — the shell's vocabulary, kept out of the DOM-free `types.ts`)
 - `src/glitch/render-frame.ts` — `renderGlitchFrame()`: the imperative shell
