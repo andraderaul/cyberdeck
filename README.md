@@ -95,6 +95,9 @@ Two things about the path set are deliberate and must not be trimmed:
   all of them. Watching only the project's own `apps/` directory would silently stop shipping
   Deck Kit changes — and a stale deploy looks like nothing is wrong.
 - **`package.json` / `package-lock.json` are in every list**, so a dependency bump redeploys.
+- **Only the root `vercel.json` lists itself.** It sits outside `apps/ascii`, so a change to
+  ASCII//Convert's own build config would otherwise not match anything. The other two configs live
+  inside the directory they already watch.
 
 The trailing `':(exclude)**/*.md'` pathspec is what makes a genuinely docs-only PR skip even when
 the markdown lives *inside* an app — `apps/glitch/CLAUDE.md` ships nothing. A commit touching both
