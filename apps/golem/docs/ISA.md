@@ -287,6 +287,42 @@ alguém escrevendo programa aqui deva aprender, e replicá-la seria o mesmo erro
 Os outros quatro programas herdados batem com as duas revisões: nenhum deles tem `OV` posto na
 hora de dividir. Detalhes em `src/golem/__fixtures__/PROVENANCE.md`.
 
+### `mul` — o GOLEM calcula os 64 bits, como o `muli`
+
+O `muli` da referência calcula o produto em 64 bits e guarda a parte alta em `ER` — confirmado em
+`1_limits`, onde `muli r10, r1, 11` com `r1 = 0xFFFFFFFF` dá `ER = 0x0A`.
+
+O `mul` (tipo U) não: escreve `ERR = registradores[x] * registradores[y]`, multiplicação de
+`uint32_t` que satura em 32 bits *antes* de ser atribuída ao `uint64_t`. A parte alta sai sempre
+zero. É deslize de largura em C, não semântica.
+
+**O GOLEM calcula os dois em 64 bits.** Nenhuma fixture contradiz: os `mul` de
+`1_recursive_factorial` operam sobre valores pequenos, onde a parte alta é zero de verdade.
+
+### `stb` — o GOLEM escreve na memória
+
+O `stb` da referência não guarda byte nenhum: o `setarSTB` altera `registradores[y]`, o registrador
+*de origem*, sob uma condição que compara `memoria[PC]` com um endereço. Escreve no lugar errado, e
+só às vezes.
+
+Não custa oráculo — em `1_limits` nada relê os bytes escritos, então o trace é idêntico nas duas
+versões. **O GOLEM implementa o que o ISA descreve:** `MEM[Rx + N] = Ry`, um byte. Sem isso o
+Terminal não existe, já que escrever nele *é* um `stb`.
+
+### Ordem dos bytes dentro da palavra
+
+Byte 0 é o **mais significativo** — big-endian dentro da palavra. Fixado por `1_limits`: a palavra
+`0x41424300` lê `0x41` no offset 0 e `0x43` no offset 2.
+
+Vale para `ldb`, `stb` e para como o assembler empacota string. Empacotar ao contrário monta sem
+erro e imprime cada palavra com os caracteres invertidos.
+
+### `shr` zera o `ER`
+
+A referência monta `(ER:Rx)`, desloca, e depois faz `registradores[ER] = (ERR & 0xFFFFFFFF00000000)`
+— atribuição de um valor cujos 32 bits baixos são zero a um `uint32_t`. `ER` acaba sempre em zero.
+Bate com `1_limits`, e o GOLEM faz o mesmo.
+
 ### Outros achados, sem impacto
 
 - **`bge` está certo por acidente**, escrito com um literal octal (`00000004`) que calha de valer 4.
