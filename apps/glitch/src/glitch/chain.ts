@@ -110,6 +110,27 @@ export function createLink<K extends EffectType>(type: K, params?: EffectParams[
 }
 
 /**
+ * Moves the Link at `from` to sit at `to`, returning a new Chain — the pure half of reordering
+ * (#127), so the drag surface can stay about pointers and keys.
+ *
+ * Out-of-range indices return the Chain unchanged rather than throwing: a drag can end anywhere,
+ * including past the end of the list, and a dropped pointer is not an error worth a toast.
+ *
+ * Removing before inserting is what makes `to` mean "the index this Link ends up at" — computing
+ * the insert against the original list would place a downward move one position short.
+ */
+export function moveLink(chain: Chain, from: number, to: number): Chain {
+  if (from === to || from < 0 || to < 0 || from >= chain.length || to >= chain.length) {
+    return chain
+  }
+
+  const next = [...chain]
+  const [moved] = next.splice(from, 1)
+  next.splice(to, 0, moved)
+  return next
+}
+
+/**
  * The Seed one Link draws on, given how many Links of its own type came before it (ADR 0017).
  *
  * Occurrence 0 returns the global Seed **untouched**, and that is the load-bearing part: it is what

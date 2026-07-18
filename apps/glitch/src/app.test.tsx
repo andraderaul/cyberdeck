@@ -36,8 +36,12 @@ const renderedChain = vi.fn<(c: Chain) => void>()
 
 /** The params the canvas last received for `type` — the Chain is a list, so a Link has to be found. */
 function lastParamsOf(type: EffectType) {
-  const chain = renderedChain.mock.lastCall?.[0] as Chain
-  return chain.find((link) => link.type === type)?.params
+  return lastChain().find((link) => link.type === type)?.params
+}
+
+/** The Chain the canvas last received. */
+function lastChain() {
+  return renderedChain.mock.lastCall?.[0] as Chain
 }
 const renderedSeed = vi.fn<(s: Seed) => void>()
 
@@ -199,6 +203,109 @@ describe('App', () => {
     // Its own Links are still there.
     expect(screen.getByLabelText('blocks')).toBeInTheDocument()
     expect(screen.getByLabelText('grain')).toBeInTheDocument()
+  })
+
+  describe('reordering Links', () => {
+    function handles() {
+      return screen.getAllByRole('button', { name: /^reorder / })
+    }
+
+    it('offers a reorder handle per Link, spelling out its position', () => {
+      renderWithAdvancedOpen()
+
+      const names = handles().map((h) => h.getAttribute('aria-label'))
+
+      expect(names).toEqual([
+        'reorder block displacement, position 1 of 6',
+        'reorder pixel sort, position 2 of 6',
+        'reorder channel shift, position 3 of 6',
+        'reorder chromatic aberration, position 4 of 6',
+        'reorder scanlines, position 5 of 6',
+        'reorder noise, position 6 of 6',
+      ])
+    })
+
+    it('moves a Link later on ArrowDown', () => {
+      renderWithAdvancedOpen()
+      renderedChain.mockClear()
+
+      fireEvent.keyDown(handles()[0], { key: 'ArrowDown' })
+
+      expect(lastChain().map((link) => link.type)).toEqual([
+        'pixelSort',
+        'blockDisplacement',
+        'channelShift',
+        'chromaticAberration',
+        'scanlines',
+        'noise',
+      ])
+    })
+
+    it('moves a Link earlier on ArrowUp', () => {
+      renderWithAdvancedOpen()
+      renderedChain.mockClear()
+
+      fireEvent.keyDown(handles()[1], { key: 'ArrowUp' })
+
+      expect(lastChain().map((link) => link.type)).toEqual([
+        'pixelSort',
+        'blockDisplacement',
+        'channelShift',
+        'chromaticAberration',
+        'scanlines',
+        'noise',
+      ])
+    })
+
+    // The ends have nowhere to go — moving past them would wrap the Chain, which reads as the list
+    // jumping rather than as the move being refused.
+    it('refuses to move the first Link earlier', () => {
+      renderWithAdvancedOpen()
+      const before = lastChain().map((link) => link.type)
+
+      fireEvent.keyDown(handles()[0], { key: 'ArrowUp' })
+
+      expect(lastChain().map((link) => link.type)).toEqual(before)
+    })
+
+    it('refuses to move the last Link later', () => {
+      renderWithAdvancedOpen()
+      const before = lastChain().map((link) => link.type)
+
+      fireEvent.keyDown(handles()[5], { key: 'ArrowDown' })
+
+      expect(lastChain().map((link) => link.type)).toEqual(before)
+    })
+
+    it('marks the active Preset modified once a Link moves', () => {
+      // chainMatch is order-sensitive, so a reorder is an edit to the look exactly as a slider is.
+      renderWithAdvancedOpen()
+
+      fireEvent.keyDown(handles()[0], { key: 'ArrowDown' })
+
+      expect(
+        screen.getByRole('button', { name: `${DEFAULT_PRESET.name} (modified)` }),
+      ).toBeInTheDocument()
+    })
+
+    it('restores the match when the Link is moved back', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.keyDown(handles()[0], { key: 'ArrowDown' })
+      fireEvent.keyDown(handles()[1], { key: 'ArrowUp' })
+
+      expect(screen.getByRole('button', { name: DEFAULT_PRESET.name })).toBeInTheDocument()
+      expect(chainMatch(lastChain(), DEFAULT_PRESET.chain)).toBe(true)
+    })
+
+    it('reorders on a pointer drag and drop', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.dragStart(handles()[0])
+      fireEvent.drop(screen.getByLabelText('grain').closest('div')?.parentElement as HTMLElement)
+
+      expect(lastChain().map((link) => link.type)[5]).toBe('blockDisplacement')
+    })
   })
 
   it('passes an updated Chain down to the canvas when a control changes', () => {
