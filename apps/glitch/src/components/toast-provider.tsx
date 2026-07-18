@@ -1,5 +1,5 @@
+import { useToast } from '@cyberdeck/deck-kit/hooks'
 import { createContext, type ReactNode, useContext } from 'react'
-import { useToast } from '../hooks/use-toast'
 import Toast from './ui/toast'
 
 type ToastContextValue = {

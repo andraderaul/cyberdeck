@@ -8,6 +8,7 @@
   "exports": {
     "./utils": "./src/utils/index.ts",
     "./ui": "./src/ui/index.ts",
+    "./hooks": "./src/hooks/index.ts",
     "./tokens.css": "./src/tokens.css",
     "./tailwind-preset": "./src/tailwind-preset.js"
   },
