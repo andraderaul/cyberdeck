@@ -1,7 +1,8 @@
-import { Button, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
+import { Button, Chip, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import { useState } from 'react'
-import type { Chain, EffectType, Link } from '../glitch/chain'
+import { type Chain, type EffectType, type Link, MAX_CHAIN_LENGTH } from '../glitch/chain'
+import { EFFECT_ORDER } from '../glitch/presets'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
   type ChannelName,
@@ -242,6 +243,9 @@ interface Props {
   onReroll: () => void
   onLinkChange: (id: string, params: Link['params']) => void
   onReorder: (from: number, to: number) => void
+  onAdd: (type: EffectType) => void
+  onRemove: (id: string) => void
+  onDuplicate: (id: string) => void
 }
 
 /**
@@ -252,7 +256,16 @@ interface Props {
  * one section fewer (ADR 0017). Keyed by Link id, not by Effect: a Chain may hold the same Effect
  * twice, and keying by type would collapse the repeats into one row.
  */
-export default function ControlPanel({ chain, onLinkChange, onReroll, onReorder }: Props) {
+export default function ControlPanel({
+  chain,
+  onLinkChange,
+  onReroll,
+  onReorder,
+  onAdd,
+  onRemove,
+  onDuplicate,
+}: Props) {
+  const isFull = chain.length >= MAX_CHAIN_LENGTH
   // Which Link the pointer is currently carrying. Held here rather than in the drag event because
   // `dataTransfer` is unreadable during dragover — the moment the drop target has to be decided.
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
@@ -319,6 +332,27 @@ export default function ControlPanel({ chain, onLinkChange, onReroll, onReorder 
             </button>
             <Label>{EFFECT_LABELS[link.type]}</Label>
             <Tooltip id={`tooltip-${link.id}`} content={EFFECT_TOOLTIPS[link.type]} />
+            {/* Pushed to the far end so the row's destructive control is nowhere near the handle a
+                user grabs to drag it. */}
+            <div className="ml-auto flex items-center gap-3xs">
+              <button
+                type="button"
+                onClick={() => onDuplicate(link.id)}
+                disabled={isFull}
+                aria-label={`duplicate ${EFFECT_LABELS[link.type]}`}
+                className="text-dim hover:text-fg disabled:opacity-40 disabled:hover:text-dim px-2xs rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-electric"
+              >
+                <span aria-hidden="true">⧉</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onRemove(link.id)}
+                aria-label={`remove ${EFFECT_LABELS[link.type]}`}
+                className="text-dim hover:text-hot px-2xs rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-electric"
+              >
+                <span aria-hidden="true">✕</span>
+              </button>
+            </div>
           </div>
           <LinkControls link={link} onChange={(params) => onLinkChange(link.id, params)} />
         </div>
@@ -329,6 +363,28 @@ export default function ControlPanel({ chain, onLinkChange, onReroll, onReorder 
       <p id="reorder-hint" className="sr-only">
         Press the up and down arrow keys to move this effect earlier or later in the chain.
       </p>
+
+      {/* Built from the registry's own order rather than a second hand-kept list, so a new Effect
+          reaches the palette the day it is registered (ADR 0017). */}
+      <fieldset className="flex flex-col gap-sm border-none p-0 m-0">
+        <legend className="w-full mb-2xs">
+          <Label>add effect</Label>
+        </legend>
+        <div className="flex flex-wrap gap-2xs">
+          {EFFECT_ORDER.map((type) => (
+            <Chip key={type} selected={false} onClick={() => onAdd(type)} disabled={isFull}>
+              + {EFFECT_LABELS[type]}
+            </Chip>
+          ))}
+        </div>
+        {/* A live region, not a static hint: the message appears mid-interaction, and a user who
+            just hit the limit is the one who most needs to be told why the palette went quiet. */}
+        <p role="status" className="text-2xs text-dim">
+          {isFull
+            ? `chain is full — ${MAX_CHAIN_LENGTH} effects max. remove one to add another.`
+            : `${chain.length} of ${MAX_CHAIN_LENGTH} effects`}
+        </p>
+      </fieldset>
 
       {/* The Seed sits outside the Chain, so its control sits outside the Link list rather than
           becoming a seventh row that looks editable like the rest. */}

@@ -110,6 +110,65 @@ export function createLink<K extends EffectType>(type: K, params?: EffectParams[
 }
 
 /**
+ * The longest Chain the editor will build (ADR 0017 asked for ~8–12, tuned here).
+ *
+ * Measured on the worst case the sampling cap allows — a vertical Pixel Sort at a low threshold over
+ * an 800×800 buffer. That costs ~80ms for a *single* Link, so the Live Source's ~15fps budget
+ * (ADR 0002) was already blown by one heavy Effect before the Chain existed; each further Link adds
+ * roughly another 25ms. The cap therefore does not promise a frame rate, and is not pretending to:
+ * it bounds how far the compounding can run, at ~10 Links being roughly 3× the cost of the single
+ * heavy Link the app already shipped.
+ *
+ * Ten is also about where the panel stops being scannable, so the two limits agree — which is why
+ * one number can serve both without either being obviously the binding one.
+ */
+export const MAX_CHAIN_LENGTH = 10
+
+/**
+ * Appends a Link of `type`, seeded with that Effect's defaults — the palette's half of Slice 4.
+ *
+ * Refuses past MAX_CHAIN_LENGTH by returning the Chain unchanged, so the cap holds even if a caller
+ * forgets to check it. The control surface still checks separately: a silently ignored click is a
+ * worse answer than a disabled button that says why.
+ */
+export function addLink(chain: Chain, type: EffectType): Chain {
+  if (chain.length >= MAX_CHAIN_LENGTH) {
+    return chain
+  }
+  return [...chain, createLink(type)]
+}
+
+/**
+ * Drops the Link with `id`. An unknown id leaves the Chain alone, and emptying the Chain entirely is
+ * allowed — `applyChain` renders an empty Chain as the untouched Source, which is the honest result
+ * of "no Effects" rather than a state worth forbidding.
+ */
+export function removeLink(chain: Chain, id: string): Chain {
+  return chain.filter((link) => link.id !== id)
+}
+
+/**
+ * Clones the Link with `id` and inserts the copy directly after it — the point at which repeats
+ * reach the user (ADR 0017).
+ *
+ * The copy lands adjacent rather than at the end because duplicating is how a user says "another one
+ * of these, here"; appending would make them drag it back every time. It takes a fresh id, which is
+ * the whole reason `createLink`'s id isn't derived from its content — the two Links are identical in
+ * every field that matters to the look and must still be distinguishable as rows.
+ */
+export function duplicateLink(chain: Chain, id: string): Chain {
+  const index = chain.findIndex((link) => link.id === id)
+  if (index === -1 || chain.length >= MAX_CHAIN_LENGTH) {
+    return chain
+  }
+
+  const source = chain[index]
+  const next = [...chain]
+  next.splice(index + 1, 0, createLink(source.type, source.params as never))
+  return next
+}
+
+/**
  * Moves the Link at `from` to sit at `to`, returning a new Chain — the pure half of reordering
  * (#127), so the drag surface can stay about pointers and keys.
  *

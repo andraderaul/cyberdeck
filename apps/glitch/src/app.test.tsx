@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './app'
 import { Errors } from './errors/app-error'
-import type { Chain, EffectType } from './glitch/chain'
+import { type Chain, EFFECT_REGISTRY, type EffectType, MAX_CHAIN_LENGTH } from './glitch/chain'
 import { chainMatch, DEFAULT_PRESET, PRESETS } from './glitch/presets'
 import type { Seed } from './glitch/types'
 
@@ -305,6 +305,98 @@ describe('App', () => {
       fireEvent.drop(screen.getByLabelText('grain').closest('div')?.parentElement as HTMLElement)
 
       expect(lastChain().map((link) => link.type)[5]).toBe('blockDisplacement')
+    })
+  })
+
+  describe('editing the Chain', () => {
+    it('adds a Link from the palette, seeded with the Effect’s defaults', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.click(screen.getByRole('button', { name: '+ noise' }))
+
+      const types = lastChain().map((link) => link.type)
+      expect(types).toHaveLength(DEFAULT_PRESET.chain.length + 1)
+      expect(types[types.length - 1]).toBe('noise')
+      expect(lastChain()[types.length - 1].params).toEqual(EFFECT_REGISTRY.noise.defaults)
+    })
+
+    it('adds a second Link of an Effect the Chain already carries', () => {
+      // The headline capability reaching the user: repeats.
+      renderWithAdvancedOpen()
+
+      fireEvent.click(screen.getByRole('button', { name: '+ pixel sort' }))
+
+      expect(lastChain().filter((link) => link.type === 'pixelSort')).toHaveLength(2)
+    })
+
+    it('removes a Link', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.click(screen.getByRole('button', { name: 'remove scanlines' }))
+
+      expect(lastChain().some((link) => link.type === 'scanlines')).toBe(false)
+    })
+
+    it('duplicates a Link directly after itself', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.click(screen.getByRole('button', { name: 'duplicate pixel sort' }))
+
+      expect(lastChain().map((link) => link.type)).toEqual([
+        'blockDisplacement',
+        'pixelSort',
+        'pixelSort',
+        'channelShift',
+        'chromaticAberration',
+        'scanlines',
+        'noise',
+      ])
+    })
+
+    it('gives a duplicated Link its own editable row', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.click(screen.getByRole('button', { name: 'duplicate pixel sort' }))
+
+      // Two rows, not one reused — the ids are what keep them apart.
+      expect(screen.getAllByRole('group', { name: 'sort direction' })).toHaveLength(2)
+    })
+
+    it.each([
+      ['adding', () => fireEvent.click(screen.getByRole('button', { name: '+ noise' }))],
+      ['removing', () => fireEvent.click(screen.getByRole('button', { name: 'remove scanlines' }))],
+      [
+        'duplicating',
+        () => fireEvent.click(screen.getByRole('button', { name: 'duplicate noise' })),
+      ],
+    ])('marks the active Preset modified after %s a Link', (_label, act) => {
+      renderWithAdvancedOpen()
+
+      act()
+
+      expect(
+        screen.getByRole('button', { name: `${DEFAULT_PRESET.name} (modified)` }),
+      ).toBeInTheDocument()
+    })
+
+    it('reports how full the Chain is', () => {
+      renderWithAdvancedOpen()
+
+      expect(screen.getByRole('status')).toHaveTextContent(`6 of ${MAX_CHAIN_LENGTH} effects`)
+    })
+
+    it('stops at the cap and says why', () => {
+      renderWithAdvancedOpen()
+
+      // VAPORWAVE opens with 6 Links; fill the remaining slots.
+      for (let i = 0; i < MAX_CHAIN_LENGTH; i++) {
+        fireEvent.click(screen.getByRole('button', { name: '+ noise' }))
+      }
+
+      expect(lastChain()).toHaveLength(MAX_CHAIN_LENGTH)
+      expect(screen.getByRole('status')).toHaveTextContent('chain is full')
+      expect(screen.getByRole('button', { name: '+ noise' })).toBeDisabled()
+      expect(screen.getAllByRole('button', { name: /^duplicate / })[0]).toBeDisabled()
     })
   })
 

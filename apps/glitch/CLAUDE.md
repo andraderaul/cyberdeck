@@ -65,24 +65,27 @@ Single-page React/TS/Vite app. Fully client-side — no backend, no network.
 ### Presets and Randomize
 
 The six Presets in `src/glitch/presets.ts` are the app's primary surface — `PresetPicker` sits above
-the advanced Disclosure, and `DEFAULT_PRESET` is applied on open. A Preset is a whole GlitchSettings
-snapshot rather than a diff from a default: a curator can read one entire look in one place, and
-re-curate it without moving the other five.
+the advanced Disclosure, and `DEFAULT_PRESET` is applied on open. A Preset is a whole Chain rather
+than a diff from a default: a curator can read one entire look in one place, and re-curate it
+without moving the other five. Each carries **only the Links its look uses** — off is a Link's
+absence (ADR 0017), so VHS has no Pixel Sort and CORRUPTED no Scanlines.
 
-Three behaviours hang together, and all of them come from the Seed sitting *outside* GlitchSettings:
+Three behaviours hang together, and all of them come from the Seed sitting *outside* the Chain:
 
 - **Applying a Preset draws a fresh Seed.** The look is shared, the arrangement is yours.
-- **`glitchSettingsMatch()` is a total comparison** — every param of every Effect, with no
-  "except the seed" exclusion for a later reader to innocently tidy away. So a Re-roll keeps the
-  active Preset highlighted (a new arrangement is not a customisation) while a slider edit marks it
-  `(modified)` — the picker tracks `activePresetId` rather than deriving it, because a look alone
-  can't say which Preset it was edited away from.
-- **Randomize is preset + jitter** (`randomizeGlitchSettings`): pick a Preset, perturb its numbers
-  within spreads curated well inside the sliders' ranges. Starting from a known-good point is what
-  guarantees "always pretty"; independent per-param sampling would eventually deal out a combination
-  nobody vouched for. Only numbers jitter — a Preset's *choices* (which channel splits, which way
-  the sort runs, whether an Effect is on) ride through untouched, since flipping one lands outside
-  everything the base promised. Its randomness is injected, so a test pins both the base and the
+- **`chainMatch()` is a total, order-sensitive comparison** — same length, same type and params at
+  each position, with no "except the seed" exclusion for a later reader to innocently tidy away. It
+  ignores each Link's `id`, which is plumbing rather than look: comparing it would mark every Preset
+  modified the instant it was applied. So a Re-roll keeps the active Preset highlighted while a
+  slider edit, a reorder, an add, a remove or a duplicate marks it `(modified)` — the picker tracks
+  `activePresetId` rather than deriving it, because a look alone can't say which Preset it was
+  edited away from.
+- **Randomize is preset + jitter** (`randomizeChain`): pick a Preset, perturb its numbers within
+  spreads curated well inside the sliders' ranges. Starting from a known-good point is what
+  guarantees "always pretty". **The Chain's structure rides through untouched** — which Links, how
+  many, in what order — because bad structure sinks a look faster than a bad number; structural
+  variety is curated as more Presets, never assembled at random. A Preset's non-numeric choices ride
+  through for the same reason. Its randomness is injected, so a test pins both the base and the
   perturbation; the app passes `Math.random` and draws the Seed itself. Randomize clears the active
   Preset rather than marking its base modified: a jittered look is one the user discovered, not an
   edit they made.
@@ -218,15 +221,16 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   `DEFAULT_CHANNEL_SHIFT`,
   `CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE` (the two params with no natural 0..1
   bound — in the core so the sliders and Randomize's clamp share one source of truth)
-- `src/glitch/presets.ts` — `PRESETS` (the six curated looks), `DEFAULT_PRESET` (applied on open),
-  `Preset`, `glitchSettingsMatch()` (total), `randomizeGlitchSettings()` (preset + jitter, injected
-  randomness)
+- `src/glitch/presets.ts` — `PRESETS` (the six curated Chains), `DEFAULT_PRESET` (applied on open),
+  `Preset`, `chainMatch()` (total and order-sensitive), `randomizeChain()` (preset + jitter,
+  injected randomness, structure rides through), `EFFECT_ORDER` (the palette's order)
 - `src/glitch/pipeline.ts` — the six Effects: `blockDisplacement()`, `pixelSort()`,
   `channelShift()`, `chromaticAberration()`, `scanlines()`, `noise()` — see ADR 0005
 - `src/glitch/chain.ts` — the composable Effect Chain (ADR 0017): `Chain`, `Link`, `EffectType`,
   `EffectParams`, `EFFECT_REGISTRY` (type → pure fn + `DEFAULT_*`), `applyChain()` (the fold),
-  `chainFromSettings()`, and `applyPipeline()` — now a thin adapter over `applyChain`. Depends on
-  `pipeline.ts` one-way: the Effects don't know the Chain exists
+  `createLink()`, and the pure editing helpers `addLink()` / `removeLink()` / `duplicateLink()` /
+  `moveLink()` plus `MAX_CHAIN_LENGTH`. Depends on `pipeline.ts` one-way: the Effects don't know
+  the Chain exists
 - `src/glitch/rng.ts` — `createRng()` (pure, Seed → draw stream), `deriveSeed()` (the per-Link occurrence
   sub-seed — ADR 0017), `createSeed()` (impure — the app's only real randomness), `Rng`
 - `src/glitch/image-utils.ts` — `sampleDimensions()` (800×800 cap), `sourceDimensions()`,
@@ -252,9 +256,11 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   ~15fps rAF loop for a Live Source. Carries the LIVE / REC badges
 - `src/components/preset-picker.tsx` — the front door: the six Preset chips (active one highlighted,
   `(modified)` once edited) and Randomize
-- `src/components/control-panel.tsx` — GlitchSettings controls, in Pipeline order, plus the Re-roll
-  control (its own callback — the Seed is not part of the look). Sits behind the `advanced`
-  Disclosure in `app.tsx` (#84) — the tweak layer, not the front door
+- `src/components/control-panel.tsx` — the Chain editor: one section per Link in Chain order, each
+  with a grab handle (drag, or arrow keys when focused), duplicate and remove; plus the
+  registry-driven add palette and the Re-roll control (its own callback — the Seed is not part of
+  the look). Sits behind the `advanced` Disclosure in `app.tsx` (#84) — the tweak layer, not the
+  front door
 - `src/components/empty-state-hero.tsx` — initial empty state with the upload and webcam entry points
 - `src/components/export-bar.tsx` — PNG Export / Capture / Copy / Record controls and the
   recording timer

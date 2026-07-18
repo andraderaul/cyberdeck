@@ -1,6 +1,6 @@
 import { MobileBottomSheet } from '@cyberdeck/deck-kit/ui'
 import { useRef, useState } from 'react'
-import type { Chain, Link } from '../glitch/chain'
+import type { Chain, EffectType, Link } from '../glitch/chain'
 import type { Preset } from '../glitch/presets'
 import ControlPanel from './control-panel'
 import PresetPicker from './preset-picker'
@@ -13,6 +13,9 @@ interface Props {
   onRandomize: () => void
   onLinkChange: (id: string, params: Link['params']) => void
   onReorder: (from: number, to: number) => void
+  onAdd: (type: EffectType) => void
+  onRemove: (id: string) => void
+  onDuplicate: (id: string) => void
   onReroll: () => void
 }
 
@@ -29,6 +32,9 @@ export default function MobileControls({
   onRandomize,
   onLinkChange,
   onReorder,
+  onAdd,
+  onRemove,
+  onDuplicate,
   onReroll,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false)
@@ -63,6 +69,9 @@ export default function MobileControls({
               chain={chain}
               onLinkChange={onLinkChange}
               onReorder={onReorder}
+              onAdd={onAdd}
+              onRemove={onRemove}
+              onDuplicate={onDuplicate}
               onReroll={onReroll}
             />
           </Disclosure>

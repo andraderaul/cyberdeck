@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import {
+  addLink,
   applyChain,
   type Chain,
   createLink,
+  duplicateLink,
   EFFECT_REGISTRY,
   type EffectType,
+  MAX_CHAIN_LENGTH,
   moveLink,
+  removeLink,
 } from './chain'
 import { blockDisplacement } from './pipeline'
 import { deriveSeed } from './rng'
-import type { BlockDisplacementParams, PixelBuffer } from './types'
+import type { BlockDisplacementParams, PixelBuffer, PixelSortParams } from './types'
 
 /** An arbitrary fixed Seed — every test that isn't about the Seed itself rolls this one. */
 const SEED = 4242
@@ -40,7 +44,10 @@ function bytesOf(buffer: PixelBuffer): number[] {
   return Array.from(buffer.data)
 }
 
-const SORT = createLink('pixelSort', { direction: 'horizontal', threshold: 0.2, runLength: 8 })
+/** Held at its own type, not read back off the Link, whose `params` widen to the union. */
+const SORT_PARAMS: PixelSortParams = { direction: 'horizontal', threshold: 0.2, runLength: 8 }
+
+const SORT = createLink('pixelSort', SORT_PARAMS)
 
 const SHIFT = createLink('channelShift', { channel: 'r', amount: 5 })
 
@@ -251,6 +258,159 @@ describe('moveLink', () => {
 
     expect(bytesOf(applyChain(pixels, [SORT, SHIFT], SEED))).not.toEqual(
       bytesOf(applyChain(pixels, moveLink([SORT, SHIFT], 0, 1), SEED)),
+    )
+  })
+})
+
+describe('addLink', () => {
+  const chain: Chain = [BLOCKS, SORT]
+
+  it('appends a Link of the requested Effect', () => {
+    expect(addLink(chain, 'noise').map((link) => link.type)).toEqual([
+      'blockDisplacement',
+      'pixelSort',
+      'noise',
+    ])
+  })
+
+  it('seeds the new Link with that Effect’s defaults', () => {
+    const added = addLink(chain, 'scanlines')
+
+    expect(added[2].params).toEqual(EFFECT_REGISTRY.scanlines.defaults)
+  })
+
+  it('adds an Effect the Chain already carries', () => {
+    // The capability the whole restructure exists for — a palette that refused a duplicate would
+    // put the flat model's one-of-each rule back by the side door.
+    const added = addLink(chain, 'pixelSort')
+
+    expect(added.filter((link) => link.type === 'pixelSort')).toHaveLength(2)
+  })
+
+  it('gives the new Link an id of its own', () => {
+    const added = addLink(chain, 'pixelSort')
+
+    expect(new Set(added.map((link) => link.id)).size).toBe(added.length)
+  })
+
+  it('never mutates the Chain it was given', () => {
+    addLink(chain, 'noise')
+
+    expect(chain).toHaveLength(2)
+  })
+
+  it('refuses to grow past the cap', () => {
+    const full: Chain = Array.from({ length: MAX_CHAIN_LENGTH }, () => createLink('noise'))
+
+    expect(addLink(full, 'noise')).toBe(full)
+  })
+})
+
+describe('removeLink', () => {
+  const chain: Chain = [BLOCKS, SORT, GRAIN]
+
+  it('drops the Link asked for and leaves the rest in order', () => {
+    expect(removeLink(chain, SORT.id).map((link) => link.type)).toEqual([
+      'blockDisplacement',
+      'noise',
+    ])
+  })
+
+  it('leaves the Chain alone for an unknown id', () => {
+    expect(removeLink(chain, 'no-such-link')).toHaveLength(3)
+  })
+
+  it('allows the Chain to be emptied', () => {
+    // An empty Chain is the honest "no Effects" — applyChain renders it as the untouched Source,
+    // so there is nothing to forbid.
+    const emptied = chain.reduce<Chain>((acc, link) => removeLink(acc, link.id), chain)
+
+    expect(emptied).toEqual([])
+  })
+
+  it('removes only the Link whose id matched, not its twin', () => {
+    const twins = duplicateLink(chain, SORT.id)
+
+    const afterRemoval = removeLink(twins, twins[1].id)
+
+    expect(afterRemoval.filter((link) => link.type === 'pixelSort')).toHaveLength(1)
+  })
+})
+
+describe('duplicateLink', () => {
+  const chain: Chain = [BLOCKS, SORT, GRAIN]
+
+  it('inserts the copy directly after its source', () => {
+    // Duplicating is a user saying "another one of these, *here*" — appending would make them drag
+    // it back every time.
+    expect(duplicateLink(chain, BLOCKS.id).map((link) => link.type)).toEqual([
+      'blockDisplacement',
+      'blockDisplacement',
+      'pixelSort',
+      'noise',
+    ])
+  })
+
+  it('copies the params exactly', () => {
+    const copied = duplicateLink(chain, SORT.id)
+
+    expect(copied[2].params).toEqual(SORT.params)
+  })
+
+  it('gives the copy a fresh id', () => {
+    // Every field that matters to the look is identical, so content-derived ids would collide and
+    // React would reuse one row's state for the other.
+    const copied = duplicateLink(chain, SORT.id)
+
+    expect(copied[2].id).not.toBe(copied[1].id)
+  })
+
+  it('leaves the Chain alone for an unknown id', () => {
+    expect(duplicateLink(chain, 'no-such-link')).toBe(chain)
+  })
+
+  it('refuses to grow past the cap', () => {
+    const full: Chain = Array.from({ length: MAX_CHAIN_LENGTH }, () => createLink('noise'))
+
+    expect(duplicateLink(full, full[0].id)).toBe(full)
+  })
+
+  it('renders the repeat distinctly from its source', () => {
+    // The occurrence sub-seed at work: a duplicated seeded Link must not redraw the original's
+    // arrangement, or the repeat would be an invisible no-op.
+    const pixels = gradient(24, 18)
+    const doubled = duplicateLink([BLOCKS], BLOCKS.id)
+
+    expect(bytesOf(applyChain(pixels, doubled, SEED))).not.toEqual(
+      bytesOf(applyChain(pixels, [BLOCKS], SEED)),
+    )
+  })
+
+  it('leaves the image alone when an idempotent Effect is duplicated unedited', () => {
+    // Pixel Sort is a fixed point: sorting an already-sorted run returns it unchanged, so two
+    // adjacent Pixel Sorts with *identical* params render exactly as one. Not a defect in the
+    // Chain — it is what the Effect means — but it is the one duplicate that shows the user
+    // nothing until they edit it, which is why it is pinned here rather than left to surprise
+    // someone. Every other Effect renders its duplicate visibly.
+    const pixels = gradient(24, 18)
+    const doubled = duplicateLink([SORT], SORT.id)
+
+    expect(bytesOf(applyChain(pixels, doubled, SEED))).toEqual(
+      bytesOf(applyChain(pixels, [SORT], SEED)),
+    )
+  })
+
+  it('renders two Pixel Sorts differently once their params diverge', () => {
+    // The "double melt" the model exists for is reachable — it just takes an edit, since the
+    // duplicate starts identical.
+    const pixels = gradient(24, 18)
+    const crossed: Chain = [
+      SORT,
+      createLink('pixelSort', { ...SORT_PARAMS, direction: 'vertical' }),
+    ]
+
+    expect(bytesOf(applyChain(pixels, crossed, SEED))).not.toEqual(
+      bytesOf(applyChain(pixels, [SORT], SEED)),
     )
   })
 })

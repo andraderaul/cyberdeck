@@ -9,7 +9,15 @@ import PresetPicker from './components/preset-picker'
 import Disclosure from './components/ui/disclosure'
 import { Errors } from './errors/app-error'
 import { outputFilename } from './export/output'
-import { type Chain, type Link, moveLink } from './glitch/chain'
+import {
+  addLink,
+  type Chain,
+  duplicateLink,
+  type EffectType,
+  type Link,
+  moveLink,
+  removeLink,
+} from './glitch/chain'
 import { DEFAULT_PRESET, type Preset, randomizeChain } from './glitch/presets'
 import { createSeed } from './glitch/rng'
 import type { Seed } from './glitch/types'
@@ -84,6 +92,21 @@ export default function App() {
   // it (modified). Reordering back therefore restores the match on its own.
   const handleReorder = useCallback((from: number, to: number) => {
     setChain((prev) => moveLink(prev, from, to))
+  }, [])
+
+  // Add / remove / duplicate all leave activePresetId alone, exactly as a param edit and a reorder
+  // do: the look still belongs to the Preset it started from, and chainMatch — comparing length,
+  // type and params at each position — is what marks it (modified).
+  const handleAdd = useCallback((type: EffectType) => {
+    setChain((prev) => addLink(prev, type))
+  }, [])
+
+  const handleRemove = useCallback((id: string) => {
+    setChain((prev) => removeLink(prev, id))
+  }, [])
+
+  const handleDuplicate = useCallback((id: string) => {
+    setChain((prev) => duplicateLink(prev, id))
   }, [])
 
   // The Seed is not part of the look, so a Re-roll leaves both the Chain and the active
@@ -196,6 +219,9 @@ export default function App() {
               chain={chain}
               onLinkChange={patchLink}
               onReorder={handleReorder}
+              onAdd={handleAdd}
+              onRemove={handleRemove}
+              onDuplicate={handleDuplicate}
               onReroll={handleReroll}
             />
           </Disclosure>
@@ -212,6 +238,9 @@ export default function App() {
           onRandomize={handleRandomize}
           onLinkChange={patchLink}
           onReorder={handleReorder}
+          onAdd={handleAdd}
+          onRemove={handleRemove}
+          onDuplicate={handleDuplicate}
           onReroll={handleReroll}
         />
       )}
