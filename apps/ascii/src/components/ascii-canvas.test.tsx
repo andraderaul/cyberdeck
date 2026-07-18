@@ -98,4 +98,12 @@ describe('AsciiCanvas', () => {
     fireEvent.click(btn)
     expect(onMirrorToggle).toHaveBeenCalledOnce()
   })
+
+  // ADR 0016: the flip happens on the sampled pixels, so the visible canvas must carry no
+  // cosmetic transform — that CSS mirror is exactly what left Export disagreeing with the preview.
+  it('never mirrors the visible canvas with a CSS transform', () => {
+    render(<Wrapper isLive={true} isMirrored={true} onMirrorToggle={vi.fn()} />)
+
+    expect(document.querySelector('canvas')?.style.transform).toBe('')
+  })
 })

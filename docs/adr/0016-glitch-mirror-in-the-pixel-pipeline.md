@@ -11,12 +11,18 @@ horizontally when it's drawn into the sampling canvas (`renderGlitchFrame`), *be
 runs — so Effects apply on top of an already-mirrored buffer and the painted canvas that Export and
 Recording sample is the mirrored image. What you see is the file you get.
 
-This is a deliberate *implementation* divergence from ASCII, which mirrors with a cosmetic CSS
-`transform: scaleX(-1)` on the visible canvas — flipping the preview but not the exported PNG/ASCII
-text. That approach is fine for ASCII (its export is not the canvas alone) but would ship the
-preview/Export disagreement ADR 0015 refused. So the two programs now share the *feature* and the
-*interaction* (auto-on for the front camera, an `⇋` overlay toggle beside `✕ clear`) while differing
-in how the flip is realised.
+This landed as a deliberate *implementation* divergence from ASCII, which mirrored with a cosmetic
+CSS `transform: scaleX(-1)` on the visible canvas — flipping the preview but not the exported
+PNG/ASCII text. **That divergence is now closed (#124):** `renderFrame` threads an `isMirrored` flag
+down to the sampling `drawImage`, which flips the Source before a pixel becomes an `AsciiCell`, and
+the CSS transform is gone. ASCII's flip sits one call deeper than GLITCH's only because that is
+where its sampling draw lives (`convertImage`) — in both programs it happens on the sampling draw,
+ahead of the pure core (ADR 0005). The flip is taken about the contain-fit region (ADR 0010), so a
+letterboxed Source stays inside its own bands.
+
+The two programs therefore share the *feature*, the *interaction* (auto-on for the front camera, an
+`⇋` overlay toggle beside `✕ clear`) **and the mechanism** — a real pixel flip ahead of the domain
+core, in both cases. Mirror is no longer an ASCII/GLITCH asymmetry of any kind.
 
 ## Considered options
 
@@ -35,8 +41,9 @@ in how the flip is realised.
   `onFacingModeChange` callback it deliberately dropped; live front-camera opens mirrored. Because the
   flip is real, GLITCH's *default export for the selfie camera is mirrored* — the honest consequence
   of WYSIWYG, and the manual toggle turns it off.
-- **ASCII's cosmetic mirror is now a known asymmetry**, not a divergence to celebrate: ASCII's export
-  silently ignores the mirror the user sees. Left as-is here (out of scope) and logged as a follow-up
-  to upgrade ASCII to a real flip so both programs match end-to-end.
-- A future parity review should read this ADR before "fixing" the two mirror implementations to look
-  identical — the difference is intentional and load-bearing.
+- **ASCII followed (#124).** Its cosmetic mirror was logged here as a known asymmetry — the export
+  silently ignored the mirror the user saw — and has since been upgraded to the same real flip.
+- **ASCII's TXT Export mirrors too.** A real flip feeds mirrored pixels into the conversion, so each
+  row's characters come out genuinely reversed. That is the honest WYSIWYG outcome and not a bug to
+  "fix" by splitting PNG and TXT orientation, which would re-introduce the preview/Export
+  disagreement this ADR exists to remove.

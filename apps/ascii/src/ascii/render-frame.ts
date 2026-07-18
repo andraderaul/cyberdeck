@@ -20,6 +20,10 @@ function sourceDimensions(source: CanvasImageSource): { w: number; h: number } {
 }
 
 /**
+ * Mirror flips the Source on the sampling draw, *before* the pixels become cells (ADR 0016) —
+ * not with a CSS transform on the visible canvas, which mirrored the preview alone and left both
+ * Exports disagreeing with it. The character grid is genuinely mirrored, so PNG and TXT follow.
+ *
  * @returns `false` when the render was skipped — no 2D context, or the canvas is too
  *   small to fit a single character. `true` when a frame was painted.
  */
@@ -30,6 +34,7 @@ export function renderFrame(
   settings: ConversionSettings,
   fontFamily: string,
   onConverted?: (rows: string[]) => void,
+  isMirrored = false,
 ): boolean {
   const ctx = canvasEl.getContext('2d')
   const hiddenCtx = hiddenEl.getContext('2d')
@@ -60,6 +65,7 @@ export function renderFrame(
     rows,
     { brightness, contrast, charset },
     region,
+    isMirrored,
   )
   const { instructions, asciiRows } = computeFrame(cells, settings)
   paintFrame(ctx, instructions, resolution, fontFamily)

@@ -19,6 +19,10 @@ function makeCanvas(width: number, height: number): HTMLCanvasElement {
 
 function makeCtxMock(canvas: HTMLCanvasElement) {
   return {
+    save: vi.fn(),
+    restore: vi.fn(),
+    translate: vi.fn(),
+    scale: vi.fn(),
     drawImage: vi.fn(),
     getImageData: vi.fn(() => ({ data: new Uint8ClampedArray(4) })),
     fillRect: vi.fn(),
@@ -111,6 +115,68 @@ describe('renderFrame', () => {
 
     expect(result).toBe(false)
     expect(onConverted).not.toHaveBeenCalled()
+  })
+
+  it('leaves the sampling draw untransformed when not mirrored', () => {
+    renderFrame(canvasEl, canvasEl, hiddenEl, SETTINGS, 'monospace')
+
+    expect(hiddenCtxMock.scale).not.toHaveBeenCalled()
+  })
+
+  it('flips the pixels on the sampling canvas when mirrored', () => {
+    renderFrame(canvasEl, canvasEl, hiddenEl, SETTINGS, 'monospace', undefined, true)
+
+    expect(hiddenCtxMock.scale).toHaveBeenCalledWith(-1, 1)
+    expect(hiddenCtxMock.restore).toHaveBeenCalledOnce()
+  })
+
+  it('mirrors the rows handed to onConverted, so TXT Export matches the preview', () => {
+    // 33 cols x 20 rows; the left half of the grid is white and the right half black,
+    // so a real flip has to show up as reversed characters, not just a transform call.
+    canvasEl.width = 200
+    canvasEl.height = 200
+    const cols = 33
+    const rows = 20
+    const half = Math.floor(cols / 2)
+
+    // Stands in for a real 2D context: the sampled pixels come out flipped only because
+    // renderFrame asked for scale(-1, 1), so the assertion below exercises the actual call.
+    const emitted = (mirrored: boolean) => {
+      let flipped = false
+      hiddenCtxMock.scale = vi.fn((x: number) => {
+        flipped = x === -1
+      }) as unknown as typeof hiddenCtxMock.scale
+      hiddenCtxMock.restore = vi.fn()
+      hiddenCtxMock.getImageData = vi.fn(() => {
+        const data = new Uint8ClampedArray(cols * rows * 4)
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const lit = flipped ? col >= cols - half : col < half
+            const i = (row * cols + col) * 4
+            data[i] = data[i + 1] = data[i + 2] = lit ? 255 : 0
+            data[i + 3] = 255
+          }
+        }
+        return { data }
+      }) as unknown as typeof hiddenCtxMock.getImageData
+      const onConverted = vi.fn()
+      // 99x100 matches the grid's pixel aspect exactly, so the fit region is the whole
+      // grid — no letterbox crop to make "reversed" ambiguous.
+      renderFrame(
+        makeCanvas(99, 100),
+        canvasEl,
+        hiddenEl,
+        SETTINGS,
+        'monospace',
+        onConverted,
+        mirrored,
+      )
+      return onConverted.mock.calls[0][0] as string[]
+    }
+
+    const plain = emitted(false)
+    const flipped = emitted(true)
+    expect(flipped).toEqual(plain.map((line) => [...line].reverse().join('')))
   })
 
   it('returns false when 2d context is unavailable', () => {

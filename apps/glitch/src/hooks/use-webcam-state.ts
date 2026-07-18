@@ -5,9 +5,9 @@ import { useCallback, useEffect, useReducer, useRef } from 'react'
 // - the lifecycle side-effects are Commands, not Effects: Effect is this app's word for a pure
 //   PixelBuffer transform in the Pipeline (CONTEXT.md), and the collision would be a trap
 //
-// onFacingModeChange is wired (ADR 0016): unlike ASCII's cosmetic CSS mirror, GLITCH flips the
-// pixels in the Pipeline, so the front camera can auto-mirror without Export disagreeing with the
-// preview. The lifecycle is kept whole, so `switchCamera` and `facingMode` are carried without a
+// onFacingModeChange is wired (ADR 0016): the flip is real — the Source is mirrored on the sampling
+// draw, before the Pipeline — so the front camera can auto-mirror without Export disagreeing with
+// the preview. The lifecycle is kept whole, so `switchCamera` and `facingMode` are carried without a
 // control surfacing them yet — #82 scoped in the Live Source, not camera choice.
 
 /** Which Source is feeding the Pipeline: a static Source Image, or the Live Source (webcam). */
