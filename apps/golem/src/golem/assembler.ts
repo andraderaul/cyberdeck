@@ -2,6 +2,7 @@
 // material. Two passes: the first fixes every label to a word index, the second encodes.
 
 import {
+  byteShift,
   canonicalMnemonic,
   INSTRUCTIONS,
   type Operand,
@@ -236,15 +237,14 @@ function parseString(text: string): number[] | string {
   return bytes
 }
 
-// Big-endian within the word — byte 0 is the most significant — so a string reads back through
-// `ldb` in the order it was written. `1_limits` pins the convention: the word 0x41424300 yields
-// 0x41 at byte offset 0 and 0x43 at offset 2.
+// Packed by the same convention the machine reads bytes with, so a string comes back out of `ldb`
+// in the order it was written.
 function packBytes(bytes: number[]): number[] {
   const words: number[] = []
   for (let index = 0; index < bytes.length; index += 4) {
     let word = 0
     for (let offset = 0; offset < 4; offset++) {
-      word |= (bytes[index + offset] ?? 0) << (8 * (3 - offset))
+      word |= (bytes[index + offset] ?? 0) << byteShift(offset)
     }
     words.push(word >>> 0)
   }

@@ -63,7 +63,7 @@ function Listing({
   useEffect(() => {
     // Follows the PC out of view during a run, so control flow stays watchable without scrolling.
     activeRef.current?.scrollIntoView({ block: 'nearest' })
-  }, [])
+  }, [currentLine])
 
   return (
     // Unnamed on purpose: the Panel already announces this region as "Source — locked", and a
