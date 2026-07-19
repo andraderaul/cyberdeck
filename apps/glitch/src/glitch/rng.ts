@@ -10,10 +10,10 @@ const UINT32_RANGE = 0x100000000
 /**
  * A Seed's own stream of draws — mulberry32, small enough to read and strong enough that adjacent
  * Seeds open on unrelated draws, which is what keeps one Re-roll from arranging the blocks like the
- * last one. Hand-rolled rather than pulled in: the Pipeline needs a Seed-to-stream function it can
+ * last one. Hand-rolled rather than pulled in: the Chain needs a Seed-to-stream function it can
  * pin in a test, not a general-purpose PRNG.
  *
- * The Effects call this instead of `Math.random`, which is how the Pipeline keeps its promise that
+ * The Effects call this instead of `Math.random`, which is how the Chain keeps its promise that
  * all randomness derives from the Seed and none of it is hidden (ADR 0005).
  */
 export function createRng(seed: Seed): Rng {
@@ -28,9 +28,39 @@ export function createRng(seed: Seed): Rng {
   }
 }
 
+const HASH_MIX = 0x45d9f3b
+
+/** Golden-ratio constant, so a zero key still displaces the Seed instead of hashing it toward itself. */
+const HASH_DISPLACEMENT = 0x9e3779b9
+
+/**
+ * The sub-seed a repeated Link draws on — the global Seed mixed with which *occurrence* of its
+ * Effect type the Link is (ADR 0017). Two Links of the same type therefore get unrelated draws,
+ * which is what lets a Chain carry the same Effect twice without the repeats collapsing into an
+ * identical arrangement. A first occurrence never gets here: `linkSeed` (chain.ts) hands it the
+ * raw Seed untouched, which is what keeps a one-of-each Chain byte-identical to the fixed
+ * Pipeline it replaced (the migration golden tests).
+ *
+ * Keyed on occurrence rather than the Link's index — ADR 0017 as amended: a position key changes
+ * what a Link draws the moment anything moves, and could never reproduce the old Pipeline, which
+ * handed the raw Seed to every seeded Effect regardless of position. Hashed rather than drawn
+ * from a stream running along the Chain, because a stream would make every Link's arrangement
+ * depend on how many draws the Links before it happened to make — the same reason Noise hashes a
+ * pixel's position instead of streaming.
+ *
+ * The accepted cost, recorded in the ADR: two Links of the same type swap arrangements when
+ * reordered past each other.
+ */
+export function deriveSeed(seed: Seed, occurrence: number): Seed {
+  let hash = (seed ^ Math.imul(occurrence + 1, HASH_DISPLACEMENT)) | 0
+  hash = Math.imul(hash ^ (hash >>> 16), HASH_MIX)
+  hash = Math.imul(hash ^ (hash >>> 13), HASH_MIX)
+  return (hash ^ (hash >>> 16)) | 0
+}
+
 /**
  * Impure: draws a fresh Seed. The one place the app reaches for real randomness — every draw
- * downstream of it derives from the Seed it returns, so the Pipeline stays pure and a render can
+ * downstream of it derives from the Seed it returns, so the Chain stays pure and a render can
  * always be reproduced from the Seed that produced it.
  */
 export function createSeed(): Seed {

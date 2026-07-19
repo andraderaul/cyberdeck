@@ -12,11 +12,17 @@ vi.mock('./control-panel', () => ({
 }))
 
 const defaultProps = {
-  settings: DEFAULT_PRESET.settings,
+  chain: DEFAULT_PRESET.chain,
   activePresetId: DEFAULT_PRESET.id,
   onSelect: vi.fn(),
   onRandomize: vi.fn(),
-  onChange: vi.fn(),
+  actions: {
+    onLinkChange: vi.fn(),
+    onReorder: vi.fn(),
+    onAdd: vi.fn(),
+    onRemove: vi.fn(),
+    onDuplicate: vi.fn(),
+  },
   onReroll: vi.fn(),
 }
 

@@ -1,9 +1,10 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './app'
 import { Errors } from './errors/app-error'
-import { DEFAULT_PRESET, glitchSettingsMatch, PRESETS } from './glitch/presets'
-import type { GlitchSettings, Seed } from './glitch/types'
+import { type Chain, EFFECT_REGISTRY, type EffectType, MAX_CHAIN_LENGTH } from './glitch/chain'
+import { chainMatch, DEFAULT_PRESET, PRESETS } from './glitch/presets'
+import type { Seed } from './glitch/types'
 
 const toastError = vi.hoisted(() => vi.fn())
 // EmptyStateHero now lives in the kit (ADR 0015); stub it here as the app's Source entry probe.
@@ -31,12 +32,22 @@ vi.mock('@cyberdeck/deck-kit/ui', async (importOriginal) => ({
 
 // The canvas and its render shell are covered at their own seams; here they stand in as probes
 // so this test can stay about the app's wiring.
-const renderedSettings = vi.fn<(s: GlitchSettings) => void>()
+const renderedChain = vi.fn<(c: Chain) => void>()
+
+/** The params the canvas last received for `type` — the Chain is a list, so a Link has to be found. */
+function lastParamsOf(type: EffectType) {
+  return lastChain().find((link) => link.type === type)?.params
+}
+
+/** The Chain the canvas last received. */
+function lastChain() {
+  return renderedChain.mock.lastCall?.[0] as Chain
+}
 const renderedSeed = vi.fn<(s: Seed) => void>()
 
 vi.mock('./components/glitch-canvas', () => ({
   default: ({
-    settings,
+    chain,
     seed,
     liveSource,
     onClearSource,
@@ -44,7 +55,7 @@ vi.mock('./components/glitch-canvas', () => ({
     isMirrored,
     onMirrorToggle,
   }: {
-    settings: GlitchSettings
+    chain: Chain
     seed: Seed
     liveSource: HTMLVideoElement | null
     onClearSource?: () => void
@@ -52,7 +63,7 @@ vi.mock('./components/glitch-canvas', () => ({
     isMirrored?: boolean
     onMirrorToggle?: () => void
   }) => {
-    renderedSettings(settings)
+    renderedChain(chain)
     renderedSeed(seed)
     return (
       <>
@@ -113,12 +124,6 @@ vi.mock('./components/export-bar', () => ({
   ),
 }))
 
-// Every Effect's on/off group offers the same two buttons, so a bare 'off' query is ambiguous —
-// each one has to be reached through its own group.
-function powerButton(effect: string, power: 'on' | 'off') {
-  return within(screen.getByRole('group', { name: effect })).getByRole('button', { name: power })
-}
-
 // The sliders and Re-roll live behind the advanced affordance, so anything reaching for a control
 // has to open it first.
 function openAdvanced() {
@@ -175,64 +180,269 @@ describe('App', () => {
 
     openAdvanced()
 
-    // One control per Effect, in Pipeline order — the panel exposes all five.
+    // One section per Link of the opening Preset, in Chain order — VAPORWAVE carries all six.
     expect(screen.getByLabelText('blocks')).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'pixel sort' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'sort direction' })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'channel' })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'scanlines' })).toBeInTheDocument()
+    expect(screen.getByLabelText('strength')).toBeInTheDocument()
+    expect(screen.getByLabelText('intensity')).toBeInTheDocument()
     expect(screen.getByLabelText('grain')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 're-roll' })).toBeInTheDocument()
   })
 
-  it('passes an updated GlitchSettings down to the canvas when a control changes', () => {
+  // Off is the Link's absence now (ADR 0017), so an Effect a Preset doesn't carry has no row at
+  // all — this replaces the power toggles the flat model needed.
+  it('renders no controls for an Effect the active Preset leaves out', () => {
     renderWithAdvancedOpen()
-    renderedSettings.mockClear()
+
+    fireEvent.click(screen.getByRole('button', { name: 'VHS' }))
+
+    // VHS carries no Pixel Sort, so its params are gone rather than hidden behind an off toggle.
+    expect(screen.queryByRole('group', { name: 'sort direction' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('run length')).not.toBeInTheDocument()
+    // Its own Links are still there.
+    expect(screen.getByLabelText('blocks')).toBeInTheDocument()
+    expect(screen.getByLabelText('grain')).toBeInTheDocument()
+  })
+
+  describe('reordering Links', () => {
+    function handles() {
+      return screen.getAllByRole('button', { name: /^reorder / })
+    }
+
+    it('offers a reorder handle per Link, spelling out its position', () => {
+      renderWithAdvancedOpen()
+
+      const names = handles().map((h) => h.getAttribute('aria-label'))
+
+      expect(names).toEqual([
+        'reorder block displacement, position 1 of 6',
+        'reorder pixel sort, position 2 of 6',
+        'reorder channel shift, position 3 of 6',
+        'reorder chromatic aberration, position 4 of 6',
+        'reorder scanlines, position 5 of 6',
+        'reorder noise, position 6 of 6',
+      ])
+    })
+
+    it('moves a Link later on ArrowDown', () => {
+      renderWithAdvancedOpen()
+      renderedChain.mockClear()
+
+      fireEvent.keyDown(handles()[0], { key: 'ArrowDown' })
+
+      expect(lastChain().map((link) => link.type)).toEqual([
+        'pixelSort',
+        'blockDisplacement',
+        'channelShift',
+        'chromaticAberration',
+        'scanlines',
+        'noise',
+      ])
+    })
+
+    it('moves a Link earlier on ArrowUp', () => {
+      renderWithAdvancedOpen()
+      renderedChain.mockClear()
+
+      fireEvent.keyDown(handles()[1], { key: 'ArrowUp' })
+
+      expect(lastChain().map((link) => link.type)).toEqual([
+        'pixelSort',
+        'blockDisplacement',
+        'channelShift',
+        'chromaticAberration',
+        'scanlines',
+        'noise',
+      ])
+    })
+
+    // The ends have nowhere to go — moving past them would wrap the Chain, which reads as the list
+    // jumping rather than as the move being refused.
+    it('refuses to move the first Link earlier', () => {
+      renderWithAdvancedOpen()
+      const before = lastChain().map((link) => link.type)
+
+      fireEvent.keyDown(handles()[0], { key: 'ArrowUp' })
+
+      expect(lastChain().map((link) => link.type)).toEqual(before)
+    })
+
+    it('refuses to move the last Link later', () => {
+      renderWithAdvancedOpen()
+      const before = lastChain().map((link) => link.type)
+
+      fireEvent.keyDown(handles()[5], { key: 'ArrowDown' })
+
+      expect(lastChain().map((link) => link.type)).toEqual(before)
+    })
+
+    it('marks the active Preset modified once a Link moves', () => {
+      // chainMatch is order-sensitive, so a reorder is an edit to the look exactly as a slider is.
+      renderWithAdvancedOpen()
+
+      fireEvent.keyDown(handles()[0], { key: 'ArrowDown' })
+
+      expect(
+        screen.getByRole('button', { name: `${DEFAULT_PRESET.name} (modified)` }),
+      ).toBeInTheDocument()
+    })
+
+    it('restores the match when the Link is moved back', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.keyDown(handles()[0], { key: 'ArrowDown' })
+      fireEvent.keyDown(handles()[1], { key: 'ArrowUp' })
+
+      expect(screen.getByRole('button', { name: DEFAULT_PRESET.name })).toBeInTheDocument()
+      expect(chainMatch(lastChain(), DEFAULT_PRESET.chain)).toBe(true)
+    })
+
+    it('reorders on a pointer drag and drop', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.dragStart(handles()[0])
+      fireEvent.drop(screen.getByLabelText('grain').closest('div')?.parentElement as HTMLElement)
+
+      expect(lastChain().map((link) => link.type)[5]).toBe('blockDisplacement')
+    })
+  })
+
+  describe('editing the Chain', () => {
+    it('adds a Link from the palette, seeded with the Effect’s defaults', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.click(screen.getByRole('button', { name: '+ noise' }))
+
+      const types = lastChain().map((link) => link.type)
+      expect(types).toHaveLength(DEFAULT_PRESET.chain.length + 1)
+      expect(types[types.length - 1]).toBe('noise')
+      expect(lastChain()[types.length - 1].params).toEqual(EFFECT_REGISTRY.noise.defaults)
+    })
+
+    it('adds a second Link of an Effect the Chain already carries', () => {
+      // The headline capability reaching the user: repeats.
+      renderWithAdvancedOpen()
+
+      fireEvent.click(screen.getByRole('button', { name: '+ pixel sort' }))
+
+      expect(lastChain().filter((link) => link.type === 'pixelSort')).toHaveLength(2)
+    })
+
+    it('removes a Link', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.click(screen.getByRole('button', { name: 'remove scanlines' }))
+
+      expect(lastChain().some((link) => link.type === 'scanlines')).toBe(false)
+    })
+
+    it('duplicates a Link directly after itself', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.click(screen.getByRole('button', { name: 'duplicate channel shift' }))
+
+      expect(lastChain().map((link) => link.type)).toEqual([
+        'blockDisplacement',
+        'pixelSort',
+        'channelShift',
+        'channelShift',
+        'chromaticAberration',
+        'scanlines',
+        'noise',
+      ])
+    })
+
+    it('gives a duplicated Link its own editable row', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.click(screen.getByRole('button', { name: 'duplicate channel shift' }))
+
+      // Two rows, not one reused — the ids are what keep them apart.
+      expect(screen.getAllByRole('group', { name: 'channel' })).toHaveLength(2)
+    })
+
+    // Pixel Sort is a fixed point, so an unedited copy of it renders nothing. Offering the control
+    // anyway would spend a click on a change the user cannot see.
+    it('offers no duplicate for an Effect a repeat of would change nothing', () => {
+      renderWithAdvancedOpen()
+
+      expect(screen.getByRole('button', { name: /^duplicate pixel sort/ })).toBeDisabled()
+    })
+
+    it('says why that duplicate is unavailable', () => {
+      renderWithAdvancedOpen()
+
+      expect(
+        screen.getByRole('button', {
+          name: 'duplicate pixel sort — unavailable, a second pixel sort with the same settings changes nothing',
+        }),
+      ).toBeInTheDocument()
+    })
+
+    it('still offers duplicate for every other Effect', () => {
+      renderWithAdvancedOpen()
+
+      for (const label of ['block displacement', 'channel shift', 'scanlines', 'noise']) {
+        expect(screen.getByRole('button', { name: `duplicate ${label}` })).toBeEnabled()
+      }
+    })
+
+    // The Effect can still appear twice — it is the *identical* copy that is refused, not the
+    // repeat. Crossing a horizontal pass with a vertical one is the "double melt" ADR 0017 wants.
+    it('still lets a second Pixel Sort be added from the palette', () => {
+      renderWithAdvancedOpen()
+
+      fireEvent.click(screen.getByRole('button', { name: '+ pixel sort' }))
+
+      expect(lastChain().filter((link) => link.type === 'pixelSort')).toHaveLength(2)
+    })
+
+    it.each([
+      ['adding', () => fireEvent.click(screen.getByRole('button', { name: '+ noise' }))],
+      ['removing', () => fireEvent.click(screen.getByRole('button', { name: 'remove scanlines' }))],
+      [
+        'duplicating',
+        () => fireEvent.click(screen.getByRole('button', { name: 'duplicate noise' })),
+      ],
+    ])('marks the active Preset modified after %s a Link', (_label, act) => {
+      renderWithAdvancedOpen()
+
+      act()
+
+      expect(
+        screen.getByRole('button', { name: `${DEFAULT_PRESET.name} (modified)` }),
+      ).toBeInTheDocument()
+    })
+
+    it('reports how full the Chain is', () => {
+      renderWithAdvancedOpen()
+
+      expect(screen.getByRole('status')).toHaveTextContent(`6 of ${MAX_CHAIN_LENGTH} effects`)
+    })
+
+    it('stops at the cap and says why', () => {
+      renderWithAdvancedOpen()
+
+      // VAPORWAVE opens with 6 Links; fill the remaining slots.
+      for (let i = 0; i < MAX_CHAIN_LENGTH; i++) {
+        fireEvent.click(screen.getByRole('button', { name: '+ noise' }))
+      }
+
+      expect(lastChain()).toHaveLength(MAX_CHAIN_LENGTH)
+      expect(screen.getByRole('status')).toHaveTextContent('chain is full')
+      expect(screen.getByRole('button', { name: '+ noise' })).toBeDisabled()
+      expect(screen.getAllByRole('button', { name: /^duplicate / })[0]).toBeDisabled()
+    })
+  })
+
+  it('passes an updated Chain down to the canvas when a control changes', () => {
+    renderWithAdvancedOpen()
+    renderedChain.mockClear()
 
     fireEvent.click(screen.getByRole('button', { name: 'green' }))
 
-    expect(renderedSettings).toHaveBeenLastCalledWith(
-      expect.objectContaining({ channelShift: expect.objectContaining({ channel: 'g' }) }),
-    )
-  })
-
-  it('passes a toggled-off Pixel Sort down to the canvas', () => {
-    renderWithAdvancedOpen()
-    renderedSettings.mockClear()
-
-    fireEvent.click(powerButton('pixel sort', 'off'))
-
-    expect(renderedSettings).toHaveBeenLastCalledWith(
-      expect.objectContaining({ pixelSort: expect.objectContaining({ enabled: false }) }),
-    )
-  })
-
-  it('hides the Pixel Sort params when the Effect is off', () => {
-    renderWithAdvancedOpen()
-
-    fireEvent.click(powerButton('pixel sort', 'off'))
-
-    expect(screen.queryByLabelText('threshold')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('run length')).not.toBeInTheDocument()
-  })
-
-  it('passes a toggled-off Scanlines down to the canvas', () => {
-    renderWithAdvancedOpen()
-    renderedSettings.mockClear()
-
-    fireEvent.click(powerButton('scanlines', 'off'))
-
-    expect(renderedSettings).toHaveBeenLastCalledWith(
-      expect.objectContaining({ scanlines: expect.objectContaining({ enabled: false }) }),
-    )
-  })
-
-  it('hides the Scanlines params when the Effect is off', () => {
-    renderWithAdvancedOpen()
-
-    fireEvent.click(powerButton('scanlines', 'off'))
-
-    expect(screen.queryByLabelText('density')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('intensity')).not.toBeInTheDocument()
+    expect(lastParamsOf('channelShift')).toMatchObject({ channel: 'g' })
   })
 
   it('passes an updated Scanlines density down to the canvas', () => {
@@ -240,9 +450,7 @@ describe('App', () => {
 
     fireEvent.change(screen.getByLabelText('density'), { target: { value: '1' } })
 
-    expect(renderedSettings).toHaveBeenLastCalledWith(
-      expect.objectContaining({ scanlines: expect.objectContaining({ density: 1 }) }),
-    )
+    expect(lastParamsOf('scanlines')).toMatchObject({ density: 1 })
   })
 
   it('keeps the rest of the look intact when one Effect param changes', () => {
@@ -250,12 +458,13 @@ describe('App', () => {
 
     fireEvent.change(screen.getByLabelText('amount'), { target: { value: '20' } })
 
-    // Exhaustive by design: patching Channel Shift must leave Pixel Sort's params exactly as they
-    // were, and only a whole-object match catches a patch that drops a sibling Effect.
-    expect(renderedSettings).toHaveBeenLastCalledWith({
-      ...DEFAULT_PRESET.settings,
-      channelShift: { ...DEFAULT_PRESET.settings.channelShift, amount: 20 },
-    })
+    // Exhaustive by design: editing one Link must leave every sibling Link exactly as it was, and
+    // only a whole-Chain match catches an edit that drops or reorders one.
+    expect(renderedChain).toHaveBeenLastCalledWith(
+      DEFAULT_PRESET.chain.map((link) =>
+        link.type === 'channelShift' ? { ...link, params: { ...link.params, amount: 20 } } : link,
+      ),
+    )
   })
 
   it('passes an updated Noise amount down to the canvas', () => {
@@ -263,9 +472,7 @@ describe('App', () => {
 
     fireEvent.change(screen.getByLabelText('grain'), { target: { value: '0.8' } })
 
-    expect(renderedSettings).toHaveBeenLastCalledWith(
-      expect.objectContaining({ noise: expect.objectContaining({ amount: 0.8 }) }),
-    )
+    expect(lastParamsOf('noise')).toMatchObject({ amount: 0.8 })
   })
 
   it('passes an updated Noise tint down to the canvas', () => {
@@ -273,9 +480,15 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'color' }))
 
-    expect(renderedSettings).toHaveBeenLastCalledWith(
-      expect.objectContaining({ noise: expect.objectContaining({ tint: 'color' }) }),
-    )
+    expect(lastParamsOf('noise')).toMatchObject({ tint: 'color' })
+  })
+
+  it('passes an updated Chromatic Aberration strength down to the canvas', () => {
+    renderWithAdvancedOpen()
+
+    fireEvent.change(screen.getByLabelText('strength'), { target: { value: '0.7' } })
+
+    expect(lastParamsOf('chromaticAberration')).toMatchObject({ strength: 0.7 })
   })
 
   it('passes an updated Block Displacement density down to the canvas', () => {
@@ -283,9 +496,7 @@ describe('App', () => {
 
     fireEvent.change(screen.getByLabelText('blocks'), { target: { value: '0.8' } })
 
-    expect(renderedSettings).toHaveBeenLastCalledWith(
-      expect.objectContaining({ blockDisplacement: expect.objectContaining({ density: 0.8 }) }),
-    )
+    expect(lastParamsOf('blockDisplacement')).toMatchObject({ density: 0.8 })
   })
 
   it('passes an updated Block Displacement amount down to the canvas', () => {
@@ -293,12 +504,10 @@ describe('App', () => {
 
     fireEvent.change(screen.getByLabelText('displace'), { target: { value: '0.9' } })
 
-    expect(renderedSettings).toHaveBeenLastCalledWith(
-      expect.objectContaining({ blockDisplacement: expect.objectContaining({ amount: 0.9 }) }),
-    )
+    expect(lastParamsOf('blockDisplacement')).toMatchObject({ amount: 0.9 })
   })
 
-  it('passes a Seed down to the canvas alongside the GlitchSettings', () => {
+  it('passes a Seed down to the canvas alongside the Chain', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'upload' }))
 
@@ -314,13 +523,13 @@ describe('App', () => {
     expect(renderedSeed.mock.lastCall?.[0]).not.toBe(before)
   })
 
-  it('leaves the look untouched on Re-roll — a new arrangement, the same GlitchSettings', () => {
+  it('leaves the look untouched on Re-roll — a new arrangement, the same Chain', () => {
     renderWithAdvancedOpen()
-    const before = renderedSettings.mock.lastCall?.[0]
+    const before = renderedChain.mock.lastCall?.[0]
 
     fireEvent.click(screen.getByRole('button', { name: 're-roll' }))
 
-    expect(renderedSettings).toHaveBeenLastCalledWith(before)
+    expect(renderedChain).toHaveBeenLastCalledWith(before)
   })
 
   describe('Presets', () => {
@@ -337,7 +546,7 @@ describe('App', () => {
       fireEvent.click(screen.getByRole('button', { name: 'upload' }))
 
       expect(chip(DEFAULT_PRESET.name)).toHaveAttribute('aria-pressed', 'true')
-      expect(renderedSettings).toHaveBeenLastCalledWith(DEFAULT_PRESET.settings)
+      expect(renderedChain).toHaveBeenLastCalledWith(DEFAULT_PRESET.chain)
     })
 
     // The Presets are the front door, not part of the tweak layer — they must be reachable without
@@ -357,7 +566,7 @@ describe('App', () => {
 
       fireEvent.click(chip(OTHER_PRESET.name))
 
-      expect(renderedSettings).toHaveBeenLastCalledWith(OTHER_PRESET.settings)
+      expect(renderedChain).toHaveBeenLastCalledWith(OTHER_PRESET.chain)
       expect(chip(OTHER_PRESET.name)).toHaveAttribute('aria-pressed', 'true')
       expect(chip(DEFAULT_PRESET.name)).toHaveAttribute('aria-pressed', 'false')
     })
@@ -382,7 +591,7 @@ describe('App', () => {
       expect(chip(`${DEFAULT_PRESET.name} (modified)`)).toHaveAttribute('aria-pressed', 'true')
     })
 
-    // The whole reason the Seed sits outside GlitchSettings: a Re-roll is a new arrangement, not a
+    // The whole reason the Seed sits outside the Chain: a Re-roll is a new arrangement, not a
     // customisation, so it must not move the user off their Preset or mark it modified.
     it('keeps the Preset highlighted and unmodified through a Re-roll', () => {
       renderWithAdvancedOpen()
@@ -421,8 +630,8 @@ describe('App', () => {
 
         fireEvent.click(screen.getByRole('button', { name: /randomize/i }))
 
-        const settings = renderedSettings.mock.lastCall?.[0] as GlitchSettings
-        expect(glitchSettingsMatch(settings, DEFAULT_PRESET.settings)).toBe(false)
+        const settings = renderedChain.mock.lastCall?.[0] as Chain
+        expect(chainMatch(settings, DEFAULT_PRESET.chain)).toBe(false)
       })
 
       it('draws a fresh Seed with the look', () => {

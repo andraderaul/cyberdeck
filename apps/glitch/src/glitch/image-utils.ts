@@ -1,5 +1,5 @@
 /**
- * Sampling cap, applied to *both* axes — the Pipeline walks every sampled pixel, so it's the
+ * Sampling cap, applied to *both* axes — the Chain walks every sampled pixel, so it's the
  * pixel count that has to stay bounded. ASCII//Convert caps width alone because its char grid
  * bounds the work downstream; here the sampled buffer *is* the work, and a 500×20000 Source
  * would sail past a width-only cap and freeze the tab.

@@ -1,7 +1,8 @@
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
 import { type RefObject, useEffect, useRef } from 'react'
+import type { Chain } from '../glitch/chain'
 import { renderGlitchFrame } from '../glitch/render-frame'
-import type { GlitchSettings, Seed } from '../glitch/types'
+import type { Seed } from '../glitch/types'
 
 /** ~15fps — enough for a glitched feed, and cheap enough to stay on the main thread (ADR 0002). */
 export const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
@@ -9,7 +10,7 @@ export const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
 /**
  * Chrome shared by everything sitting on top of the canvas — see ADR 0013. `bg-bg` is the
  * load-bearing part: the canvas *is* the user's artwork, so a transparent chip takes its contrast
- * from whatever the Pipeline just painted (hot pink on a bright feed measures 1.57:1). Standing on
+ * from whatever the Chain just painted (hot pink on a bright feed measures 1.57:1). Standing on
  * an opaque surface from the palette is what holds the ratio ADR 0009 audited. Not translucent —
  * no alpha survives an arbitrary backdrop.
  */
@@ -25,7 +26,7 @@ export const HAVE_ENOUGH_DATA = 4
 interface Props {
   sourceImage: HTMLImageElement | null
   liveSource: HTMLVideoElement | null
-  settings: GlitchSettings
+  chain: Chain
   seed: Seed
   canvasRef: RefObject<HTMLCanvasElement>
   onClearSource: () => void
@@ -36,13 +37,13 @@ interface Props {
 
 /**
  * Lifecycle coordinator: decides *when* to render. A Source Image renders once per Source,
- * GlitchSettings or Seed change; a Live Source renders on the throttled rAF loop instead. The Seed
+ * Chain or Seed change; a Live Source renders on the throttled rAF loop instead. The Seed
  * is its own trigger, which is what makes a Re-roll a re-render on its own.
  */
 export default function GlitchCanvas({
   sourceImage,
   liveSource,
-  settings,
+  chain,
   seed,
   canvasRef,
   onClearSource,
@@ -57,8 +58,8 @@ export default function GlitchCanvas({
     if (!canvas || !sourceImage) {
       return
     }
-    renderGlitchFrame(sourceImage, canvas, hiddenRef.current, settings, seed, isMirrored)
-  }, [sourceImage, settings, seed, isMirrored, canvasRef])
+    renderGlitchFrame(sourceImage, canvas, hiddenRef.current, chain, seed, isMirrored)
+  }, [sourceImage, chain, seed, isMirrored, canvasRef])
 
   // rAF loop throttled to ~15fps — see ADR 0002 for the Web Worker upgrade path. The Seed is held
   // across frames rather than re-rolled per frame: that's what keeps the corruption pattern from
@@ -82,13 +83,13 @@ export default function GlitchCanvas({
       }
       lastTime = now
       if (video.readyState >= HAVE_ENOUGH_DATA) {
-        renderGlitchFrame(video, canvas, hiddenRef.current, settings, seed, isMirrored)
+        renderGlitchFrame(video, canvas, hiddenRef.current, chain, seed, isMirrored)
       }
     }
 
     rafId = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafId)
-  }, [liveSource, settings, seed, isMirrored, canvasRef])
+  }, [liveSource, chain, seed, isMirrored, canvasRef])
 
   const isLive = liveSource !== null
 
