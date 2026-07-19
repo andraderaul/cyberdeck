@@ -50,6 +50,27 @@ ASCII then copies the proven anatomy. Only what lands empty-diff with two caller
 tab/strip shell) crosses into deck-kit afterwards — ADR 0014's bar is unchanged; the shell is
 **not** extracted up front.
 
+## What crossed the seam, and what did not
+
+Recorded from the extraction slice, so a future review re-running the diff does not re-suggest
+either half — the same treatment `use-webcam-state` got in ADR 0014.
+
+- **Extracted: the shell** (`TabStrip` in `@cyberdeck/deck-kit/ui`). The tablist markup, the
+  selected-tab state and the single mounted panel were byte-identical between the two programs —
+  ADR 0014's bar met exactly. Panels arrive through a render-prop child rather than a
+  `Record<id, node>`, so "only the active panel is mounted" stays structural rather than a
+  convention each caller has to keep.
+- **Left copied: the tab set.** `TABS` is identical in both apps today and stays in both. It is a
+  program's vocabulary, and vocabulary never crosses the seam (ADR 0014) — a kit that named the
+  tabs would decide what a program on the deck is allowed to be. The identity is this ADR being
+  applied twice, not a shared module.
+- **Left copied: the panels.** The Chain row, the tool chips and the output actions are domain
+  surface. Their *anatomy* is shared; their contents are each app's.
+- **Divergent on purpose: the REC badge's background.** GLITCH's carries `bg-bg` because its canvas
+  *is* the output and any pixel can sit under the chip; ASCII's `paintFrame()` fills the canvas
+  first, so the overlay already stands on the audited pair (ADR 0013). Identical-looking, different
+  for a reason.
+
 ## Consequences
 
 - The desktop `aside`, the floating `⚙ controls` trigger, `MobileControls`, and `ExportBar` are
