@@ -90,6 +90,10 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     case 'SELECT_PRESET':
       return { chain: action.preset.chain, activePresetId: action.preset.id, seed: action.seed }
     case 'RANDOMIZE':
+      // The jittered Chain arrives already built, so ADR 0017's structure-rides-through rule —
+      // which Links, how many, in what order, all untouched — is `randomizeChain`'s to keep
+      // (presets.ts, pinned by presets.test.ts). Nothing here can enforce it: this case takes
+      // any Chain. A reader tracing why Randomize never invents structure goes there, not here.
       return { chain: action.chain, activePresetId: null, seed: action.seed }
     case 'REROLL':
       return { ...state, seed: action.seed }
