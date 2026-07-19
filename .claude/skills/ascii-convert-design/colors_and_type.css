@@ -1,7 +1,8 @@
 /* ============================================================
    ASCII//CONVERT — DESIGN TOKENS
    Cyberpunk client-side ASCII art converter
-   Source: andraderaul/ascii-art-converter (src/index.css)
+   Convenience copy of packages/deck-kit/src/tokens.css (ADR 0014)
+   for standalone prototypes — if the two disagree, the kit wins.
    ============================================================ */
 
 /* Fonts ----------------------------------------------------- */

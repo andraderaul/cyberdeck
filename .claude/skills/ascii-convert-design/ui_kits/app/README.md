@@ -1,6 +1,6 @@
 # ASCII//Convert · App UI Kit
 
-A click-through prototype of the full ASCII Art Converter web app. Pixel-faithful to the source repo (`andraderaul/ascii-art-converter`), with a working ASCII conversion pipeline ported into vanilla JS.
+A click-through prototype of the ASCII//Convert app as it looked **before ADR 0020's Control Strip** — fixed left sidebar, bottom download bar. The real app lives at `apps/ascii` in this monorepo; take the tokens and component styling from this kit, never the layout. The ASCII conversion pipeline is ported into vanilla JS and works.
 
 ## What's here
 
@@ -33,17 +33,22 @@ A click-through prototype of the full ASCII Art Converter web app. Pixel-faithfu
 
 ## Mapping to source files
 
-| This kit | Original |
+Paths are relative to `apps/ascii` unless noted. Two of the kit's surfaces were removed by
+ADR 0020 — their rows map to what replaced them, not to a like-for-like file.
+
+| This kit | Today |
 |---|---|
 | `App.jsx` | `src/app.tsx` |
-| `Sidebar.jsx :: UploadZone` | `src/components/upload-zone.tsx` |
-| `Sidebar.jsx :: ControlPanel` | `src/components/control-panel.tsx` |
+| `Sidebar.jsx :: UploadZone` | `packages/deck-kit/src/ui/{empty-state-hero,source-image-drop-zone}.tsx` — upload is now the canvas empty state |
+| `Sidebar.jsx :: ControlPanel` | `src/components/{control-strip,preset-picker,settings-editor}.tsx` — the sidebar became the PRESETS / EDIT tabs |
 | `AsciiCanvas.jsx` | `src/components/ascii-canvas.tsx` |
-| `DownloadBar.jsx` | `src/components/download-bar.tsx` |
+| `DownloadBar.jsx` | `src/components/output-panel.tsx` — the bar became the OUT tab |
 | `Modals.jsx :: ApiKeyModal` | `src/components/api-key-modal.tsx` |
 | `Modals.jsx :: AnalysisModal` | `src/components/analysis-modal.tsx` |
 | `Modals.jsx :: AboutModal` | `src/components/about-modal.tsx` |
-| `Primitives.jsx` | `src/components/ui/*` |
+| `Primitives.jsx` | `packages/deck-kit/src/ui/*` (`Button`, `Chip`, `Slider`, `ToggleGroup`, `Toast` — ADR 0014) and `src/components/ui/*` (`Modal`, `Badge`) |
 | `ascii-engine.js` | `src/ascii/{converter,renderer,types}.ts` |
 
-When fidelity questions come up, the source files in `../../repo_reference/src/` are canonical.
+When fidelity questions come up, `apps/ascii/src` and `packages/deck-kit/src` are canonical — for
+tokens and component styling. For layout they deliberately are not: this kit predates the Control
+Strip, so its sidebar/download-bar shell no longer exists anywhere in the source.

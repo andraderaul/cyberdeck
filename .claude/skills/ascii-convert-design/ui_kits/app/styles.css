@@ -1,6 +1,6 @@
 /* ============================================================
    ASCII//CONVERT UI KIT — shared component styles
-   Mirrors the source repo's Tailwind + var(--token) setup
+   Mirrors apps/ascii's Tailwind + var(--token) setup
    ============================================================ */
 
 @import url("../../colors_and_type.css");

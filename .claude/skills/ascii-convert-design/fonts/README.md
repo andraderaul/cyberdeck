@@ -6,4 +6,4 @@ Loaded from Google Fonts CDN. No local file. If you need offline support, downlo
 
 ## Departure Mono — used for display/wordmark
 
-**FLAGGED:** This font is referenced by name in the source repo but the file is not included. Free download from https://departuremono.com/. Drop the `.woff2` here as `DepartureMono-Regular.woff2` and the wordmark will render in its intended pixel-grid style. Until then it falls back to IBM Plex Mono.
+**FLAGGED:** This font is referenced by name in deck-kit's `tokens.css` (`--font-display`) but no `.woff2` is bundled anywhere in the monorepo. Free download from https://departuremono.com/. Drop the `.woff2` here as `DepartureMono-Regular.woff2` and the wordmark will render in its intended pixel-grid style. Until then it falls back to IBM Plex Mono.
