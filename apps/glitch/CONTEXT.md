@@ -72,6 +72,15 @@ rápido que número ruim. Parte de um ponto conhecidamente bom, em vez de amostr
 independentemente — é assim que o "sempre bonito" é garantido.
 _Avoid_: shuffle, aleatorizar (mecanismo, não intenção)
 
+**Editor**:
+O estado que uma sessão de edição segura: o **look** (a Chain), o **arranjo** (o Seed) e a
+**procedência** — de qual Preset o look partiu, se algum, e se já foi editado desde então
+("modified"). As transições andam juntas e são a regra do produto: aplicar um Preset troca o
+look e sorteia um arranjo novo; Randomize descobre um look e apaga a procedência; Re-roll troca
+só o arranjo; editar a Chain preserva a procedência — o look editado ainda pertence ao Preset de
+onde partiu, marcado modificado, nunca desmarcado.
+_Avoid_: session, workspace, app state
+
 ## Effects
 
 | Effect | O que faz |

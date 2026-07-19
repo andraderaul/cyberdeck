@@ -9,6 +9,7 @@ import Disclosure from './ui/disclosure'
 interface Props {
   chain: Chain
   activePresetId: string | null
+  isModified: boolean
   onSelect: (preset: Preset) => void
   onRandomize: () => void
   actions: ChainActions
@@ -24,6 +25,7 @@ interface Props {
 export default function MobileControls({
   chain,
   activePresetId,
+  isModified,
   onSelect,
   onRandomize,
   actions,
@@ -51,8 +53,8 @@ export default function MobileControls({
       <MobileBottomSheet isOpen={isOpen} onClose={() => setIsOpen(false)} triggerRef={triggerRef}>
         <div className="flex flex-col gap-lg">
           <PresetPicker
-            chain={chain}
             activePresetId={activePresetId}
+            isModified={isModified}
             onSelect={onSelect}
             onRandomize={onRandomize}
           />
