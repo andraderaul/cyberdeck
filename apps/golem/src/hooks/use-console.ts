@@ -3,11 +3,11 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { downloadText, outputFilename } from '../export/output'
-import { assemble, type Image } from '../golem/assembler'
+import { assemble, type Image, wordIndexForLine } from '../golem/assembler'
 import { type Command, parseCommand } from '../golem/command'
 import { GREETING, helpFor, helpLines } from '../golem/help'
 import { formatMemoryDump, formatRegister } from '../golem/inspect'
-import { registerIndex } from '../golem/isa'
+import { PC, registerIndex } from '../golem/isa'
 import { createMachine, type Machine, step } from '../golem/machine'
 import { encode } from '../golem/share'
 import { formatHex, formatStep, TRACE_END, TRACE_START } from '../golem/trace'
@@ -30,6 +30,10 @@ export interface ConsoleState {
   rate: ClockRate
   /** Commands already entered, oldest first — the Console walks these with the arrow keys. */
   history: string[]
+  /** Source lines carrying a breakpoint. Presentation state: they outlive the Machine. */
+  breakpoints: ReadonlySet<number>
+  /** The source line the PC currently sits on, or null when nothing is loaded. */
+  currentLine: number | null
   /**
    * The editor is writable exactly while no Machine exists. Divergence between the source on
    * screen and the code executing is impossible by construction, not prevented by syncing.
@@ -46,6 +50,14 @@ export interface ConsoleState {
 // All five reference programs run in under 400 instructions; this is generous enough that a real
 // program is never truncated, and bounded so `clock max` on an endless loop cannot exhaust memory.
 const TRACE_LIMIT = 100_000
+
+/** The source line the PC is sitting on, or null when it points outside the assembled program. */
+function lineOfPc(machine: Machine | null, image: Image | null): number | null {
+  if (machine === null || image === null) {
+    return null
+  }
+  return image.lineForWord[machine.registers[PC] >>> 2] ?? null
+}
 
 /** Frames the recorded lines the way the reference emulator frames a run, so the two can diff. */
 function wrapTrace(lines: string[]): string {
@@ -104,6 +116,15 @@ export function useConsole(initialSource: string): ConsoleState {
   const historyRef = useRef<string[]>([])
   const [history, setHistory] = useState<string[]>([])
 
+  // Presentation state, like the clock rate: repeated debugging runs are the normal case, so
+  // re-entering breakpoints after every `reset` would make the feature useless.
+  const breakpointsRef = useRef<Set<number>>(new Set())
+  const [breakpoints, setBreakpoints] = useState<ReadonlySet<number>>(new Set())
+
+  const syncBreakpoints = useCallback(() => {
+    setBreakpoints(new Set(breakpointsRef.current))
+  }, [])
+
   const setMachine = useCallback((next: Machine | null) => {
     machineRef.current = next
     setMachineState(next)
@@ -130,13 +151,29 @@ export function useConsole(initialSource: string): ConsoleState {
   }, [])
 
   // One instruction. Returns false when there is nothing left to run, which stops the clock.
+  //
+  // The breakpoint is checked *after* stepping, on the instruction about to run. That is also
+  // what lets a run resume from a breakpoint without immediately tripping it again.
   const advance = useCallback((): boolean => {
     const current = machineRef.current
     if (current === null || current.halted) {
       return false
     }
-    return !stepRecording(current).halted
-  }, [stepRecording])
+
+    const next = stepRecording(current)
+    if (next.halted) {
+      // A run that reaches `int 0` should say so; silence reads as the clock having stalled.
+      append([{ kind: 'info', text: 'halted' }])
+      return false
+    }
+
+    const line = lineOfPc(next, imageRef.current)
+    if (line !== null && breakpointsRef.current.has(line)) {
+      append([{ kind: 'info', text: `paused at line ${line}` }])
+      return false
+    }
+    return true
+  }, [append, stepRecording])
 
   const clock = useClock(advance)
 
@@ -332,6 +369,48 @@ export function useConsole(initialSource: string): ConsoleState {
           )
           break
 
+        case 'break': {
+          const image = imageRef.current
+          if (image !== null && !wordIndexForLine(image).has(command.line)) {
+            output.push({
+              kind: 'error',
+              text: `line ${command.line} has no instruction to stop at`,
+            })
+            break
+          }
+          breakpointsRef.current.add(command.line)
+          syncBreakpoints()
+          output.push({ kind: 'info', text: `breakpoint at line ${command.line}` })
+          break
+        }
+
+        case 'breaks': {
+          const lines = [...breakpointsRef.current].sort((a, b) => a - b)
+          output.push({
+            kind: 'info',
+            text: lines.length === 0 ? 'no breakpoints' : `breakpoints: ${lines.join(', ')}`,
+          })
+          break
+        }
+
+        case 'unbreak': {
+          if (command.line === 'all') {
+            breakpointsRef.current.clear()
+            syncBreakpoints()
+            output.push({ kind: 'info', text: 'all breakpoints cleared' })
+            break
+          }
+          const removed = breakpointsRef.current.delete(command.line)
+          syncBreakpoints()
+          output.push({
+            kind: removed ? 'info' : 'error',
+            text: removed
+              ? `breakpoint at line ${command.line} cleared`
+              : `no breakpoint at line ${command.line}`,
+          })
+          break
+        }
+
         case 'bad-usage':
           output.push({ kind: 'error', text: command.message })
           break
@@ -346,7 +425,7 @@ export function useConsole(initialSource: string): ConsoleState {
           break
       }
     },
-    [append, build, clock, setMachine, source, stepRecording],
+    [append, build, clock, setMachine, source, stepRecording, syncBreakpoints],
   )
 
   const submit = useCallback(
@@ -375,6 +454,8 @@ export function useConsole(initialSource: string): ConsoleState {
     image,
     lines,
     history,
+    breakpoints,
+    currentLine: lineOfPc(machine, image),
     running: clock.running,
     rate: clock.rate,
     editable: machine === null,
