@@ -1,0 +1,203 @@
+[START OF SIMULATION]
+call r0, r0, 0x000F
+[F] R0 = (PC + 4) >> 2 = 0x00000000, PC = (R0 + 0x000F) << 2 = 0x0000003C
+addi r1, r0, 64
+[F] FR = 0x00000000, R1 = R0 + 0x0040 = 0x00000040
+or fr, fr, r1
+[U] FR = FR | R1 = 0x00000040
+ldw r1, r0, 0x002C
+[F] R1 = MEM[(R0 + 0x002C) << 2] = 0x00002200
+ldw r2, r0, 0x002D
+[F] R2 = MEM[(R0 + 0x002D) << 2] = 0x00002201
+ldw r3, r0, 0x002E
+[F] R3 = MEM[(R0 + 0x002E) << 2] = 0x00002202
+ldw r4, r0, 0x002F
+[F] R4 = MEM[(R0 + 0x002F) << 2] = 0x00002203
+addi r7, r0, 15
+[F] FR = 0x00000040, R7 = R0 + 0x000F = 0x0000000F
+stw r4, 0x0000, r7
+[F] MEM[(R4 + 0x0000) << 2] = R7 = 0x0000000F
+call r29, r0, 0x000B
+[F] R29 = (PC + 4) >> 2 = 0x00000018, PC = (R0 + 0x000B) << 2 = 0x0000002C
+[HARDWARE INTERRUPTION 2]
+isr r31, r30, 0x0004
+[F] R31 = IPC >> 2 = 0x0000000B, R30 = CR = 0x01EEE754, PC = 0x00000010
+cmp r30, r0
+[U] FR = 0x00000044
+ldw r9, r4, 0x0000
+[F] R9 = MEM[(R4 + 0x0000) << 2] = 0x00000020
+andi r9, r9, 32
+[F] R9 = R9 & 0x0020 = 0x00000020
+cmp r9, r0
+[U] FR = 0x00000044
+ldw r8, r3, 0x0000
+[F] R8 = MEM[(R3 + 0x0000) << 2] = 0x00000000
+addi r10, r0, 1
+[F] FR = 0x00000044, R10 = R0 + 0x0001 = 0x00000001
+reti r31
+[F] PC = R31 << 2 = 0x0000002C
+cmpi r10, 0
+[F] FR = 0x00000044
+beq 0x0000000B
+[S] PC = 0x00000034
+addi r10, r0, 0
+[F] FR = 0x00000044, R10 = R0 + 0x0000 = 0x00000000
+ret r29
+[F] PC = R29 << 2 = 0x00000060
+addi r5, r0, 74
+[F] FR = 0x00000044, R5 = R0 + 0x004A = 0x0000004A
+stw r1, 0x0000, r5
+[F] MEM[(R1 + 0x0000) << 2] = R5 = 0x0000004A
+addi r6, r0, 8
+[F] FR = 0x00000044, R6 = R0 + 0x0008 = 0x00000008
+stw r2, 0x0000, r6
+[F] MEM[(R2 + 0x0000) << 2] = R6 = 0x00000008
+addi r7, r0, 4
+[F] FR = 0x00000044, R7 = R0 + 0x0004 = 0x00000004
+stw r4, 0x0000, r7
+[F] MEM[(R4 + 0x0000) << 2] = R7 = 0x00000004
+call r29, r0, 0x000B
+[F] R29 = (PC + 4) >> 2 = 0x0000001F, PC = (R0 + 0x000B) << 2 = 0x0000002C
+cmpi r10, 0
+[F] FR = 0x00000041
+beq 0x0000000B
+[S] PC = 0x0000002C
+cmpi r10, 0
+[F] FR = 0x00000041
+[HARDWARE INTERRUPTION 2]
+isr r31, r30, 0x0004
+[F] R31 = IPC >> 2 = 0x0000000C, R30 = CR = 0x01EEE754, PC = 0x00000010
+cmp r30, r0
+[U] FR = 0x00000044
+ldw r9, r4, 0x0000
+[F] R9 = MEM[(R4 + 0x0000) << 2] = 0x00000000
+andi r9, r9, 32
+[F] R9 = R9 & 0x0020 = 0x00000000
+cmp r9, r0
+[U] FR = 0x00000041
+ldw r8, r3, 0x0000
+[F] R8 = MEM[(R3 + 0x0000) << 2] = 0x41140000
+addi r10, r0, 1
+[F] FR = 0x00000041, R10 = R0 + 0x0001 = 0x00000001
+reti r31
+[F] PC = R31 << 2 = 0x00000030
+beq 0x0000000B
+[S] PC = 0x0000002C
+cmpi r10, 0
+[F] FR = 0x00000044
+beq 0x0000000B
+[S] PC = 0x00000034
+addi r10, r0, 0
+[F] FR = 0x00000044, R10 = R0 + 0x0000 = 0x00000000
+ret r29
+[F] PC = R29 << 2 = 0x0000007C
+addi r7, r0, 5
+[F] FR = 0x00000044, R7 = R0 + 0x0005 = 0x00000005
+stw r4, 0x0000, r7
+[F] MEM[(R4 + 0x0000) << 2] = R7 = 0x00000005
+call r29, r0, 0x000B
+[F] R29 = (PC + 4) >> 2 = 0x00000022, PC = (R0 + 0x000B) << 2 = 0x0000002C
+[HARDWARE INTERRUPTION 2]
+isr r31, r30, 0x0004
+[F] R31 = IPC >> 2 = 0x0000000B, R30 = CR = 0x01EEE754, PC = 0x00000010
+cmp r30, r0
+[U] FR = 0x00000044
+ldw r9, r4, 0x0000
+[F] R9 = MEM[(R4 + 0x0000) << 2] = 0x00000000
+andi r9, r9, 32
+[F] R9 = R9 & 0x0020 = 0x00000000
+cmp r9, r0
+[U] FR = 0x00000041
+ldw r8, r3, 0x0000
+[F] R8 = MEM[(R3 + 0x0000) << 2] = 0x41140000
+addi r10, r0, 1
+[F] FR = 0x00000041, R10 = R0 + 0x0001 = 0x00000001
+reti r31
+[F] PC = R31 << 2 = 0x0000002C
+cmpi r10, 0
+[F] FR = 0x00000044
+beq 0x0000000B
+[S] PC = 0x00000034
+addi r10, r0, 0
+[F] FR = 0x00000044, R10 = R0 + 0x0000 = 0x00000000
+ret r29
+[F] PC = R29 << 2 = 0x00000088
+ldw r8, r1, 0x0000
+[F] R8 = MEM[(R1 + 0x0000) << 2] = 0x41140000
+addi r6, r0, 2
+[F] FR = 0x00000044, R6 = R0 + 0x0002 = 0x00000002
+stw r2, 0x0000, r6
+[F] MEM[(R2 + 0x0000) << 2] = R6 = 0x00000002
+addi r7, r0, 3
+[F] FR = 0x00000044, R7 = R0 + 0x0003 = 0x00000003
+stw r4, 0x0000, r7
+[F] MEM[(R4 + 0x0000) << 2] = R7 = 0x00000003
+call r29, r0, 0x000B
+[F] R29 = (PC + 4) >> 2 = 0x00000028, PC = (R0 + 0x000B) << 2 = 0x0000002C
+cmpi r10, 0
+[F] FR = 0x00000041
+beq 0x0000000B
+[S] PC = 0x0000002C
+[HARDWARE INTERRUPTION 2]
+isr r31, r30, 0x0004
+[F] R31 = IPC >> 2 = 0x0000000B, R30 = CR = 0x01EEE754, PC = 0x00000010
+cmp r30, r0
+[U] FR = 0x00000044
+ldw r9, r4, 0x0000
+[F] R9 = MEM[(R4 + 0x0000) << 2] = 0x00000000
+andi r9, r9, 32
+[F] R9 = R9 & 0x0020 = 0x00000000
+cmp r9, r0
+[U] FR = 0x00000041
+ldw r8, r3, 0x0000
+[F] R8 = MEM[(R3 + 0x0000) << 2] = 0x41940000
+addi r10, r0, 1
+[F] FR = 0x00000041, R10 = R0 + 0x0001 = 0x00000001
+reti r31
+[F] PC = R31 << 2 = 0x0000002C
+cmpi r10, 0
+[F] FR = 0x00000044
+beq 0x0000000B
+[S] PC = 0x00000034
+addi r10, r0, 0
+[F] FR = 0x00000044, R10 = R0 + 0x0000 = 0x00000000
+ret r29
+[F] PC = R29 << 2 = 0x000000A0
+addi r7, r0, 9
+[F] FR = 0x00000044, R7 = R0 + 0x0009 = 0x00000009
+stw r4, 0x0000, r7
+[F] MEM[(R4 + 0x0000) << 2] = R7 = 0x00000009
+call r29, r0, 0x000B
+[F] R29 = (PC + 4) >> 2 = 0x0000002B, PC = (R0 + 0x000B) << 2 = 0x0000002C
+[HARDWARE INTERRUPTION 2]
+isr r31, r30, 0x0004
+[F] R31 = IPC >> 2 = 0x0000000B, R30 = CR = 0x01EEE754, PC = 0x00000010
+cmp r30, r0
+[U] FR = 0x00000044
+ldw r9, r4, 0x0000
+[F] R9 = MEM[(R4 + 0x0000) << 2] = 0x00000000
+andi r9, r9, 32
+[F] R9 = R9 & 0x0020 = 0x00000000
+cmp r9, r0
+[U] FR = 0x00000041
+ldw r8, r3, 0x0000
+[F] R8 = MEM[(R3 + 0x0000) << 2] = 0x00000013
+addi r10, r0, 1
+[F] FR = 0x00000041, R10 = R0 + 0x0001 = 0x00000001
+reti r31
+[F] PC = R31 << 2 = 0x0000002C
+cmpi r10, 0
+[F] FR = 0x00000044
+beq 0x0000000B
+[S] PC = 0x00000034
+addi r10, r0, 0
+[F] FR = 0x00000044, R10 = R0 + 0x0000 = 0x00000000
+ret r29
+[F] PC = R29 << 2 = 0x000000AC
+int 44739242
+[S] CR = 0x02AAAAAA, PC = 0x0000000C
+[SOFTWARE INTERRUPTION]
+int 0
+[S] CR = 0x00000000, PC = 0x00000000
+[END OF SIMULATION]
+

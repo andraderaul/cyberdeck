@@ -334,13 +334,13 @@ Bate com `1_limits`, e o GOLEM faz o mesmo.
 
 ## Onde o oráculo não protege
 
-As fixtures herdadas exercitam 7 dos 11 branches. `2_blt` e `2_bnz`, fabricados em #135 enquanto o
+As fixtures herdadas exercitam 7 dos 11 branches. `gen_blt` e `gen_bnz`, fabricados em #135 enquanto o
 emulador de referência ainda compila, levam a 9:
 
 | branch | cobertura |
 |---|---|
 | `ble`, `bni` | **nenhuma** — só teste escrito à mão |
-| `blt`, `bnz` | fixture gerada (`2_blt`, `2_bnz`), as duas direções |
+| `blt`, `bnz` | fixture gerada (`gen_blt`, `gen_bnz`), as duas direções |
 | `bzd`, `biv` | 1 uso cada |
 | `beq`, `bgt` | 3 usos cada |
 | `bge` | 4 usos |
