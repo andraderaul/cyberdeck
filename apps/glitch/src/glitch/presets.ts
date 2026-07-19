@@ -44,7 +44,7 @@ export const PRESETS: Preset[] = [
     id: 'vaporwave',
     name: 'VAPORWAVE',
     // The one Chain that still holds every Effect, and the reason it opens the app: a casual creator
-    // has to see what the whole Pipeline does while their image stays plainly readable underneath.
+    // has to see what every Effect does at once while their image stays plainly readable underneath.
     chain: [
       createLink('blockDisplacement', { density: 0.1, amount: 0.2 }),
       createLink('pixelSort', { direction: 'horizontal', threshold: 0.65, runLength: 70 }),
@@ -119,8 +119,8 @@ export const PRESETS: Preset[] = [
 
 /**
  * The look the app opens on. A casual creator has to see the point on the first screen, not a raw
- * image — and this is the Preset carrying every Effect, so that first screen also shows the whole
- * Pipeline at once.
+ * image — and this is the Preset carrying every Effect, so that first screen also shows the full
+ * Effect set at once.
  */
 export const DEFAULT_PRESET: Preset = PRESETS[0]
 

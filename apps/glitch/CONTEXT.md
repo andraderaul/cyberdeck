@@ -21,7 +21,7 @@ distintos e mover um Link não re-sorteia o arranjo dele.
 ## Language
 
 **PixelBuffer**:
-A grade de pixels que atravessa o Pipeline — a moeda do núcleo puro, análoga ao AsciiCell
+A grade de pixels que atravessa a Chain — a moeda do núcleo puro, análoga ao AsciiCell
 do ASCII//Convert. Uma forma estrutural simples, deliberadamente independente do DOM, para
 que o núcleo seja testável sem canvas.
 _Avoid_: ImageData (é o tipo do DOM que a casca embrulha/desembrulha), bitmap, frame
@@ -48,10 +48,10 @@ flag `enabled` nem zero codificado; um Effect está ligado porque o Link está l
 _Avoid_: step, node, camada
 
 **Seed**:
-O valor que semeia toda a pseudo-aleatoriedade do Pipeline — **o arranjo**, uma rolagem
+O valor que semeia toda a pseudo-aleatoriedade da Chain — **o arranjo**, uma rolagem
 específica de um look. Alimenta o Block Displacement (que sorteia seus blocos do stream do
 Seed) e o Noise (cujo grão sai de um hash posicional que recebe o Seed), de modo que um
-Re-roll move os dois. Vive ao lado dos GlitchSettings, não dentro: é o que permite que o
+Re-roll move os dois. Vive ao lado da Chain, não dentro: é o que permite que o
 Re-roll troque o arranjo sem alterar o look. Fixo por padrão tanto na imagem quanto na
 webcam; **Re-roll** gera um novo Seed.
 _Avoid_: random, rng
@@ -93,8 +93,9 @@ vídeo via `canvas.captureStream()` + `MediaRecorder`). Recording grava o canvas
 
 ## Escopo (v1)
 
-- **Dentro:** imagem estática + Live Source (webcam) em tempo real; pipeline fixo de 6
-  Effects; presets-first (6 Presets, um já aplicado na abertura) + Randomize; Seed fixo com
-  Re-roll; PNG Export + Capture + Copy + Recording.
+- **Dentro:** imagem estática + Live Source (webcam) em tempo real; a Chain editável de
+  Effects — 6 tipos, ordem, presença e repetição nas mãos do usuário (ADR 0017); presets-first
+  (6 Presets, um já aplicado na abertura) + Randomize; Seed fixo com Re-roll; PNG Export +
+  Capture + Copy + Recording.
 - **Fora (v2+):** datamosh real; glitch animado
   (Seed avançando por frame na webcam).

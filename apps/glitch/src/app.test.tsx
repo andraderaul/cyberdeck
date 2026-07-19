@@ -507,7 +507,7 @@ describe('App', () => {
     expect(lastParamsOf('blockDisplacement')).toMatchObject({ amount: 0.9 })
   })
 
-  it('passes a Seed down to the canvas alongside the GlitchSettings', () => {
+  it('passes a Seed down to the canvas alongside the Chain', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'upload' }))
 
@@ -523,7 +523,7 @@ describe('App', () => {
     expect(renderedSeed.mock.lastCall?.[0]).not.toBe(before)
   })
 
-  it('leaves the look untouched on Re-roll — a new arrangement, the same GlitchSettings', () => {
+  it('leaves the look untouched on Re-roll — a new arrangement, the same Chain', () => {
     renderWithAdvancedOpen()
     const before = renderedChain.mock.lastCall?.[0]
 
@@ -591,7 +591,7 @@ describe('App', () => {
       expect(chip(`${DEFAULT_PRESET.name} (modified)`)).toHaveAttribute('aria-pressed', 'true')
     })
 
-    // The whole reason the Seed sits outside GlitchSettings: a Re-roll is a new arrangement, not a
+    // The whole reason the Seed sits outside the Chain: a Re-roll is a new arrangement, not a
     // customisation, so it must not move the user off their Preset or mark it modified.
     it('keeps the Preset highlighted and unmodified through a Re-roll', () => {
       renderWithAdvancedOpen()

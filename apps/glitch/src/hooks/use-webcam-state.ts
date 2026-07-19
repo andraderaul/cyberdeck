@@ -3,14 +3,14 @@ import { useCallback, useEffect, useReducer, useRef } from 'react'
 // Copied by hand from ASCII//Convert (ADR 0011), with two deliberate divergences:
 // - modes carry this app's domain terms ('image' / 'live'), not ASCII's 'upload' / 'webcam'
 // - the lifecycle side-effects are Commands, not Effects: Effect is this app's word for a pure
-//   PixelBuffer transform in the Pipeline (CONTEXT.md), and the collision would be a trap
+//   PixelBuffer transform in the Chain (CONTEXT.md), and the collision would be a trap
 //
 // onFacingModeChange is wired (ADR 0016): the flip is real — the Source is mirrored on the sampling
-// draw, before the Pipeline — so the front camera can auto-mirror without Export disagreeing with
+// draw, before the Chain — so the front camera can auto-mirror without Export disagreeing with
 // the preview. The lifecycle is kept whole, so `switchCamera` and `facingMode` are carried without a
 // control surfacing them yet — #82 scoped in the Live Source, not camera choice.
 
-/** Which Source is feeding the Pipeline: a static Source Image, or the Live Source (webcam). */
+/** Which Source is feeding the Chain: a static Source Image, or the Live Source (webcam). */
 export type SourceMode = 'image' | 'live'
 type FacingMode = 'user' | 'environment'
 

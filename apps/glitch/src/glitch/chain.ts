@@ -82,7 +82,7 @@ interface EffectDefinition<K extends EffectType> {
    * second Link of it, unedited and adjacent, is a no-op.
    *
    * A property of the transform, not of the UI, which is why it lives here rather than as a list of
-   * Effect names in the control panel: the editor hides the duplicate control for these, and any
+   * Effect names in the control panel: the editor disables the duplicate control for these, and any
    * future surface that offers repeats gets the same answer from the same place.
    */
   idempotent?: boolean
@@ -178,6 +178,8 @@ export function duplicateLink(chain: Chain, id: string): Chain {
 
   const source = chain[index]
   const next = [...chain]
+  // `as never` is `applyLink`'s correlated-union cast in another coat: type and params came off
+  // the same Link, but TypeScript checks the pair independently.
   next.splice(index + 1, 0, createLink(source.type, source.params as never))
   return next
 }

@@ -161,7 +161,7 @@ describe('renderGlitchFrame', () => {
   })
 
   // Mirror flips the pixels, not the preview (ADR 0016): the flip happens on the sampling draw,
-  // before the Pipeline, so Effects apply on top and the painted (exported) canvas carries it.
+  // before the Chain, so Effects apply on top and the painted (exported) canvas carries it.
   it('flips the Source horizontally around the sampling draw when mirrored', () => {
     const ctx = fakeMirrorContext(new ImageData(100, 50))
     const hidden = fakeCanvas(ctx)

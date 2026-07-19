@@ -10,7 +10,7 @@ export const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
 /**
  * Chrome shared by everything sitting on top of the canvas — see ADR 0013. `bg-bg` is the
  * load-bearing part: the canvas *is* the user's artwork, so a transparent chip takes its contrast
- * from whatever the Pipeline just painted (hot pink on a bright feed measures 1.57:1). Standing on
+ * from whatever the Chain just painted (hot pink on a bright feed measures 1.57:1). Standing on
  * an opaque surface from the palette is what holds the ratio ADR 0009 audited. Not translucent —
  * no alpha survives an arbitrary backdrop.
  */
@@ -37,7 +37,7 @@ interface Props {
 
 /**
  * Lifecycle coordinator: decides *when* to render. A Source Image renders once per Source,
- * GlitchSettings or Seed change; a Live Source renders on the throttled rAF loop instead. The Seed
+ * Chain or Seed change; a Live Source renders on the throttled rAF loop instead. The Seed
  * is its own trigger, which is what makes a Re-roll a re-render on its own.
  */
 export default function GlitchCanvas({

@@ -201,7 +201,7 @@ describe('GlitchCanvas', () => {
   })
 
   // Unlike every other surface in the app, what sits behind these is the user's artwork — the
-  // Pipeline can paint any color at all under them. ADR 0009's audited ratios are token-on-token,
+  // Chain can paint any color at all under them. ADR 0009's audited ratios are token-on-token,
   // so they only hold here if each chip brings its own audited surface instead of compositing on
   // whatever was just painted. A class assertion because happy-dom composites nothing.
   it('gives every canvas overlay its own surface rather than the artwork behind it', () => {

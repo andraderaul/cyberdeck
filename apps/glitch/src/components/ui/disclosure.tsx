@@ -25,7 +25,7 @@ export default function Disclosure({
         // Only while open: the region unmounts when collapsed, and a reference to an absent element
         // is a dangling one for assistive tech. Diverges from ASCII//Convert's mobile-controls,
         // which keeps its panels mounted behind `hidden` — affordable here because what's inside
-        // holds no state of its own to lose (GlitchSettings lives up in App).
+        // holds no state of its own to lose (the Chain lives up in App).
         aria-controls={isOpen ? regionId : undefined}
         onClick={() => setIsOpen((prev) => !prev)}
         className="w-full flex items-center justify-between"

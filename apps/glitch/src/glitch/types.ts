@@ -1,4 +1,4 @@
-/** The grid of pixels flowing through the Pipeline — the pure core's currency, deliberately DOM-free. */
+/** The grid of pixels flowing through the Chain — the pure core's currency, deliberately DOM-free. */
 export interface PixelBuffer {
   // Pinned to ArrayBuffer, not the default ArrayBufferLike: the ImageData constructor the shell
   // wraps this back into rejects a SharedArrayBuffer-backed array.
@@ -52,7 +52,7 @@ export type SortDirection = 'horizontal' | 'vertical'
 export interface PixelSortParams {
   direction: SortDirection
   /**
-   * Luminance floor on the normalised 0..1 scale the Pipeline computes brightness on. Contiguous
+   * Luminance floor on the normalised 0..1 scale the pure core computes brightness on. Contiguous
    * pixels at or above it form the threshold band that gets sorted; darker pixels break the run
    * and are left where they are.
    */
