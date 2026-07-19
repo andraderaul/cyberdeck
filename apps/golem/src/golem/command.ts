@@ -17,6 +17,9 @@ export type Command =
   | { kind: 'export'; what: 'hex' | 'trace' }
   | { kind: 'share' }
   | { kind: 'help'; topic: string | null }
+  | { kind: 'break'; line: number }
+  | { kind: 'breaks' }
+  | { kind: 'unbreak'; line: number | 'all' }
   | { kind: 'empty' }
   | { kind: 'unknown'; input: string; suggestion: string | null }
   | { kind: 'bad-usage'; name: string; message: string }
@@ -32,11 +35,14 @@ export const COMMAND_NAMES = [
   'mem',
   'export',
   'share',
+  'break',
+  'breaks',
+  'unbreak',
   'reset',
   'help',
 ] as const
 
-const NO_ARGUMENT_COMMANDS = ['asm', 'step', 'reset', 'run', 'stop', 'share'] as const
+const NO_ARGUMENT_COMMANDS = ['asm', 'step', 'reset', 'run', 'stop', 'share', 'breaks'] as const
 
 const DEFAULT_DUMP_COUNT = 8
 const MAX_DUMP_COUNT = 256
@@ -72,6 +78,25 @@ export function parseCommand(input: string): Command {
 
   if (lowered === 'mem') {
     return parseMem(args)
+  }
+
+  if (lowered === 'break') {
+    const line = args.length === 1 ? parseAddress(args[0]) : null
+    if (line === null || line < 1) {
+      return { kind: 'bad-usage', name: 'break', message: 'usage: break <line>' }
+    }
+    return { kind: 'break', line }
+  }
+
+  if (lowered === 'unbreak') {
+    if (args.length === 1 && args[0].toLowerCase() === 'all') {
+      return { kind: 'unbreak', line: 'all' }
+    }
+    const line = args.length === 1 ? parseAddress(args[0]) : null
+    if (line === null || line < 1) {
+      return { kind: 'bad-usage', name: 'unbreak', message: 'usage: unbreak <line> | unbreak all' }
+    }
+    return { kind: 'unbreak', line }
   }
 
   if (lowered === 'help') {

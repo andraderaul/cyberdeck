@@ -80,6 +80,8 @@ export default function App() {
             <SourceEditor
               source={console.source}
               editable={console.editable}
+              breakpoints={console.breakpoints}
+              currentLine={console.currentLine}
               onChange={console.setSource}
             />
             {/* The Console is the operator's surface and the Terminal is the machine's. They sit
