@@ -105,12 +105,19 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 
 **Components**
 - `src/components/ascii-canvas.tsx` — lifecycle coordinator: drives static and rAF render paths
-- `src/components/control-panel.tsx` — ConversionSettings controls
+- `src/components/control-strip.tsx` — the Control Strip (ADR 0020): the bottom-anchored control
+  surface at both breakpoints and the program's whole control grammar — there is no aside and no
+  sheet behind it. PRESETS and EDIT so far; OUT joins them when its panel exists, since a tab is
+  never rendered ahead of what sits behind it. Only the active panel is mounted, so one tab's
+  controls are in the accessibility tree at a time. The shell is GLITCH's, ported rather than
+  redesigned — whatever lands empty-diff is what crosses into deck-kit
+- `src/components/settings-editor.tsx` — the Strip's EDIT tab: every ConversionSettings control as
+  a row of tool chips, the focused tool's control in the panel above. The three sliders are
+  siblings, so at `sm` the whole group reads at once while mobile focuses one (adaptive density);
+  the off-density ones are `hidden`, which keeps them out of the accessibility tree too
 - `src/components/upload-zone.tsx` — image upload and Live Source activation
 - `src/components/download-bar.tsx` — Export and Capture controls
 - `src/components/empty-state-hero.tsx` — initial empty state with upload and webcam entry points
-- `src/components/mobile-bottom-sheet.tsx` — slide-up sheet for mobile controls
-- `src/components/mobile-controls.tsx` — ConversionSettings controls layout for mobile
 - `src/components/ai-config-banner.tsx` — informational banner for AI config; dismiss state in `sessionStorage`
 - `src/components/analysis-modal.tsx` — AI Analysis results with threat-level display
 - `src/components/api-key-modal.tsx` — API key configuration
