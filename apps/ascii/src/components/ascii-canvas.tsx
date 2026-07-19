@@ -1,3 +1,4 @@
+import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
 import { type RefObject, useEffect, useRef } from 'react'
 import { resizeImage } from '../ascii/image-utils'
@@ -23,6 +24,8 @@ interface Props {
   canvasRef: RefObject<HTMLCanvasElement>
   isMirrored?: boolean
   isRecording?: boolean
+  elapsedSeconds?: number
+  onStopRecording?: () => void
   isLive?: boolean
   onClearSource?: () => void
   onMirrorToggle?: () => void
@@ -38,6 +41,8 @@ export default function AsciiCanvas({
   canvasRef,
   isMirrored,
   isRecording,
+  elapsedSeconds = 0,
+  onStopRecording,
   isLive,
   onClearSource,
   onMirrorToggle,
@@ -154,14 +159,28 @@ export default function AsciiCanvas({
             LIVE
           </span>
         )}
+        {/* The badge *is* the stop control (ADR 0020): a take runs while the user keeps working in
+            PRESETS and EDIT, so its stop has to be reachable from every tab — and the badge already
+            marks the one place that is. No new chrome, and it carries the timer that left with
+            LiveSourceBar. Unlike GLITCH's, it needs no opaque background of its own: paintFrame()
+            fills this canvas with --void before drawing, so the overlay already sits on the audited
+            pair (ADR 0013). */}
         {isRecording && (
-          <span
+          <button
+            type="button"
             data-testid="rec-indicator"
-            className="flex items-center gap-2xs font-mono text-xs text-hot-pink border border-hot-pink px-sm py-2xs rounded-xs select-none"
-            aria-hidden="true"
+            onClick={onStopRecording}
+            aria-label={`stop recording — ${formatElapsedTime(elapsedSeconds)} elapsed`}
+            className="flex items-center gap-2xs font-mono text-xs text-hot-pink border border-hot-pink px-sm py-2xs rounded-xs select-none cursor-pointer transition-colors duration-fast hover:bg-danger-ghost"
           >
-            <span className="motion-safe:animate-pulse">●</span> REC
-          </span>
+            <span className="motion-safe:animate-pulse" aria-hidden="true">
+              ●
+            </span>
+            <span role="status" aria-live="polite">
+              {formatElapsedTime(elapsedSeconds)}
+            </span>
+            <span aria-hidden="true">⏹</span>
+          </button>
         )}
         {/* Live source-tuning chrome, homed here beside clear (ADR 0015): same family as clear —
             it acts on the Source, not the export. Icon-only on mobile to hold the row. */}
