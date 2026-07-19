@@ -1,4 +1,5 @@
 import { ErrorBoundary } from '@cyberdeck/deck-kit/ui'
+import { useEffect } from 'react'
 import Console from './components/console'
 import Flags from './components/flags'
 import Memory from './components/memory'
@@ -6,6 +7,7 @@ import Registers from './components/registers'
 import SourceEditor from './components/source-editor'
 import Terminal from './components/terminal'
 import { useConsole } from './hooks/use-console'
+import { useSourceLoading } from './hooks/use-source-loading'
 
 // Prints a string a byte at a time, so the Terminal has something to show on first load. The
 // example that teaches the syntax properly, with its own tour, arrives with #140.
@@ -40,7 +42,20 @@ const STARTER_SOURCE = [
 ].join('\n')
 
 export default function App() {
+  const loaded = useSourceLoading(STARTER_SOURCE)
   const console = useConsole(STARTER_SOURCE)
+  const { replaceSource, note } = console
+
+  // The Source resolves after first render, since reading a share link means decompressing it.
+  useEffect(() => {
+    if (!loaded.ready) {
+      return
+    }
+    replaceSource(loaded.source)
+    if (loaded.problem !== null) {
+      note(loaded.problem, 'error')
+    }
+  }, [loaded, replaceSource, note])
 
   return (
     <ErrorBoundary>

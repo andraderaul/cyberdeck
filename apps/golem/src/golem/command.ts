@@ -15,6 +15,7 @@ export type Command =
   | { kind: 'reg'; name: string }
   | { kind: 'mem'; start: number; count: number; unit: MemoryUnit }
   | { kind: 'export'; what: 'hex' | 'trace' }
+  | { kind: 'share' }
   | { kind: 'empty' }
   | { kind: 'unknown'; input: string; suggestion: string | null }
   | { kind: 'bad-usage'; name: string; message: string }
@@ -29,10 +30,11 @@ export const COMMAND_NAMES = [
   'reg',
   'mem',
   'export',
+  'share',
   'reset',
 ] as const
 
-const NO_ARGUMENT_COMMANDS = ['asm', 'step', 'reset', 'run', 'stop'] as const
+const NO_ARGUMENT_COMMANDS = ['asm', 'step', 'reset', 'run', 'stop', 'share'] as const
 
 const DEFAULT_DUMP_COUNT = 8
 const MAX_DUMP_COUNT = 256
