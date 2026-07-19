@@ -7,8 +7,8 @@ import { assemble, type Image, wordIndexForLine } from '../golem/assembler'
 import { type Command, parseCommand } from '../golem/command'
 import { GREETING, helpFor, helpLines } from '../golem/help'
 import { formatMemoryDump, formatRegister, hex32 } from '../golem/inspect'
-import { PC, registerIndex } from '../golem/isa'
-import { createMachine, type Machine, step } from '../golem/machine'
+import { PC, registerIndex, SOFTWARE_VECTOR } from '../golem/isa'
+import { createMachine, type Machine, type StepEvent, step } from '../golem/machine'
 import { encode } from '../golem/share'
 import { formatHex, formatStep, frameTrace } from '../golem/trace'
 import { type ClockRate, useClock } from './use-clock'
@@ -57,6 +57,20 @@ function lineOfPc(machine: Machine | null, image: Image | null): number | null {
     return null
   }
   return image.lineForWord[machine.registers[PC] >>> 2] ?? null
+}
+
+/**
+ * One Console line per dispatch, naming the cause and the vector it landed on. Per dispatch and
+ * not per Step, which is what bounds the narration on a program that interrupts in a loop.
+ *
+ * This exists because a dispatch mid-`run` is otherwise invisible: the PC simply is somewhere
+ * else, with nothing on screen saying who moved it.
+ */
+function narrate(event: StepEvent): string {
+  switch (event.kind) {
+    case 'software-interrupt':
+      return `software interrupt — cause ${hex32(event.cause)}, vector ${hex32(SOFTWARE_VECTOR)}`
+  }
 }
 
 /** Frames the recorded lines for export, marking truncation when the limit was hit. */
@@ -139,25 +153,32 @@ export function useConsole(initialSource: string): ConsoleState {
     setMachineState(next)
   }, [])
 
-  /** Advances one instruction and records the trace line for it. */
-  const stepRecording = useCallback(
-    (current: Machine): Machine => {
-      const next = step(current)
-      if (traceRef.current.length < TRACE_LIMIT) {
-        traceRef.current.push(formatStep(current, next))
-      }
-      setMachine(next)
-      return next
-    },
-    [setMachine],
-  )
-
   const append = useCallback((entries: Omit<ConsoleLine, 'id'>[]) => {
     setLines((previous) => [
       ...previous,
       ...entries.map((entry, offset) => ({ ...entry, id: previous.length + offset })),
     ])
   }, [])
+
+  /**
+   * Advances one instruction, records the trace entry, and narrates anything that happened *to*
+   * the program. The narration is a Console line, never a Terminal one: the Terminal is the
+   * program's own output and a dispatch is not something the program printed.
+   */
+  const stepRecording = useCallback(
+    (current: Machine): Machine => {
+      const { machine: next, events } = step(current)
+      if (traceRef.current.length < TRACE_LIMIT) {
+        traceRef.current.push(formatStep(current, next, events))
+      }
+      if (events.length > 0) {
+        append(events.map((event) => ({ kind: 'info' as const, text: narrate(event) })))
+      }
+      setMachine(next)
+      return next
+    },
+    [append, setMachine],
+  )
 
   // One instruction. Returns false when there is nothing left to run, which stops the clock.
   //

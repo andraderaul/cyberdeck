@@ -123,6 +123,16 @@ export const GT = 0x04
 export const ZD = 0x08
 export const OV = 0x10
 export const IV = 0x20
+/** Interrupt enable. A software interrupt is dispatched only while this is set. */
+export const IE = 0x40
+
+/**
+ * Interrupt vectors, at the head of memory as *byte* addresses. Word 0 is the entry point, so a
+ * program's first instruction is the `call` that jumps past the three handlers.
+ */
+export const HARDWARE_1_VECTOR = 0x04
+export const HARDWARE_2_VECTOR = 0x08
+export const SOFTWARE_VECTOR = 0x0c
 
 /** Words of addressable memory. Must span the Terminal at byte `0x0000888B`. */
 export const MEMORY_WORDS = 0x4000

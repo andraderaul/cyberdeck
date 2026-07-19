@@ -4,8 +4,22 @@
 
 import { describe, expect, it } from 'vitest'
 import { assemble } from './assembler'
-import { EQ, ER, FR, GT, IV, LT, OV, TERMINAL_ADDRESS, ZD } from './isa'
-import { createMachine, type Machine, step } from './machine'
+import {
+  CR,
+  EQ,
+  ER,
+  FR,
+  GT,
+  IPC,
+  IV,
+  LT,
+  OV,
+  PC,
+  SOFTWARE_VECTOR,
+  TERMINAL_ADDRESS,
+  ZD,
+} from './isa'
+import { createMachine, type Machine, type StepEvent, step } from './machine'
 
 function machineFor(source: string): Machine {
   const result = assemble(source)
@@ -19,10 +33,25 @@ function machineFor(source: string): Machine {
 function run(source: string, limit = 200): Machine {
   let machine = machineFor(source)
   for (let i = 0; i < limit && !machine.halted; i++) {
-    machine = step(machine)
+    machine = step(machine).machine
   }
   return machine
 }
+
+/** Every event a run emits, in order — the stream the trace and the Console narration consume. */
+function eventsOf(source: string, limit = 200): StepEvent[] {
+  let machine = machineFor(source)
+  const events: StepEvent[] = []
+  for (let i = 0; i < limit && !machine.halted; i++) {
+    const result = step(machine)
+    events.push(...result.events)
+    machine = result.machine
+  }
+  return events
+}
+
+// `enai` is #208's; until then a program enables interrupts the way the macro will expand.
+const ENABLE_INTERRUPTS = ['addi r1, r0, 64', 'or fr, fr, r1']
 
 /**
  * Builds a program that sets flags, takes the branch under test, and records which way it went.
@@ -49,7 +78,7 @@ const fellThrough = (machine: Machine) => machine.registers[12] === 1 && machine
 describe('step', () => {
   it('is pure — the machine it is given is not mutated', () => {
     const before = machineFor('addi r1, r0, 7')
-    const after = step(before)
+    const after = step(before).machine
 
     expect(before.registers[1]).toBe(0)
     expect(after.registers[1]).toBe(7)
@@ -58,7 +87,51 @@ describe('step', () => {
   it('returns a halted machine unchanged rather than crashing', () => {
     const halted = run('int 0')
 
-    expect(step(halted)).toBe(halted)
+    expect(step(halted).machine).toBe(halted)
+  })
+
+  it('emits no events for an instruction that interrupts nothing', () => {
+    expect(step(machineFor('addi r1, r0, 7')).events).toEqual([])
+  })
+})
+
+// `int 1` and a division by zero leave *identical* after-states — both set CR to 1 and land on the
+// same vector. Nothing downstream could tell them apart from a state diff, which is the whole
+// reason `step` reports events rather than the Console inferring them (#205).
+describe('int N dispatch', () => {
+  const dispatching = (n: number) => [...ENABLE_INTERRUPTS, `int ${n}`, 'int 0'].join('\n')
+
+  it('carries N as the cause and lands on the software vector', () => {
+    const machine = run(dispatching(2), 3)
+
+    expect(machine.registers[CR]).toBe(2)
+    expect(machine.registers[PC]).toBe(SOFTWARE_VECTOR)
+  })
+
+  it('saves the interrupted PC so an ISR can return past the int', () => {
+    const machine = run(dispatching(2), 3)
+
+    // The instruction *after* the `int` — two setup words plus the int itself.
+    expect(machine.registers[IPC]).toBe(0x0c)
+  })
+
+  it('reports the dispatch as an event naming its cause', () => {
+    expect(eventsOf(dispatching(2), 3)).toEqual([{ kind: 'software-interrupt', cause: 2 }])
+  })
+
+  it('is suppressed entirely while IE is clear', () => {
+    const machine = run(['int 2', 'addi r5, r0, 1', 'int 0'].join('\n'))
+
+    // Fell through to the next instruction rather than dispatching, and left CR untouched.
+    expect(machine.registers[5]).toBe(1)
+    expect(machine.registers[CR]).toBe(0)
+    expect(eventsOf(['int 2', 'int 0'].join('\n'))).toEqual([])
+  })
+
+  it('still halts on int 0, IE or no IE', () => {
+    expect(run('int 0').halted).toBe(true)
+    expect(run([...ENABLE_INTERRUPTS, 'int 0'].join('\n')).halted).toBe(true)
+    expect(eventsOf([...ENABLE_INTERRUPTS, 'int 0'].join('\n'))).toEqual([])
   })
 })
 

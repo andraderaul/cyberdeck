@@ -179,7 +179,7 @@ Todos os saltos são tipo S e recebem um endereço de **palavra** em `im26`; o `
 | `0x26` | `ret` | — | F | `PC = Rx << 2` |
 | `0x27` | `isr` | — | F | `Rx = IPC >> 2`; `Ry = CR` |
 | `0x28` | `reti` | — | F | `PC = Rx << 2` |
-| `0x3F` | `int` | `halt` | S | interrupção de software; `int 0` encerra a simulação |
+| `0x3F` | `int` | `halt` | S | `int 0` encerra a simulação; `int N` despacha interrupção de software com causa `N` |
 
 `call` guarda o endereço de retorno como **índice de palavra**, e é por isso que `ret` faz `<< 2`.
 
@@ -198,6 +198,22 @@ unidade 1, onde só a primeira faz algo:
 | 3 | `0x0C` | handler de interrupção de software |
 
 Nas unidades 1 os três handlers são `nop`.
+
+### Despacho de interrupção
+
+Um despacho faz três coisas, sempre as mesmas: `CR` recebe a **causa**, `IPC` recebe o endereço da
+instrução **seguinte** à interrompida — é o que permite a ISR voltar com um `ret` comum — e o `PC`
+salta para o vetor.
+
+Interrupções de software são **condicionadas ao bit `IE`** (`0x40` no `FR`). Com `IE` limpo, `int N`
+não despacha.
+
+| causa | origem |
+|---|---|
+| `N` | `int N` com `N` diferente de zero |
+
+As demais causas (divisão por zero, instrução inválida, watchdog, FPU) entram junto com as fatias
+que as implementam.
 
 ---
 
@@ -322,6 +338,15 @@ erro e imprime cada palavra com os caracteres invertidos.
 A referência monta `(ER:Rx)`, desloca, e depois faz `registradores[ER] = (ERR & 0xFFFFFFFF00000000)`
 — atribuição de um valor cujos 32 bits baixos são zero a um `uint32_t`. `ER` acaba sempre em zero.
 Bate com `1_limits`, e o GOLEM faz o mesmo.
+
+### `int N` com `IE` limpo é no-op
+
+Nenhuma fixture prende esse caso: os programas de referência ligam `IE` com `enai` antes de
+qualquer `int N`. Fica **decidido** que a instrução não faz nada — nem escreve `CR`, nem salta.
+
+A alternativa seria escrever a causa e não desviar, e isso produz um estado que ISR nenhuma sabe
+explicar: `CR` diria que houve uma interrupção que o `PC` desmente. "Interrupção condicionada"
+significa que ela não aconteceu, não que aconteceu pela metade.
 
 ### Outros achados, sem impacto
 

@@ -86,7 +86,7 @@ describe.each(ALL)('%s', (name) => {
     const total = Math.max(...byStep.keys())
 
     for (let index = 1; index <= total; index++) {
-      machine = step(machine)
+      machine = step(machine).machine
 
       for (const { target, value } of byStep.get(index) ?? []) {
         const actual = machine.registers[indexOfTarget(target)] >>> 0

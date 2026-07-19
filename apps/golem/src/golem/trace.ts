@@ -8,7 +8,7 @@
 
 import { hex } from './hex'
 import { CR, ER, FR, PC, registerName, unpackU } from './isa'
-import type { Machine } from './machine'
+import type { Machine, StepEvent } from './machine'
 
 // The disassembly line names registers in lower case, the effects line in upper.
 const lower = (index: number) => registerName(index)
@@ -54,10 +54,31 @@ const BRANCHES: Record<number, string> = {
 }
 
 /**
- * Renders the instruction that took `before` to `after` as the two lines a trace entry is: the
- * disassembly, then the effects it had. Pure, and reads only the two states it is given.
+ * The reference emulator's marker for a dispatch, emitted *after* the lines of the instruction
+ * that caused it — the order the reference writes them, and therefore the order a diff expects.
  */
-export function formatStep(before: Machine, after: Machine): string {
+export function formatEvent(event: StepEvent): string {
+  switch (event.kind) {
+    case 'software-interrupt':
+      return '[SOFTWARE INTERRUPTION]'
+  }
+}
+
+/**
+ * Renders the instruction that took `before` to `after` as the two lines a trace entry is: the
+ * disassembly, then the effects it had — followed by a marker line per event the Step raised.
+ * Pure, and reads only what it is given.
+ */
+export function formatStep(
+  before: Machine,
+  after: Machine,
+  events: readonly StepEvent[] = [],
+): string {
+  const entry = formatInstruction(before, after)
+  return [entry, ...events.map(formatEvent)].join('\n')
+}
+
+function formatInstruction(before: Machine, after: Machine): string {
   const instruction = (before.memory[before.registers[PC] >>> 2] ?? 0) >>> 0
   const opcode = instruction >>> 26
 
@@ -187,8 +208,10 @@ export function frameTrace(lines: readonly string[]): string {
 }
 
 /** The whole log for collected steps, framed so it can be diffed directly against the reference. */
-export function formatTrace(steps: { before: Machine; after: Machine }[]): string {
-  return frameTrace(steps.map(({ before, after }) => formatStep(before, after)))
+export function formatTrace(
+  steps: { before: Machine; after: Machine; events?: readonly StepEvent[] }[],
+): string {
+  return frameTrace(steps.map(({ before, after, events }) => formatStep(before, after, events)))
 }
 
 /** The Image in the reference `.hex` format: one `0x`-prefixed word per line. */

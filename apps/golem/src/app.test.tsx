@@ -221,6 +221,69 @@ describe('the Terminal', () => {
   })
 })
 
+describe('interrupt narration', () => {
+  // `enai` is #208's; this enables IE the way the macro will expand, so the narration can be
+  // tested on the semantics that already exist.
+  const DISPATCHES = [
+    'addi r1, r0, 64',
+    'or fr, fr, r1',
+    'int 2',
+    'int 0',
+    'int 0',
+    'sw:',
+    'int 0',
+  ].join('\n')
+
+  it('narrates a dispatch on the Console, naming cause and vector', async () => {
+    render(<App />)
+    write(DISPATCHES)
+
+    await type('asm')
+    await stepTimes(3)
+
+    expect(
+      screen.getByText(/software interrupt — cause 0x00000002, vector 0x0000000C/),
+    ).toBeInTheDocument()
+  })
+
+  // The Terminal is the program's own output; a dispatch is something that happened *to* it.
+  // The v1 separation of the two surfaces holds in v2 (ADR 0018).
+  it('keeps the narration off the Terminal', async () => {
+    render(<App />)
+    write(DISPATCHES)
+
+    await type('asm')
+    await stepTimes(3)
+
+    expect(screen.getByRole('region', { name: 'Terminal' }).textContent).not.toMatch(
+      /software interrupt/,
+    )
+  })
+
+  it('says nothing when a step interrupts nothing', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await stepTimes(3)
+
+    expect(screen.queryByText(/software interrupt/)).not.toBeInTheDocument()
+  })
+
+  it('shows the dispatch in cr and ipc like any other register', async () => {
+    render(<App />)
+    write(DISPATCHES)
+
+    await type('asm')
+    await stepTimes(3)
+    await type('reg cr')
+    await type('reg ipc')
+
+    expect(screen.getByText(/cr\s*=\s*0x00000002/i)).toBeInTheDocument()
+    expect(screen.getByText(/ipc\s*=\s*0x0000000C/i)).toBeInTheDocument()
+  })
+})
+
 describe('breakpoints and the current line', () => {
   /** The line the PC is on, as the listing marks it. */
   const markedLine = () => document.querySelector('[aria-current="step"]')

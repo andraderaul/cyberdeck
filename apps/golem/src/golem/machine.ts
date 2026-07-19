@@ -13,6 +13,7 @@ import {
   ER,
   FR,
   GT,
+  IE,
   IPC,
   IR,
   IV,
@@ -21,6 +22,7 @@ import {
   OV,
   PC,
   REGISTER_COUNT,
+  SOFTWARE_VECTOR,
   TERMINAL_ADDRESS,
   unpackU,
   ZD,
@@ -32,6 +34,19 @@ export interface Machine {
   readonly halted: boolean
   /** Characters written to the memory-mapped Terminal, in the order the program emitted them. */
   readonly terminal: string
+}
+
+/**
+ * Something that happened *to* the program during a Step, as opposed to something the program
+ * did. Reported rather than inferred because a dispatch is **not derivable from a state diff**:
+ * `int 1` and a division by zero leave byte-identical machines behind, same cause in `CR`, same
+ * vector in `PC`. The trace formatter and the Console narration read this one stream.
+ */
+export type StepEvent = { kind: 'software-interrupt'; cause: number }
+
+export interface StepResult {
+  readonly machine: Machine
+  readonly events: readonly StepEvent[]
 }
 
 /** Instantiates a machine with the Image loaded at word 0 and every register cleared. */
@@ -59,15 +74,17 @@ interface Cycle {
   halted: boolean
   /** Set by a branch or call, so the fall-through PC increment is skipped. */
   jumped: boolean
+  events: StepEvent[]
 }
 
 /**
- * Executes one instruction and returns the resulting machine. Stepping a halted machine returns
- * it unchanged — the Console reports that, rather than the machine crashing on a dead program.
+ * Executes one instruction and returns the resulting machine alongside anything that happened
+ * *to* it. Stepping a halted machine returns it unchanged — the Console reports that, rather than
+ * the machine crashing on a dead program.
  */
-export function step(machine: Machine): Machine {
+export function step(machine: Machine): StepResult {
   if (machine.halted) {
-    return machine
+    return { machine, events: [] }
   }
 
   const wordIndex = machine.registers[PC] >>> 2
@@ -80,6 +97,7 @@ export function step(machine: Machine): Machine {
     terminal: machine.terminal,
     halted: false,
     jumped: false,
+    events: [],
   }
   cycle.registers[IR] = instruction
 
@@ -90,11 +108,27 @@ export function step(machine: Machine): Machine {
   }
 
   return {
-    registers: cycle.registers,
-    memory: cycle.writable ?? cycle.memory,
-    halted: cycle.halted,
-    terminal: cycle.terminal,
+    machine: {
+      registers: cycle.registers,
+      memory: cycle.writable ?? cycle.memory,
+      halted: cycle.halted,
+      terminal: cycle.terminal,
+    },
+    events: cycle.events,
   }
+}
+
+/**
+ * Diverts control to a vector: the cause lands in `CR`, the return address in `IPC`, and the PC
+ * jumps. `IPC` holds the address of the instruction *after* the one interrupted, which is what
+ * lets an ISR return past it with a plain `ret`.
+ */
+function dispatch(cycle: Cycle, vector: number, cause: number, event: StepEvent): void {
+  cycle.registers[CR] = cause >>> 0
+  cycle.registers[IPC] = (cycle.registers[PC] + 4) >>> 0
+  cycle.registers[PC] = vector >>> 0
+  cycle.jumped = true
+  cycle.events.push(event)
 }
 
 function execute(cycle: Cycle, instruction: number): void {
@@ -263,11 +297,22 @@ function execute(cycle: Cycle, instruction: number): void {
       write(cycle, fy, r[CR])
       break
 
-    // `int 0` ends the simulation.
+    // `int 0` ends the simulation — that meaning is unchanged from v1, and `halt` is still its
+    // alias. A nonzero code is a software interrupt carrying the code as its cause, which is what
+    // makes system-call dispatch from an ISR writable.
     case 0x3f:
-      cycle.registers[CR] = 0
-      cycle.registers[PC] = 0
-      cycle.halted = true
+      if (im26 === 0) {
+        cycle.registers[CR] = 0
+        cycle.registers[PC] = 0
+        cycle.halted = true
+        break
+      }
+      // Gated on IE. With interrupts off the instruction is a no-op rather than a deferred or
+      // partial dispatch — see ISA.md, "Divergências deliberadas": no fixture pins this, and a
+      // half-dispatch that wrote CR without jumping would be a state no ISR could explain.
+      if ((r[FR] & IE) !== 0) {
+        dispatch(cycle, SOFTWARE_VECTOR, im26, { kind: 'software-interrupt', cause: im26 })
+      }
       break
 
     default:
