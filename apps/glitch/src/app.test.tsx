@@ -549,15 +549,35 @@ describe('App', () => {
       expect(renderedChain).toHaveBeenLastCalledWith(DEFAULT_PRESET.chain)
     })
 
-    // The Presets are the front door, not part of the tweak layer — they must be reachable without
-    // opening the advanced affordance.
-    it('offers the Presets without the advanced affordance opened', () => {
+    // The Presets are the front door, not part of the tweak layer — the Strip carries them beside
+    // the canvas (ADR 0020), reachable without opening the advanced affordance.
+    it('offers the Presets on the Strip without the advanced affordance opened', () => {
       render(<App />)
+      fireEvent.click(screen.getByRole('button', { name: 'upload' }))
 
       for (const preset of PRESETS) {
         expect(chip(preset.name)).toBeInTheDocument()
       }
       expect(screen.getByRole('button', { name: /randomize/i })).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: 'presets' })).toHaveAttribute('aria-selected', 'true')
+    })
+
+    // The Strip is the whole control surface for the front door, so no Preset survives in the
+    // aside or the sheet — and no tab is rendered ahead of the panel behind it.
+    it('renders exactly one tab, and no Presets outside the Strip', () => {
+      render(<App />)
+      fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+
+      expect(screen.getAllByRole('tab')).toHaveLength(1)
+      expect(screen.getAllByRole('button', { name: DEFAULT_PRESET.name })).toHaveLength(1)
+    })
+
+    // Nothing to preview on the empty state, where the choice is which Source to open.
+    it('holds the Strip back until there is a Source', () => {
+      render(<App />)
+
+      expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /randomize/i })).not.toBeInTheDocument()
     })
 
     it('applies a Preset’s look and highlights it when it is picked', () => {

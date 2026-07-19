@@ -2,10 +2,10 @@ import { useRecording } from '@cyberdeck/deck-kit/recording'
 import { EmptyStateHero, ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import ControlPanel from './components/control-panel'
+import ControlStrip from './components/control-strip'
 import ExportBar from './components/export-bar'
 import GlitchCanvas from './components/glitch-canvas'
 import MobileControls from './components/mobile-controls'
-import PresetPicker from './components/preset-picker'
 import Disclosure from './components/ui/disclosure'
 import { Errors } from './errors/app-error'
 import { outputFilename } from './export/output'
@@ -141,34 +141,31 @@ export default function App() {
           )}
         </main>
 
-        {/* Progressive disclosure: the Presets are the front door — one click to a good-looking
-            result — and the sliders are the tweak layer, folded away behind the affordance.
-            Hidden on mobile, where MobileControls carries the same stack in a bottom sheet. */}
+        {/* The Presets moved to the Strip (ADR 0020), so the aside is down to the tweak layer alone
+            until the EDIT tab replaces it. Hidden on mobile, where MobileControls carries the same
+            `advanced` fold in a bottom sheet. */}
         <aside className="hidden sm:flex sm:border-r border-base p-md overflow-y-auto flex-col gap-lg sm:order-first">
-          <PresetPicker
-            activePresetId={activePresetId}
-            isModified={isModified}
-            onSelect={selectPreset}
-            onRandomize={randomize}
-          />
           <Disclosure label="advanced">
             <ControlPanel chain={chain} actions={chainActions} onReroll={reroll} />
           </Disclosure>
         </aside>
       </div>
 
-      {/* Only with a Source: there's nothing to tweak on the empty state, where the choice is which
-          Source to open, not how to glitch it. */}
+      {/* Outside the grid, so the Strip spans the aside's column too and stays bottom-anchored at
+          both breakpoints — the canvas above it is never occluded (ADR 0020). Only with a Source:
+          on the empty state the choice is which Source to open, not how to glitch it. */}
       {hasSource && (
-        <MobileControls
-          chain={chain}
-          activePresetId={activePresetId}
-          isModified={isModified}
-          onSelect={selectPreset}
-          onRandomize={randomize}
-          actions={chainActions}
-          onReroll={reroll}
-        />
+        // `relative` so the mobile ⚙ trigger can anchor itself just above the Strip rather than to
+        // a fixed offset that a taller Strip would collide with.
+        <div className="relative shrink-0">
+          <MobileControls chain={chain} actions={chainActions} onReroll={reroll} />
+          <ControlStrip
+            activePresetId={activePresetId}
+            isModified={isModified}
+            onSelect={selectPreset}
+            onRandomize={randomize}
+          />
+        </div>
       )}
     </div>
   )

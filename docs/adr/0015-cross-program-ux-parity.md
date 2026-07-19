@@ -1,5 +1,8 @@
 # Cross-program UX parity — ASCII adopts GLITCH's Source model, two surfaces cross into the kit
 
+Status: the *shell form* here (desktop aside + mobile bottom sheet) is superseded by ADR 0020's
+Control Strip; the parity discipline, the Source model, and the non-convergences stand.
+
 ADR 0011/0012 keep the programs independent — each ships, versions, and deploys on its own. That
 independence is about *release*, not *interaction*: someone who learns one program should not have to
 relearn the deck for the next. GLITCH//Studio, built second, landed a cleaner Source model than

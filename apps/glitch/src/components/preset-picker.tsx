@@ -1,4 +1,4 @@
-import { Button, Chip, Label } from '@cyberdeck/deck-kit/ui'
+import { Button, Chip } from '@cyberdeck/deck-kit/ui'
 import type { Preset } from '../glitch/presets'
 import { PRESETS } from '../glitch/presets'
 
@@ -15,12 +15,16 @@ interface Props {
 }
 
 export default function PresetPicker({ activePresetId, isModified, onSelect, onRandomize }: Props) {
+  // `min-w-0` on both the fieldset and the scroller: a fieldset's default min-width is min-content,
+  // which would let the chips push Randomize off the Strip's right edge instead of scrolling.
   return (
-    <fieldset className="flex flex-col gap-sm border-none p-0 m-0">
-      <legend className="w-full mb-2xs">
-        <Label>presets</Label>
-      </legend>
-      <div className="flex flex-wrap gap-2xs">
+    <fieldset className="flex items-center gap-sm border-none p-0 m-0 min-w-0">
+      {/* The Strip's PRESETS tab already names this group on screen (ADR 0020) — the legend stays
+          for the accessible name rather than repeating the word underneath it. */}
+      <legend className="sr-only">presets</legend>
+      {/* The chips scroll horizontally so the Strip keeps one row whatever the width; Randomize sits
+          outside that scroller, since it must stay reachable without scrolling past six Presets. */}
+      <div className="flex-1 min-w-0 flex gap-2xs overflow-x-auto">
         {PRESETS.map((preset) => {
           const isActive = preset.id === activePresetId
           const showModified = isActive && isModified
@@ -29,6 +33,7 @@ export default function PresetPicker({ activePresetId, isModified, onSelect, onR
               key={preset.id}
               selected={isActive}
               onClick={() => onSelect(preset)}
+              className="shrink-0"
               // The asterisk carries "modified" visually, but it reaches a screen reader as one
               // character of punctuation — so the accessible name spells the state out instead.
               aria-label={showModified ? `${preset.name} (modified)` : preset.name}
@@ -43,7 +48,7 @@ export default function PresetPicker({ activePresetId, isModified, onSelect, onR
           )
         })}
       </div>
-      <Button variant="secondary" onClick={onRandomize} className="w-full">
+      <Button variant="secondary" onClick={onRandomize} className="shrink-0">
         ⚄ randomize
       </Button>
     </fieldset>

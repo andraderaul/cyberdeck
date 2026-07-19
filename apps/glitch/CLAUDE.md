@@ -67,8 +67,8 @@ Single-page React/TS/Vite app. Fully client-side — no backend, no network.
 
 ### Presets and Randomize
 
-The six Presets in `src/glitch/presets.ts` are the app's primary surface — `PresetPicker` sits above
-the advanced Disclosure, and `DEFAULT_PRESET` is applied on open. A Preset is a whole Chain rather
+The six Presets in `src/glitch/presets.ts` are the app's primary surface — `PresetPicker` fills the
+Control Strip's PRESETS tab (ADR 0020), and `DEFAULT_PRESET` is applied on open. A Preset is a whole Chain rather
 than a diff from a default: a curator can read one entire look in one place, and re-curate it
 without moving the other five. Each carries **only the Links its look uses** — off is a Link's
 absence (ADR 0017), so VHS has no Pixel Sort and CORRUPTED no Scanlines.
@@ -267,15 +267,20 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 **Components**
 - `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render, and owns the
   ~15fps rAF loop for a Live Source. Carries the LIVE / REC badges
-- `src/components/preset-picker.tsx` — the front door: the six Preset chips (active one highlighted,
-  `(modified)` once edited) and Randomize
+- `src/components/control-strip.tsx` — the Control Strip (ADR 0020): the bottom-anchored control
+  surface at both breakpoints, so the canvas is never occluded while a look is browsed. PRESETS is
+  its only tab so far — a tab is never rendered ahead of the panel behind it, which is why the
+  selection is static rather than state
+- `src/components/preset-picker.tsx` — the PRESETS panel: the six Preset chips in a horizontally
+  scrollable row (active one highlighted, `(modified)` once edited) and Randomize beside them
 - `src/components/control-panel.tsx` — the Chain editor: one section per Link in Chain order, each
   with a grab handle (drag, or arrow keys when focused), duplicate and remove; plus the
   registry-driven add palette and the Re-roll control (its own callback — the Seed is not part of
   the look). Sits behind the `advanced` Disclosure in `app.tsx` (#84) — the tweak layer, not the
   front door
 - `src/components/mobile-controls.tsx` — the mobile bottom sheet carrying the same stack as the
-  desktop aside: Presets first, the Chain editor behind `advanced`
+  desktop aside, now the `advanced` fold alone — the Presets left for the Strip (ADR 0020), and the
+  sheet itself dies when the EDIT tab takes the Chain editor
 - `src/components/export-bar.tsx` — PNG Export / Capture / Copy / Record controls and the
   recording timer
 - `src/components/ui/disclosure.tsx` — the one primitive still local: the `advanced` fold
