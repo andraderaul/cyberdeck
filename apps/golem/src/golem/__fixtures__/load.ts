@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 const FIXTURE_DIR = dirname(fileURLToPath(import.meta.url))
 
 /**
- * The five programs inherited from the reference material (`INHERITED`) and the ones generated
+ * The programs inherited from the reference material (`INHERITED`) and the ones generated
  * here to cover branches no reference program executes (`GENERATED`). The distinction matters:
  * only an inherited `.hex` is an independent oracle for the assembler — see PROVENANCE.md.
  */
@@ -20,11 +20,22 @@ export const INHERITED_PROGRAMS = [
   '1_limits',
 ] as const
 
+/**
+ * Unit 2's four reference programs — interrupts, ISRs, watchdog, FPU and Terminal readback.
+ * Inherited on the same statute as `INHERITED_PROGRAMS`; kept separate because each one goes
+ * green on a different v2 slice, and a suite that ran them all from day one would be red by
+ * design rather than by regression.
+ */
+export const UNIT_2_PROGRAMS = ['2_hello_world', '2_interruption', '2_watchdog', '2_fpu'] as const
+
 // `bni` is absent: setting IV needs an invalid instruction, and that sends the reference emulator
 // into a non-terminating loop rather than raising the flag. It stays hand-written, like `ble`.
-export const GENERATED_PROGRAMS = ['2_blt', '2_bnz'] as const
+export const GENERATED_PROGRAMS = ['gen_blt', 'gen_bnz'] as const
 
-export type FixtureName = (typeof INHERITED_PROGRAMS)[number] | (typeof GENERATED_PROGRAMS)[number]
+export type FixtureName =
+  | (typeof INHERITED_PROGRAMS)[number]
+  | (typeof UNIT_2_PROGRAMS)[number]
+  | (typeof GENERATED_PROGRAMS)[number]
 
 /** A program in its three forms: source, assembled words, and reference execution trace. */
 export interface Fixture {
