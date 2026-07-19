@@ -20,6 +20,9 @@ export default function Terminal({ machine }: TerminalProps) {
 
   useEffect(() => {
     // Follows the program's output as it prints, rather than stranding the reader at the top.
+    if (output === '') {
+      return
+    }
     endRef.current?.scrollIntoView({ block: 'end' })
   }, [output])
 
