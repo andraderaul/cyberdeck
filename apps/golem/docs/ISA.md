@@ -180,7 +180,7 @@ Todos os saltos são tipo S e recebem um endereço de **palavra** em `im26`; o `
 |---|---|---|---|---|
 | `0x25` | `call` | — | F | `Rx = (PC + 4) >> 2`; `PC = (Ry + N) << 2` |
 | `0x26` | `ret` | — | F | `PC = Rx << 2` |
-| `0x27` | `isr` | — | F | `Rx = IPC >> 2`; `Ry = CR` |
+| `0x27` | `isr` | — | F | `Rx = IPC >> 2`; `Ry = CR`; `PC = N << 2` |
 | `0x28` | `reti` | — | F | `PC = Rx << 2` |
 | `0x3F` | `int` | `halt` | S | `int 0` encerra a simulação; `int N` despacha interrupção de software com causa `N` |
 
@@ -214,9 +214,26 @@ não despacha.
 | causa | origem |
 |---|---|
 | `N` | `int N` com `N` diferente de zero |
+| `0x01` | divisão por zero |
+| `0x2A` | instrução inválida |
 
-As demais causas (divisão por zero, instrução inválida, watchdog, FPU) entram junto com as fatias
-que as implementam.
+As causas de hardware (watchdog, FPU) entram junto com as fatias que as implementam.
+
+`isr` **salta**: além de capturar `IPC` e `CR`, ele põe o `PC` em `N << 2`. É o que permite ao
+vetor caber em uma palavra — a palavra do vetor é o preâmbulo *e* o desvio para o corpo da ISR.
+
+### `enai` — a única macro
+
+Uma **Macro** expande para mais de uma instrução; um **Alias** é 1:1. `enai rX` é a única macro do
+assembler, e existe porque as fontes de referência a usam:
+
+```asm
+enai r1     // vira: addi r1, r0, 64
+            //       or fr, fr, r1
+```
+
+O registrador do operando é **scratch**: entra com a máscara `IE` e sai com ela. A expansão está
+prendida palavra a palavra pelos três `.hex` da unidade 2, que carregam exatamente esse par.
 
 ---
 
@@ -350,6 +367,18 @@ qualquer `int N`. Fica **decidido** que a instrução não faz nada — nem escr
 A alternativa seria escrever a causa e não desviar, e isso produz um estado que ISR nenhuma sabe
 explicar: `CR` diria que houve uma interrupção que o `PC` desmente. "Interrupção condicionada"
 significa que ela não aconteceu, não que aconteceu pela metade.
+
+### Instrução inválida — o GOLEM não trava
+
+Com `IE` ligado, o GOLEM levanta `IV`, emite `[INVALID INSTRUCTION @ PC]` e despacha a interrupção
+de software com causa `0x2A` — que é o que o `2_interruption` mostra.
+
+Com `IE` **limpo**, o emulador de referência entra num laço que não termina, cuspindo `nop` para
+sempre (foi assim que a tentativa de fabricar oráculo de `bni` encheu o disco — ver
+`PROVENANCE.md`). O GOLEM levanta `IV` e **segue para a instrução seguinte**, como já fazia na v1.
+
+Travar não é semântica, é ausência de tratamento. E o comportamento da v1 é o que os testes de
+`biv`/`bni` dependem: sem avançar o `PC`, não há como observar a flag que a instrução inválida põe.
 
 ### Outros achados, sem impacto
 

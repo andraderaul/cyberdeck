@@ -5,6 +5,8 @@
 import { describe, expect, it } from 'vitest'
 import { assemble } from './assembler'
 import {
+  CAUSE_INVALID_INSTRUCTION,
+  CAUSE_ZERO_DIVISION,
   CR,
   EQ,
   ER,
@@ -50,7 +52,8 @@ function eventsOf(source: string, limit = 200): StepEvent[] {
   return events
 }
 
-// `enai` is #208's; until then a program enables interrupts the way the macro will expand.
+// Written as the two instructions `enai r1` expands to, not as `enai` itself: these are machine
+// tests, and the machine has never heard of macros. The expansion is the assembler's to pin.
 const ENABLE_INTERRUPTS = ['addi r1, r0, 64', 'or fr, fr, r1']
 
 /**
@@ -132,6 +135,108 @@ describe('int N dispatch', () => {
     expect(run('int 0').halted).toBe(true)
     expect(run([...ENABLE_INTERRUPTS, 'int 0'].join('\n')).halted).toBe(true)
     expect(eventsOf([...ENABLE_INTERRUPTS, 'int 0'].join('\n'))).toEqual([])
+  })
+})
+
+// The fixtures run these paths only with IE set, because every reference program enables
+// interrupts before doing anything interesting. The gated half is invisible to the oracle.
+describe('faults the oracle only sees one side of', () => {
+  it('dispatches a division by zero with cause 1', () => {
+    const source = [...ENABLE_INTERRUPTS, 'addi r2, r0, 8', 'div r2, r2, r0', 'int 0'].join('\n')
+    const machine = run(source, 4)
+
+    expect(machine.registers[CR]).toBe(CAUSE_ZERO_DIVISION)
+    expect(machine.registers[PC]).toBe(SOFTWARE_VECTOR)
+    expect(eventsOf(source, 4)).toContainEqual({
+      kind: 'software-interrupt',
+      cause: CAUSE_ZERO_DIVISION,
+    })
+  })
+
+  it('raises ZD without dispatching while IE is clear', () => {
+    const source = ['addi r2, r0, 8', 'div r2, r2, r0', 'addi r5, r0, 1', 'int 0'].join('\n')
+    const machine = run(source)
+
+    expect(machine.registers[FR] & ZD).toBe(ZD)
+    expect(machine.registers[5]).toBe(1)
+    expect(machine.registers[CR]).toBe(0)
+  })
+
+  it('leaves the destination untouched on a divide by zero', () => {
+    // Pinned by the reference: `R1 = R1 / R0 = 0x00000020`, the value R1 already held.
+    const machine = run(['addi r2, r0, 8', 'div r2, r2, r0', 'int 0'].join('\n'))
+
+    expect(machine.registers[2]).toBe(8)
+  })
+
+  it('dispatches an invalid instruction with cause 0x2A, naming its PC', () => {
+    const source = [...ENABLE_INTERRUPTS, '0xBADA55E5', 'int 0'].join('\n')
+    const machine = run(source, 3)
+
+    expect(machine.registers[CR]).toBe(CAUSE_INVALID_INSTRUCTION)
+    expect(eventsOf(source, 3)).toContainEqual({ kind: 'invalid-instruction', pc: 0x08 })
+  })
+
+  it('raises IV without dispatching while IE is clear', () => {
+    const source = ['0xBADA55E5', 'addi r5, r0, 1', 'int 0'].join('\n')
+    const machine = run(source)
+
+    expect(machine.registers[FR] & IV).toBe(IV)
+    // Execution carries on past the garbage rather than looping, as it did in v1.
+    expect(machine.registers[5]).toBe(1)
+    expect(machine.registers[CR]).toBe(0)
+  })
+
+  it('reports an invalid instruction even when no dispatch follows', () => {
+    expect(eventsOf(['0xBADA55E5', 'int 0'].join('\n'))).toEqual([
+      { kind: 'invalid-instruction', pc: 0 },
+    ])
+  })
+})
+
+describe('isr and reti', () => {
+  it('captures IPC and CR, then jumps to the handler body', () => {
+    const machine = run(
+      [
+        'bun main',
+        'nop',
+        'nop',
+        'isr r5, r6, handler',
+        'handler:',
+        'int 0',
+        'main:',
+        ...ENABLE_INTERRUPTS,
+        'int 7',
+        'int 0',
+      ].join('\n'),
+      5,
+    )
+
+    // The `int 7` dispatched, and the vector's `isr` captured what it left behind.
+    expect(machine.registers[6]).toBe(7)
+    expect(machine.registers[5]).toBe(machine.registers[IPC] >>> 2)
+    expect(machine.registers[PC]).toBe(0x10)
+  })
+
+  it('returns from a handler and carries on past the interrupted instruction', () => {
+    const machine = run(
+      [
+        'bun main',
+        'nop',
+        'nop',
+        'isr r31, r30, handler',
+        'handler:',
+        'reti r31',
+        'main:',
+        ...ENABLE_INTERRUPTS,
+        'int 7',
+        'addi r9, r0, 1',
+        'int 0',
+      ].join('\n'),
+    )
+
+    expect(machine.registers[9]).toBe(1)
+    expect(machine.halted).toBe(true)
   })
 })
 

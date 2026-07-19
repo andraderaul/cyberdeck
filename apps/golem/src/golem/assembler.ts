@@ -5,6 +5,7 @@ import {
   byteShift,
   canonicalMnemonic,
   INSTRUCTIONS,
+  MACROS,
   type Operand,
   packU,
   registerIndex,
@@ -43,6 +44,9 @@ type Piece =
   | { kind: 'instruction'; line: number; mnemonic: string; spec: Spec; operands: string[] }
   | { kind: 'data'; line: number; words: number[] }
   | { kind: 'error'; line: number; message: string }
+  /** A Macro, already expanded. Its parts keep the macro's own source line, so an error inside
+   * an expansion still points at the line the operator wrote. */
+  | { kind: 'macro'; line: number; parts: Piece[] }
 
 /**
  * Assembles source into an Image, or returns every error found rather than the first — a program
@@ -84,10 +88,10 @@ export function assemble(source: string): AssembleResult {
   const words: number[] = []
   const lineForWord: number[] = []
 
-  for (const piece of pieces) {
+  const emit = (piece: Piece): void => {
     if (piece.kind === 'error') {
       errors.push({ line: piece.line, message: piece.message })
-      continue
+      return
     }
 
     if (piece.kind === 'data') {
@@ -95,16 +99,23 @@ export function assemble(source: string): AssembleResult {
         words.push(word)
         lineForWord.push(piece.line)
       }
-      continue
+      return
+    }
+
+    if (piece.kind === 'macro') {
+      piece.parts.forEach(emit)
+      return
     }
 
     const word = encode(piece, labels, errors)
     if (word === null) {
-      continue
+      return
     }
     words.push(word)
     lineForWord.push(piece.line)
   }
+
+  pieces.forEach(emit)
 
   if (errors.length > 0) {
     return { ok: false, errors }
@@ -132,6 +143,9 @@ function pieceWidth(piece: Piece): number {
   if (piece.kind === 'data') {
     return piece.words.length
   }
+  if (piece.kind === 'macro') {
+    return piece.parts.reduce((total, part) => total + pieceWidth(part), 0)
+  }
   return piece.kind === 'instruction' ? 1 : 0
 }
 
@@ -142,6 +156,27 @@ function classify(text: string, line: number): Piece {
   }
 
   const [rawMnemonic, ...rest] = text.split(/\s+/)
+
+  const macro = MACROS[rawMnemonic.toLowerCase()]
+  if (macro) {
+    const operand = rest.join(' ').trim()
+    if (operand === '' || operand.includes(',')) {
+      return {
+        kind: 'error',
+        line,
+        message: `"${rawMnemonic.toLowerCase()}" takes one register, e.g. ${rawMnemonic.toLowerCase()} r1`,
+      }
+    }
+    if (registerIndex(operand) === null) {
+      return { kind: 'error', line, message: `"${operand}" is not a register` }
+    }
+    return {
+      kind: 'macro',
+      line,
+      parts: macro(operand).map((expanded) => classify(expanded, line)),
+    }
+  }
+
   const spec = INSTRUCTIONS[canonicalMnemonic(rawMnemonic)]
 
   if (spec) {

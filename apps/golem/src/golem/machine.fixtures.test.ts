@@ -30,6 +30,14 @@ function parseTrace(out: string): Expectation[] {
   let index = 0
 
   for (const line of out.split('\n')) {
+    // An invalid instruction still costs a Step, but the reference prints no effects line for it
+    // — there is no instruction to disassemble. Counting it keeps this parser's step numbering
+    // aligned with the machine's from that point on.
+    if (line.trim().startsWith('[INVALID INSTRUCTION')) {
+      index++
+      continue
+    }
+
     const effects = /^\[[UFS]\]\s*(.*)$/.exec(line.trim())
     if (!effects) {
       continue

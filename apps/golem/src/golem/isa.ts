@@ -76,7 +76,7 @@ export const INSTRUCTIONS: Record<string, Spec> = {
   ),
   call: f(0x25, ['x', 'y', 'imm']),
   ret: f(0x26, ['x']),
-  isr: f(0x27, ['x', 'y']),
+  isr: f(0x27, ['x', 'y', 'imm']),
   reti: f(0x28, ['x']),
   int: s(0x3f, ['imm']),
 }
@@ -133,6 +133,22 @@ export const IE = 0x40
 export const HARDWARE_1_VECTOR = 0x04
 export const HARDWARE_2_VECTOR = 0x08
 export const SOFTWARE_VECTOR = 0x0c
+
+/** Cause codes the machine raises itself, as opposed to the `N` an `int N` carries. */
+export const CAUSE_ZERO_DIVISION = 0x01
+export const CAUSE_INVALID_INSTRUCTION = 0x2a
+
+/**
+ * Mnemonics the assembler expands into **more than one** instruction — which is exactly what
+ * separates a Macro from an Alias (`CONTEXT.md`): an alias is 1:1, a macro is not.
+ *
+ * `enai` is the only one, and it is here because the reference Sources use it, not for
+ * convenience. The expansion is pinned by the `.hex` fixtures word for word, scratch register
+ * included: the operand register is clobbered with the IE mask on the way through.
+ */
+export const MACROS: Record<string, (operand: string) => string[]> = {
+  enai: (register) => [`addi ${register}, r0, ${IE}`, `or fr, fr, ${register}`],
+}
 
 /** Words of addressable memory. Must span the Terminal at byte `0x0000888B`. */
 export const MEMORY_WORDS = 0x4000

@@ -330,6 +330,44 @@ describe('load', () => {
   })
 })
 
+describe('debugging an ISR', () => {
+  // An ISR is code on a line like any other, so it needs no new grammar to debug — `break` on the
+  // handler's line is the whole feature.
+  const WITH_HANDLER = [
+    'bun main', // 1
+    'nop', // 2
+    'nop', // 3
+    'isr r31, r30, handler', // 4
+    'handler:', // 5
+    'addi r9, r0, 1', // 6
+    'reti r31', // 7
+    'main:', // 8
+    'enai r1', // 9
+    'int 7', // 10
+    'int 0', // 11
+  ].join('\n')
+
+  it('pauses a run inside the handler', async () => {
+    render(<App />)
+    write(WITH_HANDLER)
+
+    await type('break 6')
+    await type('run')
+
+    expect(await screen.findByText(/paused at line 6/)).toBeInTheDocument()
+  })
+
+  it('narrates the dispatch that got it there', async () => {
+    render(<App />)
+    write(WITH_HANDLER)
+
+    await type('break 6')
+    await type('run')
+
+    expect(await screen.findByText(/software interrupt — cause 0x00000007/)).toBeInTheDocument()
+  })
+})
+
 describe('interrupt narration', () => {
   // `enai` is #208's; this enables IE the way the macro will expand, so the narration can be
   // tested on the semantics that already exist.

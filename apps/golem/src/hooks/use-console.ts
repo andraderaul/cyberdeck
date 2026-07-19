@@ -71,6 +71,10 @@ function narrate(event: StepEvent): string {
   switch (event.kind) {
     case 'software-interrupt':
       return `software interrupt — cause ${hex32(event.cause)}, vector ${hex32(SOFTWARE_VECTOR)}`
+    // Narrated even when IE is clear and no dispatch follows: "there is garbage at this address"
+    // is the more useful half of the news either way.
+    case 'invalid-instruction':
+      return `invalid instruction at ${hex32(event.pc)}`
   }
 }
 

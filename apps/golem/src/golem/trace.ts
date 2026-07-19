@@ -62,6 +62,8 @@ export function formatEvent(event: StepEvent): string {
   switch (event.kind) {
     case 'software-interrupt':
       return '[SOFTWARE INTERRUPTION]'
+    case 'invalid-instruction':
+      return `[INVALID INSTRUCTION @ 0x${hex(event.pc)}]`
   }
 }
 
@@ -75,8 +77,12 @@ export function formatStep(
   after: Machine,
   events: readonly StepEvent[] = [],
 ): string {
-  const entry = formatInstruction(before, after)
-  return [entry, ...events.map(formatEvent)].join('\n')
+  // An invalid instruction has no disassembly to print — there is no instruction. The reference
+  // emits only the marker lines, so the entry is dropped rather than rendered as `?? 0x…`.
+  const invalid = events.some((event) => event.kind === 'invalid-instruction')
+  const entry = invalid ? [] : [formatInstruction(before, after)]
+
+  return [...entry, ...events.map(formatEvent)].join('\n')
 }
 
 function formatInstruction(before: Machine, after: Machine): string {
@@ -186,10 +192,19 @@ function formatInstruction(before: Machine, after: Machine): string {
         `call ${lower(fx)}, ${lower(fy)}, 0x${hex(im16, 4)}`,
         `[F] ${upper(fx)} = (PC + 4) >> 2 = 0x${hex(after.registers[fx])}, PC = (${upper(fy)} + 0x${hex(im16, 4)}) << 2 = 0x${hex(after.registers[PC])}`,
       ].join('\n')
+    // `reti` reads identically to `ret` here — the reference prints the same effects line, and
+    // the two differ in intent rather than in what they do to the machine.
     case 0x26:
+    case 0x28:
       return [
-        `ret ${lower(fx)}`,
+        `${opcode === 0x26 ? 'ret' : 'reti'} ${lower(fx)}`,
         `[F] PC = ${upper(fx)} << 2 = 0x${hex(after.registers[PC])}`,
+      ].join('\n')
+
+    case 0x27:
+      return [
+        `isr ${lower(fx)}, ${lower(fy)}, 0x${hex(im16, 4)}`,
+        `[F] ${upper(fx)} = IPC >> 2 = 0x${hex(after.registers[fx])}, ${upper(fy)} = CR = 0x${hex(after.registers[fy])}, PC = 0x${hex(after.registers[PC])}`,
       ].join('\n')
 
     case 0x3f:

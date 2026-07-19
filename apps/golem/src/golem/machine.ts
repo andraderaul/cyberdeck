@@ -8,6 +8,8 @@
 import type { Image } from './assembler'
 import {
   byteShift,
+  CAUSE_INVALID_INSTRUCTION,
+  CAUSE_ZERO_DIVISION,
   CR,
   EQ,
   ER,
@@ -42,7 +44,10 @@ export interface Machine {
  * `int 1` and a division by zero leave byte-identical machines behind, same cause in `CR`, same
  * vector in `PC`. The trace formatter and the Console narration read this one stream.
  */
-export type StepEvent = { kind: 'software-interrupt'; cause: number }
+export type StepEvent =
+  | { kind: 'software-interrupt'; cause: number }
+  /** Raised whether or not a dispatch follows, since the PC it names is the useful part. */
+  | { kind: 'invalid-instruction'; pc: number }
 
 export interface StepResult {
   readonly machine: Machine
@@ -292,9 +297,13 @@ function execute(cycle: Cycle, instruction: number): void {
       cycle.registers[PC] = (r[fx] << 2) >>> 0
       cycle.jumped = true
       break
+    // The ISR preamble: capture what the dispatch left behind, then jump to the handler body.
+    // `isr` jumps — it is not merely two register reads, which is what makes a vector one word.
     case 0x27:
       write(cycle, fx, r[IPC] >>> 2)
       write(cycle, fy, r[CR])
+      cycle.registers[PC] = (im16 << 2) >>> 0
+      cycle.jumped = true
       break
 
     // `int 0` ends the simulation — that meaning is unchanged from v1, and `halt` is still its
@@ -315,9 +324,20 @@ function execute(cycle: Cycle, instruction: number): void {
       }
       break
 
-    default:
+    // An unassigned opcode. `IV` is raised whatever the state of IE, so `biv`/`bni` still work on
+    // a machine with interrupts off; the dispatch on top of that is what lets a program survive
+    // garbage by handling it. The event carries the PC because the trace line names it.
+    default: {
       cycle.registers[FR] = r[FR] | IV
+      cycle.events.push({ kind: 'invalid-instruction', pc: r[PC] >>> 0 })
+      if ((r[FR] & IE) !== 0) {
+        dispatch(cycle, SOFTWARE_VECTOR, CAUSE_INVALID_INSTRUCTION, {
+          kind: 'software-interrupt',
+          cause: CAUSE_INVALID_INSTRUCTION,
+        })
+      }
       break
+    }
   }
 }
 
@@ -342,9 +362,17 @@ function multiply(cycle: Cycle, destination: number, a: number, b: number): void
 }
 
 // Sets ZD on a divide by zero and leaves OV alone — see ISA.md, "Divergências deliberadas".
+// The destination is left untouched on a fault, which the reference trace pins: `2_interruption`
+// shows `R1 = R1 / R0 = 0x00000020`, the value R1 already held.
 function divide(cycle: Cycle, destination: number, a: number, b: number): void {
   if (b >>> 0 === 0) {
     cycle.registers[FR] = cycle.registers[FR] | ZD
+    if ((cycle.registers[FR] & IE) !== 0) {
+      dispatch(cycle, SOFTWARE_VECTOR, CAUSE_ZERO_DIVISION, {
+        kind: 'software-interrupt',
+        cause: CAUSE_ZERO_DIVISION,
+      })
+    }
     return
   }
   cycle.registers[FR] = cycle.registers[FR] & ~ZD
