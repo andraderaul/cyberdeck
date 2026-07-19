@@ -47,6 +47,22 @@ export type EditorAction =
   | { type: 'DUPLICATE_LINK'; id: string }
 
 /**
+ * The five Chain edits as callbacks, bundled: they only ever travel together — the Editor mints
+ * them as one set, ControlPanel and MobileControls forward them untouched — so they cross each
+ * surface as one prop rather than five parallel ones.
+ *
+ * Editor vocabulary rather than panel vocabulary: this is the same five transitions the reducer
+ * holds, so it belongs beside them and the panel imports it, not the other way round.
+ */
+export interface ChainActions {
+  onLinkChange: (id: string, params: Link['params']) => void
+  onReorder: (from: number, to: number) => void
+  onAdd: (type: EffectType) => void
+  onRemove: (id: string) => void
+  onDuplicate: (id: string) => void
+}
+
+/**
  * The app opens on a Preset rather than a raw look: a casual creator has to see the point on the
  * first screen. The opening arrangement is drawn by the caller, for the same reason applying a
  * Preset rolls one — a look is shared, an arrangement of it is yours.
@@ -63,8 +79,7 @@ export function initialEditorState(seed: Seed): EditorState {
  *   arrangement — everyone shares the look, nobody gets handed the byte-identical image.
  * - RANDOMIZE clears provenance rather than marking its base modified: a jittered look is one
  *   the user discovered, not an edit they made to the Preset it happened to start from.
- * - REROLL moves the arrangement alone: a new arrangement is not a customisation, so both the
- *   Chain and the active Preset stay exactly where they were.
+ * - REROLL leaves the active Preset alone: a new arrangement is not a customisation.
  * - The five Chain edits move the look alone. An edited look still belongs to the Preset it
  *   started from — `isPresetModified` is what marks it, never a deselection — so none of these
  *   cases touch `activePresetId`, and `chainMatch` being order-sensitive means an edit undone

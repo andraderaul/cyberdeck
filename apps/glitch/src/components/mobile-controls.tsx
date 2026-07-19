@@ -1,8 +1,9 @@
 import { MobileBottomSheet } from '@cyberdeck/deck-kit/ui'
 import { useRef, useState } from 'react'
 import type { Chain } from '../glitch/chain'
+import type { ChainActions } from '../glitch/editor-state'
 import type { Preset } from '../glitch/presets'
-import ControlPanel, { type ChainActions } from './control-panel'
+import ControlPanel from './control-panel'
 import PresetPicker from './preset-picker'
 import Disclosure from './ui/disclosure'
 

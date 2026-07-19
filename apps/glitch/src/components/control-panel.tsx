@@ -8,6 +8,7 @@ import {
   type Link,
   MAX_CHAIN_LENGTH,
 } from '../glitch/chain'
+import type { ChainActions } from '../glitch/editor-state'
 import { EFFECT_ORDER } from '../glitch/presets'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
@@ -250,19 +251,6 @@ function LinkControls({ link, onChange }: LinkProps) {
       )
     }
   }
-}
-
-/**
- * The Chain-editing callbacks, bundled: the five only ever travel together — App mints them as one
- * set and MobileControls forwards them untouched — so they cross each surface as one prop rather
- * than five parallel ones.
- */
-export interface ChainActions {
-  onLinkChange: (id: string, params: Link['params']) => void
-  onReorder: (from: number, to: number) => void
-  onAdd: (type: EffectType) => void
-  onRemove: (id: string) => void
-  onDuplicate: (id: string) => void
 }
 
 interface Props {

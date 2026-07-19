@@ -3,8 +3,12 @@
 // app.test.tsx, and testing past it would be testing past the module's interface.
 
 import { useCallback, useMemo, useReducer } from 'react'
-import type { ChainActions } from '../components/control-panel'
-import { editorReducer, initialEditorState, isPresetModified } from '../glitch/editor-state'
+import {
+  type ChainActions,
+  editorReducer,
+  initialEditorState,
+  isPresetModified,
+} from '../glitch/editor-state'
 import { type Preset, randomizeChain } from '../glitch/presets'
 import { createSeed } from '../glitch/rng'
 

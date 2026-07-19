@@ -242,7 +242,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/glitch/editor-state.ts` — the Editor (CONTEXT.md): `EditorState` (Chain + Seed +
   `activePresetId`), `EditorAction`, `editorReducer()` (the whole transition table — pure, all
   randomness arrives in the payload), `isPresetModified()` (the one place `(modified)` is derived),
-  `initialEditorState()`
+  `initialEditorState()`, `ChainActions` (the five Chain edits as one callback bundle — Editor
+  vocabulary, so the panels import it from here)
 - `src/glitch/image-utils.ts` — `sampleDimensions()` (800×800 cap), `sourceDimensions()`,
   `GlitchSource` (image | video — the shell's vocabulary, kept out of the DOM-free `types.ts`)
 - `src/glitch/render-frame.ts` — `renderGlitchFrame()`: the imperative shell
