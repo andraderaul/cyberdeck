@@ -218,8 +218,7 @@ não despacha.
 | `0x2A` | instrução inválida |
 
 | `0xE1AC04DA` | watchdog (hardware 1) |
-
-A causa da FPU (hardware 2) entra junto com a fatia que a implementa.
+| `0x01EEE754` | FPU (hardware 2) |
 
 **`IPC` difere entre os dois tipos.** Uma interrupção de software nasce no meio da instrução, com o
 `PC` ainda sobre ela, então o retorno é `PC + 4`. Uma de hardware chega **depois** que o `PC` já
@@ -255,6 +254,72 @@ depois de disparar. Todo o resto foi decidido aqui:
   tendo alguém escutado ou não. A alternativa — deixar pendente até `IE` subir — exige inventar
   estado que nada na referência sugere.
 - **Com o enable limpo o dispositivo não conta.** O contador fica onde foi escrito.
+
+---
+
+## FPU
+
+Quatro registradores em endereços de **palavra**:
+
+| endereço | registrador |
+|---|---|
+| `0x2200` | x |
+| `0x2201` | y |
+| `0x2202` | z |
+| `0x2203` | control |
+
+Escrever em `control` dispara a operação; o nibble baixo escolhe qual. Ao terminar, a FPU levanta a
+interrupção de hardware 2.
+
+| op | operação | ciclos |
+|---|---|---|
+| `0` | nenhuma | 1 |
+| `1` | `z = x + y` | `\|expX - expY\| + 1` |
+| `2` | `z = x - y` | `\|expX - expY\| + 1` |
+| `3` | `z = x * y` | `\|expX - expY\| + 1` |
+| `4` | `z = x / y` (erro se `y = 0`) | `\|expX - expY\| + 1` |
+| `5` | `x = z` | 1 |
+| `6` | `y = z` | 1 |
+| `7` | `z = teto(z)` | 1 |
+| `8` | `z = piso(z)` | 1 |
+| `9` | `z = arredonda(z)` | 1 |
+| outro | indefinida — erro | 1 |
+
+Ler `control` devolve `0`, ou `0x20` se a última operação falhou. Os ciclos são consumidos um por
+Step, e o Step que **inicia** a operação já consome um — mesma forma do Watchdog.
+
+### A conversão é assimétrica
+
+Este é o comportamento mais estranho herdado, e o `2_fpu` depende dele nos dois sentidos:
+
+- **Escrever** converte **numericamente**: escrever `74` guarda o float `74.0`, não os bits
+  `0x0000004A`. É por isso que `74 / 8` dá `9.25` e não um denormal.
+- **Ler** converte de volta **dependendo do valor**: se for inteiro exato, volta como inteiro; se
+  tiver parte fracionária, voltam os **bits IEEE-754**.
+
+Ou seja, `z = 9.25` lê `0x41140000`, mas `z = 19` lê `0x00000013`. Um registrador cujo encoding
+depende do valor que carrega é indefensável como projeto — e é exatamente o que a referência faz.
+Replicado fielmente: o `2_fpu` lê dos dois jeitos e ficaria vermelho com qualquer um sozinho.
+
+### A máscara de expoente quebrada — replicada de propósito
+
+A referência lê o expoente com `(bits & 0x7F80000) >> 23`. O expoente IEEE-754 fica em
+`0x7F800000` — falta um dígito hexadecimal. Na prática ela lê quatro bits do meio da mantissa.
+
+**O GOLEM replica o bug**, ao contrário do que faz com o `ble`. A diferença é o que está em jogo:
+um `ble` quebrado envenena todo programa novo, enquanto isto só decide quantos ciclos uma operação
+é *dita* custar — ficção didática sem verdade de fundo. Corrigir deixaria todo trace da unidade 2
+vermelho em troca de nada.
+
+Os números do `2_fpu` só fecham sob a máscara quebrada: divisão custa 4, multiplicação custa 3.
+
+### Decisões sem oráculo
+
+- **Divisão por zero levanta o mesmo bit `0x20` do `control`.** A referência põe um campo `status`
+  interno que **não está mapeado em endereço nenhum** — erro que nenhum programa consegue ler. O
+  GOLEM expõe os dois erros no mesmo bit, que é o único lugar observável.
+- **Com `IE` limpo a operação completa e nada é despachado.** A referência escreve `CR` e `IPC` a
+  cada Step mesmo sem despachar; o GOLEM não, pela mesma razão do `int N` com `IE` limpo.
 
 `isr` **salta**: além de capturar `IPC` e `CR`, ele põe o `PC` em `N << 2`. É o que permite ao
 vetor caber em uma palavra — a palavra do vetor é o preâmbulo *e* o desvio para o corpo da ISR.

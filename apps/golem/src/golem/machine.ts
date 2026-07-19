@@ -6,17 +6,25 @@
 // (byte 0 is the most significant). That distinction is the ISA's main source of confusion.
 
 import type { Image } from './assembler'
+import { floatBits, referenceExponent } from './float'
 import {
   byteShift,
+  CAUSE_FPU,
   CAUSE_INVALID_INSTRUCTION,
   CAUSE_WATCHDOG,
   CAUSE_ZERO_DIVISION,
   CR,
   EQ,
   ER,
+  FPU_CONTROL,
+  FPU_ERROR,
+  FPU_OPERATIONS,
+  FPU_X,
+  FPU_Y,
   FR,
   GT,
   HARDWARE_1_VECTOR,
+  HARDWARE_2_VECTOR,
   IE,
   IPC,
   IR,
@@ -35,12 +43,45 @@ import {
   ZD,
 } from './isa'
 
+/**
+ * The FPU's state. Unlike the Watchdog — whose register simply *is* a memory word — the FPU keeps
+ * its own, because its registers do not round-trip: a write converts an integer to a float, and a
+ * read converts back by a different rule. Memory could not hold both meanings at once.
+ */
+export interface Fpu {
+  /** Held as the float they denote, not as the word that was written. */
+  readonly x: number
+  readonly y: number
+  readonly z: number
+  /** Reads back as zero, or `FPU_ERROR` after a faulted operation. */
+  readonly control: number
+  /** The operation in flight, or `0` when idle. */
+  readonly operation: number
+  /** Cycles left before it completes, consumed one per Step. */
+  readonly remaining: number
+  /** Whether an operation is running — distinguishes idle from "completing this Step". */
+  readonly busy: boolean
+}
+
 export interface Machine {
   readonly registers: readonly number[]
   readonly memory: readonly number[]
   readonly halted: boolean
   /** Characters written to the memory-mapped Terminal, in the order the program emitted them. */
   readonly terminal: string
+  readonly fpu: Fpu
+}
+
+const fround = Math.fround
+
+const IDLE_FPU: Fpu = {
+  x: 0,
+  y: 0,
+  z: 0,
+  control: 0,
+  operation: 0,
+  remaining: 0,
+  busy: false,
 }
 
 /**
@@ -77,6 +118,7 @@ export function createMachine(image: Image): Machine {
     memory,
     halted: false,
     terminal: '',
+    fpu: IDLE_FPU,
   }
 }
 
@@ -91,6 +133,7 @@ interface Cycle {
   /** Set by a branch or call, so the fall-through PC increment is skipped. */
   jumped: boolean
   events: StepEvent[]
+  fpu: Fpu
 }
 
 /**
@@ -114,6 +157,7 @@ export function step(machine: Machine): StepResult {
     halted: false,
     jumped: false,
     events: [],
+    fpu: machine.fpu,
   }
   cycle.registers[IR] = instruction
 
@@ -129,6 +173,7 @@ export function step(machine: Machine): StepResult {
   // run next rather than the one it just left.
   if (!cycle.halted) {
     tickWatchdog(cycle)
+    tickFpu(cycle)
   }
 
   return {
@@ -137,6 +182,7 @@ export function step(machine: Machine): StepResult {
       memory: cycle.writable ?? cycle.memory,
       halted: cycle.halted,
       terminal: cycle.terminal,
+      fpu: cycle.fpu,
     },
     events: cycle.events,
   }
@@ -207,6 +253,124 @@ function tickWatchdog(cycle: Cycle): void {
     })
   }
 }
+
+/**
+ * Starts the operation a write to `control` asked for. The reference computes the whole result
+ * up front and then merely *counts down* to the interrupt — the cycles are theatre, not work —
+ * so the same is done here, and the panel showing cycles tick away is showing exactly that.
+ */
+function startFpu(cycle: Cycle, control: number): void {
+  const operation = control & 0x0f
+  const { x, y, z } = cycle.fpu
+
+  // `|expX - expY| + 1` for the arithmetic operations; everything else costs one.
+  const spread = Math.abs(referenceExponent(x) - referenceExponent(y)) + 1
+  const started = (next: Partial<Fpu>, cycles = 1): void => {
+    cycle.fpu = { ...cycle.fpu, control: 0, operation, remaining: cycles, busy: true, ...next }
+  }
+
+  switch (operation) {
+    case FPU_OPERATIONS.none:
+      started({})
+      return
+    case FPU_OPERATIONS.add:
+      started({ z: fround(x + y) }, spread)
+      return
+    case FPU_OPERATIONS.subtract:
+      started({ z: fround(x - y) }, spread)
+      return
+    case FPU_OPERATIONS.multiply:
+      started({ z: fround(x * y) }, spread)
+      return
+    case FPU_OPERATIONS.divide:
+      // A zero divisor leaves `z` alone and raises the error bit, at the base cost.
+      if (y === 0) {
+        started({ control: FPU_ERROR })
+        return
+      }
+      started({ z: fround(x / y) }, spread)
+      return
+    case FPU_OPERATIONS.assignX:
+      started({ x: z })
+      return
+    case FPU_OPERATIONS.assignY:
+      started({ y: z })
+      return
+    case FPU_OPERATIONS.ceiling:
+      started({ z: Math.ceil(z) })
+      return
+    case FPU_OPERATIONS.floor:
+      started({ z: Math.floor(z) })
+      return
+    case FPU_OPERATIONS.round:
+      started({ z: Math.round(z) })
+      return
+    default:
+      started({ control: FPU_ERROR })
+  }
+}
+
+/**
+ * The FPU's clock: one cycle consumed per Step, firing hardware interrupt 2 when the operation
+ * lands. Same shape as the Watchdog, including that the Step which *starts* the work consumes a
+ * cycle of it — which is what makes the reference's timings come out exact.
+ */
+function tickFpu(cycle: Cycle): void {
+  if (!cycle.fpu.busy) {
+    return
+  }
+
+  if (cycle.fpu.remaining !== 0) {
+    cycle.fpu = { ...cycle.fpu, remaining: cycle.fpu.remaining - 1 }
+    return
+  }
+
+  cycle.fpu = { ...cycle.fpu, operation: 0, busy: false }
+  if ((cycle.registers[FR] & IE) !== 0) {
+    const resume = cycle.registers[PC] >>> 0
+    divert(cycle, HARDWARE_2_VECTOR, CAUSE_FPU, resume, {
+      kind: 'hardware-interrupt',
+      line: 2,
+      resume,
+    })
+  }
+}
+
+/**
+ * What a read of an FPU register yields, and the strangest thing inherited from the reference:
+ * **the encoding depends on the value.** A whole number comes back as that integer, anything else
+ * as its IEEE-754 bit pattern. So `z = 9.25` reads as `0x41140000` while `z = 19` reads as `0x13`.
+ *
+ * Faithfully replicated — `2_fpu` reads back both kinds and would go red on either alone. See
+ * ISA.md, where it is written down as the quirk it is.
+ */
+function readFpuRegister(fpu: Fpu, address: number): number {
+  if (address === FPU_CONTROL) {
+    return fpu.control >>> 0
+  }
+
+  const value = address === FPU_X ? fpu.x : address === FPU_Y ? fpu.y : fpu.z
+  return Number.isInteger(value) && value >= 0 ? value >>> 0 : floatBits(value)
+}
+
+/** A write converts the other way: the word is read as an integer and held as the float it names. */
+function writeFpuRegister(cycle: Cycle, address: number, word: number): void {
+  if (address === FPU_CONTROL) {
+    startFpu(cycle, word >>> 0)
+    return
+  }
+
+  const value = fround(word >>> 0)
+  if (address === FPU_X) {
+    cycle.fpu = { ...cycle.fpu, x: value }
+  } else if (address === FPU_Y) {
+    cycle.fpu = { ...cycle.fpu, y: value }
+  } else {
+    cycle.fpu = { ...cycle.fpu, z: value }
+  }
+}
+
+const isFpuRegister = (address: number): boolean => address >= FPU_X && address <= FPU_CONTROL
 
 function execute(cycle: Cycle, instruction: number): void {
   const opcode = instruction >>> 26
@@ -491,13 +655,27 @@ function mutableMemory(cycle: Cycle): number[] {
   return cycle.writable
 }
 
+// Devices are intercepted here, on the single memory-access path, rather than in each instruction
+// that touches memory. That is what makes `ldw`, `stw`, `push` and `pop` agree about them without
+// four copies of the same check — and it is where v3's cache attaches, as a layer rather than
+// surgery (ADR 0020 groundwork).
 function readWord(cycle: Cycle, wordIndex: number): number {
+  const index = wordIndex >>> 0
+  if (isFpuRegister(index)) {
+    return readFpuRegister(cycle.fpu, index)
+  }
+
   const memory = cycle.writable ?? cycle.memory
-  return (memory[wordIndex >>> 0] ?? 0) >>> 0
+  return (memory[index] ?? 0) >>> 0
 }
 
 function writeWord(cycle: Cycle, wordIndex: number, value: number): void {
   const index = wordIndex >>> 0
+  if (isFpuRegister(index)) {
+    writeFpuRegister(cycle, index, value)
+    return
+  }
+
   if (index >= MEMORY_WORDS) {
     return
   }

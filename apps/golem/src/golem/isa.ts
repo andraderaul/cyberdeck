@@ -147,6 +147,33 @@ export const WATCHDOG_ADDRESS = 0x2020
 export const WATCHDOG_ENABLE = 0x80000000
 export const WATCHDOG_COUNTER = 0x7fffffff
 
+export const CAUSE_FPU = 0x01eee754
+
+/** The FPU's four mapped registers, also at word addresses. */
+export const FPU_X = 0x2200
+export const FPU_Y = 0x2201
+export const FPU_Z = 0x2202
+export const FPU_CONTROL = 0x2203
+
+/** The error bit the control register reads back after a faulted operation. */
+export const FPU_ERROR = 0x20
+
+/**
+ * What the low nibble of a write to `control` asks for. Anything else is undefined and faults.
+ */
+export const FPU_OPERATIONS = {
+  none: 0x0,
+  add: 0x1,
+  subtract: 0x2,
+  multiply: 0x3,
+  divide: 0x4,
+  assignX: 0x5,
+  assignY: 0x6,
+  ceiling: 0x7,
+  floor: 0x8,
+  round: 0x9,
+} as const
+
 /**
  * Mnemonics the assembler expands into **more than one** instruction — which is exactly what
  * separates a Macro from an Alias (`CONTEXT.md`): an alias is 1:1, a macro is not.

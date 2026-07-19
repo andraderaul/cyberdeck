@@ -4,13 +4,21 @@
 
 import { describe, expect, it } from 'vitest'
 import { assemble } from './assembler'
+import { floatBits } from './float'
 import {
+  CAUSE_FPU,
   CAUSE_INVALID_INSTRUCTION,
   CAUSE_WATCHDOG,
   CAUSE_ZERO_DIVISION,
   CR,
   EQ,
   ER,
+  FPU_CONTROL,
+  FPU_ERROR,
+  FPU_OPERATIONS,
+  FPU_X,
+  FPU_Y,
+  FPU_Z,
   FR,
   GT,
   HARDWARE_1_VECTOR,
@@ -405,6 +413,158 @@ describe('the Watchdog', () => {
 
     expect(coinciding).toContainEqual({ kind: 'software-interrupt', cause: 5 })
     expect(coinciding.some((event) => event.kind === 'hardware-interrupt')).toBe(true)
+  })
+})
+
+// One reference program drives the FPU, and it uses five of its ten operations. Everything below
+// is either untouched by it or invisible in its trace.
+describe('the FPU', () => {
+  /**
+   * Writes `x` and `y`, then each control word in turn, spinning between them. The waits are
+   * generous: every operation costs far fewer cycles than the gap, so the sequence is
+   * timing-independent except where a test looks at the timing on purpose.
+   */
+  function fpuProgram(x: number, y: number, controls: number[], interrupts = true): string {
+    const wait = Array.from({ length: 12 }, () => 'nop')
+    return [
+      'bun main',
+      'bun idle',
+      // Hardware 2 must *return*, or the first FPU interrupt parks the program and every later
+      // operation in the sequence never happens.
+      'isr r31, r30, resume',
+      'nop',
+      'resume:',
+      'reti r31',
+      'idle:',
+      'bun idle',
+      'main:',
+      ...(interrupts ? ENABLE_INTERRUPTS : []),
+      `addi r1, r0, ${FPU_X}`,
+      `addi r2, r0, ${FPU_Y}`,
+      `addi r4, r0, ${FPU_CONTROL}`,
+      `addi r5, r0, ${x}`,
+      'stw r1, 0, r5',
+      `addi r6, r0, ${y}`,
+      'stw r2, 0, r6',
+      ...controls.flatMap((control) => [`addi r7, r0, ${control}`, 'stw r4, 0, r7', ...wait]),
+      'spin:',
+      'bun spin',
+    ].join('\n')
+  }
+
+  /** The FPU as it stands once the whole sequence has run. */
+  const fpuAfter = (x: number, y: number, controls: number[], interrupts = true) =>
+    run(fpuProgram(x, y, controls, interrupts), 400).fpu
+
+  const { add, subtract, multiply, divide, assignX, ceiling, floor, round } = FPU_OPERATIONS
+
+  it('divides as IEEE-754 singles, not as integers', () => {
+    // The reference's own trick: the program writes 74 and 8, and gets 9.25 back.
+    const fpu = fpuAfter(74, 8, [divide])
+
+    expect(fpu.z).toBe(9.25)
+    expect(floatBits(fpu.z)).toBe(0x41140000)
+  })
+
+  it('adds, subtracts and multiplies', () => {
+    expect(fpuAfter(10, 4, [add]).z).toBe(14)
+    expect(fpuAfter(10, 4, [subtract]).z).toBe(6)
+    expect(fpuAfter(10, 4, [multiply]).z).toBe(40)
+  })
+
+  it('assigns z back into x', () => {
+    expect(fpuAfter(10, 4, [add, assignX]).x).toBe(14)
+  })
+
+  // `2_fpu` uses round; ceiling and floor are reachable and no fixture ever exercises them.
+  it('rounds, ceils and floors', () => {
+    // 37 / 8 = 4.625.
+    expect(fpuAfter(37, 8, [divide, round]).z).toBe(5)
+    expect(fpuAfter(37, 8, [divide, ceiling]).z).toBe(5)
+    expect(fpuAfter(37, 8, [divide, floor]).z).toBe(4)
+  })
+
+  it('raises the error bit on a divide by zero, leaving z alone', () => {
+    const fpu = fpuAfter(10, 0, [divide])
+
+    expect(fpu.control).toBe(FPU_ERROR)
+    expect(fpu.z).toBe(0)
+  })
+
+  it('raises the error bit on an undefined operation', () => {
+    expect(fpuAfter(1, 1, [15]).control).toBe(FPU_ERROR)
+  })
+
+  it('clears the error bit once a good operation follows', () => {
+    expect(fpuAfter(10, 4, [15, add]).control).toBe(0)
+  })
+
+  it('goes idle again once the operation lands', () => {
+    const fpu = fpuAfter(10, 4, [add])
+
+    expect(fpu.busy).toBe(false)
+    expect(fpu.operation).toBe(0)
+  })
+
+  it('fires hardware interrupt 2 exactly once per operation', () => {
+    const events = eventsOf(fpuProgram(10, 4, [add]), 400)
+
+    expect(events.filter((event) => event.kind === 'hardware-interrupt')).toHaveLength(1)
+    expect(events).toContainEqual({
+      kind: 'hardware-interrupt',
+      line: 2,
+      resume: expect.any(Number),
+    })
+  })
+
+  it('lands on the hardware 2 vector with the FPU cause', () => {
+    expect(run(fpuProgram(10, 4, [add]), 400).registers[CR]).toBe(CAUSE_FPU)
+  })
+
+  it('completes the work but dispatches nothing while IE is clear', () => {
+    const source = fpuProgram(10, 4, [add], false)
+
+    expect(run(source, 400).fpu.z).toBe(14)
+    expect(run(source, 400).registers[CR]).toBe(0)
+    expect(eventsOf(source, 400)).toEqual([])
+  })
+
+  // The strangest thing inherited from the reference: what a read yields depends on the *value*.
+  // `2_fpu` reads back both kinds and would go red on either one alone.
+  it('reads a fractional register as IEEE-754 bits and a whole one as an integer', () => {
+    const readZ = (x: number, y: number) =>
+      run(
+        [
+          'bun main',
+          'bun idle',
+          'isr r31, r30, resume',
+          'nop',
+          'resume:',
+          'reti r31',
+          'idle:',
+          'bun idle',
+          'main:',
+          ...ENABLE_INTERRUPTS,
+          `addi r1, r0, ${FPU_X}`,
+          `addi r2, r0, ${FPU_Y}`,
+          `addi r3, r0, ${FPU_Z}`,
+          `addi r4, r0, ${FPU_CONTROL}`,
+          `addi r5, r0, ${x}`,
+          'stw r1, 0, r5',
+          `addi r6, r0, ${y}`,
+          'stw r2, 0, r6',
+          `addi r7, r0, ${divide}`,
+          'stw r4, 0, r7',
+          ...Array.from({ length: 12 }, () => 'nop'),
+          'ldw r8, r3, 0',
+          'spin:',
+          'bun spin',
+        ].join('\n'),
+        400,
+      ).registers[8]
+
+    expect(readZ(37, 8)).toBe(0x40940000) // 4.625, as bits
+    expect(readZ(40, 8)).toBe(5) // exactly 5, as an integer
   })
 })
 
