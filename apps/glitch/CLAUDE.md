@@ -95,7 +95,7 @@ Three behaviours hang together, and all of them come from the Seed sitting *outs
 
 `useWebcamState` owns the `MediaStream` lifecycle and hands `App` a playing `HTMLVideoElement`; it
 is never rendered, only sampled into the hidden canvas (ADR 0001). It's a hand-copy of
-ASCII//Convert's hook (ADR 0011) with two deliberate divergences, both noted in the file: modes
+ASCII//Convert's hook (ADR 0011, deliberately left copied in ADR 0014) with two divergences, both noted in the file: modes
 carry this app's terms (`'image'` / `'live'`), and the lifecycle side-effects are **Commands** rather
 than Effects — `Effect` already means a pure `PixelBuffer` transform here, and the collision would
 be a trap.
@@ -117,12 +117,11 @@ touches the loop, so the feed keeps running.
 
 ### Recording
 
-`useRecording` wraps `canvas.captureStream(15)` + `MediaRecorder` with runtime format detection
-(vp9 → vp8 → webm → mp4). It is a hand-copy of ASCII//Convert's hook (ADR 0011) with one divergence,
-noted in the file: failures go to an `onError` callback instead of being swallowed. ADR 0006 wants
-every operational failure surfaced, and Recording is one of this app's four output paths
-(`CONTEXT.md`) — the ASCII original returns silently on all three start failures. `app.tsx` hands
-it the toast.
+`useRecording` (from `@cyberdeck/deck-kit/recording` — the Recording core crossed the seam in
+ADR 0014) wraps `canvas.captureStream(15)` + `MediaRecorder` with runtime format detection
+(vp9 → vp8 → webm → mp4). Failures go to an `onError` callback: ADR 0006 wants every operational
+failure surfaced, and Recording is one of this app's four output paths (`CONTEXT.md`). `app.tsx`
+hands it the toast.
 
 A Recording is the one output this app timestamps (`glitch-recording-<ms>.webm`), where PNG Export
 and Capture keep stable names. The asymmetry is deliberate: a Capture is one click to redo, but a
@@ -152,10 +151,12 @@ whatever the Source's height. Here the sampled buffer *is* what `applyChain` wal
 ### Error handling
 
 Operational errors (Export, Copy, Recording) use the `AppError` plain-object shape
-(`type`, `message`, `cause?`),
-surfaced via the toast system (`use-toast` + `ToastProvider`) — see ADR 0006. The typed-error-class
-half of ADR 0006 has no counterpart here; this app has no AI surface. Image-load failures surface
-through `loadImageFile`'s `onError` callback straight to the same toast.
+(`type`, `message`, `cause?`) from `@cyberdeck/deck-kit/errors`, surfaced via the kit's toast
+system (`useToastError` / `useToastInfo`) — the operational-error *mechanism* crossed the seam in
+ADR 0014; this app keeps only its own `Errors` factories (`src/errors/app-error.ts`). The
+typed-error-class half of ADR 0006 has no counterpart here; this app has no AI surface.
+Image-load failures surface through the kit's image loading `onError` callback straight to the
+same toast.
 
 ### Domain language (from CONTEXT.md)
 
@@ -186,10 +187,11 @@ it.
 
 ### Design system
 
-Copied by hand from ASCII//Convert (ADR 0011 — there is deliberately no shared `packages/`).
-Tokens live as CSS custom properties in `src/index.css`; `tailwind.config.js` points at those
-same variables, so `text-violet` and `var(--violet)` resolve to one value. Keep the copies in
-step with `apps/ascii` by hand; the duplication is the signal that tells us what to extract later.
+The visual language lives in `@cyberdeck/deck-kit` (ADR 0014): `src/index.css` imports the kit's
+`tokens.css`, and `tailwind.config.js` extends the kit's Tailwind preset, so `text-violet` and
+`var(--violet)` resolve to one value shared with ASCII//Convert. The deck-kit glob in the Tailwind
+`content` is load-bearing — without it the kit primitives' classes are purged at build (root
+`CLAUDE.md`).
 
 **Anything sitting on the canvas must bring its own background** — ADR 0013, and a standing
 constraint on any overlay added later, not just the ones there now (`CANVAS_OVERLAY_CHROME` in
@@ -239,18 +241,17 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/glitch/render-frame.ts` — `renderGlitchFrame()`: the imperative shell
 
 **Errors & utilities**
-- `src/errors/app-error.ts` — `AppError`, `createError`, `normalizeError`, `Errors`
-- `src/export/output.ts` — `outputFilename()`, `mimeToExtension()`
-- `src/hooks/use-recording.ts` — `useRecording()`, `isRecordingSupported()`, `detectMimeType()`,
-  `formatElapsedTime()`: the Recording's MediaRecorder lifecycle — see ADR 0007 and ADR 0006
-- `src/hooks/use-toast.ts` — toast queue state
+- `src/errors/app-error.ts` — `Errors`: this app's error factories over the kit's `AppError` /
+  `createError` (`@cyberdeck/deck-kit/errors`)
+- `src/export/output.ts` — `outputFilename()`, `OutputKind`
 - `src/hooks/use-webcam-state.ts` — `useWebcamState()`, `planCommands()`, `reducer()`: the Live
-  Source's MediaStream lifecycle
-- `src/utils/cn.ts` — `cn()` (clsx + tailwind-merge)
-- `src/utils/copy.ts` — `copyCanvasToClipboard()` (canvas → PNG on the clipboard)
-- `src/utils/load-image-file.ts` — `loadImageFile()` (File → HTMLImageElement)
-- `src/utils/share.ts` — `shareOrDownloadCanvas()`, `shareOrDownloadBlob()` (Web Share API with
-  download fallback)
+  Source's MediaStream lifecycle — deliberately still a hand-copy (ADR 0014)
+- `src/utils/copy.ts` — `copyCanvasToClipboard()`, `isClipboardImageSupported()` (canvas → PNG on
+  the clipboard)
+- Everything else shared comes from `@cyberdeck/deck-kit` (ADR 0014): `recording` (`useRecording`,
+  `formatElapsedTime`), `ui` (the primitives plus `EmptyStateHero`, `ErrorBoundary`,
+  `MobileBottomSheet`, the toast hooks), `utils` (`cn`, `shareOrDownloadCanvas`,
+  `shareOrDownloadBlob`, `isTouchDevice`), `errors`
 
 **Components**
 - `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render, and owns the
@@ -262,13 +263,11 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   registry-driven add palette and the Re-roll control (its own callback — the Seed is not part of
   the look). Sits behind the `advanced` Disclosure in `app.tsx` (#84) — the tweak layer, not the
   front door
-- `src/components/empty-state-hero.tsx` — initial empty state with the upload and webcam entry points
+- `src/components/mobile-controls.tsx` — the mobile bottom sheet carrying the same stack as the
+  desktop aside: Presets first, the Chain editor behind `advanced`
 - `src/components/export-bar.tsx` — PNG Export / Capture / Copy / Record controls and the
   recording timer
-- `src/components/toast-provider.tsx` — renders the toast queue
-- `src/components/error-boundary.tsx` — generic React error boundary
-- `src/components/ui/` — design system primitives: `button`, `chip`, `disclosure`, `label`, `slider`,
-  `toast`, `toggle-group`, `source-image-drop-zone`
+- `src/components/ui/disclosure.tsx` — the one primitive still local: the `advanced` fold
 
 **Testing**
 - `src/test-setup.ts` polyfills `ImageData` — happy-dom ships none, and the shell constructs one.
