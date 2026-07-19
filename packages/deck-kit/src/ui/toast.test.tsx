@@ -32,7 +32,6 @@ describe('Toast component', () => {
 
   it('variant="info" icon has text-info class', () => {
     render(<Toast message="info msg" variant="info" onDismiss={vi.fn()} />)
-    // The icon span should have text-info
     const icon = screen.getByText('ℹ')
     expect(icon.className).toContain('text-info')
   })

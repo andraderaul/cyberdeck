@@ -49,7 +49,6 @@ describe('Modal', () => {
 
   describe('Focus on open', () => {
     it('moves focus to the first tabbable element inside the dialog on open', () => {
-      // Render a button outside the modal and focus it first
       const { container } = render(
         <div>
           <button type="button" id="outside">
@@ -135,12 +134,10 @@ describe('Modal', () => {
       expect(document.activeElement).toBe(trigger)
 
       const { unmount } = renderModal()
-      // Modal is open — focus should be inside modal
       const dialog = screen.getByRole('dialog')
       const tabbables = getTabbables(dialog)
       expect(document.activeElement).toBe(tabbables[0])
 
-      // Close modal
       unmount()
       expect(document.activeElement).toBe(trigger)
 

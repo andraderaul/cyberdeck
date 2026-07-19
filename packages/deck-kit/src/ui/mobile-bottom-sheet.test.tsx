@@ -4,7 +4,6 @@ import MobileBottomSheet from './mobile-bottom-sheet'
 
 describe('MobileBottomSheet', () => {
   afterEach(() => {
-    // restore body overflow after each test
     document.body.style.overflow = ''
   })
 

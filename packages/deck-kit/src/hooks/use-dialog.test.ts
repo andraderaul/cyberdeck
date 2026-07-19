@@ -95,7 +95,6 @@ describe('Focus on mount', () => {
     document.body.appendChild(panel)
     const ref = { current: panel }
 
-    // Should not throw
     expect(() => {
       renderHook(() => useDialog({ panelRef: ref, onClose: vi.fn() }))
     }).not.toThrow()
@@ -165,7 +164,6 @@ describe('Focus trap', () => {
     const { ref, tabbables } = makePanelRef(3)
     renderHook(() => useDialog({ panelRef: ref, onClose: vi.fn() }))
 
-    // Focus the middle element — Tab should not wrap
     tabbables[1].focus()
     const preventDefaultSpy = vi.fn()
 
@@ -197,7 +195,6 @@ describe('Focus return on unmount', () => {
       useDialog({ panelRef: ref, onClose: vi.fn(), triggerRef: trigger.ref }),
     )
 
-    // Focus is now in panel
     expect(document.activeElement).not.toBe(trigger.ref.current)
 
     unmount()
@@ -214,7 +211,6 @@ describe('Focus return on unmount', () => {
     const { ref } = makePanelRef()
     const { unmount } = renderHook(() => useDialog({ panelRef: ref, onClose: vi.fn() }))
 
-    // Focus moved into panel
     expect(document.activeElement).not.toBe(previouslyFocused)
 
     unmount()
