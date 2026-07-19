@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { GENERATED_PROGRAMS, INHERITED_PROGRAMS, loadFixture, parseHex } from './__fixtures__/load'
+import {
+  GENERATED_PROGRAMS,
+  INHERITED_PROGRAMS,
+  loadFixture,
+  parseHex,
+  UNIT_2_RUNNABLE,
+} from './__fixtures__/load'
 import type { Image } from './assembler'
 import { CR, ER, FR, PC, registerIndex } from './isa'
 import { createMachine, step } from './machine'
@@ -60,7 +66,7 @@ function indexOfTarget(target: string): number {
   return index
 }
 
-const ALL = [...INHERITED_PROGRAMS, ...GENERATED_PROGRAMS]
+const ALL = [...INHERITED_PROGRAMS, ...UNIT_2_RUNNABLE, ...GENERATED_PROGRAMS]
 
 describe.each(ALL)('%s', (name) => {
   it('executes exactly as the reference emulator traced it', () => {

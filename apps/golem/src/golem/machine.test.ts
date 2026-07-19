@@ -369,6 +369,44 @@ describe('the Terminal', () => {
     expect(run(source).terminal).toBe('Hi')
   })
 
+  // Unit 2's smallest behavior, and what `2_hello_world` needs: the Terminal is a device *and*
+  // an address. The byte stays readable where it was written, so a program can `ldb` back what
+  // it printed — which is how that program checks its own output.
+  it('keeps a written byte readable at its address', () => {
+    const source = [
+      `addi r1, r0, ${TERMINAL_ADDRESS >>> 2}`,
+      'shl r1, r1, 2',
+      `addi r1, r1, ${TERMINAL_ADDRESS & 3}`,
+      'addi r2, r0, 65',
+      'stb r1, 0, r2',
+      'ldb r3, r1, 0',
+      'int 0',
+    ].join('\n')
+
+    const machine = run(source)
+    expect(machine.registers[3]).toBe(65)
+    // Still echoed — readback is an addition, not a replacement.
+    expect(machine.terminal).toBe('A')
+  })
+
+  it('reads back only the most recent byte written', () => {
+    const source = [
+      `addi r1, r0, ${TERMINAL_ADDRESS >>> 2}`,
+      'shl r1, r1, 2',
+      `addi r1, r1, ${TERMINAL_ADDRESS & 3}`,
+      'addi r2, r0, 72',
+      'stb r1, 0, r2',
+      'addi r2, r0, 105',
+      'stb r1, 0, r2',
+      'ldb r3, r1, 0',
+      'int 0',
+    ].join('\n')
+
+    const machine = run(source)
+    expect(machine.registers[3]).toBe(105)
+    expect(machine.terminal).toBe('Hi')
+  })
+
   it('leaves the Terminal empty when nothing writes to it', () => {
     expect(run('addi r1, r0, 1\nint 0').terminal).toBe('')
   })

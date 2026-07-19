@@ -412,10 +412,11 @@ function readByte(cycle: Cycle, byteAddress: number): number {
 function writeByte(cycle: Cycle, byteAddress: number, value: number): void {
   const address = byteAddress >>> 0
 
-  // The Terminal is a device, not storage: a byte written here is emitted as a character.
+  // The Terminal is a device *and* an address: the byte is emitted as a character and stays
+  // readable where it was written, so a program can `ldb` back what it just printed. Falling
+  // through to the ordinary word write is what gives that readback (#206).
   if (address === TERMINAL_ADDRESS) {
     cycle.terminal += String.fromCharCode(value & 0xff)
-    return
   }
 
   const wordIndex = address >>> 2
