@@ -12,9 +12,13 @@ the tests — do not re-derive semantics from memory.
 
 ## Status
 
-Scaffold only (#134). Every region on the page is an inert shell; the oracle fixtures are
-committed (#135) but nothing loads them yet. The v1 breakdown is #134–#146, tracked under the
-PRD in #133.
+**v1 complete** (#133, tickets #134–#146). You write assembly, `asm` it, and drive execution from
+the Console while registers, memory, flags and the Terminal update beside you. All 42 instructions
+execute; every vendored reference program assembles word-for-word to its `.hex` and traces
+line-for-line against its `.out`.
+
+Out of scope, and deliberately so: units 2 and 3 of the architecture (interrupts, watchdog, FPU,
+cache), reverse execution, and video recording. See the PRD for why.
 
 ## Commands
 
