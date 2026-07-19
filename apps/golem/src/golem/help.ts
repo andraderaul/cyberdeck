@@ -59,6 +59,12 @@ const HELP: Record<(typeof COMMAND_NAMES)[number], Entry> = {
     detail:
       'The hex runs in another implementation of this ISA; the trace can be diffed against a reference emulator.',
   },
+  load: {
+    usage: 'load [name]',
+    summary: 'put a reference program in the editor',
+    detail:
+      'With no name, lists what is available. Only works while no Machine exists, so running code can never change under you — `reset` first. It replaces whatever is in the editor.',
+  },
   share: {
     usage: 'share',
     summary: 'produce a link containing this program',

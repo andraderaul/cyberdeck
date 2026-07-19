@@ -221,6 +221,115 @@ describe('the Terminal', () => {
   })
 })
 
+describe('load', () => {
+  it('lists the programs when given no name', async () => {
+    render(<App />)
+
+    await type('load')
+
+    expect(screen.getByText(/watchdog/)).toBeInTheDocument()
+    expect(screen.getByText(/an infinite loop losing to a countdown/)).toBeInTheDocument()
+  })
+
+  it('puts the named program in the editor', async () => {
+    render(<App />)
+
+    await type('load watchdog')
+
+    expect(sourceText()).toContain('forever_loop')
+    expect(screen.getByText(/loaded watchdog/)).toBeInTheDocument()
+  })
+
+  // The three-state model holds by construction: with a Machine alive the editor is locked, so
+  // there is nothing to load into and running code can never change underneath the operator.
+  it('refuses while a machine exists, and says what to do about it', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('load watchdog')
+
+    expect(screen.getByText(/a machine is running — reset first/)).toBeInTheDocument()
+    expect(sourceText()).not.toContain('forever_loop')
+  })
+
+  it('loads after a reset', async () => {
+    render(<App />)
+
+    await type('asm')
+    await type('reset')
+    await type('load watchdog')
+
+    expect(sourceText()).toContain('forever_loop')
+  })
+
+  it('suggests the nearest name for a typo', async () => {
+    render(<App />)
+
+    await type('load watchdg')
+
+    expect(screen.getByText(/did you mean "watchdog"/)).toBeInTheDocument()
+  })
+
+  it('points at the listing when a name is nothing like a real one', async () => {
+    render(<App />)
+
+    await type('load elephant')
+
+    expect(screen.getByText(/try "load" to list them/)).toBeInTheDocument()
+  })
+
+  // The signature scene is meant to be one command from a cold start, so the untouched starter
+  // example does not count as work worth protecting.
+  it('replaces the starter example without ceremony', async () => {
+    render(<App />)
+
+    await type('load watchdog')
+
+    expect(sourceText()).toContain('forever_loop')
+  })
+
+  it('refuses once before overwriting something the operator wrote', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('load watchdog')
+
+    expect(screen.getByText(/would replace what you have written/)).toBeInTheDocument()
+    expect(sourceText()).toContain('addi r1, r0, 20')
+  })
+
+  it('goes through when the same load is confirmed', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('load watchdog')
+    await type('load watchdog')
+
+    expect(sourceText()).toContain('forever_loop')
+  })
+
+  it('forgets a pending confirmation once something else is typed', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('load watchdog')
+    await type('breaks')
+    await type('load watchdog')
+
+    expect(sourceText()).toContain('addi r1, r0, 20')
+  })
+
+  it('assembles what it loaded', async () => {
+    render(<App />)
+
+    await type('load hello_world')
+    await type('asm')
+
+    expect(screen.getByText(/assembled \d+ words/)).toBeInTheDocument()
+  })
+})
+
 describe('interrupt narration', () => {
   // `enai` is #208's; this enables IE the way the macro will expand, so the narration can be
   // tested on the semantics that already exist.
