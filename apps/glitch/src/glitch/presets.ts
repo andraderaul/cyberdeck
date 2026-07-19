@@ -158,8 +158,11 @@ export function chainMatch(a: Chain, b: Chain): boolean {
   return a.length === b.length && a.every((link, index) => linkMatch(link, b[index]))
 }
 
-// How far Randomize may perturb each param off its base Preset. Curated well inside the sliders'
-// ranges: a slider has to reach the ugly extremes, Randomize must never land on them.
+/**
+ * With the `*_SPREAD` consts below, how far Randomize may perturb each param off its base Preset.
+ * Curated well inside the sliders' ranges: a slider has to reach the ugly extremes, Randomize must
+ * never land on them.
+ */
 const BLOCK_DENSITY_SPREAD = 0.12
 const BLOCK_AMOUNT_SPREAD = 0.15
 const SORT_THRESHOLD_SPREAD = 0.08
@@ -170,7 +173,7 @@ const SCANLINE_DENSITY_SPREAD_NOTCHES = 2
 const SCANLINE_INTENSITY_SPREAD = 0.08
 const NOISE_AMOUNT_SPREAD = 0.06
 
-// The unit scale every normalised param rides (types.ts).
+/** With `UNIT_MAX`, the unit scale every normalised param rides (types.ts). */
 const UNIT_MIN = 0
 const UNIT_MAX = 1
 

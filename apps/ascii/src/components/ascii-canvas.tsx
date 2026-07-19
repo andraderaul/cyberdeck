@@ -6,9 +6,11 @@ import type { ConversionSettings } from '../ascii/types'
 
 const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
 
-// Shared shape for the overlay's source-tuning buttons (mirror, switch-camera, clear). No bg-bg
-// unlike GLITCH's CANVAS_OVERLAY_CHROME — ASCII's canvas is filled, so the border reads without an
-// opaque backdrop.
+/**
+ * Shared shape for the overlay's source-tuning buttons (mirror, switch-camera, clear). No bg-bg
+ * unlike GLITCH's CANVAS_OVERLAY_CHROME — ASCII's canvas is filled, so the border reads without an
+ * opaque backdrop. `OVERLAY_BUTTON_REST` below carries the same rationale.
+ */
 const OVERLAY_BUTTON =
   'font-mono text-xs border px-sm py-2xs rounded-xs cursor-pointer transition-colors duration-fast'
 const OVERLAY_BUTTON_REST = 'text-fg-muted border-base hover:text-fg hover:border-strong'
