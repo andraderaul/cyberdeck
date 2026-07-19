@@ -12,7 +12,7 @@ import { createMachine, type Machine, step } from '../golem/machine'
 import { encode } from '../golem/share'
 import { formatHex, formatStep, frameTrace } from '../golem/trace'
 import { type ClockRate, useClock } from './use-clock'
-import { saveSource } from './use-source-loading'
+import { clearShareFragment, saveSource } from './use-source-loading'
 
 /** A line in the Console log. `echo` is what the operator typed, the rest is the tool answering. */
 export interface ConsoleLine {
@@ -196,6 +196,7 @@ export function useConsole(initialSource: string): ConsoleState {
     }
     setSourceState(next)
     saveSource(next)
+    clearShareFragment()
   }, [])
 
   // A Source arriving from a share link or from storage lands after the first render, since

@@ -554,6 +554,22 @@ describe('sharing and persistence', () => {
 
     await waitFor(() => expect(editor()).toHaveValue(TINY))
   })
+
+  // Story 39: an edit makes the fragment stale, so a reload restores the newer work rather than
+  // silently reverting to the shared snapshot.
+  it('lets edited work win over the share link on reload', async () => {
+    window.location.hash = `#${await encode(TINY)}`
+    const { unmount } = render(<App />)
+    await waitFor(() => expect(editor()).toHaveValue(TINY))
+
+    write('addi r9, r0, 99\nint 0')
+    expect(window.location.hash).toBe('')
+    unmount()
+
+    render(<App />)
+
+    await waitFor(() => expect(editor()).toHaveValue('addi r9, r0, 99\nint 0'))
+  })
 })
 
 describe('exporting', () => {

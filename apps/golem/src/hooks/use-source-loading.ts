@@ -18,8 +18,9 @@ export interface LoadedSource {
 /**
  * Resolves the starting Source. Precedence is **share link, then saved work, then the example**:
  * a link someone sent you is an explicit request to see *their* program, so it wins over whatever
- * happened to be in the editor — and because the link is never consumed, reloading it shows the
- * shared program again rather than silently reverting to yours.
+ * happened to be in the editor. Reloading an untouched link shows the shared program again — but
+ * an edit clears the fragment (see `clearShareFragment`), so newer work is never shadowed by a
+ * stale snapshot on reload (PRD story 39).
  */
 export function useSourceLoading(fallback: string): LoadedSource {
   const [state, setState] = useState<LoadedSource>({
@@ -57,6 +58,17 @@ export function useSourceLoading(fallback: string): LoadedSource {
   }, [fallback])
 
   return state
+}
+
+/**
+ * Drops the share fragment from the address bar. Called on edit: the fragment describes a
+ * snapshot that no longer matches the editor, and leaving it in place would make the next reload
+ * silently revert to it — losing exactly the work story 39 promises to keep.
+ */
+export function clearShareFragment(): void {
+  if (window.location.hash !== '') {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+  }
 }
 
 /** Saves the Source so an accidental reload does not cost the session's work. */
