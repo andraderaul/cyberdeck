@@ -1,7 +1,17 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './app'
+import { decode, encode } from './golem/share'
+
+/** Reads a share URL back to the source it carries. */
+async function decodeFragment(url: string): Promise<string> {
+  const result = await decode(url.slice(url.indexOf('#') + 1))
+  if (!result.ok) {
+    throw new Error(result.message)
+  }
+  return result.source
+}
 
 /** Drives the Console the way an operator does — it is the only way in (ADR 0018). */
 async function type(command: string) {
@@ -194,6 +204,88 @@ describe('the Terminal', () => {
     await stepTimes(30)
 
     expect(screen.getByRole('region', { name: 'Console' })).not.toHaveTextContent('Hi\n')
+  })
+})
+
+describe('sharing and persistence', () => {
+  afterEach(() => {
+    window.location.hash = ''
+    window.localStorage.clear()
+  })
+
+  /** The URL `share` printed. Read from the Console rather than the clipboard, because
+   *  `userEvent.setup()` installs its own clipboard stub over any spy a test puts there. */
+  async function sharedUrl(): Promise<string> {
+    const link = await screen.findByText(/^https?:\/\//)
+    return link.textContent ?? ''
+  }
+
+  it('produces a share link carrying the program', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('share')
+
+    expect(await decodeFragment(await sharedUrl())).toBe(TINY)
+  })
+
+  it('copies the link and says so', async () => {
+    render(<App />)
+
+    await type('share')
+
+    expect(await screen.findByText(/copied to the clipboard/)).toBeInTheDocument()
+  })
+
+  it('puts the link in the address bar so a reload keeps it', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('share')
+    await sharedUrl()
+
+    expect(await decodeFragment(window.location.hash)).toBe(TINY)
+  })
+
+  it('loads the program from a share link, unlocked and ready', async () => {
+    window.location.hash = `#${await encode(TINY)}`
+
+    render(<App />)
+
+    await waitFor(() => expect(editor()).toHaveValue(TINY))
+    expect(editor()).not.toHaveAttribute('readonly')
+  })
+
+  it('reports a corrupt link rather than showing a blank page', async () => {
+    window.location.hash = '#not-a-real-fragment'
+
+    render(<App />)
+
+    expect(await screen.findByText(/corrupt or truncated/)).toBeInTheDocument()
+    // Still usable: the editor falls back to something runnable.
+    expect(editor()).not.toHaveAttribute('readonly')
+  })
+
+  it('restores the source after a reload', async () => {
+    const { unmount } = render(<App />)
+    write('addi r9, r0, 99\nint 0')
+    unmount()
+
+    render(<App />)
+
+    await waitFor(() => expect(editor()).toHaveValue('addi r9, r0, 99\nint 0'))
+  })
+
+  // A link someone sent is an explicit request to see *their* program.
+  it('lets a share link win over saved work', async () => {
+    const { unmount } = render(<App />)
+    write('addi r9, r0, 99\nint 0')
+    unmount()
+
+    window.location.hash = `#${await encode(TINY)}`
+    render(<App />)
+
+    await waitFor(() => expect(editor()).toHaveValue(TINY))
   })
 })
 

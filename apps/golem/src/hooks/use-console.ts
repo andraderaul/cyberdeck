@@ -8,8 +8,10 @@ import { type Command, parseCommand } from '../golem/command'
 import { formatMemoryDump, formatRegister } from '../golem/inspect'
 import { registerIndex } from '../golem/isa'
 import { createMachine, type Machine, step } from '../golem/machine'
+import { encode } from '../golem/share'
 import { formatHex, formatStep, TRACE_END, TRACE_START } from '../golem/trace'
 import { type ClockRate, useClock } from './use-clock'
+import { saveSource } from './use-source-loading'
 
 /** A line in the Console log. `echo` is what the operator typed, the rest is the tool answering. */
 export interface ConsoleLine {
@@ -31,6 +33,10 @@ export interface ConsoleState {
    */
   editable: boolean
   setSource: (source: string) => void
+  /** Replaces the Source wholesale — used when a share link or saved work resolves. */
+  replaceSource: (source: string) => void
+  /** Writes a line to the Console without it having been typed. */
+  note: (text: string, kind?: 'info' | 'error') => void
   submit: (input: string) => void
 }
 
@@ -45,7 +51,39 @@ function wrapTrace(lines: string[]): string {
   return [TRACE_START, ...body, TRACE_END].join('\n')
 }
 
-const GREETING = 'GOLEM ready. Commands: asm, run, stop, step, clock, reset.'
+/**
+ * Builds the share URL and puts it on the clipboard, reporting either way. The URL is printed
+ * whether or not the copy works, so a browser that blocks clipboard access still leaves something
+ * to select by hand.
+ */
+async function shareSource(
+  source: string,
+  append: (entries: Omit<ConsoleLine, 'id'>[]) => void,
+): Promise<void> {
+  try {
+    const fragment = await encode(source)
+    const url = `${window.location.origin}${window.location.pathname}#${fragment}`
+    window.history.replaceState(null, '', `#${fragment}`)
+
+    let copied = false
+    try {
+      await navigator.clipboard.writeText(url)
+      copied = true
+    } catch {
+      // Clipboard blocked, or no permission — the URL below is still usable.
+    }
+
+    append([
+      { kind: 'info', text: copied ? 'link copied to the clipboard:' : 'link (copy it by hand):' },
+      { kind: 'info', text: url },
+    ])
+  } catch {
+    append([{ kind: 'error', text: 'could not build a share link for this program' }])
+  }
+}
+
+const GREETING =
+  'GOLEM ready. Commands: asm, run, stop, step, clock, reg, mem, export, share, reset.'
 
 export function useConsole(initialSource: string): ConsoleState {
   const [source, setSourceState] = useState(initialSource)
@@ -104,7 +142,19 @@ export function useConsole(initialSource: string): ConsoleState {
       return
     }
     setSourceState(next)
+    saveSource(next)
   }, [])
+
+  // A Source arriving from a share link or from storage lands after the first render, since
+  // decoding is asynchronous.
+  const replaceSource = useCallback((next: string) => {
+    setSourceState(next)
+  }, [])
+
+  const note = useCallback(
+    (text: string, kind: 'info' | 'error' = 'info') => append([{ kind, text }]),
+    [append],
+  )
 
   /** Assembles and instantiates, reporting either way. Returns whether a Machine now exists. */
   const build = useCallback(
@@ -263,6 +313,12 @@ export function useConsole(initialSource: string): ConsoleState {
           break
         }
 
+        // Asynchronous, so it appends its own line when the codec finishes rather than joining
+        // this command's output.
+        case 'share':
+          void shareSource(source, append)
+          break
+
         case 'bad-usage':
           output.push({ kind: 'error', text: command.message })
           break
@@ -277,7 +333,7 @@ export function useConsole(initialSource: string): ConsoleState {
           break
       }
     },
-    [build, clock, setMachine, stepRecording],
+    [append, build, clock, setMachine, source, stepRecording],
   )
 
   const submit = useCallback(
@@ -303,6 +359,8 @@ export function useConsole(initialSource: string): ConsoleState {
     rate: clock.rate,
     editable: machine === null,
     setSource,
+    replaceSource,
+    note,
     submit,
   }
 }
