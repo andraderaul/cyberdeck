@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { GENERATED_PROGRAMS, INHERITED_PROGRAMS, loadFixture, parseHex } from './__fixtures__/load'
+import {
+  GENERATED_PROGRAMS,
+  INHERITED_PROGRAMS,
+  loadFixture,
+  parseHex,
+  UNIT_2_RUNNABLE,
+} from './__fixtures__/load'
 import { assemble } from './assembler'
 import { createMachine, type Machine, type StepEvent, step } from './machine'
 import { formatHex, formatStep, formatTrace } from './trace'
 
-const ALL = [...INHERITED_PROGRAMS, ...GENERATED_PROGRAMS]
+const ALL = [...INHERITED_PROGRAMS, ...UNIT_2_RUNNABLE, ...GENERATED_PROGRAMS]
 
 function traceOf(words: number[], limit = 2000): string {
   let machine = createMachine({ words, lineForWord: [] })

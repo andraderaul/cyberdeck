@@ -16,6 +16,7 @@ const upper = (index: number) => registerName(index).toUpperCase()
 
 export const TRACE_START = '[START OF SIMULATION]'
 export const TRACE_END = '[END OF SIMULATION]'
+export const TRACE_TERMINAL = '[TERMINAL]'
 
 /** Type U operators that read as `Rz = Rx <op> Ry`, and which extra registers they report. */
 const BINARY_U: Record<number, { mnemonic: string; symbol: string; fr: boolean; er: boolean }> = {
@@ -202,16 +203,26 @@ function formatInstruction(before: Machine, after: Machine): string {
   }
 }
 
-/** Frames already-formatted trace lines the way the reference emulator frames a run. */
-export function frameTrace(lines: readonly string[]): string {
-  return [TRACE_START, ...lines, TRACE_END].join('\n')
+/**
+ * Frames already-formatted trace lines the way the reference emulator frames a run, with what the
+ * program printed appended under a `[TERMINAL]` heading.
+ *
+ * The heading appears **only when the program printed something** — the reference omits it
+ * entirely otherwise, which is why every unit-1 fixture ends without one.
+ */
+export function frameTrace(lines: readonly string[], terminal = ''): string {
+  const output = terminal === '' ? [] : [TRACE_TERMINAL, terminal]
+  return [TRACE_START, ...lines, ...output, TRACE_END].join('\n')
 }
 
 /** The whole log for collected steps, framed so it can be diffed directly against the reference. */
 export function formatTrace(
   steps: { before: Machine; after: Machine; events?: readonly StepEvent[] }[],
 ): string {
-  return frameTrace(steps.map(({ before, after, events }) => formatStep(before, after, events)))
+  return frameTrace(
+    steps.map(({ before, after, events }) => formatStep(before, after, events)),
+    steps.length === 0 ? '' : steps[steps.length - 1].after.terminal,
+  )
 }
 
 /** The Image in the reference `.hex` format: one `0x`-prefixed word per line. */

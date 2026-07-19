@@ -49,6 +49,9 @@ são silenciosamente descartadas. (Não é um bug: é o mesmo contrato de MIPS.)
 **Terminal:** dispositivo de saída mapeado no endereço de **byte** `0x0000888B`. Escrever nele com
 `stb` emite um caractere. É a única saída da máquina na unidade 1.
 
+O byte escrito **continua legível no endereço**: um `ldb` posterior devolve o último byte emitido.
+O Terminal é dispositivo *e* endereço, e é assim que o `2_hello_world` confere a própria saída.
+
 ---
 
 ## Encoding

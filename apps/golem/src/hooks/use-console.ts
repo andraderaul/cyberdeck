@@ -73,11 +73,15 @@ function narrate(event: StepEvent): string {
   }
 }
 
-/** Frames the recorded lines for export, marking truncation when the limit was hit. */
-function wrapTrace(lines: string[]): string {
+/**
+ * Frames the recorded lines for export, marking truncation when the limit was hit. The Terminal
+ * output rides along so an exported trace still diffs clean against the reference `.out`, which
+ * ends with what the program printed.
+ */
+function wrapTrace(lines: string[], terminal: string): string {
   const body =
     lines.length < TRACE_LIMIT ? lines : [...lines, `[TRACE TRUNCATED AT ${TRACE_LIMIT}]`]
-  return frameTrace(body)
+  return frameTrace(body, terminal)
 }
 
 /**
@@ -343,11 +347,12 @@ export function useConsole(initialSource: string): ConsoleState {
             break
           }
 
-          if (requireMachine(output) === null) {
+          const current = requireMachine(output)
+          if (current === null) {
             break
           }
           const filename = outputFilename('trace-export')
-          downloadText(filename, `${wrapTrace(traceRef.current)}\n`)
+          downloadText(filename, `${wrapTrace(traceRef.current, current.terminal)}\n`)
           output.push({
             kind: 'info',
             text: `wrote ${filename} — ${traceRef.current.length} instructions`,
