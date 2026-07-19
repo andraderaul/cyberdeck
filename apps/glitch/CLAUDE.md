@@ -137,7 +137,10 @@ Like Capture, it records the **output canvas** the Chain already painted — it 
 
 The Record control is hidden entirely where `MediaRecorder` + `captureStream` are unsupported — no
 GIF fallback (ADR 0007) — and only ever appears for a Live Source: a Source Image has no elapsing
-time to record. On stop, `shareOrDownloadBlob` opens the native share sheet on mobile or downloads
+time to record. **Start and stop live apart** (ADR 0020): start is a control in the OUT tab, stop is
+the canvas REC badge. That split is what lets a take keep running while the user tweaks the Chain in
+another tab, and it is why OUT drops the start control while `isRecording` — one running take must
+not offer two stops. On stop, `shareOrDownloadBlob` opens the native share sheet on mobile or downloads
 on desktop. Clearing the Source stops a running Recording first, since the camera is about to go.
 
 ### Sampling cap
@@ -266,12 +269,14 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 
 **Components**
 - `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render, and owns the
-  ~15fps rAF loop for a Live Source. Carries the LIVE / REC badges
+  ~15fps rAF loop for a Live Source. Carries the LIVE badge and the REC badge, which is also the
+  Recording's stop control and its elapsed timer — the canvas is the one surface every tab shows,
+  so that is where a stop reachable from anywhere has to live (ADR 0020)
 - `src/components/control-strip.tsx` — the Control Strip (ADR 0020): the bottom-anchored control
-  surface at both breakpoints and the program's whole control grammar — there is no aside and no
-  sheet behind it. PRESETS and EDIT so far; OUT joins them when its panel exists, since a tab is
-  never rendered ahead of what sits behind it. Only the active panel is mounted, so one tab's
-  controls are in the accessibility tree at a time
+  surface at both breakpoints and the program's whole control grammar — there is no aside, no sheet
+  and no always-visible export bar behind it. PRESETS → EDIT → OUT is the session read left to
+  right. Only the active panel is mounted, so one tab's controls are in the accessibility tree at a
+  time
 - `src/components/preset-picker.tsx` — the PRESETS panel: the six Preset chips in a horizontally
   scrollable row (active one highlighted, `(modified)` once edited) and Randomize beside them
 - `src/components/chain-editor.tsx` — the Strip's EDIT tab: the Chain as a row of Link chips
@@ -282,8 +287,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   slot with the params, and Re-roll sits outside the row (its own callback — the Seed is not part of
   the look)
 
-- `src/components/export-bar.tsx` — PNG Export / Capture / Copy / Record controls and the
-  recording timer
+- `src/components/output-panel.tsx` — the Strip's OUT tab: PNG Export / Capture / Copy and the
+  Record *start*. Stopping is deliberately absent — a take runs while the user keeps working in
+  PRESETS and EDIT, so its stop is the canvas REC badge (ADR 0020)
 
 **Testing**
 - `src/test-setup.ts` polyfills `ImageData` — happy-dom ships none, and the shell constructs one.

@@ -1,22 +1,29 @@
 import { cn } from '@cyberdeck/deck-kit/utils'
-import { useState } from 'react'
+import { type RefObject, useState } from 'react'
 import type { Chain } from '../glitch/chain'
 import type { ChainActions } from '../glitch/editor-state'
 import type { Preset } from '../glitch/presets'
 import ChainEditor from './chain-editor'
+import OutputPanel from './output-panel'
 import PresetPicker from './preset-picker'
 
-// PRESETS then EDIT — ADR 0015's hierarchy survives the new shell: a good look in one tap comes
-// first, fine editing one step behind. OUT joins them when its panel exists; a tab is never
-// rendered ahead of what sits behind it.
+// PRESETS → EDIT → OUT, which is the session read left to right: ADR 0015's hierarchy survives the
+// new shell (a good look in one tap first, fine editing one step behind), and export is the
+// terminal action that affords a tab switch rather than sitting always-visible.
 const TABS = [
   { id: 'presets', label: 'presets' },
   { id: 'edit', label: 'edit' },
+  { id: 'out', label: 'out' },
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
 
 interface Props {
+  canvasRef: RefObject<HTMLCanvasElement | null>
+  isLive: boolean
+  canRecord: boolean
+  isRecording: boolean
+  onStartRecording: () => void
   chain: Chain
   activePresetId: string | null
   isModified: boolean
@@ -33,6 +40,11 @@ interface Props {
  * The whole program's control grammar lives here — there is no aside and no sheet behind it.
  */
 export default function ControlStrip({
+  canvasRef,
+  isLive,
+  canRecord,
+  isRecording,
+  onStartRecording,
   chain,
   activePresetId,
   isModified,
@@ -79,15 +91,25 @@ export default function ControlStrip({
         aria-labelledby={`strip-tab-${activeTab}`}
         className="px-sm py-sm"
       >
-        {activeTab === 'presets' ? (
+        {activeTab === 'presets' && (
           <PresetPicker
             activePresetId={activePresetId}
             isModified={isModified}
             onSelect={onSelect}
             onRandomize={onRandomize}
           />
-        ) : (
+        )}
+        {activeTab === 'edit' && (
           <ChainEditor chain={chain} actions={actions} onReroll={onReroll} />
+        )}
+        {activeTab === 'out' && (
+          <OutputPanel
+            canvasRef={canvasRef}
+            isLive={isLive}
+            canRecord={canRecord}
+            isRecording={isRecording}
+            onStartRecording={onStartRecording}
+          />
         )}
       </div>
     </div>

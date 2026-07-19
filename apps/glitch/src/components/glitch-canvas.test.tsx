@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { createRef, type RefObject } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Chain, createLink } from '../glitch/chain'
@@ -149,6 +149,38 @@ describe('GlitchCanvas', () => {
     renderCanvas({ liveSource: liveSource(), isRecording: true })
 
     expect(screen.getByTestId('rec-indicator')).toBeTruthy()
+  })
+
+  // The badge is the stop control now (ADR 0020): a take runs while the user works in PRESETS and
+  // EDIT, and the canvas is the one surface every tab shows.
+  describe('the REC badge as the stop control', () => {
+    it('stops the Recording when tapped', () => {
+      const onStopRecording = vi.fn()
+      renderCanvas({ liveSource: liveSource(), isRecording: true, onStopRecording })
+
+      fireEvent.click(screen.getByTestId('rec-indicator'))
+
+      expect(onStopRecording).toHaveBeenCalledOnce()
+    })
+
+    it('carries the elapsed timer', () => {
+      renderCanvas({ liveSource: liveSource(), isRecording: true, elapsedSeconds: 75 })
+
+      expect(screen.getByTestId('rec-indicator')).toHaveTextContent('1:15')
+    })
+
+    // The timer is what a screen reader needs, and punctuation alone wouldn't carry "this stops it".
+    it('names itself as the stop, with the time elapsed', () => {
+      renderCanvas({ liveSource: liveSource(), isRecording: true, elapsedSeconds: 75 })
+
+      expect(screen.getByRole('button', { name: 'stop recording — 1:15 elapsed' })).toBeTruthy()
+    })
+
+    it('announces the elapsing time', () => {
+      renderCanvas({ liveSource: liveSource(), isRecording: true, elapsedSeconds: 5 })
+
+      expect(screen.getByRole('status')).toHaveTextContent('0:05')
+    })
   })
 
   it('shows no recording marker when nothing is being recorded', () => {

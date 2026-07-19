@@ -1,3 +1,4 @@
+import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
 import { type RefObject, useEffect, useRef } from 'react'
 import type { Chain } from '../glitch/chain'
@@ -31,6 +32,8 @@ interface Props {
   canvasRef: RefObject<HTMLCanvasElement>
   onClearSource: () => void
   isRecording?: boolean
+  elapsedSeconds?: number
+  onStopRecording?: () => void
   isMirrored?: boolean
   onMirrorToggle?: () => void
 }
@@ -48,6 +51,8 @@ export default function GlitchCanvas({
   canvasRef,
   onClearSource,
   isRecording,
+  elapsedSeconds = 0,
+  onStopRecording,
   isMirrored = false,
   onMirrorToggle,
 }: Props) {
@@ -115,18 +120,31 @@ export default function GlitchCanvas({
             LIVE
           </span>
         )}
-        {/* Decorative: the ExportBar's timer is the announced one, so this must not double it. */}
+        {/* The badge *is* the stop control (ADR 0020): a take runs while the user keeps working in
+            PRESETS and EDIT, so its stop has to be reachable from every tab — and the badge already
+            marks the one place that is. No new chrome, and it carries the timer that left with the
+            ExportBar. `role="status"` so the elapsing time is announced rather than silently
+            counting; the badge is now the announced timer, so nothing doubles it. */}
         {isRecording && (
-          <span
+          <button
+            type="button"
             data-testid="rec-indicator"
+            onClick={onStopRecording}
+            aria-label={`stop recording — ${formatElapsedTime(elapsedSeconds)} elapsed`}
             className={cn(
               CANVAS_OVERLAY_CHROME,
               'flex items-center gap-2xs text-hot-pink border border-hot-pink',
+              'cursor-pointer transition-colors duration-fast hover:bg-danger-ghost',
             )}
-            aria-hidden="true"
           >
-            <span className="motion-safe:animate-pulse">●</span> REC
-          </span>
+            <span className="motion-safe:animate-pulse" aria-hidden="true">
+              ●
+            </span>
+            <span role="status" aria-live="polite">
+              {formatElapsedTime(elapsedSeconds)}
+            </span>
+            <span aria-hidden="true">⏹</span>
+          </button>
         )}
         {/* Live source-tuning chrome, homed beside clear (ADR 0015): same family as clear — it acts
             on the Source, not the export. A real pixel flip (ADR 0016), so it also toggles the
