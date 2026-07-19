@@ -3,20 +3,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_PRESET } from '../glitch/presets'
 import MobileControls from './mobile-controls'
 
-vi.mock('./preset-picker', () => ({
-  default: () => <div>Presets content</div>,
-}))
-
 vi.mock('./control-panel', () => ({
   default: () => <div>Advanced content</div>,
 }))
 
 const defaultProps = {
   chain: DEFAULT_PRESET.chain,
-  activePresetId: DEFAULT_PRESET.id,
-  isModified: false,
-  onSelect: vi.fn(),
-  onRandomize: vi.fn(),
   actions: {
     onLinkChange: vi.fn(),
     onReorder: vi.fn(),
@@ -37,18 +29,26 @@ describe('MobileControls', () => {
   it('keeps the sheet closed until the trigger is clicked', () => {
     render(<MobileControls {...defaultProps} />)
 
-    expect(screen.queryByText('Presets content')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /advanced/i })).not.toBeInTheDocument()
   })
 
-  // Presets are the front door, so they show the moment the sheet opens — the per-Effect panel
-  // stays folded behind `advanced`.
-  it('opens the sheet on the Presets, with the advanced panel folded away', () => {
+  // The Presets went to the Strip (ADR 0020), so the sheet is the tweak layer alone — and the fold
+  // is still what stands between opening it and the Chain editor.
+  it('opens the sheet on the advanced fold, still folded away', () => {
     render(<MobileControls {...defaultProps} />)
 
     fireEvent.click(screen.getByRole('button', { name: /controls/i }))
 
-    expect(screen.getByText('Presets content')).toBeVisible()
+    expect(screen.getByRole('button', { name: /advanced/i })).toBeVisible()
     expect(screen.queryByText('Advanced content')).not.toBeInTheDocument()
+  })
+
+  it('carries no Preset picker — that surface belongs to the Strip', () => {
+    render(<MobileControls {...defaultProps} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /controls/i }))
+
+    expect(screen.queryByRole('button', { name: /randomize/i })).not.toBeInTheDocument()
   })
 
   it('reveals the advanced panel once the affordance is opened', () => {
@@ -63,10 +63,10 @@ describe('MobileControls', () => {
   it('closes the sheet when the backdrop is clicked', () => {
     render(<MobileControls {...defaultProps} />)
     fireEvent.click(screen.getByRole('button', { name: /controls/i }))
-    expect(screen.getByText('Presets content')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /advanced/i })).toBeInTheDocument()
 
     fireEvent.click(screen.getByTestId('sheet-backdrop'))
 
-    expect(screen.queryByText('Presets content')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /advanced/i })).not.toBeInTheDocument()
   })
 })
