@@ -197,6 +197,100 @@ describe('the Terminal', () => {
   })
 })
 
+describe('state inspection', () => {
+  it('prints one register in hex and decimal', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('step')
+    await type('reg r1')
+
+    expect(screen.getByRole('region', { name: 'Console' }).textContent).toContain(
+      'r1 = 0x00000014  (20)',
+    )
+  })
+
+  it('reports an unknown register name clearly', async () => {
+    render(<App />)
+
+    await type('asm')
+    await type('reg banana')
+
+    expect(screen.getByText(/no register called "banana"/)).toBeInTheDocument()
+  })
+
+  it('dumps a range of memory as words', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('mem 0 4')
+
+    // The first word of TINY is `addi r1, r0, 20`.
+    expect(screen.getByRole('region', { name: 'Console' })).toHaveTextContent('0x04005020')
+  })
+
+  it('dumps the same region as bytes when asked', async () => {
+    render(<App />)
+
+    await type('asm')
+    await type('mem 0 16 bytes')
+
+    // A byte dump carries an ASCII gutter, which a word dump does not.
+    expect(screen.getByRole('region', { name: 'Console' }).textContent).toMatch(/\|.{16}\|/)
+  })
+
+  it('explains the usage rather than guessing at a bad range', async () => {
+    render(<App />)
+
+    await type('mem nowhere')
+
+    expect(screen.getByText(/usage: mem/)).toBeInTheDocument()
+  })
+
+  it('shows flags by name rather than as a hex value', async () => {
+    render(<App />)
+
+    const flags = screen.getByRole('region', { name: 'Flags' })
+    for (const name of ['EQ', 'LT', 'GT', 'ZD', 'OV', 'IV']) {
+      expect(flags).toHaveTextContent(name)
+    }
+  })
+
+  it('lights the flag a comparison sets', async () => {
+    render(<App />)
+    write(['addi r1, r0, 1', 'cmp r1, r1', 'int 0'].join('\n'))
+
+    await type('asm')
+    await type('step')
+    await type('step')
+    await type('reg fr')
+
+    // cmp of equal values sets EQ, which is bit 0.
+    expect(screen.getByText(/fr = 0x00000001/)).toBeInTheDocument()
+  })
+
+  it('shows a memory window that follows the machine', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+
+    expect(screen.getByRole('region', { name: 'Memory' })).toHaveTextContent('0x04005020')
+  })
+
+  // ADR 0018: no panel is interactive; the Console is the only way to look elsewhere.
+  it('keeps every state panel free of controls', () => {
+    render(<App />)
+
+    for (const name of ['Registers', 'Flags', 'Memory', 'Terminal']) {
+      const panel = screen.getByRole('region', { name })
+      expect(panel.querySelectorAll('button, a, input, textarea, select')).toHaveLength(0)
+    }
+  })
+})
+
 // The driver itself is verified by running the app — testing rAF scheduling would test the
 // browser. What is worth asserting here is the grammar around it and the state it leaves behind.
 describe('the clock', () => {

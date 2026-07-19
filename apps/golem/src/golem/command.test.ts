@@ -34,6 +34,36 @@ describe('parseCommand', () => {
     expect(parseCommand(input).kind).toBe('bad-usage')
   })
 
+  it('parses reg with a register name', () => {
+    expect(parseCommand('reg r1')).toEqual({ kind: 'reg', name: 'r1' })
+    expect(parseCommand('reg PC')).toEqual({ kind: 'reg', name: 'pc' })
+  })
+
+  it.each(['reg', 'reg r1 r2'])('rejects %s with usage', (input) => {
+    expect(parseCommand(input).kind).toBe('bad-usage')
+  })
+
+  it.each([
+    ['mem 0', { start: 0, count: 8, unit: 'words' }],
+    ['mem 16 4', { start: 16, count: 4, unit: 'words' }],
+    ['mem 0x10 4', { start: 16, count: 4, unit: 'words' }],
+    ['mem 0 16 bytes', { start: 0, count: 16, unit: 'bytes' }],
+    ['mem 0 words', { start: 0, count: 8, unit: 'words' }],
+  ])('parses %s', (input, expected) => {
+    expect(parseCommand(input)).toEqual({ kind: 'mem', ...expected })
+  })
+
+  it.each([
+    'mem',
+    'mem -1',
+    'mem 0 0',
+    'mem 0 9999',
+    'mem 0 4 nibbles',
+    'mem a b c d',
+  ])('rejects %s with usage', (input) => {
+    expect(parseCommand(input).kind).toBe('bad-usage')
+  })
+
   it('ignores surrounding whitespace and case', () => {
     expect(parseCommand('  STEP  ')).toEqual({ kind: 'step' })
   })
