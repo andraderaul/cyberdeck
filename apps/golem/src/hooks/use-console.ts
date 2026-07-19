@@ -2,11 +2,13 @@
 // is delegated to a pure function in `src/golem/`.
 
 import { useCallback, useRef, useState } from 'react'
+import { downloadText, outputFilename } from '../export/output'
 import { assemble, type Image } from '../golem/assembler'
 import { type Command, parseCommand } from '../golem/command'
 import { formatMemoryDump, formatRegister } from '../golem/inspect'
 import { registerIndex } from '../golem/isa'
 import { createMachine, type Machine, step } from '../golem/machine'
+import { formatHex, formatStep, TRACE_END, TRACE_START } from '../golem/trace'
 import { type ClockRate, useClock } from './use-clock'
 
 /** A line in the Console log. `echo` is what the operator typed, the rest is the tool answering. */
@@ -32,6 +34,17 @@ export interface ConsoleState {
   submit: (input: string) => void
 }
 
+// All five reference programs run in under 400 instructions; this is generous enough that a real
+// program is never truncated, and bounded so `clock max` on an endless loop cannot exhaust memory.
+const TRACE_LIMIT = 100_000
+
+/** Frames the recorded lines the way the reference emulator frames a run, so the two can diff. */
+function wrapTrace(lines: string[]): string {
+  const body =
+    lines.length < TRACE_LIMIT ? lines : [...lines, `[TRACE TRUNCATED AT ${TRACE_LIMIT}]`]
+  return [TRACE_START, ...body, TRACE_END].join('\n')
+}
+
 const GREETING = 'GOLEM ready. Commands: asm, run, stop, step, clock, reset.'
 
 export function useConsole(initialSource: string): ConsoleState {
@@ -44,10 +57,28 @@ export function useConsole(initialSource: string): ConsoleState {
   // and the state is a mirror for the panels. React batches the mirror updates within a frame.
   const machineRef = useRef<Machine | null>(null)
 
+  // Formatted as it happens rather than by retaining every intermediate Machine: each one carries
+  // a full memory array, so keeping them would cost megabytes a second under `clock max`.
+  const traceRef = useRef<string[]>([])
+  const imageRef = useRef<Image | null>(null)
+
   const setMachine = useCallback((next: Machine | null) => {
     machineRef.current = next
     setMachineState(next)
   }, [])
+
+  /** Advances one instruction and records the trace line for it. */
+  const stepRecording = useCallback(
+    (current: Machine): Machine => {
+      const next = step(current)
+      if (traceRef.current.length < TRACE_LIMIT) {
+        traceRef.current.push(formatStep(current, next))
+      }
+      setMachine(next)
+      return next
+    },
+    [setMachine],
+  )
 
   const append = useCallback((entries: Omit<ConsoleLine, 'id'>[]) => {
     setLines((previous) => [
@@ -62,10 +93,8 @@ export function useConsole(initialSource: string): ConsoleState {
     if (current === null || current.halted) {
       return false
     }
-    const next = step(current)
-    setMachine(next)
-    return !next.halted
-  }, [setMachine])
+    return !stepRecording(current).halted
+  }, [stepRecording])
 
   const clock = useClock(advance)
 
@@ -95,6 +124,8 @@ export function useConsole(initialSource: string): ConsoleState {
         return false
       }
 
+      imageRef.current = result.image
+      traceRef.current = []
       setImage(result.image)
       setMachine(createMachine(result.image))
       output.push({
@@ -157,8 +188,7 @@ export function useConsole(initialSource: string): ConsoleState {
             output.push({ kind: 'info', text: 'machine halted — reset to run again' })
             break
           }
-          const next = step(current)
-          setMachine(next)
+          const next = stepRecording(current)
           output.push({
             kind: 'info',
             text: next.halted
@@ -168,9 +198,37 @@ export function useConsole(initialSource: string): ConsoleState {
           break
         }
 
+        case 'export': {
+          if (command.what === 'hex') {
+            const current = imageRef.current
+            if (current === null) {
+              output.push({ kind: 'error', text: 'no image — run asm first' })
+              break
+            }
+            const filename = outputFilename('hex-export')
+            downloadText(filename, formatHex(current.words))
+            output.push({ kind: 'info', text: `wrote ${filename}` })
+            break
+          }
+
+          if (machineRef.current === null) {
+            output.push({ kind: 'error', text: 'no machine — run asm first' })
+            break
+          }
+          const filename = outputFilename('trace-export')
+          downloadText(filename, `${wrapTrace(traceRef.current)}\n`)
+          output.push({
+            kind: 'info',
+            text: `wrote ${filename} — ${traceRef.current.length} instructions`,
+          })
+          break
+        }
+
         case 'reset':
           // The Clock is presentation state, not part of the Machine — its rate survives a reset.
           clock.stop()
+          imageRef.current = null
+          traceRef.current = []
           setMachine(null)
           setImage(null)
           output.push({ kind: 'info', text: 'machine destroyed — editor unlocked' })
@@ -219,7 +277,7 @@ export function useConsole(initialSource: string): ConsoleState {
           break
       }
     },
-    [build, clock, setMachine],
+    [build, clock, setMachine, stepRecording],
   )
 
   const submit = useCallback(

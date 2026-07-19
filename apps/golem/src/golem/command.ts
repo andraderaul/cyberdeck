@@ -14,12 +14,23 @@ export type Command =
   | { kind: 'clock'; rate: number | 'max' }
   | { kind: 'reg'; name: string }
   | { kind: 'mem'; start: number; count: number; unit: MemoryUnit }
+  | { kind: 'export'; what: 'hex' | 'trace' }
   | { kind: 'empty' }
   | { kind: 'unknown'; input: string; suggestion: string | null }
   | { kind: 'bad-usage'; name: string; message: string }
 
 /** Every command name, in the order `help` should list them. */
-export const COMMAND_NAMES = ['asm', 'run', 'stop', 'step', 'clock', 'reg', 'mem', 'reset'] as const
+export const COMMAND_NAMES = [
+  'asm',
+  'run',
+  'stop',
+  'step',
+  'clock',
+  'reg',
+  'mem',
+  'export',
+  'reset',
+] as const
 
 const NO_ARGUMENT_COMMANDS = ['asm', 'step', 'reset', 'run', 'stop'] as const
 
@@ -57,6 +68,14 @@ export function parseCommand(input: string): Command {
 
   if (lowered === 'mem') {
     return parseMem(args)
+  }
+
+  if (lowered === 'export') {
+    const what = args[0]?.toLowerCase()
+    if (args.length !== 1 || (what !== 'hex' && what !== 'trace')) {
+      return { kind: 'bad-usage', name: 'export', message: 'usage: export hex | export trace' }
+    }
+    return { kind: 'export', what }
   }
 
   return { kind: 'unknown', input: name, suggestion: nearestCommand(lowered) }

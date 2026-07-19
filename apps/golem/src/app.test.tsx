@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './app'
 
 /** Drives the Console the way an operator does — it is the only way in (ADR 0018). */
@@ -194,6 +194,92 @@ describe('the Terminal', () => {
     await stepTimes(30)
 
     expect(screen.getByRole('region', { name: 'Console' })).not.toHaveTextContent('Hi\n')
+  })
+})
+
+describe('exporting', () => {
+  /** Captures what a download would have written, without touching the filesystem. */
+  function captureDownloads() {
+    const written: { filename: string; contents: string }[] = []
+
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:stub')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      written.push({ filename: this.download, contents: lastBlobText })
+    })
+
+    let lastBlobText = ''
+    const RealBlob = globalThis.Blob
+    vi.stubGlobal(
+      'Blob',
+      class extends RealBlob {
+        constructor(parts: BlobPart[], options?: BlobPropertyBag) {
+          super(parts, options)
+          lastBlobText = parts.join('')
+        }
+      },
+    )
+
+    return written
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('exports the assembled image in the reference hex format', async () => {
+    const written = captureDownloads()
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('export hex')
+
+    expect(written[0].filename).toBe('golem-image.hex')
+    // add r3, r1, r2 -> z=3, x=1, y=2, so 0xC22 in the low bits.
+    expect(written[0].contents).toBe(
+      ['0x04005020', '0x04005840', '0x00000C22', '0xFC000000', ''].join('\n'),
+    )
+  })
+
+  it('exports the trace of the run so far', async () => {
+    const written = captureDownloads()
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('step')
+    await type('step')
+    await type('export trace')
+
+    const lines = written[0].contents.trimEnd().split('\n')
+    expect(written[0].filename).toBe('golem-trace.txt')
+    expect(lines[0]).toBe('[START OF SIMULATION]')
+    expect(lines[lines.length - 1]).toBe('[END OF SIMULATION]')
+    expect(lines[1]).toBe('addi r1, r0, 20')
+    expect(lines[2]).toMatch(/^\[F\] FR = 0x00000000, R1 = R0 \+ 0x0014 = 0x00000014$/)
+  })
+
+  it.each([
+    ['export hex', /no image/],
+    ['export trace', /no machine/],
+  ])('reports clearly when %s has nothing to write', async (command, message) => {
+    render(<App />)
+
+    await type(command)
+
+    expect(screen.getByText(message)).toBeInTheDocument()
+  })
+
+  it('explains the usage for an unknown export', async () => {
+    render(<App />)
+
+    await type('export everything')
+
+    expect(screen.getByText(/usage: export hex/)).toBeInTheDocument()
   })
 })
 
