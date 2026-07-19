@@ -12,12 +12,9 @@ import AiConfigBanner from './components/ai-config-banner'
 import AnalysisModal from './components/analysis-modal'
 import ApiKeyModal from './components/api-key-modal'
 import AsciiCanvas from './components/ascii-canvas'
-import ControlPanel from './components/control-panel'
+import ControlStrip from './components/control-strip'
 import ExportBar from './components/export-bar'
 import LiveSourceBar from './components/live-source-bar'
-import MobileControls from './components/mobile-controls'
-import PresetPicker from './components/preset-picker'
-import Disclosure from './components/ui/disclosure'
 import HeaderButton from './components/ui/header-button'
 import { outputFilename } from './export/output'
 import { useWebcamState } from './hooks/use-webcam-state'
@@ -175,22 +172,10 @@ export default function App() {
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-1 [grid-template-rows:1fr_auto] sm:grid-cols-[280px_1fr] sm:[grid-template-rows:1fr] overflow-hidden">
-        {/* Progressive disclosure, converged onto GLITCH's model (ADR 0016): Presets are the front
-            door, the per-setting controls fold away behind `advanced`. Hidden on mobile, where
-            MobileControls carries the same stack in a bottom sheet. */}
-        <aside className="hidden sm:flex border-r border-base p-md overflow-y-auto flex-col gap-lg sm:order-first">
-          <PresetPicker
-            settings={settings}
-            activePresetId={activePresetId}
-            onSelect={handlePresetSelect}
-          />
-          <Disclosure label="advanced">
-            <ControlPanel settings={settings} onChange={patchSettings} />
-          </Disclosure>
-        </aside>
-
-        <main className="flex flex-col overflow-hidden">
+      {/* One column at both breakpoints now: the Strip below carries every control, so there is no
+          aside to make room for (ADR 0020). */}
+      <div className="flex-1 flex overflow-hidden">
+        <main className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 relative overflow-hidden">
             <ErrorBoundary
               fallback={
@@ -254,12 +239,17 @@ export default function App() {
         </main>
       </div>
 
-      <MobileControls
-        settings={settings}
-        onSettingsChange={patchSettings}
-        activePresetId={activePresetId}
-        onPresetSelect={handlePresetSelect}
-      />
+      {/* Bottom-anchored at both breakpoints, with the canvas above it never occluded (ADR 0020).
+          Only with a Source: on the empty state the choice is which Source to open, not how to
+          convert it. */}
+      {(sourceImage || sourceVideo) && (
+        <ControlStrip
+          settings={settings}
+          activePresetId={activePresetId}
+          onPresetSelect={handlePresetSelect}
+          onSettingsChange={patchSettings}
+        />
+      )}
 
       {activeModal?.kind === 'apiKey' && (
         <ApiKeyModal

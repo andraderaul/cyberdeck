@@ -56,7 +56,6 @@ vi.mock('./components/ascii-canvas', () => ({ default: () => <canvas /> }))
 vi.mock('./components/control-panel', () => ({ default: () => <div>control</div> }))
 vi.mock('./components/export-bar', () => ({ default: () => <div>export</div> }))
 vi.mock('./components/live-source-bar', () => ({ default: () => <div>live</div> }))
-vi.mock('./components/mobile-controls', () => ({ default: () => <div>mobile</div> }))
 
 import { useAIConfig } from './ai/use-ai-config'
 import { useWebcamState } from './hooks/use-webcam-state'
