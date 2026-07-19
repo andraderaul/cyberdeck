@@ -275,8 +275,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/components/control-strip.tsx` — the Control Strip (ADR 0020): the bottom-anchored control
   surface at both breakpoints and the program's whole control grammar — there is no aside, no sheet
   and no always-visible export bar behind it. PRESETS → EDIT → OUT is the session read left to
-  right. Only the active panel is mounted, so one tab's controls are in the accessibility tree at a
-  time
+  right. The shell is the kit's `TabStrip` (ADR 0020's extraction slice); this file is the wiring
+  that says which panel each tab carries. Only the active panel is mounted, so one tab's controls
+  are in the accessibility tree at a time
 - `src/components/preset-picker.tsx` — the PRESETS panel: the six Preset chips in a horizontally
   scrollable row (active one highlighted, `(modified)` once edited) and Randomize beside them
 - `src/components/chain-editor.tsx` — the Strip's EDIT tab: the Chain as a row of Link chips

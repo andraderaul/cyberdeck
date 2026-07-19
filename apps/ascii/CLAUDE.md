@@ -112,8 +112,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   surface at both breakpoints and the program's whole control grammar — there is no aside and no
   sheet and no always-visible export bar behind it. A tab is
   never rendered ahead of what sits behind it — PRESETS → EDIT → OUT is the session read left to
-  right. Only the active panel is mounted, so one tab's
-  controls are in the accessibility tree at a time. The shell is GLITCH's, ported rather than
+  right. The shell is the kit's `TabStrip`
+  (ADR 0020's extraction slice); this file is the wiring that says which panel each tab carries.
+  Only the active panel is mounted, so one tab's controls are in the accessibility tree at a time. The shell is GLITCH's, ported rather than
   redesigned — whatever lands empty-diff is what crosses into deck-kit
 - `src/components/settings-editor.tsx` — the Strip's EDIT tab: every ConversionSettings control as
   a row of tool chips, the focused tool's control in the panel above. The three sliders are

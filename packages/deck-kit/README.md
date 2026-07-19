@@ -16,7 +16,7 @@ is fine, nothing else consumes it.
 | Import | What |
 |--------|------|
 | `@cyberdeck/deck-kit/utils` | `cn`, `isTouchDevice`, `loadImageFile`, `shareOrDownloadBlob`, `shareOrDownloadCanvas` |
-| `@cyberdeck/deck-kit/ui` | `Button` |
+| `@cyberdeck/deck-kit/ui` | `Button`, `TabStrip`, and the rest of the primitives |
 | `@cyberdeck/deck-kit/tokens.css` | the CSS custom properties (design tokens) |
 | `@cyberdeck/deck-kit/tailwind-preset` | the Tailwind `theme` |
 
