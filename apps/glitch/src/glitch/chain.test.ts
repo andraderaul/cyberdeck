@@ -187,15 +187,15 @@ describe('applyChain', () => {
 })
 
 describe('deriveSeed', () => {
-  it('gives every index its own Seed', () => {
-    const seeds = Array.from({ length: 12 }, (_, index) => deriveSeed(SEED, index))
+  it('gives every occurrence its own Seed', () => {
+    const seeds = Array.from({ length: 12 }, (_, occurrence) => deriveSeed(SEED, occurrence))
 
     expect(new Set(seeds).size).toBe(seeds.length)
   })
 
-  it('displaces the Seed even at index 0', () => {
-    // Without the golden-ratio displacement the first Link would hash toward the global Seed, and
-    // Link 0 would share an arrangement with an unchained call to the same Effect.
+  it('displaces the Seed even at occurrence 0', () => {
+    // A first occurrence drawing the raw Seed is linkSeed's explicit branch (chain.ts), not a
+    // property of this hash — pinning the displacement keeps that branch from looking removable.
     expect(deriveSeed(SEED, 0)).not.toBe(SEED)
   })
 
@@ -203,7 +203,7 @@ describe('deriveSeed', () => {
     expect(deriveSeed(SEED, 3)).toBe(deriveSeed(SEED, 3))
   })
 
-  it('sends two Seeds to unrelated places at the same index', () => {
+  it('sends two Seeds to unrelated places at the same occurrence', () => {
     expect(deriveSeed(SEED, 3)).not.toBe(deriveSeed(SEED + 1, 3))
   })
 })

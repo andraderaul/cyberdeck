@@ -30,24 +30,29 @@ export function createRng(seed: Seed): Rng {
 
 const HASH_MIX = 0x45d9f3b
 
-/** Golden-ratio constant, so index 0 still displaces the Seed instead of hashing it toward itself. */
+/** Golden-ratio constant, so a zero key still displaces the Seed instead of hashing it toward itself. */
 const HASH_DISPLACEMENT = 0x9e3779b9
 
 /**
- * The Seed one Link in the Chain draws on — the global Seed mixed with the Link's own position
- * (ADR 0017). Two Links of the same type therefore get unrelated draws, which is what lets a Chain
- * carry the same Effect twice without the repeats collapsing into an identical arrangement.
+ * The sub-seed a repeated Link draws on — the global Seed mixed with which *occurrence* of its
+ * Effect type the Link is (ADR 0017). Two Links of the same type therefore get unrelated draws,
+ * which is what lets a Chain carry the same Effect twice without the repeats collapsing into an
+ * identical arrangement. A first occurrence never gets here: `linkSeed` (chain.ts) hands it the
+ * raw Seed untouched, which is what keeps a one-of-each Chain byte-identical to the fixed
+ * Pipeline it replaced (the migration golden tests).
  *
- * Derived from the *index* rather than drawn from a stream running along the Chain: a stream would
- * make every Link's arrangement depend on how many draws the Links before it happened to make, so
- * inserting or reordering one Link would scramble every Link downstream. ADR 0017 rejected that
- * explicitly, for the same reason Noise hashes a pixel's position instead of streaming.
+ * Keyed on occurrence rather than the Link's index — ADR 0017 as amended: a position key changes
+ * what a Link draws the moment anything moves, and could never reproduce the old Pipeline, which
+ * handed the raw Seed to every seeded Effect regardless of position. Hashed rather than drawn
+ * from a stream running along the Chain, because a stream would make every Link's arrangement
+ * depend on how many draws the Links before it happened to make — the same reason Noise hashes a
+ * pixel's position instead of streaming.
  *
- * The accepted cost, recorded in the ADR: moving a Link to a new index gives it a new arrangement.
- * A reorder is already a deliberate edit to the look, so the reshuffle rides along with it.
+ * The accepted cost, recorded in the ADR: two Links of the same type swap arrangements when
+ * reordered past each other.
  */
-export function deriveSeed(seed: Seed, index: number): Seed {
-  let hash = (seed ^ Math.imul(index + 1, HASH_DISPLACEMENT)) | 0
+export function deriveSeed(seed: Seed, occurrence: number): Seed {
+  let hash = (seed ^ Math.imul(occurrence + 1, HASH_DISPLACEMENT)) | 0
   hash = Math.imul(hash ^ (hash >>> 16), HASH_MIX)
   hash = Math.imul(hash ^ (hash >>> 13), HASH_MIX)
   return (hash ^ (hash >>> 16)) | 0
