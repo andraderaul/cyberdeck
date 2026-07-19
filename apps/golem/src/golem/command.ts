@@ -14,6 +14,8 @@ export type Command =
   | { kind: 'reg'; name: string }
   | { kind: 'mem'; start: number; count: number; unit: MemoryUnit }
   | { kind: 'export'; what: 'hex' | 'trace' }
+  /** `null` when unargued, which lists the available programs rather than failing. */
+  | { kind: 'load'; name: string | null }
   | { kind: 'share' }
   | { kind: 'help'; topic: string | null }
   | { kind: 'break'; line: number }
@@ -33,6 +35,7 @@ export const COMMAND_NAMES = [
   'reg',
   'mem',
   'export',
+  'load',
   'share',
   'break',
   'breaks',
@@ -108,6 +111,15 @@ export function parseCommand(input: string): Command {
       return { kind: 'bad-usage', name: 'help', message: 'usage: help [command]' }
     }
     return { kind: 'help', topic: args[0]?.toLowerCase() ?? null }
+  }
+
+  // `load` with no argument lists the names rather than erroring: an operator who does not know
+  // what is on offer is the exact person typing it.
+  if (lowered === 'load') {
+    if (args.length > 1) {
+      return { kind: 'bad-usage', name: 'load', message: 'usage: load [name]' }
+    }
+    return { kind: 'load', name: args[0]?.toLowerCase() ?? null }
   }
 
   if (lowered === 'export') {
@@ -202,10 +214,19 @@ function parseClock(args: string[]): Command {
  * sharing a couple of letters does not.
  */
 export function nearestCommand(input: string): string | null {
+  return nearest(input, COMMAND_NAMES)
+}
+
+/**
+ * The closest of `candidates` within the same threshold — shared so a mistyped program name gets
+ * the same treatment as a mistyped command, rather than a second, subtly different notion of
+ * "close enough".
+ */
+export function nearest(input: string, candidates: readonly string[]): string | null {
   let best: string | null = null
   let bestDistance = Number.POSITIVE_INFINITY
 
-  for (const name of COMMAND_NAMES) {
+  for (const name of candidates) {
     const distance = editDistance(input, name)
     if (distance < bestDistance) {
       best = name

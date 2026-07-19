@@ -4,11 +4,12 @@
 import { useCallback, useRef, useState } from 'react'
 import { downloadText, outputFilename } from '../export/output'
 import { assemble, type Image, wordIndexForLine } from '../golem/assembler'
-import { type Command, parseCommand } from '../golem/command'
+import { type Command, nearest, parseCommand } from '../golem/command'
 import { GREETING, helpFor, helpLines } from '../golem/help'
 import { formatMemoryDump, formatRegister, hex32 } from '../golem/inspect'
 import { PC, registerIndex, SOFTWARE_VECTOR } from '../golem/isa'
 import { createMachine, type Machine, type StepEvent, step } from '../golem/machine'
+import { PROGRAM_NAMES, PROGRAMS, programNamed } from '../golem/programs'
 import { encode } from '../golem/share'
 import { formatHex, formatStep, frameTrace } from '../golem/trace'
 import { type ClockRate, useClock } from './use-clock'
@@ -116,6 +117,19 @@ async function shareSource(
 }
 
 export function useConsole(initialSource: string): ConsoleState {
+  /**
+   * Whether replacing this Source would destroy anything. The starter example and a program that
+   * was itself loaded are not the operator's work, so `load` overwrites them without ceremony;
+   * anything else earns one refusal first.
+   */
+  const isDisposable = useCallback(
+    (current: string): boolean =>
+      current.trim() === '' ||
+      current === initialSource ||
+      PROGRAMS.some((program) => program.source === current),
+    [initialSource],
+  )
+
   const [source, setSourceState] = useState(initialSource)
   const [machine, setMachineState] = useState<Machine | null>(null)
   const [image, setImage] = useState<Image | null>(null)
@@ -146,6 +160,10 @@ export function useConsole(initialSource: string): ConsoleState {
   const syncBreakpoints = useCallback(() => {
     setBreakpoints(new Set(breakpointsRef.current))
   }, [])
+
+  // The program `load` is waiting for a second confirmation on. Cleared by any other command, so
+  // the confirmation cannot be answered by something typed minutes later.
+  const pendingLoadRef = useRef<string | null>(null)
 
   // The PC a run paused at, so resuming skips that one breakpoint instead of tripping it again.
   // Any step or machine replacement invalidates it — see setMachine.
@@ -278,6 +296,10 @@ export function useConsole(initialSource: string): ConsoleState {
 
   const dispatch = useCallback(
     (command: Command, output: Omit<ConsoleLine, 'id'>[]): void => {
+      if (command.kind !== 'load') {
+        pendingLoadRef.current = null
+      }
+
       switch (command.kind) {
         case 'asm':
           build(output)
@@ -357,6 +379,60 @@ export function useConsole(initialSource: string): ConsoleState {
             kind: 'info',
             text: `wrote ${filename} — ${traceRef.current.length} instructions`,
           })
+          break
+        }
+
+        case 'load': {
+          if (command.name === null) {
+            output.push({ kind: 'info', text: 'programs:' })
+            output.push(
+              ...PROGRAMS.map((program) => ({
+                kind: 'info' as const,
+                text: `  ${program.name.padEnd(14)}${program.summary}`,
+              })),
+            )
+            break
+          }
+
+          // The three-state model holds by construction rather than by warning: with a Machine
+          // alive the editor is locked, so there is nothing to load into.
+          if (machineRef.current !== null) {
+            output.push({
+              kind: 'error',
+              text: 'a machine is running — reset first, then load',
+            })
+            break
+          }
+
+          const program = programNamed(command.name)
+          if (program === null) {
+            const suggestion = nearest(command.name, PROGRAM_NAMES)
+            output.push({
+              kind: 'error',
+              text: suggestion
+                ? `no program called "${command.name}" — did you mean "${suggestion}"?`
+                : `no program called "${command.name}" — try "load" to list them`,
+            })
+            break
+          }
+
+          // Loading destroys whatever is in the editor. Work the operator typed gets one refusal
+          // first; the starter example and an already-loaded program are not work, so the
+          // signature scene — `load watchdog`, `run` — stays a single command.
+          if (!isDisposable(source) && pendingLoadRef.current !== program.name) {
+            pendingLoadRef.current = program.name
+            output.push({
+              kind: 'error',
+              text: `"load ${program.name}" would replace what you have written — run it again to confirm, or "share" first to keep a link to it`,
+            })
+            break
+          }
+
+          pendingLoadRef.current = null
+          setSourceState(program.source)
+          saveSource(program.source)
+          clearShareFragment()
+          output.push({ kind: 'info', text: `loaded ${program.name} — ${program.summary}` })
           break
         }
 
@@ -474,7 +550,17 @@ export function useConsole(initialSource: string): ConsoleState {
           break
       }
     },
-    [append, build, clock, requireMachine, setMachine, source, stepRecording, syncBreakpoints],
+    [
+      append,
+      build,
+      clock,
+      isDisposable,
+      requireMachine,
+      setMachine,
+      source,
+      stepRecording,
+      syncBreakpoints,
+    ],
   )
 
   const submit = useCallback(
