@@ -62,6 +62,9 @@ function Listing({
 
   useEffect(() => {
     // Follows the PC out of view during a run, so control flow stays watchable without scrolling.
+    if (currentLine === null) {
+      return
+    }
     activeRef.current?.scrollIntoView({ block: 'nearest' })
   }, [currentLine])
 
