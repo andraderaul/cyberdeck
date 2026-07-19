@@ -2,7 +2,7 @@
   "name": "@cyberdeck/deck-kit",
   "description": "The shared shell every program on the deck builds on — visual language, ui/ primitives, framework-neutral hooks and utils, and generic browser plumbing. Consumed as source (ADR 0014).",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "license": "MIT",
   "type": "module",
   "exports": {

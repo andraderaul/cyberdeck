@@ -2,7 +2,7 @@
   "name": "@cyberdeck/glitch",
   "description": "Client-side tool that applies a pipeline of glitch effects over an image with real-time preview and export.",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "license": "MIT",
   "type": "module",
   "scripts": {

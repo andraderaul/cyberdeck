@@ -1,5 +1,53 @@
 ## [1.25.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.24.0...v1.25.0) (2026-07-16)
 
+## 1.28.0
+
+### Minor Changes
+
+- 4bd889a: ASCII//Convert adopts the Control Strip (ADR 0020), the anatomy proven in GLITCH//Studio: a
+  horizontal, bottom-anchored surface at both breakpoints, opening on PRESETS with the canvas visible
+  throughout. The EDIT tab carries every ConversionSettings control as tool chips — charset, color
+  mode, resolution, brightness, contrast — with the focused tool's control in the panel above the
+  row, and the three sliders reading as one group on desktop.
+
+  The legacy control surfaces are gone with it: the desktop aside, the mobile bottom sheet and its
+  floating trigger, and the `advanced` Disclosure. Both programs now share one control grammar.
+
+- 4bd889a: ASCII//Convert's OUT tab (ADR 0020) unifies the two per-source bars into one surface with source
+  gating: a Source Image offers PNG and TXT Export plus AI Analysis, a Live Source offers Capture,
+  Recording and AI Analysis. The AI config banner is rehomed inside OUT, beside the Analysis it
+  advertises, and its configure flow still opens the API key modal.
+
+  Recording's start and stop now live apart, as in GLITCH: start is a control in OUT, stop is the
+  canvas REC badge, which becomes tappable and carries the elapsed timer — so a take survives a tab
+  switch and is stoppable from anywhere.
+
+  ExportBar and LiveSourceBar are gone. A full ASCII session — choose a Source, apply a Preset, tune
+  the conversion, Export/Capture/Analyze — now runs in the Strip alone, and both programs share one
+  control grammar.
+
+### Patch Changes
+
+- 4bd889a: The Control Strip's shell crosses into deck-kit as `TabStrip` (ADR 0020's extraction slice). With
+  the Strip landed in both programs, the tablist markup, the selected-tab state and the single
+  mounted panel were byte-identical — ADR 0014's "empty diff plus two real callers" met exactly. The
+  tab set and the panels stay in each app: those are vocabulary and domain surface, and neither
+  crosses the seam.
+
+  `MobileBottomSheet` is removed from the kit. It lost its only two callers when the sheets died, and
+  nothing on the deck references it.
+
+- 4bd889a: Reorder a Link by dragging it on a phone. The Chain row used HTML5 drag-and-drop, which never fires
+  on touch, so reordering was reachable only with a mouse or a keyboard — the one structural edit
+  that stayed desktop-only. Pointer Events replace it, covering mouse, pen and finger through one
+  path.
+
+  The REC badge's hover no longer goes translucent over the artwork (GLITCH), and neither badge
+  announces its timer once a second any more — the accessible name carries the elapsed time instead.
+
+- Updated dependencies [4bd889a]
+  - @cyberdeck/deck-kit@0.1.0
+
 ## 1.27.1
 
 ### Patch Changes
