@@ -8,16 +8,10 @@ import { useAIConfig } from './ai/use-ai-config'
 import type { Preset } from './ascii/presets'
 import type { ConversionSettings } from './ascii/types'
 import AboutModal from './components/about-modal'
-import AiConfigBanner from './components/ai-config-banner'
 import AnalysisModal from './components/analysis-modal'
 import ApiKeyModal from './components/api-key-modal'
 import AsciiCanvas from './components/ascii-canvas'
-import ControlPanel from './components/control-panel'
-import ExportBar from './components/export-bar'
-import LiveSourceBar from './components/live-source-bar'
-import MobileControls from './components/mobile-controls'
-import PresetPicker from './components/preset-picker'
-import Disclosure from './components/ui/disclosure'
+import ControlStrip from './components/control-strip'
 import HeaderButton from './components/ui/header-button'
 import { outputFilename } from './export/output'
 import { useWebcamState } from './hooks/use-webcam-state'
@@ -175,22 +169,10 @@ export default function App() {
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-1 [grid-template-rows:1fr_auto] sm:grid-cols-[280px_1fr] sm:[grid-template-rows:1fr] overflow-hidden">
-        {/* Progressive disclosure, converged onto GLITCH's model (ADR 0016): Presets are the front
-            door, the per-setting controls fold away behind `advanced`. Hidden on mobile, where
-            MobileControls carries the same stack in a bottom sheet. */}
-        <aside className="hidden sm:flex border-r border-base p-md overflow-y-auto flex-col gap-lg sm:order-first">
-          <PresetPicker
-            settings={settings}
-            activePresetId={activePresetId}
-            onSelect={handlePresetSelect}
-          />
-          <Disclosure label="advanced">
-            <ControlPanel settings={settings} onChange={patchSettings} />
-          </Disclosure>
-        </aside>
-
-        <main className="flex flex-col overflow-hidden">
+      {/* One column at both breakpoints now: the Strip below carries every control, so there is no
+          aside to make room for (ADR 0020). */}
+      <div className="flex-1 flex overflow-hidden">
+        <main className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 relative overflow-hidden">
             <ErrorBoundary
               fallback={
@@ -208,6 +190,8 @@ export default function App() {
                   canvasRef={canvasRef}
                   isMirrored={isMirrored}
                   isRecording={isRecording}
+                  elapsedSeconds={elapsedSeconds}
+                  onStopRecording={stopRecording}
                   isLive={!!sourceVideo}
                   onClearSource={handleClearSource}
                   onMirrorToggle={handleMirrorToggle}
@@ -223,43 +207,30 @@ export default function App() {
               )}
             </ErrorBoundary>
           </div>
-          {(sourceImage || sourceVideo) && (
-            <div className="flex flex-col gap-xs py-sm px-md border-t border-base shrink-0">
-              {!aiConfig && (
-                <AiConfigBanner onConfigure={() => setActiveModal({ kind: 'apiKey' })} />
-              )}
-              {sourceVideo ? (
-                <LiveSourceBar
-                  canvasRef={canvasRef}
-                  hasAiConfig={!!aiConfig}
-                  onAnalyze={handleAnalyze}
-                  canRecord={canRecord}
-                  isRecording={isRecording}
-                  elapsedSeconds={elapsedSeconds}
-                  onStartRecording={startRecording}
-                  onStopRecording={stopRecording}
-                />
-              ) : (
-                <ExportBar
-                  canvasRef={canvasRef}
-                  asciiRows={asciiRows}
-                  hasImage={!!sourceImage}
-                  canvasDimensions={canvasDimensions}
-                  hasAiConfig={!!aiConfig}
-                  onAnalyze={handleAnalyze}
-                />
-              )}
-            </div>
-          )}
         </main>
       </div>
 
-      <MobileControls
-        settings={settings}
-        onSettingsChange={patchSettings}
-        activePresetId={activePresetId}
-        onPresetSelect={handlePresetSelect}
-      />
+      {/* Bottom-anchored at both breakpoints, with the canvas above it never occluded (ADR 0020).
+          Only with a Source: on the empty state the choice is which Source to open, not how to
+          convert it. */}
+      {(sourceImage || sourceVideo) && (
+        <ControlStrip
+          canvasRef={canvasRef}
+          asciiRows={asciiRows}
+          isLive={!!sourceVideo}
+          canvasDimensions={canvasDimensions}
+          hasAiConfig={!!aiConfig}
+          onAnalyze={handleAnalyze}
+          onConfigureAi={() => setActiveModal({ kind: 'apiKey' })}
+          canRecord={canRecord}
+          isRecording={isRecording}
+          onStartRecording={startRecording}
+          settings={settings}
+          activePresetId={activePresetId}
+          onPresetSelect={handlePresetSelect}
+          onSettingsChange={patchSettings}
+        />
+      )}
 
       {activeModal?.kind === 'apiKey' && (
         <ApiKeyModal

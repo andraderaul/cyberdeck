@@ -1,0 +1,319 @@
+/* ============================================================
+   ASCII//CONVERT — DESIGN TOKENS
+   Cyberpunk client-side ASCII art converter
+   Convenience copy of packages/deck-kit/src/tokens.css (ADR 0014)
+   for standalone prototypes — if the two disagree, the kit wins.
+   ============================================================ */
+
+/* Fonts ----------------------------------------------------- */
+@font-face {
+  font-family: "Departure Mono";
+  src: url("./fonts/DepartureMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap");
+
+:root {
+  /* ============================================================
+     COLOR PRIMITIVES — the cyberpunk neon palette
+     ============================================================ */
+
+  /* Violet — primary accent. "ASCII//CONVERT" wordmark, primary buttons,
+     active toggles, slider thumbs, focus rings. */
+  --violet: #b829ff;
+  --deep-violet: #7b1fa2;
+  --soft-violet: #d888ff;
+
+  /* Cyan — secondary / info. Secondary buttons, source-code link,
+     LOW threat level, tag badges. */
+  --cyan: #00e5ff;
+  --deep-cyan: #0097a7;
+  --soft-cyan: #80f4ff;
+
+  /* Hot Pink — destructive / live. Webcam LIVE indicator, capture/record
+     buttons, HIGH/CRITICAL threat level, toast borders. */
+  --hot-pink: #ff2d78;
+  --deep-pink: #c2185b;
+  --soft-pink: #ff80ab;
+
+  /* Electric — warning / quota. MODERATE threat, parse errors, recoverable
+     states. Use sparingly. */
+  --electric: #ffe600;
+  --deep-electric: #b8a800;
+  --soft-electric: #fff176;
+
+  /* Void ramp — backgrounds and chrome, near-black violet-tinted */
+  --void: #0a0a0f;     /* app background */
+  --abyss: #0f0f1a;    /* card / surface */
+  --shadow: #1a1a2e;   /* elevated panel, toast bg */
+  --slate: #2a2a4a;    /* borders, dividers */
+  --muted: #6b6b9a;    /* subtle text, ghost labels */
+  --dim: #9898c0;      /* secondary text */
+  --ghost: #c8c8e0;    /* primary text */
+  --white: #eeeef8;    /* selection foreground only */
+
+  /* ============================================================
+     SEMANTIC COLORS — what to reach for in components
+     ============================================================ */
+
+  --accent: var(--violet);
+  --accent-deep: var(--deep-violet);
+  --accent-soft: var(--soft-violet);
+
+  --fg: var(--ghost);
+  --fg-muted: var(--dim);
+  --fg-subtle: var(--muted);
+
+  --bg: var(--void);
+  --bg-surface: var(--abyss);
+  --bg-elevated: var(--shadow);
+  --bg-overlay: var(--slate);
+
+  --color-info: var(--cyan);
+  --color-info-deep: var(--deep-cyan);
+  --color-info-soft: var(--soft-cyan);
+  --color-info-bg: #001a1e;
+
+  --color-danger: var(--hot-pink);
+  --color-danger-deep: var(--deep-pink);
+  --color-danger-soft: var(--soft-pink);
+  --color-danger-bg: #1e0010;
+
+  --color-warning: var(--electric);
+  --color-warning-deep: var(--deep-electric);
+  --color-warning-soft: var(--soft-electric);
+  --color-warning-bg: #1a1a00;
+
+  --color-accent-bg: #1a0a2e;
+
+  /* Transparent state surfaces — for hover/active fills over dark bg */
+  --bg-accent-ghost: rgba(184, 41, 255, 0.05);
+  --bg-accent-dim: rgba(184, 41, 255, 0.08);
+  --bg-accent-soft: rgba(184, 41, 255, 0.12);
+  --bg-danger-ghost: rgba(255, 45, 120, 0.08);
+  --bg-info-ghost: rgba(0, 229, 255, 0.06);
+  --bg-modal-overlay: rgba(8, 8, 18, 0.72);
+
+  /* ============================================================
+     TYPOGRAPHY — monospace only, no proportional faces
+     ============================================================ */
+
+  --font-mono: "IBM Plex Mono", "Departure Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: "Departure Mono", "IBM Plex Mono", ui-monospace, monospace;
+
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-md: 18px;
+  --text-lg: 24px;
+  --text-xl: 32px;
+  --text-2xl: 48px;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.6;
+  --leading-loose: 1.8;
+
+  /* Tracking — wide letter-spacing is a core motif. Most UI labels
+     use tracking-wide; section headers use wider; logos go to widest. */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0.02em;
+  --tracking-wide: 0.08em;
+  --tracking-wider: 0.12em;
+  --tracking-widest: 0.18em;
+
+  /* ============================================================
+     SPACING — 4/8/16 baseline. Macro sections use a separate scale.
+     ============================================================ */
+
+  --sp-xs: 16px;
+  --sp-sm: 32px;
+  --sp-md: 64px;
+  --sp-lg: 96px;
+  --sp-xl: 128px;
+  --sp-2xl: 160px;
+
+  --gap-xs: 4px;
+  --gap-2xs: 6px;
+  --gap-sm: 8px;
+  --gap-md: 16px;
+  --gap-lg: 24px;
+  --gap-xl: 32px;
+  --gap-2xl: 48px;
+  --gap-3xl: 64px;
+
+  /* ============================================================
+     BORDERS — sharp, thin, single-pixel by default
+     ============================================================ */
+
+  --border-width-thin: 1px;
+  --border-width-base: 1px;
+  --border-width-accent: 2px;  /* primary buttons, modal top edge */
+  --border-width-thick: 3px;
+
+  --border-color-subtle: var(--shadow);
+  --border-color-base: var(--slate);
+  --border-color-strong: var(--muted);
+
+  --border-subtle: 1px solid var(--shadow);
+  --border-base: 1px solid var(--slate);
+  --border-strong: 1px solid var(--muted);
+  --border-accent: 2px solid var(--violet);
+  --border-info: 1px solid var(--cyan);
+  --border-danger: 1px solid var(--hot-pink);
+  --border-warning: 1px solid var(--electric);
+
+  /* ============================================================
+     RADII — almost-sharp. No pill-shaped buttons. radius-pill exists
+     only for status dots / progress markers.
+     ============================================================ */
+
+  --radius-none: 0px;
+  --radius-xs: 2px;   /* default for buttons, inputs, cards */
+  --radius-sm: 4px;   /* modals */
+  --radius-md: 6px;   /* rare — only larger surfaces */
+  --radius-pill: 999px;
+
+  /* ============================================================
+     MOTION — flick = overshoot, smooth = standard, sharp = decisive
+     ============================================================ */
+
+  --ease-flick: cubic-bezier(0.36, 2.09, 0.07, -1.52);
+  --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-sharp: cubic-bezier(0.4, 0, 0.6, 1);
+  --ease-snap: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --duration-instant: 80ms;
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+  --duration-slower: 600ms;
+
+  --transition-base: var(--duration-base) var(--ease-smooth);
+  --transition-fast: var(--duration-fast) var(--ease-sharp);
+  --transition-bounce: var(--duration-base) var(--ease-flick);
+
+  /* ============================================================
+     COMPONENT TOKENS
+     ============================================================ */
+
+  /* Cards */
+  --card-bg: var(--abyss);
+  --card-border: var(--border-base);
+  --card-padding: var(--gap-xl);
+  --card-radius: var(--radius-xs);
+
+  /* Buttons */
+  --btn-font: var(--font-mono);
+  --btn-tracking: var(--tracking-wide);
+  --btn-radius: var(--radius-xs);
+  --btn-min-height: 44px;
+
+  --btn-primary-padding: 14px 32px;
+  --btn-primary-border: 2px solid var(--violet);
+  --btn-primary-color: var(--violet);
+  --btn-primary-bg: var(--color-accent-bg);
+  --btn-primary-size: 14px;
+  --btn-primary-weight: var(--weight-bold);
+
+  --btn-secondary-padding: 10px 24px;
+  --btn-secondary-border: 1px solid var(--cyan);
+  --btn-secondary-color: var(--cyan);
+  --btn-secondary-bg: var(--color-info-bg);
+  --btn-secondary-size: 13px;
+  --btn-secondary-weight: var(--weight-medium);
+
+  --btn-ghost-border: 1px solid var(--slate);
+  --btn-ghost-color: var(--muted);
+  --btn-ghost-bg: transparent;
+  --btn-ghost-size: 13px;
+
+  /* Inputs */
+  --input-bg: var(--abyss);
+  --input-border: var(--border-base);
+  --input-border-focus: 1px solid var(--violet);
+  --input-color: var(--ghost);
+  --input-placeholder: var(--muted);
+  --input-padding: 10px 14px;
+  --input-font-size: var(--text-sm);
+  --input-radius: var(--radius-xs);
+}
+
+/* ============================================================
+   BASE TYPE STYLES — semantic shortcuts
+   ============================================================ */
+
+body {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-normal);
+  color: var(--fg);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--violet);
+  color: var(--white);
+}
+
+/* Display heading — the "ASCII//CONVERT" wordmark / hero titles */
+.t-display {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wider);
+  color: var(--violet);
+  line-height: var(--leading-tight);
+  text-transform: uppercase;
+}
+
+/* Section header — "NEURAL SCAN RESULTS", "AI CONFIG" */
+.t-section {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wider);
+  color: var(--violet);
+  text-transform: uppercase;
+}
+
+/* Label — the small uppercase tag above every form control */
+.t-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+}
+
+/* Body — default paragraph text */
+.t-body {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--fg);
+}
+
+/* Caption — meta text, helper strings */
+.t-caption {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+/* Code / data — same family but emphasized, used for ASCII output */
+.t-code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--violet);
+  letter-spacing: 0;
+}

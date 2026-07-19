@@ -30,7 +30,9 @@ const FG = {
   fgMuted: '#9898c0',
   // Carries the LIVE / REC badges, the recording timer, and every danger affordance
   hotPink: '#ff2d78',
-  // Carries the mobile "⚙ controls" trigger, which floats over the canvas — a canvas overlay too
+  // Carries the Strip's active tab and every accent affordance. It stopped being canvas overlay
+  // chrome when the mobile "⚙ controls" trigger died with the sheet (ADR 0020), so it is pinned
+  // on the surface backgrounds alone now.
   violet: '#b829ff',
 }
 
@@ -65,10 +67,11 @@ describe('WCAG AA-small contrast pins (≥ 4.5:1)', () => {
       expect(contrastRatio(FG.fgMuted, BG.void)).toBeGreaterThanOrEqual(4.5)
     })
 
-    // The mobile "⚙ controls" trigger floats over the canvas, so it stands on --bg like the badges
-    // rather than on --abyss, where violet would fall to 4.35:1.
-    it('controls trigger text passes', () => {
-      expect(contrastRatio(FG.violet, BG.void)).toBeGreaterThanOrEqual(4.5)
+    // The REC badge is a button now (ADR 0020), so ADR 0013's opaque-background rule binds its
+    // hover state too — a translucent hover would put the user's artwork back under the text the
+    // resting pair was audited for. --shadow is what the hover uses; this is that pair.
+    it('REC badge text passes on its hover surface', () => {
+      expect(contrastRatio(FG.hotPink, BG.shadow)).toBeGreaterThanOrEqual(4.5)
     })
   })
 })

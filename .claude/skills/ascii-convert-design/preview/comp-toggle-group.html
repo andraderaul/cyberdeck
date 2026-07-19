@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 16px 20px; gap: 10px; flex-direction: column; justify-content: center; align-items: stretch; }
+  .label { font-size: 10px; letter-spacing: 0.08em; color: var(--fg-muted); text-transform: uppercase; }
+  .group { display: flex; gap: 4px; flex-wrap: wrap; }
+  .opt {
+    min-height: 32px; padding: 6px 12px;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+    border-radius: 2px; background: transparent; cursor: pointer;
+    border: 1px solid var(--slate); color: var(--fg-muted);
+  }
+  .opt.active { border-color: var(--violet); background: var(--bg-accent-soft); color: var(--violet); }
+</style>
+</head>
+<body>
+<div class="card">
+  <span class="label">color mode</span>
+  <div class="group">
+    <button class="opt active">matrix</button>
+    <button class="opt">bw</button>
+    <button class="opt">retro</button>
+    <button class="opt">sepia</button>
+    <button class="opt">neon</button>
+    <button class="opt">original</button>
+  </div>
+  <span class="label">charset</span>
+  <div class="group">
+    <button class="opt">classic</button>
+    <button class="opt active">sharp</button>
+    <button class="opt">detailed</button>
+    <button class="opt">blocks</button>
+    <button class="opt">braille</button>
+    <button class="opt">katakana</button>
+  </div>
+</div>
+</body>
+</html>

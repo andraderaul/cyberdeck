@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 18px 20px; gap: 14px; align-items: stretch; flex-direction: column; justify-content: center; }
+  .swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .sw { display: flex; flex-direction: column; gap: 6px; }
+  .chip {
+    height: 56px; border: 1px solid var(--slate); border-radius: 2px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 6px 8px;
+  }
+  .chip .hex { font-size: 10px; color: rgba(10,10,15,0.9); font-weight: 700; letter-spacing: 0.04em; }
+  .sw .name { font-size: 11px; letter-spacing: var(--tracking-wide); color: var(--fg); }
+  .sw .role { font-size: 10px; letter-spacing: var(--tracking-wide); color: var(--fg-subtle); text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="swatches">
+    <div class="sw">
+      <div class="chip" style="background: var(--cyan);"><span class="hex">#00E5FF</span></div>
+      <span class="name">--cyan</span>
+      <span class="role">info / secondary</span>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background: var(--deep-cyan);"><span class="hex" style="color:#fff">#0097A7</span></div>
+      <span class="name">--deep-cyan</span>
+      <span class="role">deep / dim</span>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background: var(--soft-cyan);"><span class="hex">#80F4FF</span></div>
+      <span class="name">--soft-cyan</span>
+      <span class="role">soft / hover</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

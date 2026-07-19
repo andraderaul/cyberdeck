@@ -1,0 +1,32 @@
+/* Shared preview card chrome.
+   Each preview card has minimal framing — the asset name renders
+   outside the card, so just show the specimen with a thin border. */
+@import url("../colors_and_type.css");
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--void);
+  color: var(--fg);
+  font-family: var(--font-mono);
+}
+
+.card {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--slate);
+  border-radius: var(--radius-xs);
+  padding: var(--gap-lg);
+  display: flex;
+}
+
+/* Utility classes used across cards */
+.row { display: flex; align-items: center; gap: var(--gap-md); }
+.col { display: flex; flex-direction: column; gap: var(--gap-md); }
+.mono { font-family: var(--font-mono); }
+.muted { color: var(--fg-muted); }
+.subtle { color: var(--fg-subtle); }
+.label { font-size: var(--text-xs); letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--fg-muted); }
+.meta { font-size: 10px; letter-spacing: var(--tracking-wide); color: var(--fg-subtle); text-transform: uppercase; }

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 18px 20px; gap: 14px; align-items: stretch; flex-direction: column; justify-content: center; }
+  .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .sw { display: flex; flex-direction: column; gap: 5px; }
+  .chip {
+    height: 48px; border-radius: 2px; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; letter-spacing: var(--tracking-wide);
+  }
+  .sw .name { font-size: 10px; letter-spacing: var(--tracking-wide); color: var(--fg); }
+  .sw .role { font-size: 9px; letter-spacing: var(--tracking-wide); color: var(--fg-subtle); text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="swatches">
+    <div class="sw">
+      <div class="chip" style="background: var(--color-accent-bg); border: 2px solid var(--violet); color: var(--violet);">ACCENT</div>
+      <span class="name">--accent</span>
+      <span class="role">violet · primary</span>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background: var(--color-info-bg); border: 1px solid var(--cyan); color: var(--cyan);">INFO</div>
+      <span class="name">--color-info</span>
+      <span class="role">cyan · secondary</span>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background: var(--color-danger-bg); border: 1px solid var(--hot-pink); color: var(--hot-pink);">DANGER</div>
+      <span class="name">--color-danger</span>
+      <span class="role">pink · live</span>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background: var(--color-warning-bg); border: 1px solid var(--electric); color: var(--electric);">WARNING</div>
+      <span class="name">--color-warning</span>
+      <span class="role">electric</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

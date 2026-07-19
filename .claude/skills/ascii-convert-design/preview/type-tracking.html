@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 18px 24px; gap: 8px; flex-direction: column; justify-content: center; }
+  .row {
+    display: grid; grid-template-columns: 70px 1fr 120px;
+    align-items: baseline; gap: 12px; padding: 5px 0;
+    border-bottom: 1px dashed var(--shadow);
+  }
+  .row:last-child { border-bottom: none; }
+  .meta { font-size: 10px; color: var(--fg-subtle); letter-spacing: 0.06em; text-transform: uppercase; }
+  .sample { font-size: 14px; color: var(--fg); }
+  .name { font-size: 10px; color: var(--fg-subtle); letter-spacing: 0.06em; text-align: right; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="row"><span class="meta">tight</span><span class="sample" style="letter-spacing:-0.02em;">Compact body text</span><span class="name">-0.02em</span></div>
+  <div class="row"><span class="meta">normal</span><span class="sample" style="letter-spacing:0.02em;">Default paragraph text</span><span class="name">0.02em</span></div>
+  <div class="row"><span class="meta">wide</span><span class="sample" style="letter-spacing:0.08em; text-transform:uppercase;">BUTTON LABEL</span><span class="name">0.08em</span></div>
+  <div class="row"><span class="meta">wider</span><span class="sample" style="letter-spacing:0.12em; text-transform:uppercase; color:var(--violet); font-weight:700;">SECTION HEADER</span><span class="name">0.12em</span></div>
+  <div class="row"><span class="meta">widest</span><span class="sample" style="letter-spacing:0.18em; text-transform:uppercase; color:var(--violet); font-weight:700;">ASCII//CONVERT</span><span class="name">0.18em</span></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 18px 20px; gap: 14px; align-items: stretch; flex-direction: column; justify-content: center; }
+  .swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .sw { display: flex; flex-direction: column; gap: 6px; }
+  .chip {
+    height: 56px; border: 1px solid var(--slate); border-radius: 2px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 6px 8px;
+  }
+  .chip .hex { font-size: 10px; color: rgba(10,10,15,0.9); font-weight: 700; letter-spacing: 0.04em; }
+  .sw .name { font-size: 11px; letter-spacing: var(--tracking-wide); color: var(--fg); }
+  .sw .role { font-size: 10px; letter-spacing: var(--tracking-wide); color: var(--fg-subtle); text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="swatches">
+    <div class="sw">
+      <div class="chip" style="background: var(--electric);"><span class="hex">#FFE600</span></div>
+      <span class="name">--electric</span>
+      <span class="role">warning / moderate</span>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background: var(--deep-electric);"><span class="hex">#B8A800</span></div>
+      <span class="name">--deep-electric</span>
+      <span class="role">deep</span>
+    </div>
+    <div class="sw">
+      <div class="chip" style="background: var(--soft-electric);"><span class="hex">#FFF176</span></div>
+      <span class="name">--soft-electric</span>
+      <span class="role">soft</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

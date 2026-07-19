@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  body { padding: 12px; }
+  .card { padding: 0; background: transparent; border: none; }
+  .modal {
+    width: 100%; background: var(--abyss);
+    border: 1px solid var(--slate);
+    border-top: 2px solid var(--violet);
+    padding: 22px; display: flex; flex-direction: column; gap: 14px;
+    border-radius: 0;
+  }
+  .head { display: flex; justify-content: space-between; align-items: center; }
+  .title { color: var(--violet); font-weight: 700; letter-spacing: 0.12em; font-size: 11px; }
+  .close { color: var(--muted); font-size: 13px; cursor: pointer; }
+  .threat {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px;
+    background: rgba(0,229,255,0.07);
+    border: 1px solid var(--cyan);
+  }
+  .threat .lbl { color: var(--dim); font-size: 11px; letter-spacing: 0.08em; }
+  .threat .val { color: var(--cyan); font-weight: 700; font-size: 13px; letter-spacing: 0.12em; }
+  .desc { color: var(--ghost); font-size: 12px; line-height: 1.5; margin: 0; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="modal">
+    <div class="head">
+      <span class="title">◈ NEURAL SCAN RESULTS</span>
+      <span class="close">✕</span>
+    </div>
+    <div class="threat"><span class="lbl">THREAT LEVEL</span><span class="val">LOW</span></div>
+    <p class="desc">Subject rendered in ASCII fragments. Head bowed, draped in cloth — possibly hood or shawl. No active threat vectors detected.</p>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 20px; gap: 12px; flex-direction: column; justify-content: center; align-items: stretch; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    min-height: 44px; padding: 10px 24px;
+    font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.08em;
+    border-radius: 2px; background: transparent; cursor: pointer;
+    transition: all 150ms cubic-bezier(0.4, 0, 0.6, 1);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { border: 2px solid var(--violet); background: var(--color-accent-bg); color: var(--violet); font-weight: 700; padding: 14px 32px; font-size: 14px; }
+  .btn-secondary { border: 1px solid var(--cyan); background: var(--color-info-bg); color: var(--cyan); font-weight: 500; }
+  .btn-danger { border: 1px solid var(--hot-pink); background: var(--bg-danger-ghost); color: var(--hot-pink); font-weight: 700; }
+  .btn-analyze { border: 1px solid var(--violet); background: var(--bg-accent-ghost); color: var(--violet); }
+  .btn-ghost { border: 1px solid var(--slate); background: transparent; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="row">
+    <button class="btn btn-primary">export png</button>
+    <button class="btn btn-secondary">export txt</button>
+    <button class="btn btn-danger">◎ capture</button>
+  </div>
+  <div class="row">
+    <button class="btn btn-analyze">◈ scan &amp; analyze</button>
+    <button class="btn btn-ghost">⇄ front</button>
+    <button class="btn btn-primary" disabled style="opacity:.4; cursor:not-allowed;">save key</button>
+  </div>
+</div>
+</body>
+</html>

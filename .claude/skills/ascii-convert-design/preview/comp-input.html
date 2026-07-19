@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 20px; gap: 18px; flex-direction: column; justify-content: center; align-items: stretch; }
+  .field { display: flex; flex-direction: column; gap: 8px; }
+  .label { font-size: 10px; letter-spacing: 0.08em; color: var(--dim); text-transform: uppercase; }
+  .input {
+    background: var(--abyss); border: 1px solid var(--slate); color: var(--ghost);
+    padding: 10px 14px; font-family: var(--font-mono); font-size: 13px;
+    border-radius: 2px;
+  }
+  .input.focus { border-color: var(--violet); }
+  .helper { font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="field">
+    <span class="label">PROVIDER</span>
+    <div class="input">Anthropic (Claude) ▾</div>
+  </div>
+  <div class="field">
+    <span class="label">API KEY</span>
+    <div class="input focus" style="color: var(--muted);">paste your key here</div>
+    <span class="helper">your key stays in your browser only — never sent to our servers</span>
+  </div>
+</div>
+</body>
+</html>

@@ -14,7 +14,7 @@ Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced pane
 Chain (ADR 0017, #125–#128). All six Effects are live — Source Image *or* Live Source → the Chain
 → PNG Export / Capture / Copy / Recording — the pure-core / imperative-shell seam is established,
 and the render is deterministic in Chain + Seed. The front door is the six Presets plus Randomize;
-behind the advanced affordance the Chain is fully editable — reorder, add, remove, duplicate, the
+behind the EDIT tab the Chain is fully editable — reorder, add, remove, duplicate, the
 same Effect more than once. The v1 scope in `CONTEXT.md` is complete.
 
 The Preset **values** are taste, not derivation: they are the one thing here a human curates, and
@@ -67,8 +67,8 @@ Single-page React/TS/Vite app. Fully client-side — no backend, no network.
 
 ### Presets and Randomize
 
-The six Presets in `src/glitch/presets.ts` are the app's primary surface — `PresetPicker` sits above
-the advanced Disclosure, and `DEFAULT_PRESET` is applied on open. A Preset is a whole Chain rather
+The six Presets in `src/glitch/presets.ts` are the app's primary surface — `PresetPicker` fills the
+Control Strip's PRESETS tab (ADR 0020), and `DEFAULT_PRESET` is applied on open. A Preset is a whole Chain rather
 than a diff from a default: a curator can read one entire look in one place, and re-curate it
 without moving the other five. Each carries **only the Links its look uses** — off is a Link's
 absence (ADR 0017), so VHS has no Pixel Sort and CORRUPTED no Scanlines.
@@ -137,7 +137,10 @@ Like Capture, it records the **output canvas** the Chain already painted — it 
 
 The Record control is hidden entirely where `MediaRecorder` + `captureStream` are unsupported — no
 GIF fallback (ADR 0007) — and only ever appears for a Live Source: a Source Image has no elapsing
-time to record. On stop, `shareOrDownloadBlob` opens the native share sheet on mobile or downloads
+time to record. **Start and stop live apart** (ADR 0020): start is a control in the OUT tab, stop is
+the canvas REC badge. That split is what lets a take keep running while the user tweaks the Chain in
+another tab, and it is why OUT drops the start control while `isRecording` — one running take must
+not offer two stops. On stop, `shareOrDownloadBlob` opens the native share sheet on mobile or downloads
 on desktop. Clearing the Source stops a running Recording first, since the camera is about to go.
 
 ### Sampling cap
@@ -261,24 +264,33 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   the clipboard)
 - Everything else shared comes from `@cyberdeck/deck-kit` (ADR 0014): `recording` (`useRecording`,
   `formatElapsedTime`), `ui` (the primitives plus `EmptyStateHero`, `ErrorBoundary`,
-  `MobileBottomSheet`, the toast hooks), `utils` (`cn`, `shareOrDownloadCanvas`,
+  the toast hooks), `utils` (`cn`, `shareOrDownloadCanvas`,
   `shareOrDownloadBlob`, `isTouchDevice`), `errors`
 
 **Components**
 - `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render, and owns the
-  ~15fps rAF loop for a Live Source. Carries the LIVE / REC badges
-- `src/components/preset-picker.tsx` — the front door: the six Preset chips (active one highlighted,
-  `(modified)` once edited) and Randomize
-- `src/components/control-panel.tsx` — the Chain editor: one section per Link in Chain order, each
-  with a grab handle (drag, or arrow keys when focused), duplicate and remove; plus the
-  registry-driven add palette and the Re-roll control (its own callback — the Seed is not part of
-  the look). Sits behind the `advanced` Disclosure in `app.tsx` (#84) — the tweak layer, not the
-  front door
-- `src/components/mobile-controls.tsx` — the mobile bottom sheet carrying the same stack as the
-  desktop aside: Presets first, the Chain editor behind `advanced`
-- `src/components/export-bar.tsx` — PNG Export / Capture / Copy / Record controls and the
-  recording timer
-- `src/components/ui/disclosure.tsx` — the one primitive still local: the `advanced` fold
+  ~15fps rAF loop for a Live Source. Carries the LIVE badge and the REC badge, which is also the
+  Recording's stop control and its elapsed timer — the canvas is the one surface every tab shows,
+  so that is where a stop reachable from anywhere has to live (ADR 0020)
+- `src/components/control-strip.tsx` — the Control Strip (ADR 0020): the bottom-anchored control
+  surface at both breakpoints and the program's whole control grammar — there is no aside, no sheet
+  and no always-visible export bar behind it. PRESETS → EDIT → OUT is the session read left to
+  right. The shell is the kit's `TabStrip` (ADR 0020's extraction slice); this file is the wiring
+  that says which panel each tab carries. Only the active panel is mounted, so one tab's controls
+  are in the accessibility tree at a time
+- `src/components/preset-picker.tsx` — the PRESETS panel: the six Preset chips in a horizontally
+  scrollable row (active one highlighted, `(modified)` once edited) and Randomize beside them
+- `src/components/chain-editor.tsx` — the Strip's EDIT tab: the Chain as a row of Link chips
+  left→right in processing order, each chip both the selection control and the drag handle (drag, or
+  left/right arrows when focused). The focused Link's params fill the panel above the row —
+  stacked on mobile, one grid row of equal columns at `sm` (adaptive density, ADR 0020) — with
+  duplicate and remove as actions on that panel. The registry-driven add palette shares the panel
+  slot with the params, and Re-roll sits outside the row (its own callback — the Seed is not part of
+  the look)
+
+- `src/components/output-panel.tsx` — the Strip's OUT tab: PNG Export / Capture / Copy and the
+  Record *start*. Stopping is deliberately absent — a take runs while the user keeps working in
+  PRESETS and EDIT, so its stop is the canvas REC badge (ADR 0020)
 
 **Testing**
 - `src/test-setup.ts` polyfills `ImageData` — happy-dom ships none, and the shell constructs one.

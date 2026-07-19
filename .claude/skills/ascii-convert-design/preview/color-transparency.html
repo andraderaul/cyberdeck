@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 18px 20px; gap: 12px; align-items: stretch; flex-direction: column; justify-content: center; }
+  .swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .sw { display: flex; flex-direction: column; gap: 5px; }
+  .chip {
+    height: 56px; border-radius: 2px; border: 1px solid var(--slate);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; letter-spacing: var(--tracking-wide); color: var(--violet);
+  }
+  .ghost { background: var(--bg-accent-ghost); }
+  .dim { background: var(--bg-accent-dim); }
+  .soft { background: var(--bg-accent-soft); }
+  .sw .name { font-size: 10px; letter-spacing: var(--tracking-wide); color: var(--fg); }
+  .sw .role { font-size: 9px; letter-spacing: var(--tracking-wide); color: var(--fg-subtle); text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="swatches">
+    <div class="sw">
+      <div class="chip ghost">ghost · 5%</div>
+      <span class="name">--bg-accent-ghost</span>
+      <span class="role">subtle hover</span>
+    </div>
+    <div class="sw">
+      <div class="chip dim">dim · 8%</div>
+      <span class="name">--bg-accent-dim</span>
+      <span class="role">hover</span>
+    </div>
+    <div class="sw">
+      <div class="chip soft">soft · 12%</div>
+      <span class="name">--bg-accent-soft</span>
+      <span class="role">active toggle</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

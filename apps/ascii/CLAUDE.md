@@ -104,14 +104,31 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/utils/share.ts` — `shareOrDownloadBlob()` (Web Share API with download fallback)
 
 **Components**
-- `src/components/ascii-canvas.tsx` — lifecycle coordinator: drives static and rAF render paths
-- `src/components/control-panel.tsx` — ConversionSettings controls
+- `src/components/ascii-canvas.tsx` — lifecycle coordinator: drives static and rAF render paths.
+  Carries the LIVE badge and the REC badge, which is also the Recording's stop control and its
+  elapsed timer (ADR 0020). Unlike GLITCH's badge it needs no opaque background: `paintFrame()`
+  fills this canvas with `--void` first, so the overlay already sits on the audited pair (ADR 0013)
+- `src/components/control-strip.tsx` — the Control Strip (ADR 0020): the bottom-anchored control
+  surface at both breakpoints and the program's whole control grammar — there is no aside and no
+  sheet and no always-visible export bar behind it. A tab is
+  never rendered ahead of what sits behind it — PRESETS → EDIT → OUT is the session read left to
+  right. The shell is the kit's `TabStrip`
+  (ADR 0020's extraction slice); this file is the wiring that says which panel each tab carries.
+  Only the active panel is mounted, so one tab's controls are in the accessibility tree at a time. The shell is GLITCH's, ported rather than
+  redesigned — whatever lands empty-diff is what crosses into deck-kit
+- `src/components/settings-editor.tsx` — the Strip's EDIT tab: every ConversionSettings control as
+  a row of tool chips, the focused tool's control in the panel above. The three sliders are
+  siblings, so at `sm` the whole group reads at once while mobile focuses one (adaptive density);
+  the off-density ones are `hidden`, which keeps them out of the accessibility tree too
 - `src/components/upload-zone.tsx` — image upload and Live Source activation
-- `src/components/download-bar.tsx` — Export and Capture controls
+- `src/components/output-panel.tsx` — the Strip's OUT tab: one surface for every way the result
+  leaves, gated by Source — PNG/TXT Export for a Source Image, Capture/Record for a Live Source,
+  AI Analysis for both. It carries the Record *start* only: stopping is the canvas REC badge, so a
+  take survives a tab switch (ADR 0020). The AI config banner lives here too, beside the Analysis
+  it advertises
 - `src/components/empty-state-hero.tsx` — initial empty state with upload and webcam entry points
-- `src/components/mobile-bottom-sheet.tsx` — slide-up sheet for mobile controls
-- `src/components/mobile-controls.tsx` — ConversionSettings controls layout for mobile
-- `src/components/ai-config-banner.tsx` — informational banner for AI config; dismiss state in `sessionStorage`
+- `src/components/ai-config-banner.tsx` — informational banner for AI config, rendered inside the
+  OUT tab; dismiss state in `sessionStorage`
 - `src/components/analysis-modal.tsx` — AI Analysis results with threat-level display
 - `src/components/api-key-modal.tsx` — API key configuration
 - `src/components/about-modal.tsx` — About/info modal

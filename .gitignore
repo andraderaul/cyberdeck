@@ -2,7 +2,12 @@ node_modules/
 dist/
 *.tsbuildinfo
 .DS_Store
-.claude/
+# Agent config is per-developer and stays out — except `skills/`, which is project knowledge (how to
+# drive this program, what its gotchas are) rather than anyone's local setup. Negating a whole
+# ignored directory doesn't work, so the contents are ignored and skills/ is let back in.
+# `worktrees/` in particular must never be tracked: it holds nested git checkouts.
+**/.claude/*
+!**/.claude/skills/
 TODO.md
 coverage/
 

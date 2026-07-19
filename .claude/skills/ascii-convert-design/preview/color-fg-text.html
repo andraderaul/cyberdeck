@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 18px 20px; gap: 14px; align-items: stretch; flex-direction: column; justify-content: center; }
+  .swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .sw { display: flex; flex-direction: column; gap: 6px; }
+  .chip {
+    height: 56px; border: 1px solid var(--slate); border-radius: 2px;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .sw .name { font-size: 11px; letter-spacing: var(--tracking-wide); color: var(--fg); }
+  .sw .role { font-size: 10px; letter-spacing: var(--tracking-wide); color: var(--fg-subtle); text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="swatches">
+    <div class="sw">
+      <div class="chip" style="color: var(--ghost);">primary text</div>
+      <span class="name">--fg / ghost</span>
+      <span class="role">#C8C8E0</span>
+    </div>
+    <div class="sw">
+      <div class="chip" style="color: var(--dim);">secondary text</div>
+      <span class="name">--fg-muted / dim</span>
+      <span class="role">#9898C0</span>
+    </div>
+    <div class="sw">
+      <div class="chip" style="color: var(--muted);">subtle / placeholder</div>
+      <span class="name">--fg-subtle / muted</span>
+      <span class="role">#6B6B9A</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

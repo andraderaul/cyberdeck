@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 16px 20px; gap: 10px; flex-direction: column; justify-content: center; align-items: stretch; }
+  .row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px;
+  }
+  .item .lbl { color: var(--dim); font-size: 10px; letter-spacing: 0.08em; }
+  .item .val { font-weight: 700; font-size: 12px; letter-spacing: 0.12em; }
+  .low { background: rgba(0,229,255,0.07); border: 1px solid var(--cyan); }
+  .low .val { color: var(--cyan); }
+  .mod { background: rgba(255,230,0,0.07); border: 1px solid var(--electric); }
+  .mod .val { color: var(--electric); }
+  .high { background: rgba(255,45,120,0.07); border: 1px solid var(--hot-pink); }
+  .high .val { color: var(--hot-pink); }
+  .crit { background: rgba(255,45,120,0.12); border: 1px solid var(--hot-pink); }
+  .crit .val { color: var(--hot-pink); text-shadow: 0 0 8px var(--hot-pink); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="row">
+    <div class="item low"><span class="lbl">LVL</span><span class="val">LOW</span></div>
+    <div class="item mod"><span class="lbl">LVL</span><span class="val">MOD</span></div>
+    <div class="item high"><span class="lbl">LVL</span><span class="val">HIGH</span></div>
+    <div class="item crit"><span class="lbl">LVL</span><span class="val">CRIT</span></div>
+  </div>
+</div>
+</body>
+</html>

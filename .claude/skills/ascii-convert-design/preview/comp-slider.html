@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 20px; gap: 18px; flex-direction: column; justify-content: center; align-items: stretch; }
+  .group { display: flex; flex-direction: column; gap: 6px; }
+  .header { display: flex; justify-content: space-between; align-items: center; }
+  .label { font-size: 10px; letter-spacing: 0.08em; color: var(--fg-muted); text-transform: uppercase; }
+  .value { font-size: 11px; color: var(--violet); letter-spacing: 0.04em; }
+  .track { position: relative; height: 2px; background: var(--slate); border-radius: 1px; }
+  .fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--violet); }
+  .thumb {
+    position: absolute; top: 50%; width: 20px; height: 20px;
+    transform: translate(-50%, -50%); border-radius: 50%;
+    background: var(--violet); border: 2px solid var(--void);
+    box-shadow: 0 0 6px var(--violet);
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="group">
+    <div class="header"><span class="label">resolution</span><span class="value">12px</span></div>
+    <div class="track">
+      <div class="fill" style="width:33%;"></div>
+      <div class="thumb" style="left:33%;"></div>
+    </div>
+  </div>
+  <div class="group">
+    <div class="header"><span class="label">brightness</span><span class="value">1.0</span></div>
+    <div class="track">
+      <div class="fill" style="width:50%;"></div>
+      <div class="thumb" style="left:50%;"></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

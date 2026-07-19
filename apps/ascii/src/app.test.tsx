@@ -53,10 +53,6 @@ vi.mock('@cyberdeck/deck-kit/ui', async (importOriginal) => ({
 }))
 
 vi.mock('./components/ascii-canvas', () => ({ default: () => <canvas /> }))
-vi.mock('./components/control-panel', () => ({ default: () => <div>control</div> }))
-vi.mock('./components/export-bar', () => ({ default: () => <div>export</div> }))
-vi.mock('./components/live-source-bar', () => ({ default: () => <div>live</div> }))
-vi.mock('./components/mobile-controls', () => ({ default: () => <div>mobile</div> }))
 
 import { useAIConfig } from './ai/use-ai-config'
 import { useWebcamState } from './hooks/use-webcam-state'
@@ -67,6 +63,12 @@ const mockUseWebcamState = vi.mocked(useWebcamState)
 const mockAIConfig: AIConfig = {
   provider: 'anthropic',
   key: 'sk-ant-test',
+}
+
+// The banner is rehomed inside the OUT tab (ADR 0020), where the AI Analysis it advertises now
+// lives — so reaching it means opening that tab.
+function openOut() {
+  fireEvent.click(screen.getByRole('tab', { name: 'out' }))
 }
 
 describe('AiConfigBanner visibility', () => {
@@ -84,6 +86,7 @@ describe('AiConfigBanner visibility', () => {
     mockUseAIConfig.mockReturnValue({ config: null, save: vi.fn(), remove: vi.fn() })
     render(<App />)
     fireEvent.click(screen.getByText('hero'))
+    openOut()
     expect(screen.getByText(/AI Analyze/i)).toBeInTheDocument()
   })
 
@@ -91,6 +94,7 @@ describe('AiConfigBanner visibility', () => {
     mockUseAIConfig.mockReturnValue({ config: null, save: vi.fn(), remove: vi.fn() })
     const { rerender } = render(<App />)
     fireEvent.click(screen.getByText('hero'))
+    openOut()
     expect(screen.getByText(/AI Analyze/i)).toBeInTheDocument()
 
     mockUseAIConfig.mockReturnValue({ config: mockAIConfig, save: vi.fn(), remove: vi.fn() })
@@ -119,16 +123,34 @@ describe('EmptyStateHero webcam integration', () => {
   })
 })
 
-describe('ExportBar visibility', () => {
-  it('is not rendered before a source is loaded', () => {
+describe('the OUT tab', () => {
+  it('offers no Strip at all before a source is loaded', () => {
     render(<App />)
-    expect(screen.queryByText('export')).not.toBeInTheDocument()
+
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
   })
 
-  it('appears after a source image is loaded via EmptyStateHero', () => {
+  // Export is the session's terminal action and affords a tab switch — the always-visible bars
+  // are what ADR 0020 replaced.
+  it('keeps the outputs behind the tab rather than always on screen', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByText('hero'))
+
+    expect(screen.queryByRole('button', { name: 'export png' })).not.toBeInTheDocument()
+    openOut()
+    expect(screen.getByRole('button', { name: 'export png' })).toBeInTheDocument()
+  })
+
+  it('offers PNG and TXT Export for a Source Image', () => {
     render(<App />)
     fireEvent.click(screen.getByText('hero'))
-    expect(screen.getByText('export')).toBeInTheDocument()
+
+    openOut()
+
+    expect(screen.getByRole('button', { name: 'export png' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'export txt' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /capture/ })).not.toBeInTheDocument()
   })
 })
 

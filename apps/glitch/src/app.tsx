@@ -1,12 +1,8 @@
 import { useRecording } from '@cyberdeck/deck-kit/recording'
 import { EmptyStateHero, ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import ControlPanel from './components/control-panel'
-import ExportBar from './components/export-bar'
+import ControlStrip from './components/control-strip'
 import GlitchCanvas from './components/glitch-canvas'
-import MobileControls from './components/mobile-controls'
-import PresetPicker from './components/preset-picker'
-import Disclosure from './components/ui/disclosure'
 import { Errors } from './errors/app-error'
 import { outputFilename } from './export/output'
 import { useEditorState } from './hooks/use-editor-state'
@@ -93,10 +89,10 @@ export default function App() {
         <span className="text-fg-muted text-xs hidden sm:block">image → glitch</span>
       </header>
 
-      {/* On mobile the aside is hidden and its controls move to a bottom sheet (MobileControls), so
-          main takes the whole area; at sm the aside reappears as the left column. */}
-      <div className="flex-1 grid grid-cols-1 [grid-template-rows:1fr_auto] sm:grid-cols-[280px_1fr] sm:[grid-template-rows:1fr] overflow-hidden">
-        <main className="flex flex-col overflow-hidden">
+      {/* One column at both breakpoints now: the Strip below carries every control, so there is no
+          aside to make room for (ADR 0020). */}
+      <div className="flex-1 flex overflow-hidden">
+        <main className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 relative overflow-hidden">
             <ErrorBoundary
               fallback={
@@ -114,6 +110,8 @@ export default function App() {
                   canvasRef={canvasRef}
                   onClearSource={handleClearSource}
                   isRecording={isRecording}
+                  elapsedSeconds={elapsedSeconds}
+                  onStopRecording={stopRecording}
                   isMirrored={isMirrored}
                   onMirrorToggle={handleMirrorToggle}
                 />
@@ -126,41 +124,19 @@ export default function App() {
               )}
             </ErrorBoundary>
           </div>
-          {hasSource && (
-            <div className="flex flex-col gap-xs py-sm px-md border-t border-base shrink-0">
-              <ExportBar
-                canvasRef={canvasRef}
-                isLive={isLive}
-                canRecord={canRecord}
-                isRecording={isRecording}
-                elapsedSeconds={elapsedSeconds}
-                onStartRecording={startRecording}
-                onStopRecording={stopRecording}
-              />
-            </div>
-          )}
         </main>
-
-        {/* Progressive disclosure: the Presets are the front door — one click to a good-looking
-            result — and the sliders are the tweak layer, folded away behind the affordance.
-            Hidden on mobile, where MobileControls carries the same stack in a bottom sheet. */}
-        <aside className="hidden sm:flex sm:border-r border-base p-md overflow-y-auto flex-col gap-lg sm:order-first">
-          <PresetPicker
-            activePresetId={activePresetId}
-            isModified={isModified}
-            onSelect={selectPreset}
-            onRandomize={randomize}
-          />
-          <Disclosure label="advanced">
-            <ControlPanel chain={chain} actions={chainActions} onReroll={reroll} />
-          </Disclosure>
-        </aside>
       </div>
 
-      {/* Only with a Source: there's nothing to tweak on the empty state, where the choice is which
-          Source to open, not how to glitch it. */}
+      {/* Bottom-anchored at both breakpoints, with the canvas above it never occluded (ADR 0020).
+          Only with a Source: on the empty state the choice is which Source to open, not how to
+          glitch it. */}
       {hasSource && (
-        <MobileControls
+        <ControlStrip
+          canvasRef={canvasRef}
+          isLive={isLive}
+          canRecord={canRecord}
+          isRecording={isRecording}
+          onStartRecording={startRecording}
           chain={chain}
           activePresetId={activePresetId}
           isModified={isModified}

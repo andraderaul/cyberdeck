@@ -18,12 +18,16 @@ function Wrapper({
   isLive,
   isMirrored,
   onMirrorToggle,
+  elapsedSeconds,
+  onStopRecording,
 }: {
   sourceImage?: HTMLImageElement | null
   isRecording?: boolean
   isLive?: boolean
   isMirrored?: boolean
   onMirrorToggle?: () => void
+  elapsedSeconds?: number
+  onStopRecording?: () => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   return (
@@ -37,6 +41,8 @@ function Wrapper({
       isLive={isLive}
       isMirrored={isMirrored}
       onMirrorToggle={onMirrorToggle}
+      elapsedSeconds={elapsedSeconds}
+      onStopRecording={onStopRecording}
     />
   )
 }
@@ -66,6 +72,39 @@ describe('AsciiCanvas', () => {
     render(<Wrapper isRecording={true} />)
 
     expect(screen.getByTestId('rec-indicator')).toBeInTheDocument()
+  })
+
+  // The badge is the stop control now (ADR 0020): a take runs while the user works in PRESETS and
+  // EDIT, and the canvas is the one surface every tab shows.
+  describe('the REC badge as the stop control', () => {
+    it('stops the Recording when tapped', () => {
+      const onStopRecording = vi.fn()
+      render(<Wrapper isRecording={true} onStopRecording={onStopRecording} />)
+
+      fireEvent.click(screen.getByTestId('rec-indicator'))
+
+      expect(onStopRecording).toHaveBeenCalledOnce()
+    })
+
+    it('carries the elapsed timer', () => {
+      render(<Wrapper isRecording={true} elapsedSeconds={75} />)
+
+      expect(screen.getByTestId('rec-indicator')).toHaveTextContent('1:15')
+    })
+
+    it('names itself as the stop, with the time elapsed', () => {
+      render(<Wrapper isRecording={true} elapsedSeconds={75} />)
+
+      expect(screen.getByRole('button', { name: 'stop recording — 1:15 elapsed' })).toBeTruthy()
+    })
+
+    // Deliberately not a live region: the timer ticks once a second, and announcing it every
+    // second would talk over the user for the length of the take.
+    it('does not announce the timer once a second', () => {
+      render(<Wrapper isRecording={true} elapsedSeconds={5} />)
+
+      expect(screen.queryByRole('status')).toBeNull()
+    })
   })
 
   it('does not show REC indicator when isRecording is false', () => {

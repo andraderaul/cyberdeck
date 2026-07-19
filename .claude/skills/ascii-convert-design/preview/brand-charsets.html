@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 16px 20px; flex-direction: column; gap: 8px; justify-content: center; align-items: stretch; }
+  .row {
+    display: grid; grid-template-columns: 90px 1fr;
+    align-items: center; gap: 12px; padding: 4px 0;
+    border-bottom: 1px dashed var(--shadow);
+  }
+  .row:last-child { border-bottom: none; }
+  .name { font-size: 10px; color: var(--fg); letter-spacing: 0.06em; }
+  .chars { font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="row"><span class="name">classic</span><span class="chars" style="color: var(--violet);"> .:-=+*#%@</span></div>
+  <div class="row"><span class="name">sharp</span><span class="chars" style="color: var(--violet);"> .^!*&lt;&amp;%$#@</span></div>
+  <div class="row"><span class="name">blocks</span><span class="chars" style="color: #00ff66;"> ░▒▓█</span></div>
+  <div class="row"><span class="name">halfblock</span><span class="chars" style="color: var(--cyan);"> ▄▀█</span></div>
+  <div class="row"><span class="name">braille</span><span class="chars" style="color: var(--violet);"> ⠁⠃⠇⡇⣇⣧⣷⣿</span></div>
+  <div class="row"><span class="name">katakana</span><span class="chars" style="color: #00ff66;"> ･ｦｧｱｲｴｵｸｶｷｺｻｼｽｾｿ</span></div>
+  <div class="row"><span class="name">geometric</span><span class="chars" style="color: var(--hot-pink);"> ·•○◇◆□■▲▼◀▶★✦</span></div>
+  <div class="row"><span class="name">box</span><span class="chars" style="color: var(--electric);"> ╴─│┼╪╬█</span></div>
+</div>
+</body>
+</html>

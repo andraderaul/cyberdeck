@@ -1,3 +1,4 @@
+import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
 import { type RefObject, useEffect, useRef } from 'react'
 import type { Chain } from '../glitch/chain'
@@ -31,6 +32,8 @@ interface Props {
   canvasRef: RefObject<HTMLCanvasElement>
   onClearSource: () => void
   isRecording?: boolean
+  elapsedSeconds?: number
+  onStopRecording?: () => void
   isMirrored?: boolean
   onMirrorToggle?: () => void
 }
@@ -48,6 +51,8 @@ export default function GlitchCanvas({
   canvasRef,
   onClearSource,
   isRecording,
+  elapsedSeconds = 0,
+  onStopRecording,
   isMirrored = false,
   onMirrorToggle,
 }: Props) {
@@ -115,18 +120,35 @@ export default function GlitchCanvas({
             LIVE
           </span>
         )}
-        {/* Decorative: the ExportBar's timer is the announced one, so this must not double it. */}
+        {/* The badge *is* the stop control (ADR 0020): a take runs while the user keeps working in
+            PRESETS and EDIT, so its stop has to be reachable from every tab — and the badge already
+            marks the one place that is. No new chrome, and it carries the timer that left with the
+            ExportBar. */}
         {isRecording && (
-          <span
+          <button
+            type="button"
             data-testid="rec-indicator"
+            onClick={onStopRecording}
+            // The name carries the time, so the button announces "1:15 elapsed" when focused. It
+            // is deliberately not also a live region: the timer ticks once a second, and announcing
+            // it every second would talk over the user for the length of the take.
+            aria-label={`stop recording — ${formatElapsedTime(elapsedSeconds)} elapsed`}
             className={cn(
               CANVAS_OVERLAY_CHROME,
               'flex items-center gap-2xs text-hot-pink border border-hot-pink',
+              // `bg-shadow`, not the translucent `bg-danger-ghost` a hover state would normally
+              // take: this chip sits on the user's artwork, so ADR 0013's opaque-background rule
+              // binds every state it has, not just the resting one. --hot-pink on --shadow is
+              // pinned in src/contrast.test.ts.
+              'cursor-pointer transition-colors duration-fast hover:bg-shadow',
             )}
-            aria-hidden="true"
           >
-            <span className="motion-safe:animate-pulse">●</span> REC
-          </span>
+            <span className="motion-safe:animate-pulse" aria-hidden="true">
+              ●
+            </span>
+            <span>{formatElapsedTime(elapsedSeconds)}</span>
+            <span aria-hidden="true">⏹</span>
+          </button>
         )}
         {/* Live source-tuning chrome, homed beside clear (ADR 0015): same family as clear — it acts
             on the Source, not the export. A real pixel flip (ADR 0016), so it also toggles the

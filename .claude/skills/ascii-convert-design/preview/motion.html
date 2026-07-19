@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 16px 20px; gap: 8px; flex-direction: column; justify-content: center; }
+  .header { font-size: 10px; letter-spacing: 0.1em; color: var(--fg-subtle); text-transform: uppercase; }
+  .row {
+    display: grid; grid-template-columns: 110px 1fr 80px;
+    align-items: center; gap: 12px; padding: 3px 0;
+  }
+  .meta { font-size: 10px; color: var(--fg); letter-spacing: 0.04em; }
+  .curve { height: 26px; }
+  .name { font-size: 10px; color: var(--fg-subtle); letter-spacing: 0.06em; text-align: right; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">easing curves · durations 80 / 150 / 250 / 400 / 600 ms</div>
+  <div class="row">
+    <span class="meta">flick</span>
+    <svg class="curve" viewBox="0 0 100 30" preserveAspectRatio="none"><path d="M0,30 C36,-32 7,182 100,0" fill="none" stroke="var(--violet)" stroke-width="1.5"/></svg>
+    <span class="name">overshoot</span>
+  </div>
+  <div class="row">
+    <span class="meta">smooth</span>
+    <svg class="curve" viewBox="0 0 100 30" preserveAspectRatio="none"><path d="M0,30 C20,24 20,0 100,0" fill="none" stroke="var(--cyan)" stroke-width="1.5"/></svg>
+    <span class="name">standard</span>
+  </div>
+  <div class="row">
+    <span class="meta">sharp</span>
+    <svg class="curve" viewBox="0 0 100 30" preserveAspectRatio="none"><path d="M0,30 C40,30 60,0 100,0" fill="none" stroke="var(--electric)" stroke-width="1.5"/></svg>
+    <span class="name">snappy</span>
+  </div>
+  <div class="row">
+    <span class="meta">snap</span>
+    <svg class="curve" viewBox="0 0 100 30" preserveAspectRatio="none"><path d="M0,30 C40,30 20,0 100,0" fill="none" stroke="var(--hot-pink)" stroke-width="1.5"/></svg>
+    <span class="name">modal io</span>
+  </div>
+</div>
+</body>
+</html>

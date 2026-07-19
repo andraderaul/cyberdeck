@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 18px 20px; gap: 8px; flex-direction: column; justify-content: center; }
+  .row { display: grid; grid-template-columns: 60px 1fr 70px; align-items: center; gap: 12px; padding: 3px 0; }
+  .bar { background: var(--violet); height: 18px; border-radius: 1px; }
+  .name { font-size: 10px; color: var(--fg-subtle); letter-spacing: 0.06em; text-align: right; }
+  .key { font-size: 11px; color: var(--fg); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="row"><span class="key">xs · 4</span><div class="bar" style="width:4px;"></div><span class="name">--gap-xs</span></div>
+  <div class="row"><span class="key">sm · 8</span><div class="bar" style="width:8px;"></div><span class="name">--gap-sm</span></div>
+  <div class="row"><span class="key">md · 16</span><div class="bar" style="width:16px;"></div><span class="name">--gap-md</span></div>
+  <div class="row"><span class="key">lg · 24</span><div class="bar" style="width:24px;"></div><span class="name">--gap-lg</span></div>
+  <div class="row"><span class="key">xl · 32</span><div class="bar" style="width:32px;"></div><span class="name">--gap-xl</span></div>
+  <div class="row"><span class="key">2xl · 48</span><div class="bar" style="width:48px;"></div><span class="name">--gap-2xl</span></div>
+  <div class="row"><span class="key">3xl · 64</span><div class="bar" style="width:64px;"></div><span class="name">--gap-3xl</span></div>
+</div>
+</body>
+</html>

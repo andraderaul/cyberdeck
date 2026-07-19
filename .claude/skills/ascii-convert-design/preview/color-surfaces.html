@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="_preview.css">
+<style>
+  .card { padding: 18px 20px; gap: 12px; align-items: stretch; flex-direction: column; justify-content: center; }
+  .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .sw { display: flex; flex-direction: column; gap: 5px; }
+  .chip {
+    height: 52px; border: 1px solid var(--slate); border-radius: 2px;
+  }
+  .sw .name { font-size: 10px; letter-spacing: var(--tracking-wide); color: var(--fg); }
+  .sw .hex { font-size: 9px; color: var(--fg-subtle); letter-spacing: 0.06em; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background: var(--void);"></div><span class="name">--void</span><span class="hex">#0A0A0F</span></div>
+    <div class="sw"><div class="chip" style="background: var(--abyss);"></div><span class="name">--abyss</span><span class="hex">#0F0F1A</span></div>
+    <div class="sw"><div class="chip" style="background: var(--shadow);"></div><span class="name">--shadow</span><span class="hex">#1A1A2E</span></div>
+    <div class="sw"><div class="chip" style="background: var(--slate);"></div><span class="name">--slate</span><span class="hex">#2A2A4A</span></div>
+    <div class="sw"><div class="chip" style="background: var(--muted);"></div><span class="name">--muted</span><span class="hex">#6B6B9A</span></div>
+  </div>
+</div>
+</body>
+</html>
