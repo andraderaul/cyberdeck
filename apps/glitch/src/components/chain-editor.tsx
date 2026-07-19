@@ -24,21 +24,13 @@ import {
   SCANLINES_DENSITY_STEP,
   type SortDirection,
 } from '../glitch/types'
-import { type ChipBounds, chipAtPointer, isDragGesture } from './chain-drag'
+import { type ChipBounds, dropTargetAt, isDragGesture } from './chain-drag'
 
-const BLOCK_DISPLACEMENT_DENSITY_RANGE = { min: 0, max: 1 } as const
-
-const BLOCK_DISPLACEMENT_AMOUNT_RANGE = { min: 0, max: 1 } as const
-
-const PIXEL_SORT_THRESHOLD_RANGE = { min: 0, max: 1 } as const
-
-const SCANLINES_DENSITY_RANGE = { min: 0, max: 1 } as const
-
-const SCANLINES_INTENSITY_RANGE = { min: 0, max: 1 } as const
-
-const NOISE_AMOUNT_RANGE = { min: 0, max: 1 } as const
-
-const CHROMATIC_ABERRATION_STRENGTH_RANGE = { min: 0, max: 1 } as const
+/**
+ * Every slider here spans the unit interval; the two params with no natural 0..1 bound
+ * (`CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE`) get their ranges from the core.
+ */
+const UNIT_RANGE = { min: 0, max: 1 } as const
 
 const CHANNELS: readonly ChannelName[] = ['r', 'g', 'b']
 
@@ -102,8 +94,8 @@ function LinkControls({ link, onChange }: LinkProps) {
           <Slider
             label="blocks"
             value={params.density}
-            min={BLOCK_DISPLACEMENT_DENSITY_RANGE.min}
-            max={BLOCK_DISPLACEMENT_DENSITY_RANGE.max}
+            min={UNIT_RANGE.min}
+            max={UNIT_RANGE.max}
             step={0.01}
             defaultValue={DEFAULT_BLOCK_DISPLACEMENT.density}
             format={(v) => `${Math.round(v * 100)}%`}
@@ -112,8 +104,8 @@ function LinkControls({ link, onChange }: LinkProps) {
           <Slider
             label="displace"
             value={params.amount}
-            min={BLOCK_DISPLACEMENT_AMOUNT_RANGE.min}
-            max={BLOCK_DISPLACEMENT_AMOUNT_RANGE.max}
+            min={UNIT_RANGE.min}
+            max={UNIT_RANGE.max}
             step={0.01}
             defaultValue={DEFAULT_BLOCK_DISPLACEMENT.amount}
             format={(v) => `${Math.round(v * 100)}%`}
@@ -137,8 +129,8 @@ function LinkControls({ link, onChange }: LinkProps) {
           <Slider
             label="threshold"
             value={params.threshold}
-            min={PIXEL_SORT_THRESHOLD_RANGE.min}
-            max={PIXEL_SORT_THRESHOLD_RANGE.max}
+            min={UNIT_RANGE.min}
+            max={UNIT_RANGE.max}
             step={0.01}
             defaultValue={DEFAULT_PIXEL_SORT.threshold}
             format={(v) => `${Math.round(v * 100)}%`}
@@ -188,8 +180,8 @@ function LinkControls({ link, onChange }: LinkProps) {
         <Slider
           label="strength"
           value={params.strength}
-          min={CHROMATIC_ABERRATION_STRENGTH_RANGE.min}
-          max={CHROMATIC_ABERRATION_STRENGTH_RANGE.max}
+          min={UNIT_RANGE.min}
+          max={UNIT_RANGE.max}
           step={0.01}
           defaultValue={DEFAULT_CHROMATIC_ABERRATION.strength}
           format={(v) => `${Math.round(v * 100)}%`}
@@ -204,8 +196,8 @@ function LinkControls({ link, onChange }: LinkProps) {
           <Slider
             label="density"
             value={params.density}
-            min={SCANLINES_DENSITY_RANGE.min}
-            max={SCANLINES_DENSITY_RANGE.max}
+            min={UNIT_RANGE.min}
+            max={UNIT_RANGE.max}
             step={SCANLINES_DENSITY_STEP}
             defaultValue={DEFAULT_SCANLINES.density}
             format={(v) => `${Math.round(v * 100)}%`}
@@ -214,8 +206,8 @@ function LinkControls({ link, onChange }: LinkProps) {
           <Slider
             label="intensity"
             value={params.intensity}
-            min={SCANLINES_INTENSITY_RANGE.min}
-            max={SCANLINES_INTENSITY_RANGE.max}
+            min={UNIT_RANGE.min}
+            max={UNIT_RANGE.max}
             step={0.01}
             defaultValue={DEFAULT_SCANLINES.intensity}
             format={(v) => `${Math.round(v * 100)}%`}
@@ -241,8 +233,8 @@ function LinkControls({ link, onChange }: LinkProps) {
           <Slider
             label="grain"
             value={params.amount}
-            min={NOISE_AMOUNT_RANGE.min}
-            max={NOISE_AMOUNT_RANGE.max}
+            min={UNIT_RANGE.min}
+            max={UNIT_RANGE.max}
             step={0.01}
             defaultValue={DEFAULT_NOISE.amount}
             format={(v) => `${Math.round(v * 100)}%`}
@@ -435,7 +427,7 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
                 if (!started.dragging) {
                   return
                 }
-                const target = chipAtPointer(event.clientX, chipBounds())
+                const target = dropTargetAt(event.clientX, chipBounds())
                 if (target !== null && target !== started.index) {
                   onReorder(started.index, target)
                   // The dragged Link is at the target now, so the next move measures from there.

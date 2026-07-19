@@ -19,13 +19,13 @@ export interface ChipBounds {
 export const DRAG_THRESHOLD_PX = 8
 
 /**
- * Which chip the pointer is over, or `null` on an empty row.
+ * The Chain position a drag at `x` would drop onto, or `null` on an empty row.
  *
  * Containment first, then the nearest edge: a Link dragged into the gap between two chips, or off
  * the end of the row, still has to land somewhere, and refusing those positions would make the gaps
  * dead zones on a row the user is dragging across.
  */
-export function chipAtPointer(x: number, chips: readonly ChipBounds[]): number | null {
+export function dropTargetAt(x: number, chips: readonly ChipBounds[]): number | null {
   if (chips.length === 0) {
     return null
   }
