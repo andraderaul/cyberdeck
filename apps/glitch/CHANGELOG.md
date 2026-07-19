@@ -1,5 +1,58 @@
 # @cyberdeck/glitch
 
+## 0.6.0
+
+### Minor Changes
+
+- 4bd889a: The Control Strip's EDIT tab (ADR 0020): the Chain reads left→right as a row of Link chips in
+  processing order, with the focused Link's params in the panel above it — stacked on mobile, laid
+  out as one group on desktop. Every structural edit keeps full parity across breakpoints: drag or
+  left/right arrows to reorder, a `+` chip for the add palette, duplicate and remove on the focused
+  Link, repeats allowed.
+
+  The legacy control surfaces are gone with it — the desktop aside, the mobile bottom sheet and its
+  floating trigger, and the `advanced` Disclosure. A mobile user can now build a look from scratch
+  with the canvas in view the whole time.
+
+- 4bd889a: The Control Strip's OUT tab (ADR 0020): PNG Export, Capture, Copy and Recording move into the third
+  tab with today's per-source availability unchanged, and the always-visible ExportBar is gone —
+  export is the session's terminal action and affords a tab switch.
+
+  Recording is the one stateful output, so its start and stop now live apart: start is a control in
+  OUT, stop is the canvas REC badge, which becomes tappable and carries the elapsed timer. A take
+  keeps running while you tweak the look in PRESETS or EDIT, and is stoppable from any of them
+  without new chrome.
+
+  A full GLITCH session — choose a Source, apply a Preset, tweak the Chain, take the result out — now
+  runs in the Strip alone.
+
+- 4bd889a: Control Strip shell with its PRESETS tab (ADR 0020). The Preset chips and Randomize move to a
+  horizontal, bottom-anchored surface present at both breakpoints, so the canvas stays visible while
+  a look is browsed and applied — the blind-editing loop the bottom sheet forced is gone for the
+  front door. The desktop aside and the mobile sheet keep the `advanced` layer only.
+
+### Patch Changes
+
+- 4bd889a: The Control Strip's shell crosses into deck-kit as `TabStrip` (ADR 0020's extraction slice). With
+  the Strip landed in both programs, the tablist markup, the selected-tab state and the single
+  mounted panel were byte-identical — ADR 0014's "empty diff plus two real callers" met exactly. The
+  tab set and the panels stay in each app: those are vocabulary and domain surface, and neither
+  crosses the seam.
+
+  `MobileBottomSheet` is removed from the kit. It lost its only two callers when the sheets died, and
+  nothing on the deck references it.
+
+- 4bd889a: Reorder a Link by dragging it on a phone. The Chain row used HTML5 drag-and-drop, which never fires
+  on touch, so reordering was reachable only with a mouse or a keyboard — the one structural edit
+  that stayed desktop-only. Pointer Events replace it, covering mouse, pen and finger through one
+  path.
+
+  The REC badge's hover no longer goes translucent over the artwork (GLITCH), and neither badge
+  announces its timer once a second any more — the accessible name carries the elapsed time instead.
+
+- Updated dependencies [4bd889a]
+  - @cyberdeck/deck-kit@0.1.0
+
 ## 0.5.0
 
 ### Minor Changes
