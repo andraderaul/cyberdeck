@@ -2,7 +2,6 @@ import { useRecording } from '@cyberdeck/deck-kit/recording'
 import { EmptyStateHero, ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import ControlStrip from './components/control-strip'
-import ExportBar from './components/export-bar'
 import GlitchCanvas from './components/glitch-canvas'
 import { Errors } from './errors/app-error'
 import { outputFilename } from './export/output'
@@ -111,6 +110,8 @@ export default function App() {
                   canvasRef={canvasRef}
                   onClearSource={handleClearSource}
                   isRecording={isRecording}
+                  elapsedSeconds={elapsedSeconds}
+                  onStopRecording={stopRecording}
                   isMirrored={isMirrored}
                   onMirrorToggle={handleMirrorToggle}
                 />
@@ -123,19 +124,6 @@ export default function App() {
               )}
             </ErrorBoundary>
           </div>
-          {hasSource && (
-            <div className="flex flex-col gap-xs py-sm px-md border-t border-base shrink-0">
-              <ExportBar
-                canvasRef={canvasRef}
-                isLive={isLive}
-                canRecord={canRecord}
-                isRecording={isRecording}
-                elapsedSeconds={elapsedSeconds}
-                onStartRecording={startRecording}
-                onStopRecording={stopRecording}
-              />
-            </div>
-          )}
         </main>
       </div>
 
@@ -144,6 +132,11 @@ export default function App() {
           glitch it. */}
       {hasSource && (
         <ControlStrip
+          canvasRef={canvasRef}
+          isLive={isLive}
+          canRecord={canRecord}
+          isRecording={isRecording}
+          onStartRecording={startRecording}
           chain={chain}
           activePresetId={activePresetId}
           isModified={isModified}

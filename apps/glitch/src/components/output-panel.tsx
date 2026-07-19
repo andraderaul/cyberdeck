@@ -1,6 +1,5 @@
-import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
 import { Button, useToastError, useToastInfo } from '@cyberdeck/deck-kit/ui'
-import { cn, shareOrDownloadCanvas } from '@cyberdeck/deck-kit/utils'
+import { shareOrDownloadCanvas } from '@cyberdeck/deck-kit/utils'
 import type { RefObject } from 'react'
 import { Errors } from '../errors/app-error'
 import { outputFilename } from '../export/output'
@@ -11,24 +10,24 @@ interface Props {
   isLive?: boolean
   canRecord?: boolean
   isRecording?: boolean
-  elapsedSeconds?: number
   onStartRecording?: () => void
-  onStopRecording?: () => void
 }
 
 /**
- * Takes the result out. Capture, PNG Export, Copy and Recording are the same act on a different
- * Source or destination — the canvas *is* the output every way, so each only reads the pixels
- * already painted and never touches the rAF loop that painted them.
+ * The Control Strip's OUT tab: takes the result out. Capture, PNG Export, Copy and Recording are
+ * the same act on a different Source or destination — the canvas *is* the output every way, so each
+ * only reads the pixels already painted and never touches the rAF loop that painted them.
+ *
+ * Stopping a Recording is deliberately **not** here. A take runs while the user keeps working in
+ * PRESETS and EDIT, so its stop lives on the canvas REC badge, reachable from every tab (ADR 0020).
+ * This panel only ever starts one.
  */
-export default function ExportBar({
+export default function OutputPanel({
   canvasRef,
   isLive,
   canRecord,
   isRecording,
-  elapsedSeconds = 0,
   onStartRecording,
-  onStopRecording,
 }: Props) {
   const toastError = useToastError()
   const toastInfo = useToastInfo()
@@ -64,16 +63,7 @@ export default function ExportBar({
   }
 
   return (
-    <div className={cn('flex gap-xs sm:gap-sm sm:justify-end', isRecording && 'items-center')}>
-      {isRecording && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="font-mono text-xs text-hot-pink border border-hot-pink px-sm py-2xs rounded-xs"
-        >
-          ● {formatElapsedTime(elapsedSeconds)}
-        </div>
-      )}
+    <div className="flex gap-xs sm:gap-sm sm:justify-end">
       <Button variant="secondary" onClick={copyPng} className="flex-1 sm:flex-none">
         copy
       </Button>
@@ -81,19 +71,13 @@ export default function ExportBar({
         {isLive ? 'capture' : 'export png'}
       </Button>
       {/* Recording is a Live Source act, and ADR 0007 hides it outright where MediaRecorder
-          can't serve — so both conditions gate the control's existence, not its disabled state. */}
-      {isLive &&
-        (isRecording ? (
-          <Button variant="danger" onClick={onStopRecording} className="flex-1 sm:flex-none">
-            ⏹ stop
-          </Button>
-        ) : (
-          canRecord && (
-            <Button variant="record" onClick={onStartRecording} className="flex-1 sm:flex-none">
-              ⏺ record
-            </Button>
-          )
-        ))}
+          can't serve — so both conditions gate the control's existence, not its disabled state.
+          While a take runs the start control goes: the stop is on the canvas badge. */}
+      {isLive && canRecord && !isRecording && (
+        <Button variant="record" onClick={onStartRecording} className="flex-1 sm:flex-none">
+          ⏺ record
+        </Button>
+      )}
     </div>
   )
 }

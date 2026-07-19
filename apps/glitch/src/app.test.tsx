@@ -52,6 +52,7 @@ vi.mock('./components/glitch-canvas', () => ({
     liveSource,
     onClearSource,
     isRecording,
+    onStopRecording,
     isMirrored,
     onMirrorToggle,
   }: {
@@ -60,6 +61,7 @@ vi.mock('./components/glitch-canvas', () => ({
     liveSource: HTMLVideoElement | null
     onClearSource?: () => void
     isRecording?: boolean
+    onStopRecording?: () => void
     isMirrored?: boolean
     onMirrorToggle?: () => void
   }) => {
@@ -68,7 +70,13 @@ vi.mock('./components/glitch-canvas', () => ({
     return (
       <>
         <canvas aria-label={liveSource ? 'live glitched preview' : 'glitched preview'} />
-        {isRecording && <span>REC</span>}
+        {/* The real badge is the stop control (ADR 0020) and is covered at the canvas' own seam;
+            here it stands in as the probe for "reachable from whichever tab is open". */}
+        {isRecording && (
+          <button type="button" onClick={onStopRecording}>
+            REC
+          </button>
+        )}
         {liveSource && <span>{isMirrored ? 'mirrored' : 'not mirrored'}</span>}
         <button type="button" onClick={onMirrorToggle}>
           toggle mirror
@@ -99,31 +107,6 @@ vi.mock('@cyberdeck/deck-kit/recording', () => ({
   },
 }))
 
-vi.mock('./components/export-bar', () => ({
-  default: ({
-    isLive,
-    canRecord,
-    isRecording,
-    onStartRecording,
-    onStopRecording,
-  }: {
-    isLive?: boolean
-    canRecord?: boolean
-    isRecording?: boolean
-    onStartRecording?: () => void
-    onStopRecording?: () => void
-  }) => (
-    <>
-      <div>{isLive ? 'capture' : 'export png'}</div>
-      {isLive && canRecord && (
-        <button type="button" onClick={isRecording ? onStopRecording : onStartRecording}>
-          {isRecording ? 'stop' : 'record'}
-        </button>
-      )}
-    </>
-  ),
-}))
-
 // Only the active tab's panel is mounted (ADR 0020), so a test reaching for a control has to be on
 // the tab that carries it. These two are the whole navigation vocabulary.
 function openEdit() {
@@ -132,6 +115,10 @@ function openEdit() {
 
 function openPresets() {
   fireEvent.click(screen.getByRole('tab', { name: 'presets' }))
+}
+
+function openOut() {
+  fireEvent.click(screen.getByRole('tab', { name: 'out' }))
 }
 
 // The path to any Chain control: a Source, then the EDIT tab.
@@ -169,16 +156,19 @@ describe('App', () => {
 
     expect(screen.getByRole('button', { name: 'upload' })).toBeInTheDocument()
     expect(screen.queryByLabelText('glitched preview')).not.toBeInTheDocument()
-    expect(screen.queryByText('export png')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
   })
 
-  it('shows the preview and PNG Export once a Source Image is uploaded', () => {
+  it('shows the preview once a Source Image is uploaded, with PNG Export in OUT', () => {
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: 'upload' }))
 
     expect(screen.getByLabelText('glitched preview')).toBeInTheDocument()
-    expect(screen.getByText('export png')).toBeInTheDocument()
+    // Export is the session's terminal action and affords a tab switch — it is not always visible.
+    expect(screen.queryByRole('button', { name: 'export png' })).not.toBeInTheDocument()
+    openOut()
+    expect(screen.getByRole('button', { name: 'export png' })).toBeInTheDocument()
   })
 
   it('returns to the empty state when the Source is cleared', () => {
@@ -642,8 +632,11 @@ describe('App', () => {
       render(<App />)
       fireEvent.click(screen.getByRole('button', { name: 'upload' }))
 
-      // PRESETS and EDIT; OUT joins them when its panel lands (#188).
-      expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['presets', 'edit'])
+      expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
+        'presets',
+        'edit',
+        'out',
+      ])
       expect(screen.getAllByRole('button', { name: DEFAULT_PRESET.name })).toHaveLength(1)
     })
 
@@ -822,9 +815,10 @@ describe('App', () => {
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'use webcam' }))
       })
+      openOut()
 
-      expect(await screen.findByText('capture')).toBeInTheDocument()
-      expect(screen.queryByText('export png')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'capture' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'export png' })).not.toBeInTheDocument()
     })
 
     // ADR 0016: the front camera opens mirrored, matching ASCII's felt default.
@@ -937,6 +931,7 @@ describe('App', () => {
         await act(async () => {
           fireEvent.click(screen.getByRole('button', { name: 'use webcam' }))
         })
+        openOut()
       }
 
       afterEach(() => {
@@ -947,7 +942,7 @@ describe('App', () => {
       it('offers Record while the Live Source runs', async () => {
         await goLive()
 
-        expect(screen.getByRole('button', { name: 'record' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /record/ })).toBeInTheDocument()
       })
 
       // Recording is a Live Source act: a Source Image has no elapsing time to record.
@@ -955,8 +950,9 @@ describe('App', () => {
         render(<App />)
 
         fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+        openOut()
 
-        expect(screen.queryByRole('button', { name: 'record' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /record/ })).not.toBeInTheDocument()
       })
 
       // ADR 0007: no GIF fallback — where MediaRecorder can't serve, the control is simply absent.
@@ -965,13 +961,13 @@ describe('App', () => {
 
         await goLive()
 
-        expect(screen.queryByRole('button', { name: 'record' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /record/ })).not.toBeInTheDocument()
       })
 
       it('starts a Recording on Record', async () => {
         await goLive()
 
-        fireEvent.click(screen.getByRole('button', { name: 'record' }))
+        fireEvent.click(screen.getByRole('button', { name: /record/ }))
 
         expect(recording.startRecording).toHaveBeenCalledOnce()
       })
@@ -981,7 +977,29 @@ describe('App', () => {
 
         await goLive()
 
-        expect(screen.getByText('REC')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'REC' })).toBeInTheDocument()
+      })
+
+      // The whole reason the stop moved to the badge: a take runs while the user keeps working in
+      // the other tabs, and the OUT tab it started from is not where they are (ADR 0020).
+      it('stops a running Recording from any tab through the canvas badge', async () => {
+        recording.isRecording = true
+        await goLive()
+
+        openPresets()
+        fireEvent.click(screen.getByRole('button', { name: 'REC' }))
+
+        expect(recording.stopRecording).toHaveBeenCalledOnce()
+      })
+
+      // Start belongs to OUT, stop belongs to the badge — offering both would give a running take
+      // two stops and leave the badge looking decorative.
+      it('drops the start control while a take is running', async () => {
+        recording.isRecording = true
+
+        await goLive()
+
+        expect(screen.queryByRole('button', { name: /record/ })).not.toBeInTheDocument()
       })
 
       // Clearing releases the camera, so the Recording has nothing left to record — leaving the
