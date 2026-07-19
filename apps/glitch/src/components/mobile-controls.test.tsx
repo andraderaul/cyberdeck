@@ -14,6 +14,7 @@ vi.mock('./control-panel', () => ({
 const defaultProps = {
   chain: DEFAULT_PRESET.chain,
   activePresetId: DEFAULT_PRESET.id,
+  isModified: false,
   onSelect: vi.fn(),
   onRandomize: vi.fn(),
   actions: {

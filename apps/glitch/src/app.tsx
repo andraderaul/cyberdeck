@@ -1,7 +1,7 @@
 import { useRecording } from '@cyberdeck/deck-kit/recording'
 import { EmptyStateHero, ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import ControlPanel, { type ChainActions } from './components/control-panel'
+import ControlPanel from './components/control-panel'
 import ExportBar from './components/export-bar'
 import GlitchCanvas from './components/glitch-canvas'
 import MobileControls from './components/mobile-controls'
@@ -9,29 +9,14 @@ import PresetPicker from './components/preset-picker'
 import Disclosure from './components/ui/disclosure'
 import { Errors } from './errors/app-error'
 import { outputFilename } from './export/output'
-import {
-  addLink,
-  type Chain,
-  duplicateLink,
-  type EffectType,
-  type Link,
-  moveLink,
-  removeLink,
-} from './glitch/chain'
-import { DEFAULT_PRESET, type Preset, randomizeChain } from './glitch/presets'
-import { createSeed } from './glitch/rng'
-import type { Seed } from './glitch/types'
+import { useEditorState } from './hooks/use-editor-state'
 import { useWebcamState } from './hooks/use-webcam-state'
 
 export default function App() {
-  // The app opens on a Preset rather than a raw look: a casual creator has to see the point on the
-  // first screen, not a near-untouched image.
-  const [chain, setChain] = useState<Chain>(DEFAULT_PRESET.chain)
-  const [activePresetId, setActivePresetId] = useState<string | null>(DEFAULT_PRESET.id)
-  // Beside the Chain, never inside it: the look and the arrangement are separate pieces
-  // of state, which is what lets Re-roll move one and leave the other alone. Drawn fresh here for
-  // the same reason applying a Preset rolls one: a look is shared, an arrangement of it is yours.
-  const [seed, setSeed] = useState<Seed>(createSeed)
+  // The look, the arrangement and the provenance live behind the Editor's one interface
+  // (editor-state.ts) — App is a caller of its transitions, not the owner of their rules.
+  const { chain, seed, activePresetId, isModified, selectPreset, randomize, reroll, chainActions } =
+    useEditorState()
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
   // The Live Source lives beside the Source Image rather than in one `source` slot: the two are
   // rendered on different clocks — an image once per change, a webcam on the rAF loop — and each
@@ -80,62 +65,6 @@ export default function App() {
       showError(webcam.error)
     }
   }, [webcam.error, showError])
-
-  // Leaves activePresetId alone: an edited look still belongs to the Preset it started from, which
-  // the picker marks as modified rather than deselecting — the user keeps their bearings.
-  const patchLink = useCallback((id: string, params: Link['params']) => {
-    setChain((prev) => prev.map((link) => (link.id === id ? ({ ...link, params } as Link) : link)))
-  }, [])
-
-  // Leaves activePresetId alone for the same reason a param edit does: a reordered look still
-  // belongs to the Preset it started from, and chainMatch — being order-sensitive — is what marks
-  // it (modified). Reordering back therefore restores the match on its own.
-  const handleReorder = useCallback((from: number, to: number) => {
-    setChain((prev) => moveLink(prev, from, to))
-  }, [])
-
-  // Add / remove / duplicate all leave activePresetId alone, exactly as a param edit and a reorder
-  // do: the look still belongs to the Preset it started from, and chainMatch — comparing length,
-  // type and params at each position — is what marks it (modified).
-  const handleAdd = useCallback((type: EffectType) => {
-    setChain((prev) => addLink(prev, type))
-  }, [])
-
-  const handleRemove = useCallback((id: string) => {
-    setChain((prev) => removeLink(prev, id))
-  }, [])
-
-  const handleDuplicate = useCallback((id: string) => {
-    setChain((prev) => duplicateLink(prev, id))
-  }, [])
-
-  const chainActions: ChainActions = {
-    onLinkChange: patchLink,
-    onReorder: handleReorder,
-    onAdd: handleAdd,
-    onRemove: handleRemove,
-    onDuplicate: handleDuplicate,
-  }
-
-  // The Seed is not part of the look, so a Re-roll leaves both the Chain and the active
-  // Preset exactly where they were — a new arrangement is not a customisation.
-  const handleReroll = useCallback(() => setSeed(createSeed()), [])
-
-  // A Preset carries no Seed, so applying one draws its own arrangement: everyone shares the look,
-  // nobody gets handed the byte-identical image.
-  const handlePresetSelect = useCallback((preset: Preset) => {
-    setChain(preset.chain)
-    setActivePresetId(preset.id)
-    setSeed(createSeed())
-  }, [])
-
-  // Clears the active Preset rather than marking its base modified: a jittered look is a new one the
-  // user discovered, not an edit they made to the Preset it happened to start from.
-  const handleRandomize = useCallback(() => {
-    setChain(randomizeChain(Math.random))
-    setActivePresetId(null)
-    setSeed(createSeed())
-  }, [])
 
   const handleUseWebcam = useCallback(() => {
     void switchMode('live')
@@ -217,13 +146,13 @@ export default function App() {
             Hidden on mobile, where MobileControls carries the same stack in a bottom sheet. */}
         <aside className="hidden sm:flex sm:border-r border-base p-md overflow-y-auto flex-col gap-lg sm:order-first">
           <PresetPicker
-            chain={chain}
             activePresetId={activePresetId}
-            onSelect={handlePresetSelect}
-            onRandomize={handleRandomize}
+            isModified={isModified}
+            onSelect={selectPreset}
+            onRandomize={randomize}
           />
           <Disclosure label="advanced">
-            <ControlPanel chain={chain} actions={chainActions} onReroll={handleReroll} />
+            <ControlPanel chain={chain} actions={chainActions} onReroll={reroll} />
           </Disclosure>
         </aside>
       </div>
@@ -234,10 +163,11 @@ export default function App() {
         <MobileControls
           chain={chain}
           activePresetId={activePresetId}
-          onSelect={handlePresetSelect}
-          onRandomize={handleRandomize}
+          isModified={isModified}
+          onSelect={selectPreset}
+          onRandomize={randomize}
           actions={chainActions}
-          onReroll={handleReroll}
+          onReroll={reroll}
         />
       )}
     </div>

@@ -43,9 +43,11 @@ Single-page React/TS/Vite app. Fully client-side — no backend, no network.
 
 1. `EmptyStateHero` offers the two entry points: `SourceImageDropZone` hands an `HTMLImageElement`
    (Source Image) to `App`, or **use webcam** switches `useWebcamState` to the Live Source
-2. `App` holds the `Chain` state and, **beside** it, the `Seed` — two separate pieces of state,
-   which is what lets Re-roll draw a new Seed and leave the look alone. Both go to `GlitchCanvas`
-   with whichever Source is active
+2. The **Editor** (`useEditorState` over the pure reducer in `src/glitch/editor-state.ts`) holds
+   the `Chain` and, **beside** it, the `Seed` — two separate pieces of state, which is what lets
+   Re-roll draw a new Seed and leave the look alone. `App` is a caller of the Editor's named
+   transitions, not the owner of their rules; Chain and Seed go to `GlitchCanvas` with whichever
+   Source is active
 3. `GlitchCanvas` decides *when* to render: a Source Image once per Source, Chain or Seed
    change via `useEffect`; a Live Source on a `requestAnimationFrame` loop throttled to ~15fps
    (ADR 0002) instead. It keeps the **hidden off-screen sampling canvas** (`hiddenRef`) that the
@@ -78,9 +80,10 @@ Three behaviours hang together, and all of them come from the Seed sitting *outs
   each position, with no "except the seed" exclusion for a later reader to innocently tidy away. It
   ignores each Link's `id`, which is plumbing rather than look: comparing it would mark every Preset
   modified the instant it was applied. So a Re-roll keeps the active Preset highlighted while a
-  slider edit, a reorder, an add, a remove or a duplicate marks it `(modified)` — the picker tracks
+  slider edit, a reorder, an add, a remove or a duplicate marks it `(modified)` — the Editor tracks
   `activePresetId` rather than deriving it, because a look alone can't say which Preset it was
-  edited away from.
+  edited away from, and `isPresetModified()` (editor-state.ts) is the one place `(modified)` is
+  derived; the picker only renders the answer.
 - **Randomize is preset + jitter** (`randomizeChain`): pick a Preset, perturb its numbers within
   spreads curated well inside the sliders' ranges. Starting from a known-good point is what
   guarantees "always pretty". **The Chain's structure rides through untouched** — which Links, how
@@ -236,6 +239,11 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   the Chain exists
 - `src/glitch/rng.ts` — `createRng()` (pure, Seed → draw stream), `deriveSeed()` (the per-Link occurrence
   sub-seed — ADR 0017), `createSeed()` (impure — the app's only real randomness), `Rng`
+- `src/glitch/editor-state.ts` — the Editor (CONTEXT.md): `EditorState` (Chain + Seed +
+  `activePresetId`), `EditorAction`, `editorReducer()` (the whole transition table — pure, all
+  randomness arrives in the payload), `isPresetModified()` (the one place `(modified)` is derived),
+  `initialEditorState()`, `ChainActions` (the five Chain edits as one callback bundle — Editor
+  vocabulary, so the panels import it from here)
 - `src/glitch/image-utils.ts` — `sampleDimensions()` (800×800 cap), `sourceDimensions()`,
   `GlitchSource` (image | video — the shell's vocabulary, kept out of the DOM-free `types.ts`)
 - `src/glitch/render-frame.ts` — `renderGlitchFrame()`: the imperative shell
@@ -244,6 +252,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/errors/app-error.ts` — `Errors`: this app's error factories over the kit's `AppError` /
   `createError` (`@cyberdeck/deck-kit/errors`)
 - `src/export/output.ts` — `outputFilename()`, `OutputKind`
+- `src/hooks/use-editor-state.ts` — `useEditorState()`: the Editor's thin React half — wraps
+  `useReducer`, draws the randomness at dispatch time, exposes the named transitions plus the
+  `ChainActions` bundle
 - `src/hooks/use-webcam-state.ts` — `useWebcamState()`, `planCommands()`, `reducer()`: the Live
   Source's MediaStream lifecycle — deliberately still a hand-copy (ADR 0014)
 - `src/utils/copy.ts` — `copyCanvasToClipboard()`, `isClipboardImageSupported()` (canvas → PNG on
