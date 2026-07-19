@@ -7,6 +7,7 @@
 
 import type { Image } from './assembler'
 import {
+  byteShift,
   CR,
   EQ,
   ER,
@@ -360,12 +361,9 @@ function writeWord(cycle: Cycle, wordIndex: number, value: number): void {
   mutableMemory(cycle)[index] = value >>> 0
 }
 
-// Byte 0 of a word is its most significant — confirmed against `1_limits`, where the word
-// 0x41424300 reads back 0x41 at offset 0 and 0x43 at offset 2.
 function readByte(cycle: Cycle, byteAddress: number): number {
   const address = byteAddress >>> 0
-  const word = readWord(cycle, address >>> 2)
-  return (word >>> (8 * (3 - (address & 3)))) & 0xff
+  return (readWord(cycle, address >>> 2) >>> byteShift(address)) & 0xff
 }
 
 function writeByte(cycle: Cycle, byteAddress: number, value: number): void {
@@ -381,7 +379,7 @@ function writeByte(cycle: Cycle, byteAddress: number, value: number): void {
   if (wordIndex >= MEMORY_WORDS) {
     return
   }
-  const shift = 8 * (3 - (address & 3))
+  const shift = byteShift(address)
   const word = readWord(cycle, wordIndex)
   mutableMemory(cycle)[wordIndex] = ((word & ~(0xff << shift)) | ((value & 0xff) << shift)) >>> 0
 }

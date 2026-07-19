@@ -416,6 +416,48 @@ describe('discoverability', () => {
   })
 })
 
+// Each of these came out of the review of the v1 branch — they were all silent failures.
+describe('regressions', () => {
+  it('prints the command reference on load, not merely a pointer to it', () => {
+    render(<App />)
+
+    // "discover commands without a manual" means the list itself, not a mention of `help`.
+    const console = screen.getByRole('region', { name: 'Console' })
+    expect(console).toHaveTextContent('commands:')
+    expect(console).toHaveTextContent('mem <start> [count] [words|bytes]')
+  })
+
+  it('answers a second asm instead of going silent', async () => {
+    render(<App />)
+
+    await type('asm')
+    await type('asm')
+
+    expect(screen.getByText(/already assembled/)).toBeInTheDocument()
+  })
+
+  it('says a breakpoint set before assembling has not been checked yet', async () => {
+    render(<App />)
+
+    await type('break 999')
+
+    expect(screen.getByText(/unchecked until you assemble/)).toBeInTheDocument()
+  })
+
+  it('shows registers through the same formatter the Console uses', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('step')
+    await type('reg r1')
+
+    // Both surfaces render 20 as 0x00000014; the panel used to hand-roll its own padding.
+    expect(screen.getByRole('region', { name: 'Registers' })).toHaveTextContent('0x00000014')
+    expect(screen.getByRole('region', { name: 'Console' }).textContent).toContain('0x00000014')
+  })
+})
+
 describe('sharing and persistence', () => {
   afterEach(() => {
     window.location.hash = ''
@@ -708,7 +750,7 @@ describe('the clock', () => {
 
     await type('clock fast')
 
-    expect(screen.getByText(/steps per second/)).toBeInTheDocument()
+    expect(screen.getByText(/takes a whole number of steps per second/)).toBeInTheDocument()
   })
 
   // The Clock is presentation state, not part of the Machine.

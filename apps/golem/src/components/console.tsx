@@ -59,7 +59,7 @@ export default function Console({ lines, history, onSubmit }: ConsoleProps) {
   useEffect(() => {
     // Newest line is the one worth reading; keep it in view as output accumulates.
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight })
-  }, [])
+  }, [lines])
 
   return (
     <Panel title="Console" className="min-h-[12rem] lg:min-h-0">

@@ -19,8 +19,9 @@ export default function Terminal({ machine }: TerminalProps) {
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    // Follows the program's output as it prints, rather than stranding the reader at the top.
     endRef.current?.scrollIntoView({ block: 'end' })
-  }, [])
+  }, [output])
 
   return (
     <Panel title="Terminal">

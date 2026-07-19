@@ -157,6 +157,19 @@ export function unpackU(field: keyof typeof FIELD_U, word: number): number {
 }
 
 /**
+ * How far to shift a word to reach the byte at `address`. Byte 0 of a word is its **most
+ * significant** — big-endian within the word — which `1_limits` pins: the word 0x41424300 yields
+ * 0x41 at offset 0 and 0x43 at offset 2.
+ *
+ * Stated once here because the assembler packs strings by it, the machine reads and writes bytes
+ * by it, and a memory dump displays by it. Three copies of `8 * (3 - (address & 3))` would be
+ * three chances to disagree.
+ */
+export function byteShift(address: number): number {
+  return 8 * (3 - (address & 3))
+}
+
+/**
  * Resolves a register name to its index, or `null` if it names nothing. Accepts `r0`–`r31` and
  * the special registers by name, which is how they are written in the reference sources.
  */

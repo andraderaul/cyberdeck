@@ -6,7 +6,7 @@ import { downloadText, outputFilename } from '../export/output'
 import { assemble, type Image, wordIndexForLine } from '../golem/assembler'
 import { type Command, parseCommand } from '../golem/command'
 import { GREETING, helpFor, helpLines } from '../golem/help'
-import { formatMemoryDump, formatRegister } from '../golem/inspect'
+import { formatMemoryDump, formatRegister, hex32 } from '../golem/inspect'
 import { PC, registerIndex } from '../golem/isa'
 import { createMachine, type Machine, step } from '../golem/machine'
 import { encode } from '../golem/share'
@@ -101,7 +101,11 @@ export function useConsole(initialSource: string): ConsoleState {
   const [source, setSourceState] = useState(initialSource)
   const [machine, setMachineState] = useState<Machine | null>(null)
   const [image, setImage] = useState<Image | null>(null)
-  const [lines, setLines] = useState<ConsoleLine[]>([{ id: 0, kind: 'info', text: GREETING }])
+  // The reference itself, not just a pointer to it: the Console is the only control grammar, so
+  // a visitor has to be able to discover the commands without going looking (#140, PRD story 2).
+  const [lines, setLines] = useState<ConsoleLine[]>(() =>
+    [GREETING, ...helpLines()].map((text, id) => ({ id, kind: 'info' as const, text })),
+  )
 
   // The clock steps far faster than React should re-render, so the ref is the machine of record
   // and the state is a mirror for the panels. React batches the mirror updates within a frame.
@@ -201,6 +205,7 @@ export function useConsole(initialSource: string): ConsoleState {
   const build = useCallback(
     (output: Omit<ConsoleLine, 'id'>[]): boolean => {
       if (machineRef.current !== null) {
+        output.push({ kind: 'info', text: 'already assembled — reset to edit and assemble again' })
         return true
       }
 
@@ -227,6 +232,15 @@ export function useConsole(initialSource: string): ConsoleState {
     },
     [setMachine, source],
   )
+
+  /** The Machine, or null having already said why there isn't one — four commands need both. */
+  const requireMachine = useCallback((output: Omit<ConsoleLine, 'id'>[]): Machine | null => {
+    if (machineRef.current === null) {
+      output.push({ kind: 'error', text: 'no machine — run asm first' })
+      return null
+    }
+    return machineRef.current
+  }, [])
 
   const dispatch = useCallback(
     (command: Command, output: Omit<ConsoleLine, 'id'>[]): void => {
@@ -270,9 +284,8 @@ export function useConsole(initialSource: string): ConsoleState {
 
         case 'step': {
           clock.stop()
-          const current = machineRef.current
+          const current = requireMachine(output)
           if (current === null) {
-            output.push({ kind: 'error', text: 'no machine — run asm first' })
             break
           }
           if (current.halted) {
@@ -282,9 +295,7 @@ export function useConsole(initialSource: string): ConsoleState {
           const next = stepRecording(current)
           output.push({
             kind: 'info',
-            text: next.halted
-              ? 'halted'
-              : `pc = 0x${next.registers[32].toString(16).padStart(8, '0')}`,
+            text: next.halted ? 'halted' : `pc = ${hex32(next.registers[PC])}`,
           })
           break
         }
@@ -302,8 +313,7 @@ export function useConsole(initialSource: string): ConsoleState {
             break
           }
 
-          if (machineRef.current === null) {
-            output.push({ kind: 'error', text: 'no machine — run asm first' })
+          if (requireMachine(output) === null) {
             break
           }
           const filename = outputFilename('trace-export')
@@ -326,9 +336,8 @@ export function useConsole(initialSource: string): ConsoleState {
           break
 
         case 'reg': {
-          const current = machineRef.current
+          const current = requireMachine(output)
           if (current === null) {
-            output.push({ kind: 'error', text: 'no machine — run asm first' })
             break
           }
           const index = registerIndex(command.name)
@@ -344,9 +353,8 @@ export function useConsole(initialSource: string): ConsoleState {
         }
 
         case 'mem': {
-          const current = machineRef.current
+          const current = requireMachine(output)
           if (current === null) {
-            output.push({ kind: 'error', text: 'no machine — run asm first' })
             break
           }
           const lines = formatMemoryDump(current.memory, command.start, command.count, command.unit)
@@ -380,7 +388,13 @@ export function useConsole(initialSource: string): ConsoleState {
           }
           breakpointsRef.current.add(command.line)
           syncBreakpoints()
-          output.push({ kind: 'info', text: `breakpoint at line ${command.line}` })
+          output.push({
+            kind: 'info',
+            text:
+              image === null
+                ? `breakpoint at line ${command.line} — unchecked until you assemble`
+                : `breakpoint at line ${command.line}`,
+          })
           break
         }
 
@@ -425,7 +439,7 @@ export function useConsole(initialSource: string): ConsoleState {
           break
       }
     },
-    [append, build, clock, setMachine, source, stepRecording, syncBreakpoints],
+    [append, build, clock, requireMachine, setMachine, source, stepRecording, syncBreakpoints],
   )
 
   const submit = useCallback(
