@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type ChipBounds, chipAtPointer, DRAG_THRESHOLD_PX, isDragGesture } from './chain-drag'
+import { type ChipBounds, DRAG_THRESHOLD_PX, dropTargetAt, isDragGesture } from './chain-drag'
 
 // Three 100px chips with 10px gaps between them.
 const CHIPS: ChipBounds[] = [
@@ -8,26 +8,26 @@ const CHIPS: ChipBounds[] = [
   { index: 2, left: 220, right: 320 },
 ]
 
-describe('chipAtPointer', () => {
+describe('dropTargetAt', () => {
   it('finds the chip under the pointer', () => {
-    expect(chipAtPointer(60, CHIPS)).toBe(0)
-    expect(chipAtPointer(150, CHIPS)).toBe(1)
-    expect(chipAtPointer(300, CHIPS)).toBe(2)
+    expect(dropTargetAt(60, CHIPS)).toBe(0)
+    expect(dropTargetAt(150, CHIPS)).toBe(1)
+    expect(dropTargetAt(300, CHIPS)).toBe(2)
   })
 
   it('hands a gap to the nearer neighbour rather than refusing the drop', () => {
-    expect(chipAtPointer(103, CHIPS)).toBe(0)
-    expect(chipAtPointer(107, CHIPS)).toBe(1)
-    expect(chipAtPointer(218, CHIPS)).toBe(2)
+    expect(dropTargetAt(103, CHIPS)).toBe(0)
+    expect(dropTargetAt(107, CHIPS)).toBe(1)
+    expect(dropTargetAt(218, CHIPS)).toBe(2)
   })
 
   it('clamps past the ends, so a drag off the row still lands', () => {
-    expect(chipAtPointer(-40, CHIPS)).toBe(0)
-    expect(chipAtPointer(9999, CHIPS)).toBe(2)
+    expect(dropTargetAt(-40, CHIPS)).toBe(0)
+    expect(dropTargetAt(9999, CHIPS)).toBe(2)
   })
 
   it('has nothing to report on an empty row', () => {
-    expect(chipAtPointer(50, [])).toBeNull()
+    expect(dropTargetAt(50, [])).toBeNull()
   })
 
   // The row scrolls, so its chips carry Chain positions that need not start at 0 or run in
@@ -38,8 +38,8 @@ describe('chipAtPointer', () => {
       { index: 0, left: 110, right: 210 },
     ]
 
-    expect(chipAtPointer(60, moved)).toBe(2)
-    expect(chipAtPointer(150, moved)).toBe(0)
+    expect(dropTargetAt(60, moved)).toBe(2)
+    expect(dropTargetAt(150, moved)).toBe(0)
   })
 })
 
