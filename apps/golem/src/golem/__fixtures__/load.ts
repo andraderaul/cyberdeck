@@ -37,6 +37,7 @@ export const UNIT_2_RUNNABLE: readonly FixtureName[] = [
   '2_hello_world',
   '2_interruption',
   '2_watchdog',
+  '2_fpu',
 ]
 
 // `bni` is absent: setting IV needs an invalid instruction, and that sends the reference emulator
