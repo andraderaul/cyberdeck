@@ -1,26 +1,45 @@
 import { Button, Chip, useToastError } from '@cyberdeck/deck-kit/ui'
 import { isTouchDevice, shareOrDownloadCanvas } from '@cyberdeck/deck-kit/utils'
-import type { RefObject } from 'react'
-import { useState } from 'react'
+import { type RefObject, useState } from 'react'
+import AiConfigBanner from '../components/ai-config-banner'
 import { Errors } from '../errors/app-error'
 import { outputFilename, type PngScale, planPngExport } from '../export/output'
 
 interface Props {
   canvasRef: RefObject<HTMLCanvasElement | null>
   asciiRows: string[]
-  hasImage?: boolean
+  isLive: boolean
   canvasDimensions?: { w: number; h: number } | null
   hasAiConfig: boolean
   onAnalyze: () => void
+  onConfigureAi: () => void
+  canRecord?: boolean
+  isRecording?: boolean
+  onStartRecording?: () => void
 }
 
-export default function ExportBar({
+/**
+ * The Control Strip's OUT tab: one surface for every way the result leaves, gated by Source.
+ *
+ * A Source Image offers PNG and TXT Export; a Live Source offers Capture and Recording. That gating
+ * is what the two sibling bars used to encode by existing separately — the availability is
+ * unchanged, only its home is. AI Analysis rides here because it is where it already lived: a
+ * terminal action on the current canvas, beside the outputs rather than in the editing tabs.
+ *
+ * Stopping a Recording is deliberately absent. A take runs while the user keeps working in PRESETS
+ * and EDIT, so its stop is the canvas REC badge, reachable from every tab (ADR 0020).
+ */
+export default function OutputPanel({
   canvasRef,
   asciiRows,
-  hasImage,
+  isLive,
   canvasDimensions,
   hasAiConfig,
   onAnalyze,
+  onConfigureAi,
+  canRecord,
+  isRecording,
+  onStartRecording,
 }: Props) {
   const toastError = useToastError()
   const [scale, setScale] = useState<PngScale>(1)
@@ -66,9 +85,26 @@ export default function ExportBar({
     }
   }
 
+  async function capture() {
+    const canvas = canvasRef.current
+    if (!canvas) {
+      return
+    }
+    try {
+      await shareOrDownloadCanvas(canvas, outputFilename('capture', { timestamp: Date.now() }))
+    } catch {
+      toastError(Errors.captureFailed().message)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-xs">
-      {hasImage && (
+      {/* Rehomed from above the bars into the tab it advertises: the banner sells AI Analysis, and
+          this is now the only place that control appears. */}
+      {!hasAiConfig && <AiConfigBanner onConfigure={onConfigureAi} />}
+
+      {/* Scale is a PNG Export setting, so it only shows where PNG Export does. */}
+      {!isLive && (
         <div className="flex items-center gap-xs">
           <span className="text-fg-subtle text-xs font-mono">png scale</span>
           {([1, 2, 4] as const).map((s) => (
@@ -86,18 +122,38 @@ export default function ExportBar({
           </span>
         </div>
       )}
+
       <div className="flex gap-xs sm:gap-sm sm:justify-end">
-        {hasAiConfig && (
+        {/* Hidden mid-take, as it was in LiveSourceBar: a modal over a running Recording would put
+            the user somewhere they can't see the take they're still shooting. */}
+        {hasAiConfig && !isRecording && (
           <Button variant="analyze" onClick={onAnalyze} className="flex-1 sm:flex-none">
             {isTouchDevice ? '◈ analyze' : '◈ scan & analyze'}
           </Button>
         )}
-        <Button variant="primary" onClick={exportPng} className="flex-1 sm:flex-none">
-          export png
-        </Button>
-        <Button variant="secondary" onClick={exportTxt} className="flex-1 sm:flex-none">
-          export txt
-        </Button>
+        {isLive ? (
+          <>
+            <Button variant="danger" onClick={capture} className="flex-1 sm:flex-none">
+              ◎ capture
+            </Button>
+            {/* ADR 0007 hides Record outright where MediaRecorder can't serve. While a take runs
+                the start control goes: the stop is on the canvas badge. */}
+            {canRecord && !isRecording && (
+              <Button variant="record" onClick={onStartRecording} className="flex-1 sm:flex-none">
+                ⏺ record
+              </Button>
+            )}
+          </>
+        ) : (
+          <>
+            <Button variant="primary" onClick={exportPng} className="flex-1 sm:flex-none">
+              export png
+            </Button>
+            <Button variant="secondary" onClick={exportTxt} className="flex-1 sm:flex-none">
+              export txt
+            </Button>
+          </>
+        )}
       </div>
     </div>
   )

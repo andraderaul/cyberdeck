@@ -8,13 +8,10 @@ import { useAIConfig } from './ai/use-ai-config'
 import type { Preset } from './ascii/presets'
 import type { ConversionSettings } from './ascii/types'
 import AboutModal from './components/about-modal'
-import AiConfigBanner from './components/ai-config-banner'
 import AnalysisModal from './components/analysis-modal'
 import ApiKeyModal from './components/api-key-modal'
 import AsciiCanvas from './components/ascii-canvas'
 import ControlStrip from './components/control-strip'
-import ExportBar from './components/export-bar'
-import LiveSourceBar from './components/live-source-bar'
 import HeaderButton from './components/ui/header-button'
 import { outputFilename } from './export/output'
 import { useWebcamState } from './hooks/use-webcam-state'
@@ -193,6 +190,8 @@ export default function App() {
                   canvasRef={canvasRef}
                   isMirrored={isMirrored}
                   isRecording={isRecording}
+                  elapsedSeconds={elapsedSeconds}
+                  onStopRecording={stopRecording}
                   isLive={!!sourceVideo}
                   onClearSource={handleClearSource}
                   onMirrorToggle={handleMirrorToggle}
@@ -208,34 +207,6 @@ export default function App() {
               )}
             </ErrorBoundary>
           </div>
-          {(sourceImage || sourceVideo) && (
-            <div className="flex flex-col gap-xs py-sm px-md border-t border-base shrink-0">
-              {!aiConfig && (
-                <AiConfigBanner onConfigure={() => setActiveModal({ kind: 'apiKey' })} />
-              )}
-              {sourceVideo ? (
-                <LiveSourceBar
-                  canvasRef={canvasRef}
-                  hasAiConfig={!!aiConfig}
-                  onAnalyze={handleAnalyze}
-                  canRecord={canRecord}
-                  isRecording={isRecording}
-                  elapsedSeconds={elapsedSeconds}
-                  onStartRecording={startRecording}
-                  onStopRecording={stopRecording}
-                />
-              ) : (
-                <ExportBar
-                  canvasRef={canvasRef}
-                  asciiRows={asciiRows}
-                  hasImage={!!sourceImage}
-                  canvasDimensions={canvasDimensions}
-                  hasAiConfig={!!aiConfig}
-                  onAnalyze={handleAnalyze}
-                />
-              )}
-            </div>
-          )}
         </main>
       </div>
 
@@ -244,6 +215,16 @@ export default function App() {
           convert it. */}
       {(sourceImage || sourceVideo) && (
         <ControlStrip
+          canvasRef={canvasRef}
+          asciiRows={asciiRows}
+          isLive={!!sourceVideo}
+          canvasDimensions={canvasDimensions}
+          hasAiConfig={!!aiConfig}
+          onAnalyze={handleAnalyze}
+          onConfigureAi={() => setActiveModal({ kind: 'apiKey' })}
+          canRecord={canRecord}
+          isRecording={isRecording}
+          onStartRecording={startRecording}
           settings={settings}
           activePresetId={activePresetId}
           onPresetSelect={handlePresetSelect}
