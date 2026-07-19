@@ -1,12 +1,9 @@
 import { useRecording } from '@cyberdeck/deck-kit/recording'
 import { EmptyStateHero, ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import ControlPanel from './components/control-panel'
 import ControlStrip from './components/control-strip'
 import ExportBar from './components/export-bar'
 import GlitchCanvas from './components/glitch-canvas'
-import MobileControls from './components/mobile-controls'
-import Disclosure from './components/ui/disclosure'
 import { Errors } from './errors/app-error'
 import { outputFilename } from './export/output'
 import { useEditorState } from './hooks/use-editor-state'
@@ -93,10 +90,10 @@ export default function App() {
         <span className="text-fg-muted text-xs hidden sm:block">image → glitch</span>
       </header>
 
-      {/* On mobile the aside is hidden and its controls move to a bottom sheet (MobileControls), so
-          main takes the whole area; at sm the aside reappears as the left column. */}
-      <div className="flex-1 grid grid-cols-1 [grid-template-rows:1fr_auto] sm:grid-cols-[280px_1fr] sm:[grid-template-rows:1fr] overflow-hidden">
-        <main className="flex flex-col overflow-hidden">
+      {/* One column at both breakpoints now: the Strip below carries every control, so there is no
+          aside to make room for (ADR 0020). */}
+      <div className="flex-1 flex overflow-hidden">
+        <main className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 relative overflow-hidden">
             <ErrorBoundary
               fallback={
@@ -140,32 +137,21 @@ export default function App() {
             </div>
           )}
         </main>
-
-        {/* The Presets moved to the Strip (ADR 0020), so the aside is down to the tweak layer alone
-            until the EDIT tab replaces it. Hidden on mobile, where MobileControls carries the same
-            `advanced` fold in a bottom sheet. */}
-        <aside className="hidden sm:flex sm:border-r border-base p-md overflow-y-auto flex-col gap-lg sm:order-first">
-          <Disclosure label="advanced">
-            <ControlPanel chain={chain} actions={chainActions} onReroll={reroll} />
-          </Disclosure>
-        </aside>
       </div>
 
-      {/* Outside the grid, so the Strip spans the aside's column too and stays bottom-anchored at
-          both breakpoints — the canvas above it is never occluded (ADR 0020). Only with a Source:
-          on the empty state the choice is which Source to open, not how to glitch it. */}
+      {/* Bottom-anchored at both breakpoints, with the canvas above it never occluded (ADR 0020).
+          Only with a Source: on the empty state the choice is which Source to open, not how to
+          glitch it. */}
       {hasSource && (
-        // `relative` so the mobile ⚙ trigger can anchor itself just above the Strip rather than to
-        // a fixed offset that a taller Strip would collide with.
-        <div className="relative shrink-0">
-          <MobileControls chain={chain} actions={chainActions} onReroll={reroll} />
-          <ControlStrip
-            activePresetId={activePresetId}
-            isModified={isModified}
-            onSelect={selectPreset}
-            onRandomize={randomize}
-          />
-        </div>
+        <ControlStrip
+          chain={chain}
+          activePresetId={activePresetId}
+          isModified={isModified}
+          onSelect={selectPreset}
+          onRandomize={randomize}
+          actions={chainActions}
+          onReroll={reroll}
+        />
       )}
     </div>
   )

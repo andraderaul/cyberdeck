@@ -14,7 +14,7 @@ Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced pane
 Chain (ADR 0017, #125–#128). All six Effects are live — Source Image *or* Live Source → the Chain
 → PNG Export / Capture / Copy / Recording — the pure-core / imperative-shell seam is established,
 and the render is deterministic in Chain + Seed. The front door is the six Presets plus Randomize;
-behind the advanced affordance the Chain is fully editable — reorder, add, remove, duplicate, the
+behind the EDIT tab the Chain is fully editable — reorder, add, remove, duplicate, the
 same Effect more than once. The v1 scope in `CONTEXT.md` is complete.
 
 The Preset **values** are taste, not derivation: they are the one thing here a human curates, and
@@ -261,29 +261,29 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   the clipboard)
 - Everything else shared comes from `@cyberdeck/deck-kit` (ADR 0014): `recording` (`useRecording`,
   `formatElapsedTime`), `ui` (the primitives plus `EmptyStateHero`, `ErrorBoundary`,
-  `MobileBottomSheet`, the toast hooks), `utils` (`cn`, `shareOrDownloadCanvas`,
+  the toast hooks), `utils` (`cn`, `shareOrDownloadCanvas`,
   `shareOrDownloadBlob`, `isTouchDevice`), `errors`
 
 **Components**
 - `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render, and owns the
   ~15fps rAF loop for a Live Source. Carries the LIVE / REC badges
 - `src/components/control-strip.tsx` — the Control Strip (ADR 0020): the bottom-anchored control
-  surface at both breakpoints, so the canvas is never occluded while a look is browsed. PRESETS is
-  its only tab so far — a tab is never rendered ahead of the panel behind it, which is why the
-  selection is static rather than state
+  surface at both breakpoints and the program's whole control grammar — there is no aside and no
+  sheet behind it. PRESETS and EDIT so far; OUT joins them when its panel exists, since a tab is
+  never rendered ahead of what sits behind it. Only the active panel is mounted, so one tab's
+  controls are in the accessibility tree at a time
 - `src/components/preset-picker.tsx` — the PRESETS panel: the six Preset chips in a horizontally
   scrollable row (active one highlighted, `(modified)` once edited) and Randomize beside them
-- `src/components/control-panel.tsx` — the Chain editor: one section per Link in Chain order, each
-  with a grab handle (drag, or arrow keys when focused), duplicate and remove; plus the
-  registry-driven add palette and the Re-roll control (its own callback — the Seed is not part of
-  the look). Sits behind the `advanced` Disclosure in `app.tsx` (#84) — the tweak layer, not the
-  front door
-- `src/components/mobile-controls.tsx` — the mobile bottom sheet carrying the same stack as the
-  desktop aside, now the `advanced` fold alone — the Presets left for the Strip (ADR 0020), and the
-  sheet itself dies when the EDIT tab takes the Chain editor
+- `src/components/chain-editor.tsx` — the Strip's EDIT tab: the Chain as a row of Link chips
+  left→right in processing order, each chip both the selection control and the drag handle (drag, or
+  left/right arrows when focused). The focused Link's params fill the panel above the row —
+  stacked on mobile, one grid row of equal columns at `sm` (adaptive density, ADR 0020) — with
+  duplicate and remove as actions on that panel. The registry-driven add palette shares the panel
+  slot with the params, and Re-roll sits outside the row (its own callback — the Seed is not part of
+  the look)
+
 - `src/components/export-bar.tsx` — PNG Export / Capture / Copy / Record controls and the
   recording timer
-- `src/components/ui/disclosure.tsx` — the one primitive still local: the `advanced` fold
 
 **Testing**
 - `src/test-setup.ts` polyfills `ImageData` — happy-dom ships none, and the shell constructs one.

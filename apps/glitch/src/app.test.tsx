@@ -124,18 +124,43 @@ vi.mock('./components/export-bar', () => ({
   ),
 }))
 
-// The sliders and Re-roll live behind the advanced affordance, so anything reaching for a control
-// has to open it first.
-function openAdvanced() {
-  fireEvent.click(screen.getByRole('button', { name: /advanced/i }))
+// Only the active tab's panel is mounted (ADR 0020), so a test reaching for a control has to be on
+// the tab that carries it. These two are the whole navigation vocabulary.
+function openEdit() {
+  fireEvent.click(screen.getByRole('tab', { name: 'edit' }))
 }
 
-// The path to any control: a Source, then the affordance open. Worth one helper — the Presets land
-// above the panel next (#86), and that layout change should touch one line, not every test.
-function renderWithAdvancedOpen() {
+function openPresets() {
+  fireEvent.click(screen.getByRole('tab', { name: 'presets' }))
+}
+
+// The path to any Chain control: a Source, then the EDIT tab.
+function renderWithEditOpen() {
   render(<App />)
   fireEvent.click(screen.getByRole('button', { name: 'upload' }))
-  openAdvanced()
+  openEdit()
+}
+
+/** The Link chips, in Chain order — each is both the selection control and the drag handle. */
+function linkChips() {
+  return screen.getAllByRole('button', { name: /, position \d+ of \d+$/ })
+}
+
+/**
+ * Focuses a Link so its params reach the panel. Named by Effect rather than by index because that
+ * is how the tests read; the first match wins, which is what a test on a repeated Effect wants.
+ */
+function focusLink(label: string) {
+  const chip = linkChips().find((c) => c.getAttribute('aria-label')?.startsWith(`${label},`))
+  if (!chip) {
+    throw new Error(`no Link chip for ${label}`)
+  }
+  fireEvent.click(chip)
+}
+
+/** Opens the add palette, which shares the panel slot with a focused Link's params. */
+function openPalette() {
+  fireEvent.click(screen.getByRole('button', { name: 'add effect' }))
 }
 
 describe('App', () => {
@@ -166,70 +191,71 @@ describe('App', () => {
     expect(screen.queryByLabelText('glitched preview')).not.toBeInTheDocument()
   })
 
-  it('keeps the per-Effect controls behind the advanced affordance', () => {
+  it('keeps the per-Effect controls behind the EDIT tab', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'upload' }))
 
-    expect(screen.queryByLabelText('grain')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('blocks')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 're-roll' })).not.toBeInTheDocument()
   })
 
-  it('reveals every Effect’s controls and Re-roll once advanced is opened', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+  // The row is the Chain: left→right in processing order, which is the layout expressing ADR 0017
+  // rather than stacking it (ADR 0020).
+  it('shows the Chain as a row of Links in processing order', () => {
+    renderWithEditOpen()
 
-    openAdvanced()
-
-    // One section per Link of the opening Preset, in Chain order — VAPORWAVE carries all six.
-    expect(screen.getByLabelText('blocks')).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'sort direction' })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'channel' })).toBeInTheDocument()
-    expect(screen.getByLabelText('strength')).toBeInTheDocument()
-    expect(screen.getByLabelText('intensity')).toBeInTheDocument()
-    expect(screen.getByLabelText('grain')).toBeInTheDocument()
+    expect(linkChips().map((c) => c.getAttribute('aria-label'))).toEqual([
+      'block displacement, position 1 of 6',
+      'pixel sort, position 2 of 6',
+      'channel shift, position 3 of 6',
+      'chromatic aberration, position 4 of 6',
+      'scanlines, position 5 of 6',
+      'noise, position 6 of 6',
+    ])
     expect(screen.getByRole('button', { name: 're-roll' })).toBeInTheDocument()
   })
 
-  // Off is the Link's absence now (ADR 0017), so an Effect a Preset doesn't carry has no row at
+  // The tab opens on the Chain's head rather than on an empty panel.
+  it('opens EDIT focused on the first Link', () => {
+    renderWithEditOpen()
+
+    expect(screen.getByLabelText('blocks')).toBeInTheDocument()
+    expect(screen.getByLabelText('displace')).toBeInTheDocument()
+  })
+
+  it('swaps the panel to the Link that is tapped', () => {
+    renderWithEditOpen()
+
+    focusLink('noise')
+
+    expect(screen.getByLabelText('grain')).toBeInTheDocument()
+    // One Link in focus at a time — the panel is the Strip's single control slot (ADR 0020).
+    expect(screen.queryByLabelText('blocks')).not.toBeInTheDocument()
+  })
+
+  // Off is the Link's absence now (ADR 0017), so an Effect a Preset doesn't carry has no chip at
   // all — this replaces the power toggles the flat model needed.
-  it('renders no controls for an Effect the active Preset leaves out', () => {
-    renderWithAdvancedOpen()
+  it('renders no Link for an Effect the active Preset leaves out', () => {
+    renderWithEditOpen()
+    openPresets()
 
     fireEvent.click(screen.getByRole('button', { name: 'VHS' }))
+    openEdit()
 
-    // VHS carries no Pixel Sort, so its params are gone rather than hidden behind an off toggle.
-    expect(screen.queryByRole('group', { name: 'sort direction' })).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('run length')).not.toBeInTheDocument()
-    // Its own Links are still there.
-    expect(screen.getByLabelText('blocks')).toBeInTheDocument()
-    expect(screen.getByLabelText('grain')).toBeInTheDocument()
+    // VHS carries no Pixel Sort, so it is gone rather than hidden behind an off toggle.
+    const names = linkChips().map((c) => c.getAttribute('aria-label'))
+    expect(names.some((n) => n?.startsWith('pixel sort'))).toBe(false)
+    expect(names.some((n) => n?.startsWith('block displacement'))).toBe(true)
+    expect(names.some((n) => n?.startsWith('noise'))).toBe(true)
   })
 
   describe('reordering Links', () => {
-    function handles() {
-      return screen.getAllByRole('button', { name: /^reorder / })
-    }
-
-    it('offers a reorder handle per Link, spelling out its position', () => {
-      renderWithAdvancedOpen()
-
-      const names = handles().map((h) => h.getAttribute('aria-label'))
-
-      expect(names).toEqual([
-        'reorder block displacement, position 1 of 6',
-        'reorder pixel sort, position 2 of 6',
-        'reorder channel shift, position 3 of 6',
-        'reorder chromatic aberration, position 4 of 6',
-        'reorder scanlines, position 5 of 6',
-        'reorder noise, position 6 of 6',
-      ])
-    })
-
-    it('moves a Link later on ArrowDown', () => {
-      renderWithAdvancedOpen()
+    // Left/right rather than up/down: the Chain reads across the row now.
+    it('moves a Link later on ArrowRight', () => {
+      renderWithEditOpen()
       renderedChain.mockClear()
 
-      fireEvent.keyDown(handles()[0], { key: 'ArrowDown' })
+      fireEvent.keyDown(linkChips()[0], { key: 'ArrowRight' })
 
       expect(lastChain().map((link) => link.type)).toEqual([
         'pixelSort',
@@ -241,11 +267,11 @@ describe('App', () => {
       ])
     })
 
-    it('moves a Link earlier on ArrowUp', () => {
-      renderWithAdvancedOpen()
+    it('moves a Link earlier on ArrowLeft', () => {
+      renderWithEditOpen()
       renderedChain.mockClear()
 
-      fireEvent.keyDown(handles()[1], { key: 'ArrowUp' })
+      fireEvent.keyDown(linkChips()[1], { key: 'ArrowLeft' })
 
       expect(lastChain().map((link) => link.type)).toEqual([
         'pixelSort',
@@ -257,31 +283,32 @@ describe('App', () => {
       ])
     })
 
-    // The ends have nowhere to go — moving past them would wrap the Chain, which reads as the list
+    // The ends have nowhere to go — moving past them would wrap the Chain, which reads as the row
     // jumping rather than as the move being refused.
     it('refuses to move the first Link earlier', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
       const before = lastChain().map((link) => link.type)
 
-      fireEvent.keyDown(handles()[0], { key: 'ArrowUp' })
+      fireEvent.keyDown(linkChips()[0], { key: 'ArrowLeft' })
 
       expect(lastChain().map((link) => link.type)).toEqual(before)
     })
 
     it('refuses to move the last Link later', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
       const before = lastChain().map((link) => link.type)
 
-      fireEvent.keyDown(handles()[5], { key: 'ArrowDown' })
+      fireEvent.keyDown(linkChips()[5], { key: 'ArrowRight' })
 
       expect(lastChain().map((link) => link.type)).toEqual(before)
     })
 
     it('marks the active Preset modified once a Link moves', () => {
       // chainMatch is order-sensitive, so a reorder is an edit to the look exactly as a slider is.
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
 
-      fireEvent.keyDown(handles()[0], { key: 'ArrowDown' })
+      fireEvent.keyDown(linkChips()[0], { key: 'ArrowRight' })
+      openPresets()
 
       expect(
         screen.getByRole('button', { name: `${DEFAULT_PRESET.name} (modified)` }),
@@ -289,20 +316,21 @@ describe('App', () => {
     })
 
     it('restores the match when the Link is moved back', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
 
-      fireEvent.keyDown(handles()[0], { key: 'ArrowDown' })
-      fireEvent.keyDown(handles()[1], { key: 'ArrowUp' })
+      fireEvent.keyDown(linkChips()[0], { key: 'ArrowRight' })
+      fireEvent.keyDown(linkChips()[1], { key: 'ArrowLeft' })
+      openPresets()
 
       expect(screen.getByRole('button', { name: DEFAULT_PRESET.name })).toBeInTheDocument()
       expect(chainMatch(lastChain(), DEFAULT_PRESET.chain)).toBe(true)
     })
 
     it('reorders on a pointer drag and drop', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
 
-      fireEvent.dragStart(handles()[0])
-      fireEvent.drop(screen.getByLabelText('grain').closest('div')?.parentElement as HTMLElement)
+      fireEvent.dragStart(linkChips()[0])
+      fireEvent.drop(linkChips()[5])
 
       expect(lastChain().map((link) => link.type)[5]).toBe('blockDisplacement')
     })
@@ -310,7 +338,8 @@ describe('App', () => {
 
   describe('editing the Chain', () => {
     it('adds a Link from the palette, seeded with the Effect’s defaults', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
+      openPalette()
 
       fireEvent.click(screen.getByRole('button', { name: '+ noise' }))
 
@@ -322,23 +351,26 @@ describe('App', () => {
 
     it('adds a second Link of an Effect the Chain already carries', () => {
       // The headline capability reaching the user: repeats.
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
+      openPalette()
 
       fireEvent.click(screen.getByRole('button', { name: '+ pixel sort' }))
 
       expect(lastChain().filter((link) => link.type === 'pixelSort')).toHaveLength(2)
     })
 
-    it('removes a Link', () => {
-      renderWithAdvancedOpen()
+    it('removes the focused Link', () => {
+      renderWithEditOpen()
+      focusLink('scanlines')
 
       fireEvent.click(screen.getByRole('button', { name: 'remove scanlines' }))
 
       expect(lastChain().some((link) => link.type === 'scanlines')).toBe(false)
     })
 
-    it('duplicates a Link directly after itself', () => {
-      renderWithAdvancedOpen()
+    it('duplicates the focused Link directly after itself', () => {
+      renderWithEditOpen()
+      focusLink('channel shift')
 
       fireEvent.click(screen.getByRole('button', { name: 'duplicate channel shift' }))
 
@@ -353,25 +385,29 @@ describe('App', () => {
       ])
     })
 
-    it('gives a duplicated Link its own editable row', () => {
-      renderWithAdvancedOpen()
+    it('gives a duplicated Link its own chip', () => {
+      renderWithEditOpen()
+      focusLink('channel shift')
 
       fireEvent.click(screen.getByRole('button', { name: 'duplicate channel shift' }))
 
-      // Two rows, not one reused — the ids are what keep them apart.
-      expect(screen.getAllByRole('group', { name: 'channel' })).toHaveLength(2)
+      // Two chips, not one reused — the ids are what keep them apart.
+      const names = linkChips().map((c) => c.getAttribute('aria-label'))
+      expect(names.filter((n) => n?.startsWith('channel shift'))).toHaveLength(2)
     })
 
     // Pixel Sort is a fixed point, so an unedited copy of it renders nothing. Offering the control
     // anyway would spend a click on a change the user cannot see.
     it('offers no duplicate for an Effect a repeat of would change nothing', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
+      focusLink('pixel sort')
 
       expect(screen.getByRole('button', { name: /^duplicate pixel sort/ })).toBeDisabled()
     })
 
     it('says why that duplicate is unavailable', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
+      focusLink('pixel sort')
 
       expect(
         screen.getByRole('button', {
@@ -381,9 +417,10 @@ describe('App', () => {
     })
 
     it('still offers duplicate for every other Effect', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
 
       for (const label of ['block displacement', 'channel shift', 'scanlines', 'noise']) {
+        focusLink(label)
         expect(screen.getByRole('button', { name: `duplicate ${label}` })).toBeEnabled()
       }
     })
@@ -391,7 +428,8 @@ describe('App', () => {
     // The Effect can still appear twice — it is the *identical* copy that is refused, not the
     // repeat. Crossing a horizontal pass with a vertical one is the "double melt" ADR 0017 wants.
     it('still lets a second Pixel Sort be added from the palette', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
+      openPalette()
 
       fireEvent.click(screen.getByRole('button', { name: '+ pixel sort' }))
 
@@ -399,16 +437,32 @@ describe('App', () => {
     })
 
     it.each([
-      ['adding', () => fireEvent.click(screen.getByRole('button', { name: '+ noise' }))],
-      ['removing', () => fireEvent.click(screen.getByRole('button', { name: 'remove scanlines' }))],
+      [
+        'adding',
+        () => {
+          openPalette()
+          fireEvent.click(screen.getByRole('button', { name: '+ noise' }))
+        },
+      ],
+      [
+        'removing',
+        () => {
+          focusLink('scanlines')
+          fireEvent.click(screen.getByRole('button', { name: 'remove scanlines' }))
+        },
+      ],
       [
         'duplicating',
-        () => fireEvent.click(screen.getByRole('button', { name: 'duplicate noise' })),
+        () => {
+          focusLink('noise')
+          fireEvent.click(screen.getByRole('button', { name: 'duplicate noise' }))
+        },
       ],
     ])('marks the active Preset modified after %s a Link', (_label, act) => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
 
       act()
+      openPresets()
 
       expect(
         screen.getByRole('button', { name: `${DEFAULT_PRESET.name} (modified)` }),
@@ -416,13 +470,14 @@ describe('App', () => {
     })
 
     it('reports how full the Chain is', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
 
       expect(screen.getByRole('status')).toHaveTextContent(`6 of ${MAX_CHAIN_LENGTH} effects`)
     })
 
     it('stops at the cap and says why', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
+      openPalette()
 
       // VAPORWAVE opens with 6 Links; fill the remaining slots.
       for (let i = 0; i < MAX_CHAIN_LENGTH; i++) {
@@ -432,12 +487,26 @@ describe('App', () => {
       expect(lastChain()).toHaveLength(MAX_CHAIN_LENGTH)
       expect(screen.getByRole('status')).toHaveTextContent('chain is full')
       expect(screen.getByRole('button', { name: '+ noise' })).toBeDisabled()
-      expect(screen.getAllByRole('button', { name: /^duplicate / })[0]).toBeDisabled()
+    })
+
+    // The cap has to reach the duplicate control too, which lives on the focused Link's panel
+    // rather than in the palette.
+    it('disables duplicate once the Chain is full', () => {
+      renderWithEditOpen()
+      openPalette()
+      for (let i = 0; i < MAX_CHAIN_LENGTH; i++) {
+        fireEvent.click(screen.getByRole('button', { name: '+ noise' }))
+      }
+
+      focusLink('block displacement')
+
+      expect(screen.getByRole('button', { name: /^duplicate block displacement/ })).toBeDisabled()
     })
   })
 
   it('passes an updated Chain down to the canvas when a control changes', () => {
-    renderWithAdvancedOpen()
+    renderWithEditOpen()
+    focusLink('channel shift')
     renderedChain.mockClear()
 
     fireEvent.click(screen.getByRole('button', { name: 'green' }))
@@ -446,7 +515,8 @@ describe('App', () => {
   })
 
   it('passes an updated Scanlines density down to the canvas', () => {
-    renderWithAdvancedOpen()
+    renderWithEditOpen()
+    focusLink('scanlines')
 
     fireEvent.change(screen.getByLabelText('density'), { target: { value: '1' } })
 
@@ -454,7 +524,8 @@ describe('App', () => {
   })
 
   it('keeps the rest of the look intact when one Effect param changes', () => {
-    renderWithAdvancedOpen()
+    renderWithEditOpen()
+    focusLink('channel shift')
 
     fireEvent.change(screen.getByLabelText('amount'), { target: { value: '20' } })
 
@@ -468,7 +539,8 @@ describe('App', () => {
   })
 
   it('passes an updated Noise amount down to the canvas', () => {
-    renderWithAdvancedOpen()
+    renderWithEditOpen()
+    focusLink('noise')
 
     fireEvent.change(screen.getByLabelText('grain'), { target: { value: '0.8' } })
 
@@ -476,7 +548,8 @@ describe('App', () => {
   })
 
   it('passes an updated Noise tint down to the canvas', () => {
-    renderWithAdvancedOpen()
+    renderWithEditOpen()
+    focusLink('noise')
 
     fireEvent.click(screen.getByRole('button', { name: 'color' }))
 
@@ -484,7 +557,8 @@ describe('App', () => {
   })
 
   it('passes an updated Chromatic Aberration strength down to the canvas', () => {
-    renderWithAdvancedOpen()
+    renderWithEditOpen()
+    focusLink('chromatic aberration')
 
     fireEvent.change(screen.getByLabelText('strength'), { target: { value: '0.7' } })
 
@@ -492,7 +566,7 @@ describe('App', () => {
   })
 
   it('passes an updated Block Displacement density down to the canvas', () => {
-    renderWithAdvancedOpen()
+    renderWithEditOpen()
 
     fireEvent.change(screen.getByLabelText('blocks'), { target: { value: '0.8' } })
 
@@ -500,7 +574,7 @@ describe('App', () => {
   })
 
   it('passes an updated Block Displacement amount down to the canvas', () => {
-    renderWithAdvancedOpen()
+    renderWithEditOpen()
 
     fireEvent.change(screen.getByLabelText('displace'), { target: { value: '0.9' } })
 
@@ -515,7 +589,7 @@ describe('App', () => {
   })
 
   it('hands the canvas a new Seed on Re-roll', () => {
-    renderWithAdvancedOpen()
+    renderWithEditOpen()
     const before = renderedSeed.mock.lastCall?.[0]
 
     fireEvent.click(screen.getByRole('button', { name: 're-roll' }))
@@ -524,7 +598,7 @@ describe('App', () => {
   })
 
   it('leaves the look untouched on Re-roll — a new arrangement, the same Chain', () => {
-    renderWithAdvancedOpen()
+    renderWithEditOpen()
     const before = renderedChain.mock.lastCall?.[0]
 
     fireEvent.click(screen.getByRole('button', { name: 're-roll' }))
@@ -564,11 +638,12 @@ describe('App', () => {
 
     // The Strip is the whole control surface for the front door, so no Preset survives in the
     // aside or the sheet — and no tab is rendered ahead of the panel behind it.
-    it('renders exactly one tab, and no Presets outside the Strip', () => {
+    it('renders only the tabs whose panels exist, and no Presets outside the Strip', () => {
       render(<App />)
       fireEvent.click(screen.getByRole('button', { name: 'upload' }))
 
-      expect(screen.getAllByRole('tab')).toHaveLength(1)
+      // PRESETS and EDIT; OUT joins them when its panel lands (#188).
+      expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['presets', 'edit'])
       expect(screen.getAllByRole('button', { name: DEFAULT_PRESET.name })).toHaveLength(1)
     })
 
@@ -604,9 +679,11 @@ describe('App', () => {
     })
 
     it('marks the Preset modified — not deselected — once a slider is edited', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
+      focusLink('noise')
 
       fireEvent.change(screen.getByLabelText('grain'), { target: { value: '0.9' } })
+      openPresets()
 
       expect(chip(`${DEFAULT_PRESET.name} (modified)`)).toHaveAttribute('aria-pressed', 'true')
     })
@@ -614,17 +691,20 @@ describe('App', () => {
     // The whole reason the Seed sits outside the Chain: a Re-roll is a new arrangement, not a
     // customisation, so it must not move the user off their Preset or mark it modified.
     it('keeps the Preset highlighted and unmodified through a Re-roll', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
 
       fireEvent.click(screen.getByRole('button', { name: 're-roll' }))
+      openPresets()
 
       expect(chip(DEFAULT_PRESET.name)).toHaveAttribute('aria-pressed', 'true')
       expect(screen.queryByRole('button', { name: /\(modified\)/ })).not.toBeInTheDocument()
     })
 
     it('re-applying a Preset drops the modified mark', () => {
-      renderWithAdvancedOpen()
+      renderWithEditOpen()
+      focusLink('noise')
       fireEvent.change(screen.getByLabelText('grain'), { target: { value: '0.9' } })
+      openPresets()
 
       fireEvent.click(chip(`${DEFAULT_PRESET.name} (modified)`))
 
@@ -681,7 +761,8 @@ describe('App', () => {
   })
 
   it('holds the Seed steady across a look change — only Re-roll re-rolls it', () => {
-    renderWithAdvancedOpen()
+    renderWithEditOpen()
+    focusLink('channel shift')
     const before = renderedSeed.mock.lastCall?.[0]
 
     fireEvent.click(screen.getByRole('button', { name: 'green' }))
