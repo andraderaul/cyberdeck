@@ -62,7 +62,7 @@ export default function Console({ lines, history, onSubmit }: ConsoleProps) {
   }, [])
 
   return (
-    <Panel title="Console">
+    <Panel title="Console" className="min-h-[12rem] lg:min-h-0">
       <div className="flex h-full min-h-0 flex-col gap-2 font-mono text-xs">
         <div ref={logRef} className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
           {lines.map((line) => (
@@ -102,6 +102,10 @@ export default function Console({ lines, history, onSubmit }: ConsoleProps) {
             aria-label="Console input"
             autoComplete="off"
             spellCheck={false}
+            // A touch keyboard would otherwise capitalise and autocorrect every command typed.
+            autoCapitalize="off"
+            autoCorrect="off"
+            enterKeyHint="send"
             className="min-w-0 flex-1 bg-transparent outline-none focus-visible:ring-1 focus-visible:ring-violet"
           />
         </form>

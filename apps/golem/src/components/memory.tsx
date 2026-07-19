@@ -28,7 +28,9 @@ export default function Memory({ machine }: MemoryProps) {
 
   return (
     <Panel title="Memory">
-      <pre className="overflow-x-auto font-mono text-xs leading-relaxed">{lines.join('\n')}</pre>
+      <pre className="max-w-full overflow-x-auto font-mono text-xs leading-relaxed">
+        {lines.join('\n')}
+      </pre>
     </Panel>
   )
 }

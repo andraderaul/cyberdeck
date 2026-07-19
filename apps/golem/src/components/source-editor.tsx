@@ -26,7 +26,9 @@ export default function SourceEditor({
   onChange,
 }: SourceEditorProps) {
   return (
-    <Panel title={editable ? 'Source' : 'Source — locked'}>
+    // Taller than the default floor when stacked: reading the program is the point of
+    // opening a shared link on a phone.
+    <Panel title={editable ? 'Source' : 'Source — locked'} className="min-h-[16rem] lg:min-h-0">
       <div className="flex h-full min-h-0 flex-col gap-2">
         {/* Says why, not just that: a disabled box with no explanation reads as a broken page. */}
         {!editable && (

@@ -59,24 +59,27 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="flex h-full flex-col gap-3 p-3">
-        <header className="flex shrink-0 items-baseline justify-between gap-3">
-          <div>
-            <h1 className="font-bold text-lg tracking-widest">
-              GOLEM<span className="text-violet">//</span>Console
-            </h1>
-            <p className="text-fg-muted text-xs">
-              a 32-bit fantasy computer — watch the machine think
-            </p>
-          </div>
-          <p className="font-mono text-fg-muted text-xs" aria-live="polite">
-            {console.running ? <span className="text-violet">running</span> : 'idle'} · clock{' '}
-            {console.rate === 'max' ? 'max' : `${console.rate}/s`}
+      <div className="flex h-screen flex-col">
+        {/* The deck's shared shell: same header rhythm and border as ASCII//Convert and
+            GLITCH//Studio, so the three read as one collection. */}
+        <header className="flex shrink-0 items-center gap-sm border-base border-b px-sm py-sm sm:px-lg">
+          <span className="font-bold text-base text-violet tracking-wide">GOLEM//CONSOLE</span>
+          <span className="hidden text-slate text-xs sm:block">—</span>
+          <span className="hidden text-fg-muted text-xs sm:block">watch the machine think</span>
+          <p className="ml-auto font-mono text-fg-muted text-xs" aria-live="polite">
+            {console.running ? <span className="text-violet">running</span> : 'idle'}
+            <span className="hidden sm:inline">
+              {' · clock '}
+              {console.rate === 'max' ? 'max' : `${console.rate}/s`}
+            </span>
           </p>
         </header>
 
-        <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <div className="grid min-h-0 grid-rows-[minmax(0,2fr)_minmax(0,1fr)] gap-3">
+        {/* One column on a phone, scrolling; two side by side once there is room. The state panels
+            come first on a small screen only in source order — visually the Source stays on top,
+            because reading the program is what a shared link is opened for. */}
+        <main className="grid flex-1 grid-cols-1 gap-sm overflow-y-auto p-sm lg:min-h-0 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:overflow-hidden lg:p-md">
+          <div className="grid gap-sm lg:min-h-0 lg:grid-rows-[minmax(0,2fr)_minmax(0,1fr)]">
             <SourceEditor
               source={console.source}
               editable={console.editable}
@@ -89,7 +92,7 @@ export default function App() {
             <Console lines={console.lines} history={console.history} onSubmit={console.submit} />
           </div>
 
-          <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto_minmax(0,1fr)_minmax(0,1fr)] gap-3">
+          <div className="grid gap-sm lg:min-h-0 lg:grid-rows-[minmax(0,1fr)_auto_minmax(0,1fr)_minmax(0,1fr)]">
             <Registers machine={console.machine} />
             <Flags machine={console.machine} />
             <Memory machine={console.machine} />
