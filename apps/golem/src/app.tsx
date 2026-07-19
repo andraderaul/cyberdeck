@@ -84,7 +84,7 @@ export default function App() {
             />
             {/* The Console is the operator's surface and the Terminal is the machine's. They sit
                 apart so no one has to work out which of the two wrote a given line. */}
-            <Console lines={console.lines} onSubmit={console.submit} />
+            <Console lines={console.lines} history={console.history} onSubmit={console.submit} />
           </div>
 
           <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto_minmax(0,1fr)_minmax(0,1fr)] gap-3">

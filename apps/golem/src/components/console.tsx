@@ -5,6 +5,7 @@ import Panel from './panel'
 
 type ConsoleProps = {
   lines: ConsoleLine[]
+  history: string[]
   onSubmit: (input: string) => void
 }
 
@@ -18,9 +19,42 @@ const LINE_STYLES: Record<ConsoleLine['kind'], string> = {
  * The operator's surface — the program's only control grammar (ADR 0018). Everything here is
  * the tool talking; anything the running program prints belongs to the Terminal instead.
  */
-export default function Console({ lines, onSubmit }: ConsoleProps) {
+export default function Console({ lines, history, onSubmit }: ConsoleProps) {
   const [input, setInput] = useState('')
   const logRef = useRef<HTMLDivElement>(null)
+
+  // How far back through history the arrows have walked. `null` means "at the live input", which
+  // is distinct from being at the newest entry — coming back down has to restore what was typed.
+  const [recalled, setRecalled] = useState<number | null>(null)
+  const draftRef = useRef('')
+
+  const walkHistory = (direction: -1 | 1) => {
+    if (history.length === 0) {
+      return
+    }
+
+    if (recalled === null) {
+      if (direction === 1) {
+        return
+      }
+      draftRef.current = input
+      setRecalled(history.length - 1)
+      setInput(history[history.length - 1])
+      return
+    }
+
+    const next = recalled + direction
+    if (next < 0) {
+      return
+    }
+    if (next >= history.length) {
+      setRecalled(null)
+      setInput(draftRef.current)
+      return
+    }
+    setRecalled(next)
+    setInput(history[next])
+  }
 
   useEffect(() => {
     // Newest line is the one worth reading; keep it in view as output accumulates.
@@ -47,6 +81,8 @@ export default function Console({ lines, onSubmit }: ConsoleProps) {
             event.preventDefault()
             onSubmit(input)
             setInput('')
+            setRecalled(null)
+            draftRef.current = ''
           }}
         >
           <span aria-hidden className="text-violet">
@@ -55,6 +91,14 @@ export default function Console({ lines, onSubmit }: ConsoleProps) {
           <input
             value={input}
             onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
+                return
+              }
+              // Prevented so the caret stays put instead of jumping to one end of the field.
+              event.preventDefault()
+              walkHistory(event.key === 'ArrowUp' ? -1 : 1)
+            }}
             aria-label="Console input"
             autoComplete="off"
             spellCheck={false}

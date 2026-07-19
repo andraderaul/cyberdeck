@@ -19,7 +19,7 @@ async function type(command: string) {
   await user.type(screen.getByRole('textbox', { name: 'Console input' }), `${command}{Enter}`)
 }
 
-const editor = () => screen.getByRole('textbox', { name: 'Assembly source' })
+const editor = () => screen.getByRole('textbox', { name: 'Assembly source' }) as HTMLTextAreaElement
 
 /** Replaces the starter program, so a test does not depend on what the example happens to be. */
 function write(source: string) {
@@ -204,6 +204,89 @@ describe('the Terminal', () => {
     await stepTimes(30)
 
     expect(screen.getByRole('region', { name: 'Console' })).not.toHaveTextContent('Hi\n')
+  })
+})
+
+describe('discoverability', () => {
+  it('names help in the Console’s first line', () => {
+    render(<App />)
+
+    expect(screen.getByRole('region', { name: 'Console' })).toHaveTextContent(/help/)
+  })
+
+  it('prints the command reference on help', async () => {
+    render(<App />)
+
+    await type('help')
+
+    const console = screen.getByRole('region', { name: 'Console' })
+    for (const name of ['asm', 'run', 'stop', 'step', 'clock', 'reg', 'mem', 'export', 'share']) {
+      expect(console).toHaveTextContent(name)
+    }
+  })
+
+  it('explains a single command on help <command>', async () => {
+    render(<App />)
+
+    await type('help clock')
+
+    expect(screen.getByRole('region', { name: 'Console' })).toHaveTextContent(
+      /clock max.*frame budget/s,
+    )
+  })
+
+  it('nudges on help for something that is not a command', async () => {
+    render(<App />)
+
+    await type('help banana')
+
+    expect(screen.getByText(/no command called "banana"/)).toBeInTheDocument()
+  })
+
+  it('loads an example that assembles and runs', async () => {
+    render(<App />)
+
+    await type('asm')
+
+    // The example demonstrates labels, data, a string and the Terminal.
+    expect(editor().value).toMatch(/message:/)
+    expect(editor().value).toMatch(/"Hello from GOLEM/)
+    expect(screen.getByText(/assembled \d+ words/)).toBeInTheDocument()
+  })
+
+  it('walks history with the arrow keys', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await type('clock 30')
+    await type('help')
+
+    const input = screen.getByRole('textbox', { name: 'Console input' })
+    input.focus()
+
+    await user.keyboard('{ArrowUp}')
+    expect(input).toHaveValue('help')
+
+    await user.keyboard('{ArrowUp}')
+    expect(input).toHaveValue('clock 30')
+
+    await user.keyboard('{ArrowDown}')
+    expect(input).toHaveValue('help')
+  })
+
+  it('returns to what was being typed on the way back down', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await type('help')
+
+    const input = screen.getByRole('textbox', { name: 'Console input' })
+    await user.type(input, 'reg r')
+    await user.keyboard('{ArrowUp}')
+    expect(input).toHaveValue('help')
+
+    await user.keyboard('{ArrowDown}')
+    expect(input).toHaveValue('reg r')
   })
 })
 

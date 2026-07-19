@@ -16,6 +16,7 @@ export type Command =
   | { kind: 'mem'; start: number; count: number; unit: MemoryUnit }
   | { kind: 'export'; what: 'hex' | 'trace' }
   | { kind: 'share' }
+  | { kind: 'help'; topic: string | null }
   | { kind: 'empty' }
   | { kind: 'unknown'; input: string; suggestion: string | null }
   | { kind: 'bad-usage'; name: string; message: string }
@@ -32,6 +33,7 @@ export const COMMAND_NAMES = [
   'export',
   'share',
   'reset',
+  'help',
 ] as const
 
 const NO_ARGUMENT_COMMANDS = ['asm', 'step', 'reset', 'run', 'stop', 'share'] as const
@@ -70,6 +72,13 @@ export function parseCommand(input: string): Command {
 
   if (lowered === 'mem') {
     return parseMem(args)
+  }
+
+  if (lowered === 'help') {
+    if (args.length > 1) {
+      return { kind: 'bad-usage', name: 'help', message: 'usage: help [command]' }
+    }
+    return { kind: 'help', topic: args[0]?.toLowerCase() ?? null }
   }
 
   if (lowered === 'export') {
