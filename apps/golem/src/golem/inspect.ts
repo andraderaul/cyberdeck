@@ -2,7 +2,7 @@
 // "what a dump looks like" is a testable function rather than something only a DOM assertion can
 // reach, and so both surfaces format a value the same way.
 
-import { EQ, GT, IV, LT, OV, registerName, ZD } from './isa'
+import { byteShift, EQ, FR, GT, IV, LT, OV, registerName, ZD } from './isa'
 import type { Machine } from './machine'
 
 export type MemoryUnit = 'words' | 'bytes'
@@ -30,7 +30,7 @@ export const hex8 = (value: number) => (value & 0xff).toString(16).toUpperCase()
 
 /** Reads `FR` as named flags. */
 export function flagsOf(machine: Machine | null): Flag[] {
-  const fr = machine?.registers[35] ?? 0
+  const fr = machine?.registers[FR] ?? 0
   return FLAGS.map(({ name, bit, meaning }) => ({ name, meaning, set: (fr & bit) !== 0 }))
 }
 
@@ -69,10 +69,8 @@ function dumpWords(memory: readonly number[], start: number, count: number): str
   return lines
 }
 
-// Byte 0 of a word is its most significant, so a byte dump reads left to right within the word.
 function byteAt(memory: readonly number[], address: number): number {
-  const word = memory[address >>> 2] ?? 0
-  return (word >>> (8 * (3 - (address & 3)))) & 0xff
+  return ((memory[address >>> 2] ?? 0) >>> byteShift(address)) & 0xff
 }
 
 function dumpBytes(memory: readonly number[], start: number, count: number): string[] {

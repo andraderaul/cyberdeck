@@ -32,6 +32,15 @@ describe('flagsOf', () => {
   })
 })
 
+// The byte convention is stated once in isa.ts; these pin it from the display side.
+describe('byte order', () => {
+  it('reads byte 0 as the most significant of its word', () => {
+    const [line] = formatMemoryDump([0x41424300], 0, 4, 'bytes')
+
+    expect(line).toContain('41 42 43 00')
+  })
+})
+
 describe('formatRegister', () => {
   // Hex to read the bit pattern, decimal to read the number — both, because both get asked for.
   it('shows a value in hex and decimal', () => {
