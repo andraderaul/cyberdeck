@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from 'react'
 import { downloadText, outputFilename } from '../export/output'
 import { assemble, type Image } from '../golem/assembler'
 import { type Command, parseCommand } from '../golem/command'
+import { GREETING, helpFor, helpLines } from '../golem/help'
 import { formatMemoryDump, formatRegister } from '../golem/inspect'
 import { registerIndex } from '../golem/isa'
 import { createMachine, type Machine, step } from '../golem/machine'
@@ -27,6 +28,8 @@ export interface ConsoleState {
   lines: ConsoleLine[]
   running: boolean
   rate: ClockRate
+  /** Commands already entered, oldest first — the Console walks these with the arrow keys. */
+  history: string[]
   /**
    * The editor is writable exactly while no Machine exists. Divergence between the source on
    * screen and the code executing is impossible by construction, not prevented by syncing.
@@ -82,9 +85,6 @@ async function shareSource(
   }
 }
 
-const GREETING =
-  'GOLEM ready. Commands: asm, run, stop, step, clock, reg, mem, export, share, reset.'
-
 export function useConsole(initialSource: string): ConsoleState {
   const [source, setSourceState] = useState(initialSource)
   const [machine, setMachineState] = useState<Machine | null>(null)
@@ -99,6 +99,10 @@ export function useConsole(initialSource: string): ConsoleState {
   // a full memory array, so keeping them would cost megabytes a second under `clock max`.
   const traceRef = useRef<string[]>([])
   const imageRef = useRef<Image | null>(null)
+
+  // What the operator has typed, oldest first — `step`, `reg r1`, `step` is the real rhythm here.
+  const historyRef = useRef<string[]>([])
+  const [history, setHistory] = useState<string[]>([])
 
   const setMachine = useCallback((next: Machine | null) => {
     machineRef.current = next
@@ -319,6 +323,15 @@ export function useConsole(initialSource: string): ConsoleState {
           void shareSource(source, append)
           break
 
+        case 'help':
+          output.push(
+            ...(command.topic === null ? helpLines() : helpFor(command.topic)).map((text) => ({
+              kind: 'info' as const,
+              text,
+            })),
+          )
+          break
+
         case 'bad-usage':
           output.push({ kind: 'error', text: command.message })
           break
@@ -343,6 +356,12 @@ export function useConsole(initialSource: string): ConsoleState {
         return
       }
 
+      historyRef.current = [
+        ...historyRef.current.filter((entry) => entry !== input.trim()),
+        input.trim(),
+      ]
+      setHistory(historyRef.current)
+
       const output: Omit<ConsoleLine, 'id'>[] = [{ kind: 'echo', text: `> ${input.trim()}` }]
       dispatch(command, output)
       append(output)
@@ -355,6 +374,7 @@ export function useConsole(initialSource: string): ConsoleState {
     machine,
     image,
     lines,
+    history,
     running: clock.running,
     rate: clock.rate,
     editable: machine === null,
