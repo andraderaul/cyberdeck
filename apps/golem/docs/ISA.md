@@ -71,12 +71,21 @@ tipo S │ opcode │              im26 (25–0)                      │   salt
 | `opcode` | 31–26 | 6 |
 | `im26` | 25–0 | 26 |
 | `im16` | 25–10 | 16 |
-| `z` | 14–10 | 5 |
-| `x` | 9–5 | 5 |
-| `y` | 4–0 | 5 |
+| `z` | 14–10 **+ bit 17** | 6 |
+| `x` | 9–5 **+ bit 16** | 6 |
+| `y` | 4–0 **+ bit 15** | 6 |
 
-`z` e `im16` se sobrepõem: `z` só é lido no tipo U, `im16` só no tipo F. No tipo U os bits 25–15
-não são usados.
+> **⚠ Os campos de registrador têm 6 bits no tipo U, não 5.** O sexto bit de cada um fica
+> **separado** do resto: bit 17 para `z`, 16 para `x`, 15 para `y`. É esse bit que permite nomear
+> um registrador especial — índice 32 ou mais — e é por ele que `cmp pc, pc` monta.
+>
+> **No tipo F não existe esse bit.** O `im16` ocupa 25–10, o que engole os três. Instrução tipo F
+> endereça só `r0`–`r31`; escrever `addi pc, r0, 0` não tem encoding.
+>
+> Verificado contra as fixtures: em `1_limits`, `cmp pc, pc` monta como `x = 32, y = 32` com os
+> bits 16 e 15 postos, e `add r31, r0, fr` como `y = 35`.
+
+`z` e `im16` se sobrepõem: `z` só é lido no tipo U, `im16` só no tipo F.
 
 > **⚠ Armadilha de ordem dos operandos.** No tipo U, **`z` é o destino** — `add rz, rx, ry`. Não é
 > a ordem dos campos no encoding, e não é a ordem que o nome das funções do emulador de referência
@@ -99,8 +108,8 @@ não são usados.
 | `0x03` | `subi` | — | F | `Rx = Ry − N`; afeta `OV` |
 | `0x04` | `mul` | — | U | `Rz = Rx × Ry`, parte alta em `ER`; afeta `OV` |
 | `0x05` | `muli` | — | F | `Rx = Ry × N`, parte alta em `ER`; afeta `OV` |
-| `0x06` | `div` | — | U | `Rz = Rx ÷ Ry`, resto em `ER`; afeta `ZD`, `OV` |
-| `0x07` | `divi` | — | F | `Rx = Ry ÷ N`, resto em `ER`; afeta `ZD`, `OV` |
+| `0x06` | `div` | — | U | `Rz = Rx ÷ Ry`, resto em `ER`; afeta `ZD` — ver "Divergências" |
+| `0x07` | `divi` | — | F | `Rx = Ry ÷ N`, resto em `ER`; afeta `ZD` — ver "Divergências" |
 | `0x08` | `cmp` | — | U | compara `Rx` e `Ry`; só escreve `FR` |
 | `0x09` | `cmpi` | — | F | compara `Rx` e `N`; só escreve `FR` |
 
@@ -121,8 +130,15 @@ não são usados.
 | `0x12` | `xor` | — | U | `Rz = Rx ^ Ry` |
 | `0x13` | `xori` | — | F | `Rx = Ry ^ N` |
 
-> **⚠ O deslocamento é `N+1`, não `N`.** `shl rz, rx, 0` desloca **uma** posição. Não existe
-> deslocamento de zero. O assembler codifica o literal escrito; quem soma 1 é a execução.
+> **⚠ O deslocamento é `N+1`, não `N`.** Não existe deslocamento de zero: o campo conta a partir
+> de um.
+>
+> **O assembler codifica `N-1`, e a execução soma 1 de volta.** Quem escreve `shl r2, r2, 16`
+> desloca 16 posições, e o campo guarda 15. Verificado nas fixtures: `1_limits` monta
+> `shl r2, r2, 16` com `y = 15`, e `shl r0, r1, 48` com `y = 47` — 47 só cabe porque `y` tem
+> **6 bits** no tipo U (ver "Encoding").
+>
+> Como `y` tem 6 bits, o deslocamento escrito vai de **1 a 64**.
 
 ### Memória
 
@@ -252,6 +268,61 @@ na máquina — um `ble` que não desvia em "menor" é uma armadilha, não um co
 Divergir aqui não custa cobertura de oráculo alguma. Essa ausência é também a causa do bug — o
 `ble` nunca foi exercitado, então nada o pegou.
 
+### `div`/`divi` — o GOLEM não mexe em `OV`
+
+As duas revisões do emulador de referência discordam aqui, e a divergência é visível em
+`1_limits`: o `.out` commitado preserva `OV` através do `divi` (`FR = 0x18`), o emulador público
+de hoje limpa (`FR = 0x08`).
+
+A causa é uma cláusula morta no `setarFR`: `if (x < 0 || y < 0)` com `x` e `y` `uint32_t` nunca é
+verdadeira, então a revisão pública sempre cai no `else` e limpa `OV`. A revisão que gerou o trace
+commitado tinha operandos com sinal, onde `0xFFFFFFFF` é `-1` e a condição vale.
+
+**O GOLEM implementa `div`/`divi` como: põe `ZD` na divisão por zero, e não toca em `OV`.** Bate
+com o `.out` commitado — que é o oráculo que este repo versiona — sem importar a regra que estaria
+por trás dele. "Dividir com operando negativo é overflow" não está no ISA, não é semântica que
+alguém escrevendo programa aqui deva aprender, e replicá-la seria o mesmo erro que replicar o
+`ble` quebrado.
+
+Os outros quatro programas herdados batem com as duas revisões: nenhum deles tem `OV` posto na
+hora de dividir. Detalhes em `src/golem/__fixtures__/PROVENANCE.md`.
+
+### `mul` — o GOLEM calcula os 64 bits, como o `muli`
+
+O `muli` da referência calcula o produto em 64 bits e guarda a parte alta em `ER` — confirmado em
+`1_limits`, onde `muli r10, r1, 11` com `r1 = 0xFFFFFFFF` dá `ER = 0x0A`.
+
+O `mul` (tipo U) não: escreve `ERR = registradores[x] * registradores[y]`, multiplicação de
+`uint32_t` que satura em 32 bits *antes* de ser atribuída ao `uint64_t`. A parte alta sai sempre
+zero. É deslize de largura em C, não semântica.
+
+**O GOLEM calcula os dois em 64 bits.** Nenhuma fixture contradiz: os `mul` de
+`1_recursive_factorial` operam sobre valores pequenos, onde a parte alta é zero de verdade.
+
+### `stb` — o GOLEM escreve na memória
+
+O `stb` da referência não guarda byte nenhum: o `setarSTB` altera `registradores[y]`, o registrador
+*de origem*, sob uma condição que compara `memoria[PC]` com um endereço. Escreve no lugar errado, e
+só às vezes.
+
+Não custa oráculo — em `1_limits` nada relê os bytes escritos, então o trace é idêntico nas duas
+versões. **O GOLEM implementa o que o ISA descreve:** `MEM[Rx + N] = Ry`, um byte. Sem isso o
+Terminal não existe, já que escrever nele *é* um `stb`.
+
+### Ordem dos bytes dentro da palavra
+
+Byte 0 é o **mais significativo** — big-endian dentro da palavra. Fixado por `1_limits`: a palavra
+`0x41424300` lê `0x41` no offset 0 e `0x43` no offset 2.
+
+Vale para `ldb`, `stb` e para como o assembler empacota string. Empacotar ao contrário monta sem
+erro e imprime cada palavra com os caracteres invertidos.
+
+### `shr` zera o `ER`
+
+A referência monta `(ER:Rx)`, desloca, e depois faz `registradores[ER] = (ERR & 0xFFFFFFFF00000000)`
+— atribuição de um valor cujos 32 bits baixos são zero a um `uint32_t`. `ER` acaba sempre em zero.
+Bate com `1_limits`, e o GOLEM faz o mesmo.
+
 ### Outros achados, sem impacto
 
 - **`bge` está certo por acidente**, escrito com um literal octal (`00000004`) que calha de valer 4.
@@ -263,21 +334,28 @@ Divergir aqui não custa cobertura de oráculo alguma. Essa ausência é também
 
 ## Onde o oráculo não protege
 
-As fixtures exercitam 7 dos 11 branches. Estes **nunca são executados** por nenhum programa de
-referência:
+As fixtures herdadas exercitam 7 dos 11 branches. `2_blt` e `2_bnz`, fabricados em #135 enquanto o
+emulador de referência ainda compila, levam a 9:
 
 | branch | cobertura |
 |---|---|
-| `blt`, `ble`, `bnz`, `bni` | **nenhuma** |
+| `ble`, `bni` | **nenhuma** — só teste escrito à mão |
+| `blt`, `bnz` | fixture gerada (`2_blt`, `2_bnz`), as duas direções |
 | `bzd`, `biv` | 1 uso cada |
 | `beq`, `bgt` | 3 usos cada |
 | `bge` | 4 usos |
 | `bne` | 7 usos |
 | `bun` | 21 usos |
 
-Os quatro sem cobertura precisam de **testes escritos à mão** — o oráculo não vai pegar erro
-neles, e o `ble` quebrado é a prova de que isso acontece na prática. `blt`, `bnz` e `bni` foram
-auditados por leitura e estão corretos, mas leitura não é teste.
+Sobram dois sem oráculo, cada um por um motivo diferente:
+
+- **`ble`** — o emulador de referência está errado ali (typo `0x20`/`0x02`) e o GOLEM diverge de
+  propósito, então não existe oráculo a favor da versão certa.
+- **`bni`** — pôr `IV` exige instrução inválida, e instrução inválida joga o emulador de
+  referência num laço que não termina em vez de levantar a flag. Não dá para fabricar.
+
+Esses dois precisam de **teste escrito à mão**, e o `ble` quebrado é a prova de que fazem falta:
+ele sobreviveu justamente porque nada o exercitava. Leitura não é teste.
 
 A mesma lógica vale além dos branches: qualquer instrução ausente das fixtures está fora do
 alcance do oráculo, e vale conferir a cobertura antes de confiar num diff verde.

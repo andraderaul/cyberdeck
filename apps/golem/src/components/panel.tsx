@@ -15,13 +15,18 @@ type PanelProps = {
 export default function Panel({ title, children, className }: PanelProps) {
   return (
     <section
-      className={cn('flex min-h-0 flex-col border border-base bg-surface', className)}
+      className={cn(
+        // A floor for the stacked mobile layout, where the grid rows no longer size these.
+        'flex min-h-0 flex-col overflow-hidden border border-base bg-surface',
+        'min-h-[8rem] lg:min-h-0',
+        className,
+      )}
       aria-label={title}
     >
-      <h2 className="shrink-0 border-base border-b px-3 py-2 font-semibold text-fg-muted text-xs uppercase tracking-widest">
+      <h2 className="shrink-0 border-base border-b px-sm py-xs font-semibold text-fg-muted text-xs uppercase tracking-widest">
         {title}
       </h2>
-      <div className="min-h-0 flex-1 overflow-auto p-3 text-sm">{children}</div>
+      <div className="min-h-0 flex-1 overflow-auto p-sm text-sm">{children}</div>
     </section>
   )
 }

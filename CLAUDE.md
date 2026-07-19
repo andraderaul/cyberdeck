@@ -12,7 +12,7 @@ versioned and deployed independently.
 |-----|------|------------|
 | **ASCII//Convert** | `apps/ascii` | Image / webcam → interactive ASCII art |
 | **GLITCH//Studio** | `apps/glitch` | Glitch effect pipeline over image / webcam (tracer bullet — image → Channel Shift → PNG Export) |
-| **GOLEM** | `apps/golem` | Third program — **design phase only**: `CONTEXT.md` and `docs/` exist, no code yet (ADRs 0018, 0019) |
+| **GOLEM//Console** | `apps/golem` | A 32-bit fantasy computer — write assembly, assemble it, drive execution from a command line while registers, memory and the Terminal update live (ADRs 0018, 0019) |
 
 Each app owns its `CLAUDE.md` and `CONTEXT.md` — read the one for the app you're working in.
 `CONTEXT-MAP.md` maps the deck; `docs/adr/` holds all architectural decisions, deck-wide.
@@ -49,6 +49,7 @@ Root scripts fan out across workspaces (`apps/*` and `packages/*`); `--workspace
 ```bash
 npm run dev          # start ASCII//Convert's dev server
 npm run dev:glitch   # start GLITCH//Studio's dev server
+npm run dev:golem    # start GOLEM//Console's dev server
 npm run build        # build every app
 npm run test         # ASCII//Convert's tests, in watch mode
 npm run test:run     # run every workspace's tests once, deck-kit included (what CI runs)
