@@ -6,12 +6,14 @@ import { describe, expect, it } from 'vitest'
 import { assemble } from './assembler'
 import {
   CAUSE_INVALID_INSTRUCTION,
+  CAUSE_WATCHDOG,
   CAUSE_ZERO_DIVISION,
   CR,
   EQ,
   ER,
   FR,
   GT,
+  HARDWARE_1_VECTOR,
   IPC,
   IV,
   LT,
@@ -19,6 +21,9 @@ import {
   PC,
   SOFTWARE_VECTOR,
   TERMINAL_ADDRESS,
+  WATCHDOG_ADDRESS,
+  WATCHDOG_COUNTER,
+  WATCHDOG_ENABLE,
   ZD,
 } from './isa'
 import { createMachine, type Machine, type StepEvent, step } from './machine'
@@ -237,6 +242,169 @@ describe('isr and reti', () => {
 
     expect(machine.registers[9]).toBe(1)
     expect(machine.halted).toBe(true)
+  })
+})
+
+// The one reference program arms the Watchdog once, with interrupts on, and halts three
+// instructions after it fires. Everything else about the device is invisible to the oracle.
+describe('the Watchdog', () => {
+  /**
+   * Arms the Watchdog with `count` and spins. The hardware-1 vector parks in its own idle loop
+   * rather than falling through, so the machine keeps stepping after a dispatch without ever
+   * re-arming — which is what lets a test tell "fired once" from "fires every Step".
+   */
+  const arming = (count: number, extra: string[] = []) =>
+    [
+      'bun main',
+      'bun idle', // hardware 1
+      'nop', // hardware 2
+      'nop', // software
+      'idle:',
+      'bun idle',
+      'main:',
+      ...extra,
+      `addi r1, r0, ${count}`,
+      'addi r2, r0, 1',
+      'shl r2, r2, 31',
+      'or r1, r1, r2',
+      `addi r3, r0, ${WATCHDOG_ADDRESS}`,
+      'stw r3, 0, r1',
+      'spin:',
+      'bun spin',
+    ].join('\n')
+
+  const register = (machine: Machine) => machine.memory[WATCHDOG_ADDRESS] >>> 0
+  const counterOf = (machine: Machine) => register(machine) & WATCHDOG_COUNTER
+  const armed = (machine: Machine) => (register(machine) & WATCHDOG_ENABLE) !== 0
+
+  /** The machine as it stood the moment `predicate` first held — no step counting to get wrong. */
+  function runUntil(
+    source: string,
+    predicate: (machine: Machine) => boolean,
+    limit = 200,
+  ): Machine {
+    let machine = machineFor(source)
+    for (let i = 0; i < limit && !machine.halted; i++) {
+      machine = step(machine).machine
+      if (predicate(machine)) {
+        return machine
+      }
+    }
+    throw new Error('predicate never held')
+  }
+
+  // The Step that arms it ticks too — devices tick every Step, and the store is not exempt. So a
+  // countdown written as 10 already reads 9 by the end of that Step, and the program gets ten
+  // further Steps before it fires. That off-by-one is exactly what makes the reference program's
+  // 100 `bun` instructions come out right.
+  it('decrements one per Step once armed, the arming Step included', () => {
+    const justArmed = runUntil(arming(10, ENABLE_INTERRUPTS), armed)
+
+    expect(counterOf(justArmed)).toBe(9)
+    expect(counterOf(step(justArmed).machine)).toBe(8)
+    expect(counterOf(step(step(justArmed).machine).machine)).toBe(7)
+  })
+
+  it('fires hardware interrupt 1 when the countdown runs out', () => {
+    const events = eventsOf(arming(3, ENABLE_INTERRUPTS), 60)
+
+    expect(events.filter((event) => event.kind === 'hardware-interrupt')).toHaveLength(1)
+    expect(events).toContainEqual({
+      kind: 'hardware-interrupt',
+      line: 1,
+      resume: expect.any(Number),
+    })
+  })
+
+  it('lands on the hardware 1 vector with the watchdog cause', () => {
+    const fired = runUntil(arming(3, ENABLE_INTERRUPTS), (machine) => machine.registers[CR] !== 0)
+
+    expect(fired.registers[CR]).toBe(CAUSE_WATCHDOG)
+    expect(fired.registers[PC]).toBe(HARDWARE_1_VECTOR)
+  })
+
+  // The reference program halts immediately after its ISR runs, so it cannot show whether a spent
+  // countdown re-arms itself. It does not: expiry disarms, or the machine would dispatch on every
+  // Step from then on. See ISA.md.
+  it('fires exactly once and disarms itself', () => {
+    const source = arming(3, ENABLE_INTERRUPTS)
+    const events = eventsOf(source, 120)
+
+    expect(events.filter((event) => event.kind === 'hardware-interrupt')).toHaveLength(1)
+    expect(register(run(source, 120))).toBe(0)
+  })
+
+  it('does not dispatch while IE is clear, and still disarms', () => {
+    const source = arming(3)
+    const machine = run(source, 60)
+
+    expect(eventsOf(source, 60)).toEqual([])
+    expect(machine.registers[CR]).toBe(0)
+    expect(register(machine)).toBe(0)
+  })
+
+  it('does not tick at all while the enable bit is clear', () => {
+    // The same store, minus the bit — the counter must sit exactly where it was written.
+    const disarmed = [
+      'addi r1, r0, 7',
+      `addi r3, r0, ${WATCHDOG_ADDRESS}`,
+      'stw r3, 0, r1',
+      'spin:',
+      'bun spin',
+    ].join('\n')
+
+    expect(register(run(disarmed, 40))).toBe(7)
+  })
+
+  it('stops counting when the program disarms it mid-countdown', () => {
+    const machine = run(
+      [
+        ...ENABLE_INTERRUPTS,
+        'addi r1, r0, 50',
+        'addi r2, r0, 1',
+        'shl r2, r2, 31',
+        'or r1, r1, r2',
+        `addi r3, r0, ${WATCHDOG_ADDRESS}`,
+        'stw r3, 0, r1',
+        'stw r3, 0, r0',
+        'spin:',
+        'bun spin',
+      ].join('\n'),
+      80,
+    )
+
+    expect(register(machine)).toBe(0)
+    expect(machine.registers[CR]).toBe(0)
+  })
+
+  // A Device tick and an instruction that dispatches on its own can land on the same Step. Both
+  // must be reported, and the hardware one wins the PC because it happens last.
+  it('reports both when a tick coincides with a software dispatch', () => {
+    const source = [
+      'bun main',
+      'bun idle',
+      'nop',
+      'bun idle',
+      'idle:',
+      'bun idle',
+      'main:',
+      ...ENABLE_INTERRUPTS,
+      'addi r1, r0, 2',
+      'addi r2, r0, 1',
+      'shl r2, r2, 31',
+      'or r1, r1, r2',
+      `addi r3, r0, ${WATCHDOG_ADDRESS}`,
+      'stw r3, 0, r1',
+      'nop',
+      'int 5',
+      'spin:',
+      'bun spin',
+    ].join('\n')
+
+    const coinciding = eventsOf(source, 60)
+
+    expect(coinciding).toContainEqual({ kind: 'software-interrupt', cause: 5 })
+    expect(coinciding.some((event) => event.kind === 'hardware-interrupt')).toBe(true)
   })
 })
 

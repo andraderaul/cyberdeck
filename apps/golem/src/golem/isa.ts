@@ -137,6 +137,15 @@ export const SOFTWARE_VECTOR = 0x0c
 /** Cause codes the machine raises itself, as opposed to the `N` an `int N` carries. */
 export const CAUSE_ZERO_DIVISION = 0x01
 export const CAUSE_INVALID_INSTRUCTION = 0x2a
+export const CAUSE_WATCHDOG = 0xe1ac04da
+
+/**
+ * The Watchdog's control register, at a **word** address like every device register. One word
+ * holds both fields: the enable bit on top, the countdown underneath.
+ */
+export const WATCHDOG_ADDRESS = 0x2020
+export const WATCHDOG_ENABLE = 0x80000000
+export const WATCHDOG_COUNTER = 0x7fffffff
 
 /**
  * Mnemonics the assembler expands into **more than one** instruction — which is exactly what

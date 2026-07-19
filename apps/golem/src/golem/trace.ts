@@ -64,6 +64,8 @@ export function formatEvent(event: StepEvent): string {
       return '[SOFTWARE INTERRUPTION]'
     case 'invalid-instruction':
       return `[INVALID INSTRUCTION @ 0x${hex(event.pc)}]`
+    case 'hardware-interrupt':
+      return `[HARDWARE INTERRUPTION ${event.line}]`
   }
 }
 
@@ -79,10 +81,23 @@ export function formatStep(
 ): string {
   // An invalid instruction has no disassembly to print — there is no instruction. The reference
   // emits only the marker lines, so the entry is dropped rather than rendered as `?? 0x…`.
-  const invalid = events.some((event) => event.kind === 'invalid-instruction')
-  const entry = invalid ? [] : [formatInstruction(before, after)]
+  if (events.some((event) => event.kind === 'invalid-instruction')) {
+    return events.map(formatEvent).join('\n')
+  }
 
-  return [...entry, ...events.map(formatEvent)].join('\n')
+  // A hardware interrupt lands *after* the instruction finished, so the PC in `after` is the
+  // vector, not what the instruction produced. The effects line must report the instruction's
+  // own result — the branch target it reached, not where the device then sent it.
+  const hardware = events.find((event) => event.kind === 'hardware-interrupt')
+  const settled = hardware === undefined ? after : withPc(after, hardware.resume)
+
+  return [formatInstruction(before, settled), ...events.map(formatEvent)].join('\n')
+}
+
+function withPc(machine: Machine, pc: number): Machine {
+  const registers = [...machine.registers]
+  registers[PC] = pc >>> 0
+  return { ...machine, registers }
 }
 
 function formatInstruction(before: Machine, after: Machine): string {

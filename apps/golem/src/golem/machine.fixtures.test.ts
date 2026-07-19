@@ -27,26 +27,35 @@ interface Expectation {
 // target and ends in the value it took. The last `0x…` in the clause is that value.
 function parseTrace(out: string): Expectation[] {
   const expectations: Expectation[] = []
+  const lines = out.split('\n').map((line) => line.trim())
   let index = 0
 
-  for (const line of out.split('\n')) {
+  lines.forEach((line, position) => {
     // An invalid instruction still costs a Step, but the reference prints no effects line for it
     // — there is no instruction to disassemble. Counting it keeps this parser's step numbering
     // aligned with the machine's from that point on.
-    if (line.trim().startsWith('[INVALID INSTRUCTION')) {
+    if (line.startsWith('[INVALID INSTRUCTION')) {
       index++
-      continue
+      return
     }
 
-    const effects = /^\[[UFS]\]\s*(.*)$/.exec(line.trim())
+    const effects = /^\[[UFS]\]\s*(.*)$/.exec(line)
     if (!effects) {
-      continue
+      return
     }
     index++
+
+    // A hardware interrupt fires *after* the instruction settled, so this line's `PC` is the
+    // instruction's own result and the machine has since moved on to the vector. Only the PC
+    // clause is affected; `trace.test.ts` compares the rendered line itself and covers it exactly.
+    const preempted = lines[position + 1]?.startsWith('[HARDWARE INTERRUPTION') ?? false
 
     for (const clause of effects[1].split(', ')) {
       const target = /^(R\d+|FR|ER|PC|CR)\s*=/.exec(clause)
       if (!target) {
+        continue
+      }
+      if (preempted && target[1] === 'PC') {
         continue
       }
       const values = clause.match(/0x[0-9A-Fa-f]+/g)
@@ -59,7 +68,7 @@ function parseTrace(out: string): Expectation[] {
         value: Number.parseInt(values[values.length - 1], 16) >>> 0,
       })
     }
-  }
+  })
 
   return expectations
 }

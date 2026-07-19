@@ -7,7 +7,13 @@ import { assemble, type Image, wordIndexForLine } from '../golem/assembler'
 import { type Command, nearest, parseCommand } from '../golem/command'
 import { GREETING, helpFor, helpLines } from '../golem/help'
 import { formatMemoryDump, formatRegister, hex32 } from '../golem/inspect'
-import { PC, registerIndex, SOFTWARE_VECTOR } from '../golem/isa'
+import {
+  HARDWARE_1_VECTOR,
+  HARDWARE_2_VECTOR,
+  PC,
+  registerIndex,
+  SOFTWARE_VECTOR,
+} from '../golem/isa'
 import { createMachine, type Machine, type StepEvent, step } from '../golem/machine'
 import { PROGRAM_NAMES, PROGRAMS, programNamed } from '../golem/programs'
 import { encode } from '../golem/share'
@@ -75,6 +81,12 @@ function narrate(event: StepEvent): string {
     // is the more useful half of the news either way.
     case 'invalid-instruction':
       return `invalid instruction at ${hex32(event.pc)}`
+    // Names the device, not just the line number: "who interrupted my program" is the question
+    // the narration exists to answer.
+    case 'hardware-interrupt':
+      return event.line === 1
+        ? `hardware interrupt 1 — the watchdog, vector ${hex32(HARDWARE_1_VECTOR)}`
+        : `hardware interrupt 2 — the fpu, vector ${hex32(HARDWARE_2_VECTOR)}`
   }
 }
 

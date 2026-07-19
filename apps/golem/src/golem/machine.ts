@@ -9,12 +9,14 @@ import type { Image } from './assembler'
 import {
   byteShift,
   CAUSE_INVALID_INSTRUCTION,
+  CAUSE_WATCHDOG,
   CAUSE_ZERO_DIVISION,
   CR,
   EQ,
   ER,
   FR,
   GT,
+  HARDWARE_1_VECTOR,
   IE,
   IPC,
   IR,
@@ -27,6 +29,9 @@ import {
   SOFTWARE_VECTOR,
   TERMINAL_ADDRESS,
   unpackU,
+  WATCHDOG_ADDRESS,
+  WATCHDOG_COUNTER,
+  WATCHDOG_ENABLE,
   ZD,
 } from './isa'
 
@@ -48,6 +53,12 @@ export type StepEvent =
   | { kind: 'software-interrupt'; cause: number }
   /** Raised whether or not a dispatch follows, since the PC it names is the useful part. */
   | { kind: 'invalid-instruction'; pc: number }
+  /**
+   * A Device demanding attention: 1 is the Watchdog, 2 the FPU. `resume` is the PC the
+   * instruction had settled on before the device took over — what `IPC` received, and what the
+   * trace must print as that instruction's effect, since the dispatch happened after it.
+   */
+  | { kind: 'hardware-interrupt'; line: 1 | 2; resume: number }
 
 export interface StepResult {
   readonly machine: Machine
@@ -112,6 +123,14 @@ export function step(machine: Machine): StepResult {
     cycle.registers[PC] = (machine.registers[PC] + 4) >>> 0
   }
 
+  // One Step is one Device tick, in lockstep with execution — inherited from the reference
+  // emulator's main loop, and the reason the Step stays the machine's only unit of time.
+  // After the PC has settled, so a hardware dispatch saves the address the program would have
+  // run next rather than the one it just left.
+  if (!cycle.halted) {
+    tickWatchdog(cycle)
+  }
+
   return {
     machine: {
       registers: cycle.registers,
@@ -129,11 +148,64 @@ export function step(machine: Machine): StepResult {
  * lets an ISR return past it with a plain `ret`.
  */
 function dispatch(cycle: Cycle, vector: number, cause: number, event: StepEvent): void {
+  divert(cycle, vector, cause, (cycle.registers[PC] + 4) >>> 0, event)
+}
+
+/**
+ * The common half of a dispatch. `resume` is the address the ISR will return to, and it is the
+ * one thing the two kinds disagree about: a *software* interrupt is raised mid-instruction, with
+ * the PC still on the instruction that raised it, so the resume address is that PC plus four. A
+ * *hardware* interrupt arrives after the PC has already settled, so the resume address is the PC
+ * as it stands — which for a taken branch is the branch target, not the branch.
+ */
+function divert(
+  cycle: Cycle,
+  vector: number,
+  cause: number,
+  resume: number,
+  event: StepEvent,
+): void {
   cycle.registers[CR] = cause >>> 0
-  cycle.registers[IPC] = (cycle.registers[PC] + 4) >>> 0
+  cycle.registers[IPC] = resume >>> 0
   cycle.registers[PC] = vector >>> 0
   cycle.jumped = true
   cycle.events.push(event)
+}
+
+/**
+ * The Watchdog: one tick per Step, firing hardware interrupt 1 when an armed countdown runs out.
+ *
+ * The register *is* memory word `WATCHDOG_ADDRESS` rather than a field beside it, which is what
+ * makes it readable by the program and dumpable by `mem` for free — a memory-mapped device whose
+ * state lived somewhere other than memory would be a lie.
+ *
+ * Expiry **disarms** it. Nothing in the oracle pins that — the reference program halts three
+ * instructions later — but the alternative re-fires on every subsequent Step, and the fixture
+ * shows exactly one dispatch. See ISA.md.
+ */
+function tickWatchdog(cycle: Cycle): void {
+  const register = readWord(cycle, WATCHDOG_ADDRESS)
+  if ((register & WATCHDOG_ENABLE) === 0) {
+    return
+  }
+
+  const counter = register & WATCHDOG_COUNTER
+  if (counter !== 0) {
+    writeWord(cycle, WATCHDOG_ADDRESS, (WATCHDOG_ENABLE | (counter - 1)) >>> 0)
+    return
+  }
+
+  // Armed and already at zero: the countdown is spent. Disarm either way — the countdown ran out
+  // whether or not anyone was listening — and dispatch only if interrupts are enabled.
+  writeWord(cycle, WATCHDOG_ADDRESS, 0)
+  if ((cycle.registers[FR] & IE) !== 0) {
+    const resume = cycle.registers[PC] >>> 0
+    divert(cycle, HARDWARE_1_VECTOR, CAUSE_WATCHDOG, resume, {
+      kind: 'hardware-interrupt',
+      line: 1,
+      resume,
+    })
+  }
 }
 
 function execute(cycle: Cycle, instruction: number): void {

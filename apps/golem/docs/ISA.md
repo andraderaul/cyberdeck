@@ -217,7 +217,44 @@ não despacha.
 | `0x01` | divisão por zero |
 | `0x2A` | instrução inválida |
 
-As causas de hardware (watchdog, FPU) entram junto com as fatias que as implementam.
+| `0xE1AC04DA` | watchdog (hardware 1) |
+
+A causa da FPU (hardware 2) entra junto com a fatia que a implementa.
+
+**`IPC` difere entre os dois tipos.** Uma interrupção de software nasce no meio da instrução, com o
+`PC` ainda sobre ela, então o retorno é `PC + 4`. Uma de hardware chega **depois** que o `PC` já
+assentou, então o retorno é o `PC` como está — que num desvio tomado é o alvo, não o desvio. As
+duas dizem a mesma coisa: "o endereço que o programa executaria em seguida".
+
+---
+
+## Watchdog
+
+Registrador no endereço de **palavra** `0x2020`. Uma palavra guarda os dois campos:
+
+| bits | campo |
+|---|---|
+| 31 | enable |
+| 30–0 | contador |
+
+O programa arma escrevendo contagem + enable (`0x80000064` = contar 100). O contador decrementa
+**um por Step**, e ao chegar a zero dispara a interrupção de hardware 1.
+
+O Step que arma **também conta**: dispositivos avançam todo Step, e o `stw` não é exceção. Uma
+contagem escrita como 100 já lê 99 ao fim daquele Step — e é justamente esse deslocamento que faz
+os 100 `bun` do `2_watchdog` fecharem exatos.
+
+### Decisões sem oráculo
+
+O `2_watchdog` arma o dispositivo uma vez, com interrupções ligadas, e encerra três instruções
+depois de disparar. Todo o resto foi decidido aqui:
+
+- **Expirar desarma.** O fixture mostra exatamente um despacho; se o contador ficasse em zero e
+  armado, dispararia a cada Step seguinte. Re-armar é trabalho do programa.
+- **Expirar com `IE` limpo desarma do mesmo jeito, e a interrupção se perde.** A contagem acabou,
+  tendo alguém escutado ou não. A alternativa — deixar pendente até `IE` subir — exige inventar
+  estado que nada na referência sugere.
+- **Com o enable limpo o dispositivo não conta.** O contador fica onde foi escrito.
 
 `isr` **salta**: além de capturar `IPC` e `CR`, ele põe o `PC` em `N << 2`. É o que permite ao
 vetor caber em uma palavra — a palavra do vetor é o preâmbulo *e* o desvio para o corpo da ISR.
