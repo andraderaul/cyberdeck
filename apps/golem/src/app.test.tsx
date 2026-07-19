@@ -21,6 +21,21 @@ async function type(command: string) {
 
 const editor = () => screen.getByRole('textbox', { name: 'Assembly source' }) as HTMLTextAreaElement
 
+/**
+ * Locked means the Source is no longer editable at all: it becomes a listing with a gutter, so
+ * there is no textbox to type into rather than a disabled one.
+ */
+const locked = () =>
+  screen.queryByRole('textbox', { name: 'Assembly source' }) === null &&
+  screen.queryByRole('region', { name: 'Source — locked' }) !== null
+
+/** The Source as it reads on screen, whether it is a textarea or a locked listing. */
+const sourceText = () =>
+  (screen.queryByRole('textbox', { name: 'Assembly source' }) as HTMLTextAreaElement | null)
+    ?.value ??
+  screen.getByRole('region', { name: /^Source/ }).textContent ??
+  ''
+
 /** Replaces the starter program, so a test does not depend on what the example happens to be. */
 function write(source: string) {
   fireEvent.change(editor(), { target: { value: source } })
@@ -87,8 +102,7 @@ describe('the three-state model', () => {
 
     await type('asm')
 
-    expect(editor()).toHaveAttribute('readonly')
-    expect(screen.getByRole('region', { name: 'Source — locked' })).toBeInTheDocument()
+    expect(locked()).toBe(true)
     expect(screen.getByText(/A Machine is running this code/)).toBeInTheDocument()
   })
 
@@ -207,6 +221,118 @@ describe('the Terminal', () => {
   })
 })
 
+describe('breakpoints and the current line', () => {
+  /** The line the PC is on, as the listing marks it. */
+  const markedLine = () => document.querySelector('[aria-current="step"]')
+
+  it('marks the line the PC is on, and moves it as the machine steps', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    expect(markedLine()?.textContent).toContain('addi r1, r0, 20')
+
+    await type('step')
+    expect(markedLine()?.textContent).toContain('addi r2, r0, 22')
+
+    await type('step')
+    expect(markedLine()?.textContent).toContain('add r3, r1, r2')
+  })
+
+  it('sets a breakpoint and pauses a run there', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('break 3')
+    await type('clock max')
+    await type('run')
+
+    await waitFor(() => expect(screen.getByText('paused at line 3')).toBeInTheDocument())
+    // Paused *before* running line 3, so r3 has not been written yet.
+    expect(markedLine()?.textContent).toContain('add r3, r1, r2')
+  })
+
+  it('leaves the machine steppable and runnable from a pause', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('break 3')
+    await type('run')
+    await waitFor(() => expect(screen.getByText('paused at line 3')).toBeInTheDocument())
+
+    await type('step')
+
+    expect(markedLine()?.textContent).toContain('int 0')
+  })
+
+  it('does not trip the same breakpoint again on resume', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('break 3')
+    await type('clock max')
+    await type('run')
+    await waitFor(() => expect(screen.getByText('paused at line 3')).toBeInTheDocument())
+
+    await type('run')
+
+    await waitFor(() => expect(screen.getByText('halted')).toBeInTheDocument())
+  })
+
+  it('reports a line with no instruction rather than ignoring it', async () => {
+    render(<App />)
+    write('addi r1, r0, 1\n\n// just a comment\nint 0')
+
+    await type('asm')
+    await type('break 3')
+
+    expect(screen.getByText(/line 3 has no instruction to stop at/)).toBeInTheDocument()
+  })
+
+  it('lists and clears breakpoints', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('break 1')
+    await type('break 3')
+    await type('breaks')
+    expect(screen.getByText('breakpoints: 1, 3')).toBeInTheDocument()
+
+    await type('unbreak 1')
+    await type('breaks')
+    expect(screen.getByText('breakpoints: 3')).toBeInTheDocument()
+
+    await type('unbreak all')
+    await type('breaks')
+    expect(screen.getByText('no breakpoints')).toBeInTheDocument()
+  })
+
+  it('says so when clearing a breakpoint that is not set', async () => {
+    render(<App />)
+
+    await type('unbreak 9')
+
+    expect(screen.getByText(/no breakpoint at line 9/)).toBeInTheDocument()
+  })
+
+  // Repeated debugging runs are the normal case; re-entering them each time would be useless.
+  it('keeps breakpoints across a reset', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('break 3')
+    await type('reset')
+    await type('breaks')
+
+    expect(screen.getByText('breakpoints: 3')).toBeInTheDocument()
+  })
+})
+
 describe('discoverability', () => {
   it('names help in the Console’s first line', () => {
     render(<App />)
@@ -249,8 +375,8 @@ describe('discoverability', () => {
     await type('asm')
 
     // The example demonstrates labels, data, a string and the Terminal.
-    expect(editor().value).toMatch(/message:/)
-    expect(editor().value).toMatch(/"Hello from GOLEM/)
+    expect(sourceText()).toMatch(/message:/)
+    expect(sourceText()).toMatch(/"Hello from GOLEM/)
     expect(screen.getByText(/assembled \d+ words/)).toBeInTheDocument()
   })
 
@@ -609,6 +735,6 @@ describe('the clock', () => {
 
     await type('run')
 
-    expect(editor()).toHaveAttribute('readonly')
+    expect(locked()).toBe(true)
   })
 })

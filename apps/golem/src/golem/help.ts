@@ -65,6 +65,20 @@ const HELP: Record<(typeof COMMAND_NAMES)[number], Entry> = {
     detail:
       'The program is compressed into the URL fragment and never leaves your browser. Opening the link loads it ready to run.',
   },
+  break: {
+    usage: 'break <line>',
+    summary: 'pause a run when it reaches a source line',
+    detail:
+      'The line must carry an instruction — a blank line or a label on its own has no word to stop at, and the Console says so rather than ignoring it. Breakpoints survive `reset`.',
+  },
+  breaks: {
+    usage: 'breaks',
+    summary: 'list the breakpoints currently set',
+  },
+  unbreak: {
+    usage: 'unbreak <line> | unbreak all',
+    summary: 'clear one breakpoint, or all of them',
+  },
   reset: {
     usage: 'reset',
     summary: 'destroy the Machine and unlock the editor',
