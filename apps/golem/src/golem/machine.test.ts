@@ -22,6 +22,7 @@ import {
   FR,
   GT,
   HARDWARE_1_VECTOR,
+  HARDWARE_2_VECTOR,
   IPC,
   IV,
   LT,
@@ -413,6 +414,69 @@ describe('the Watchdog', () => {
 
     expect(coinciding).toContainEqual({ kind: 'software-interrupt', cause: 5 })
     expect(coinciding.some((event) => event.kind === 'hardware-interrupt')).toBe(true)
+  })
+
+  // Both Devices can run out on the same Step, and only one may take it. The reference dispatches
+  // both: the second overwrites CR/IPC with the hardware-1 vector as the return address, and the
+  // first interrupt is lost to the clobber — an accident no fixture exercises, in the same
+  // category as its broken `ble`. GOLEM gives the Step to the Watchdog and holds the FPU's
+  // completion pending, so it dispatches whole on the Step after. See ISA.md.
+  it('gives a shared Step to the Watchdog and defers the FPU to the next', () => {
+    // Arming counts as a tick, so a countdown of 2 fires two Steps after its `stw`; `round` costs
+    // one cycle and its starting Step consumes it, so it fires one Step after its own. Issued
+    // back to back, the two land on the same Step.
+    const source = [
+      'bun main',
+      'bun idle', // hardware 1
+      'bun idle', // hardware 2
+      'nop', // software
+      'idle:',
+      'bun idle',
+      'main:',
+      ...ENABLE_INTERRUPTS,
+      `addi r4, r0, ${FPU_CONTROL}`,
+      `addi r5, r0, ${FPU_OPERATIONS.round}`,
+      'addi r1, r0, 2',
+      'addi r2, r0, 1',
+      'shl r2, r2, 31',
+      'or r1, r1, r2',
+      `addi r3, r0, ${WATCHDOG_ADDRESS}`,
+      'stw r3, 0, r1',
+      'stw r4, 0, r5',
+      'spin:',
+      'bun spin',
+    ].join('\n')
+
+    const steps: { events: readonly StepEvent[]; machine: Machine }[] = []
+    let machine = machineFor(source)
+    for (let i = 0; i < 40; i++) {
+      const result = step(machine)
+      steps.push(result)
+      machine = result.machine
+    }
+
+    const dispatches = steps.filter(({ events }) =>
+      events.some((event) => event.kind === 'hardware-interrupt'),
+    )
+    expect(dispatches).toHaveLength(2)
+
+    const [watchdog, fpu] = dispatches
+    expect(watchdog.events).toEqual([
+      { kind: 'hardware-interrupt', line: 1, resume: expect.any(Number) },
+    ])
+    expect(watchdog.machine.registers[CR]).toBe(CAUSE_WATCHDOG)
+    expect(watchdog.machine.registers[PC]).toBe(HARDWARE_1_VECTOR)
+
+    // One Step later, intact: its own cause, and a resume address that is a real program
+    // address — not the hardware-1 vector the clobber would have saved.
+    expect(steps.indexOf(fpu)).toBe(steps.indexOf(watchdog) + 1)
+    expect(fpu.events).toEqual([
+      { kind: 'hardware-interrupt', line: 2, resume: expect.any(Number) },
+    ])
+    expect(fpu.machine.registers[CR]).toBe(CAUSE_FPU)
+    expect(fpu.machine.registers[PC]).toBe(HARDWARE_2_VECTOR)
+    expect(fpu.machine.registers[IPC]).not.toBe(HARDWARE_1_VECTOR)
+    expect(fpu.machine.fpu.busy).toBe(false)
   })
 })
 

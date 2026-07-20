@@ -470,6 +470,18 @@ A alternativa seria escrever a causa e não desviar, e isso produz um estado que
 explicar: `CR` diria que houve uma interrupção que o `PC` desmente. "Interrupção condicionada"
 significa que ela não aconteceu, não que aconteceu pela metade.
 
+### Watchdog e FPU no mesmo Step — um despacho de hardware por vez
+
+A referência verifica os dois dispositivos em sequência e deixa os dois despacharem no mesmo
+ciclo: o watchdog escreve `CR`/`IPC` e salta para o vetor 1; a FPU, logo depois, sobrescreve `CR`
+com a própria causa e salva como retorno o `PC` — que já é o vetor 1. A interrupção do watchdog
+se perde num clobber que nenhuma fixture exercita, mesma categoria do `ble` quebrado.
+
+O GOLEM despacha **um hardware por Step**. O Watchdog (linha 1) leva o Step, e a conclusão da FPU
+fica **pendente**: a operação segura em zero ciclos e despacha inteira no Step seguinte, com a
+própria causa e um retorno real. Com `IE` limpo nada disso se aplica — a operação completa em
+silêncio, como já estava decidido acima.
+
 ### Instrução inválida — o GOLEM não trava
 
 Com `IE` ligado, o GOLEM levanta `IV`, emite `[INVALID INSTRUCTION @ PC]` e despacha a interrupção
