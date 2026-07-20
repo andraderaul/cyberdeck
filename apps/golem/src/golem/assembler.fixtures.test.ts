@@ -5,7 +5,7 @@ import {
   INHERITED_PROGRAMS,
   loadFixture,
   parseHex,
-  UNIT_2_RUNNABLE,
+  UNIT_2_PROGRAMS,
 } from './__fixtures__/load'
 import { assemble } from './assembler'
 
@@ -30,7 +30,7 @@ function assembledWords(name: FixtureName) {
  * `.hex` the professor's assembler produced. That pairing is the one oracle nobody can
  * regenerate — see `__fixtures__/PROVENANCE.md`.
  */
-describe.each([...INHERITED_PROGRAMS, ...UNIT_2_RUNNABLE])('%s (inherited oracle)', (name) => {
+describe.each([...INHERITED_PROGRAMS, ...UNIT_2_PROGRAMS])('%s (inherited oracle)', (name) => {
   it('assembles word-for-word equal to its .hex', () => {
     const { actual, expected } = assembledWords(name)
 

@@ -189,12 +189,38 @@ export function step(machine: Machine): StepResult {
 }
 
 /**
- * Diverts control to a vector: the cause lands in `CR`, the return address in `IPC`, and the PC
- * jumps. `IPC` holds the address of the instruction *after* the one interrupted, which is what
- * lets an ISR return past it with a plain `ret`.
+ * Diverts control to the software vector: the cause lands in `CR`, the return address in `IPC`,
+ * and the PC jumps. `IPC` holds the address of the instruction *after* the one interrupted, which
+ * is what lets an ISR return past it with a plain `ret`.
  */
-function dispatch(cycle: Cycle, vector: number, cause: number, event: StepEvent): void {
-  divert(cycle, vector, cause, (cycle.registers[PC] + 4) >>> 0, event)
+function softwareInterrupt(cycle: Cycle, cause: number): void {
+  divert(cycle, SOFTWARE_VECTOR, cause, (cycle.registers[PC] + 4) >>> 0, {
+    kind: 'software-interrupt',
+    cause,
+  })
+}
+
+/**
+ * Dispatches a Device's interrupt — unless the other Device already took this Step, in which case
+ * it refuses and returns false. **One hardware dispatch per Step**: the reference checks both
+ * devices in sequence and lets the second overwrite `CR`/`IPC` with the first vector as the
+ * return address — an interrupt lost to a clobber that no fixture exercises, the same category as
+ * its broken `ble`. The caller decides what a refusal means; the FPU holds its completion pending.
+ */
+function dispatchHardware(cycle: Cycle, line: 1 | 2): boolean {
+  if (cycle.events.some((event) => event.kind === 'hardware-interrupt')) {
+    return false
+  }
+
+  const resume = cycle.registers[PC] >>> 0
+  divert(
+    cycle,
+    line === 1 ? HARDWARE_1_VECTOR : HARDWARE_2_VECTOR,
+    line === 1 ? CAUSE_WATCHDOG : CAUSE_FPU,
+    resume,
+    { kind: 'hardware-interrupt', line, resume },
+  )
+  return true
 }
 
 /**
@@ -245,12 +271,7 @@ function tickWatchdog(cycle: Cycle): void {
   // whether or not anyone was listening — and dispatch only if interrupts are enabled.
   writeWord(cycle, WATCHDOG_ADDRESS, 0)
   if ((cycle.registers[FR] & IE) !== 0) {
-    const resume = cycle.registers[PC] >>> 0
-    divert(cycle, HARDWARE_1_VECTOR, CAUSE_WATCHDOG, resume, {
-      kind: 'hardware-interrupt',
-      line: 1,
-      resume,
-    })
+    dispatchHardware(cycle, 1)
   }
 }
 
@@ -325,15 +346,14 @@ function tickFpu(cycle: Cycle): void {
     return
   }
 
-  cycle.fpu = { ...cycle.fpu, operation: 0, busy: false }
-  if ((cycle.registers[FR] & IE) !== 0) {
-    const resume = cycle.registers[PC] >>> 0
-    divert(cycle, HARDWARE_2_VECTOR, CAUSE_FPU, resume, {
-      kind: 'hardware-interrupt',
-      line: 2,
-      resume,
-    })
+  // Completing. With IE clear it completes silently (see ISA.md); with IE set it must dispatch,
+  // and when the Watchdog already took this Step the completion *waits* — the operation holds at
+  // zero cycles and dispatches whole on the next Step, instead of clobbering the Watchdog's.
+  const enabled = (cycle.registers[FR] & IE) !== 0
+  if (enabled && !dispatchHardware(cycle, 2)) {
+    return
   }
+  cycle.fpu = { ...cycle.fpu, operation: 0, busy: false }
 }
 
 /**
@@ -349,7 +369,14 @@ function readFpuRegister(fpu: Fpu, address: number): number {
     return fpu.control >>> 0
   }
 
-  const value = address === FPU_X ? fpu.x : address === FPU_Y ? fpu.y : fpu.z
+  return fpuWord(address === FPU_X ? fpu.x : address === FPU_Y ? fpu.y : fpu.z)
+}
+
+/**
+ * The value-dependent encoding on its own — exported so the DEVICES panel can show, as a
+ * register's raw word, the word a program would actually read back.
+ */
+export function fpuWord(value: number): number {
   return Number.isInteger(value) && value >= 0 ? value >>> 0 : floatBits(value)
 }
 
@@ -556,7 +583,7 @@ function execute(cycle: Cycle, instruction: number): void {
       // partial dispatch — see ISA.md, "Divergências deliberadas": no fixture pins this, and a
       // half-dispatch that wrote CR without jumping would be a state no ISR could explain.
       if ((r[FR] & IE) !== 0) {
-        dispatch(cycle, SOFTWARE_VECTOR, im26, { kind: 'software-interrupt', cause: im26 })
+        softwareInterrupt(cycle, im26)
       }
       break
 
@@ -567,10 +594,7 @@ function execute(cycle: Cycle, instruction: number): void {
       cycle.registers[FR] = r[FR] | IV
       cycle.events.push({ kind: 'invalid-instruction', pc: r[PC] >>> 0 })
       if ((r[FR] & IE) !== 0) {
-        dispatch(cycle, SOFTWARE_VECTOR, CAUSE_INVALID_INSTRUCTION, {
-          kind: 'software-interrupt',
-          cause: CAUSE_INVALID_INSTRUCTION,
-        })
+        softwareInterrupt(cycle, CAUSE_INVALID_INSTRUCTION)
       }
       break
     }
@@ -604,10 +628,7 @@ function divide(cycle: Cycle, destination: number, a: number, b: number): void {
   if (b >>> 0 === 0) {
     cycle.registers[FR] = cycle.registers[FR] | ZD
     if ((cycle.registers[FR] & IE) !== 0) {
-      dispatch(cycle, SOFTWARE_VECTOR, CAUSE_ZERO_DIVISION, {
-        kind: 'software-interrupt',
-        cause: CAUSE_ZERO_DIVISION,
-      })
+      softwareInterrupt(cycle, CAUSE_ZERO_DIVISION)
     }
     return
   }

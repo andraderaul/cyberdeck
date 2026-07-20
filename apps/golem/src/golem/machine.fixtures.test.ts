@@ -4,7 +4,7 @@ import {
   INHERITED_PROGRAMS,
   loadFixture,
   parseHex,
-  UNIT_2_RUNNABLE,
+  UNIT_2_PROGRAMS,
 } from './__fixtures__/load'
 import type { Image } from './assembler'
 import { CR, ER, FR, PC, registerIndex } from './isa'
@@ -83,7 +83,7 @@ function indexOfTarget(target: string): number {
   return index
 }
 
-const ALL = [...INHERITED_PROGRAMS, ...UNIT_2_RUNNABLE, ...GENERATED_PROGRAMS]
+const ALL = [...INHERITED_PROGRAMS, ...UNIT_2_PROGRAMS, ...GENERATED_PROGRAMS]
 
 describe.each(ALL)('%s', (name) => {
   it('executes exactly as the reference emulator traced it', () => {

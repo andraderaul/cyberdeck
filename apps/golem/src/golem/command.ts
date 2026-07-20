@@ -130,7 +130,7 @@ export function parseCommand(input: string): Command {
     return { kind: 'export', what }
   }
 
-  return { kind: 'unknown', input: name, suggestion: nearestCommand(lowered) }
+  return { kind: 'unknown', input: name, suggestion: nearest(lowered, COMMAND_NAMES) }
 }
 
 function parseReg(args: string[]): Command {
@@ -209,18 +209,10 @@ function parseClock(args: string[]): Command {
 }
 
 /**
- * The closest command name within a small edit distance, or `null` when nothing is close enough
- * to be worth guessing at. The threshold scales with length so `stp`→`step` suggests but a word
- * sharing a couple of letters does not.
- */
-export function nearestCommand(input: string): string | null {
-  return nearest(input, COMMAND_NAMES)
-}
-
-/**
- * The closest of `candidates` within the same threshold — shared so a mistyped program name gets
- * the same treatment as a mistyped command, rather than a second, subtly different notion of
- * "close enough".
+ * The closest of `candidates` within a small edit distance, or `null` when nothing is close
+ * enough to be worth guessing at. The threshold scales with length so `stp`→`step` suggests but
+ * a word sharing a couple of letters does not. One function for commands and program names both,
+ * rather than two subtly different notions of "close enough".
  */
 export function nearest(input: string, candidates: readonly string[]): string | null {
   let best: string | null = null

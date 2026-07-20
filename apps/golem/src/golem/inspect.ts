@@ -2,7 +2,6 @@
 // "what a dump looks like" is a testable function rather than something only a DOM assertion can
 // reach, and so both surfaces format a value the same way.
 
-import { floatBits } from './float'
 import { hex } from './hex'
 import {
   byteShift,
@@ -20,7 +19,7 @@ import {
   WATCHDOG_ENABLE,
   ZD,
 } from './isa'
-import type { Machine } from './machine'
+import { fpuWord, type Machine } from './machine'
 
 export type MemoryUnit = 'words' | 'bytes'
 
@@ -85,10 +84,12 @@ export function devicesOf(machine: Machine | null): DeviceView {
         raw: hex32(register),
       },
     ],
+    // The raw word is the one a program would read back, not the IEEE-754 bits: the encoding is
+    // value-dependent (see ISA.md), so z = 19 shows 0x00000013 while z = 9.25 shows 0x41140000.
     fpu: [
-      { label: 'x', value: decimal(fpu?.x ?? 0), raw: hex32(floatBits(fpu?.x ?? 0)) },
-      { label: 'y', value: decimal(fpu?.y ?? 0), raw: hex32(floatBits(fpu?.y ?? 0)) },
-      { label: 'z', value: decimal(fpu?.z ?? 0), raw: hex32(floatBits(fpu?.z ?? 0)) },
+      { label: 'x', value: decimal(fpu?.x ?? 0), raw: hex32(fpuWord(fpu?.x ?? 0)) },
+      { label: 'y', value: decimal(fpu?.y ?? 0), raw: hex32(fpuWord(fpu?.y ?? 0)) },
+      { label: 'z', value: decimal(fpu?.z ?? 0), raw: hex32(fpuWord(fpu?.z ?? 0)) },
       {
         label: 'operation',
         value: fpu?.busy ? (OPERATION_NAMES[fpu.operation] ?? 'undefined') : 'idle',

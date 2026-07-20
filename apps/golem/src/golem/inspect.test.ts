@@ -132,6 +132,15 @@ describe('devicesOf', () => {
     expect(readingFor(fpu, 'z')?.value).toBe('18.5')
   })
 
+  // The raw word follows the machine's value-dependent encoding, so the panel never shows a word
+  // a `ldw` of the same register would contradict: 19 reads back as 0x13, not as its IEEE bits.
+  it('shows a whole value the word a program would read back', () => {
+    const { fpu } = devicesOf(machineWith(0, { z: 19 }))
+
+    expect(readingFor(fpu, 'z')?.value).toBe('19')
+    expect(readingFor(fpu, 'z')?.raw).toBe('0x00000013')
+  })
+
   it('names the operation in flight and its remaining cycles', () => {
     const { fpu } = devicesOf(
       machineWith(0, { busy: true, operation: FPU_OPERATIONS.divide, remaining: 3 }),

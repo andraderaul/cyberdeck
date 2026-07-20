@@ -1,4 +1,4 @@
-import { devicesOf } from '../golem/inspect'
+import { type DeviceReading, devicesOf } from '../golem/inspect'
 import type { Machine } from '../golem/machine'
 import Panel from './panel'
 
@@ -8,7 +8,7 @@ type DevicesProps = {
 
 /**
  * Where the invisible machinery becomes watchable: the Watchdog's countdown descending a tick per
- * Step, and the FPU's registers as decoded floats beside the words they really are.
+ * Step, and the FPU's registers as decoded floats beside the words a program reads back.
  *
  * Read-only like every panel but the Source, and more strictly than most — even the Console never
  * writes a device register. Talking to Devices is the program's job (ADR 0018).
@@ -26,13 +26,7 @@ export default function Devices({ machine }: DevicesProps) {
   )
 }
 
-function Group({
-  name,
-  readings,
-}: {
-  name: string
-  readings: ReturnType<typeof devicesOf>['fpu']
-}) {
+function Group({ name, readings }: { name: string; readings: DeviceReading[] }) {
   return (
     <div className="min-w-0">
       <h3 className="mb-1 font-semibold text-fg-muted text-xs uppercase tracking-widest">{name}</h3>

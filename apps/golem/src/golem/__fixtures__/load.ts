@@ -28,18 +28,6 @@ export const INHERITED_PROGRAMS = [
  */
 export const UNIT_2_PROGRAMS = ['2_hello_world', '2_interruption', '2_watchdog', '2_fpu'] as const
 
-/**
- * The unit-2 programs the machine can already run end to end. Grows by one entry per v2 slice
- * until it equals `UNIT_2_PROGRAMS`; a program is added in the same commit as the behavior that
- * turns it green, so the oracle suite is never red on work that has not been done yet.
- */
-export const UNIT_2_RUNNABLE: readonly FixtureName[] = [
-  '2_hello_world',
-  '2_interruption',
-  '2_watchdog',
-  '2_fpu',
-]
-
 // `bni` is absent: setting IV needs an invalid instruction, and that sends the reference emulator
 // into a non-terminating loop rather than raising the flag. It stays hand-written, like `ble`.
 export const GENERATED_PROGRAMS = ['gen_blt', 'gen_bnz'] as const

@@ -4,13 +4,13 @@ import {
   INHERITED_PROGRAMS,
   loadFixture,
   parseHex,
-  UNIT_2_RUNNABLE,
+  UNIT_2_PROGRAMS,
 } from './__fixtures__/load'
 import { assemble } from './assembler'
 import { createMachine, type Machine, type StepEvent, step } from './machine'
 import { formatHex, formatStep, formatTrace } from './trace'
 
-const ALL = [...INHERITED_PROGRAMS, ...UNIT_2_RUNNABLE, ...GENERATED_PROGRAMS]
+const ALL = [...INHERITED_PROGRAMS, ...UNIT_2_PROGRAMS, ...GENERATED_PROGRAMS]
 
 function traceOf(words: number[], limit = 2000): string {
   let machine = createMachine({ words, lineForWord: [] })
