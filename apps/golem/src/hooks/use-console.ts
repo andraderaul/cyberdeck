@@ -288,6 +288,14 @@ export function useConsole(initialSource: string): ConsoleState {
         return false
       }
 
+      // Blank lines and comments assemble to zero words without error, and a machine over an
+      // empty image never halts — every fetch reads 0, an implicit nop, and no `int 0` ever
+      // arrives. Refuse here so `run` cannot start an endless run over nothing.
+      if (result.image.words.length === 0) {
+        output.push({ kind: 'error', text: 'nothing to assemble — the Source has no instructions' })
+        return false
+      }
+
       imageRef.current = result.image
       traceRef.current = []
       setImage(result.image)
