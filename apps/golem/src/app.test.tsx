@@ -114,6 +114,34 @@ describe('the three-state model', () => {
 
     expect(editor()).not.toHaveAttribute('readonly')
   })
+
+  // An empty Source assembles to zero words without error, and a machine over that image never
+  // halts — every fetch is an implicit nop and no `int 0` ever arrives. Both commands refuse
+  // instead of locking the editor over nothing.
+  it('refuses to assemble a Source with no instructions', async () => {
+    render(<App />)
+
+    write('')
+    await type('asm')
+
+    expect(
+      screen.getByText('nothing to assemble — the Source has no instructions'),
+    ).toBeInTheDocument()
+    expect(locked()).toBe(false)
+  })
+
+  it('refuses to run a Source of only comments, rather than running forever', async () => {
+    render(<App />)
+
+    write('// no instructions here\n\n')
+    await type('run')
+
+    expect(
+      screen.getByText('nothing to assemble — the Source has no instructions'),
+    ).toBeInTheDocument()
+    expect(locked()).toBe(false)
+    expect(screen.queryByText(/running at/)).not.toBeInTheDocument()
+  })
 })
 
 describe('stepping', () => {
