@@ -32,6 +32,33 @@ export const UNIT_2_PROGRAMS = ['2_hello_world', '2_interruption', '2_watchdog',
 // into a non-terminating loop rather than raising the flag. It stays hand-written, like `ble`.
 export const GENERATED_PROGRAMS = ['gen_blt', 'gen_bnz'] as const
 
+/**
+ * Unit 3's cache oracle: the units 1 and 2 programs (and one new program written to stress the
+ * hierarchy) re-executed through the cache lens, each annotating Hit/Miss per access. Only the
+ * `.out` differs from the base program — the assembled `.hex` is the base's, so each entry names
+ * the base whose words it runs. `3_memory_access` is the new unit-3 showpiece and its own base.
+ *
+ * Grown one slice at a time: a program joins the list on the ticket that turns it green, so the
+ * suite is never red by design (the same discipline as `UNIT_2_PROGRAMS`).
+ */
+export const UNIT_3_CACHE_PROGRAMS = [{ name: '3_factorial_cache', base: '1_factorial' }] as const
+
+/** A cache fixture: the base program's assembled words, and the cache-on reference trace. */
+export interface CacheFixture {
+  name: string
+  hex: string
+  out: string
+}
+
+/** Reads a cache fixture — the base's `.hex` for input, the `_cache.out` for the expected trace. */
+export function loadCacheFixture(entry: { name: string; base: string }): CacheFixture {
+  return {
+    name: entry.name,
+    hex: readPart(entry.base, 'hex'),
+    out: readPart(entry.name, 'out'),
+  }
+}
+
 export type FixtureName =
   | (typeof INHERITED_PROGRAMS)[number]
   | (typeof UNIT_2_PROGRAMS)[number]
@@ -61,7 +88,7 @@ export function loadFixture(name: FixtureName): Fixture {
   }
 }
 
-function readPart(name: FixtureName, extension: 's' | 'hex' | 'out'): string {
+function readPart(name: string, extension: 's' | 'hex' | 'out'): string {
   const path = join(FIXTURE_DIR, `${name}.${extension}`)
 
   let contents: string
