@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { GENERATED_PROGRAMS, INHERITED_PROGRAMS, loadFixture, parseHex } from './__fixtures__/load'
+import {
+  type FixtureName,
+  GENERATED_PROGRAMS,
+  INHERITED_PROGRAMS,
+  loadFixture,
+  parseHex,
+  UNIT_2_PROGRAMS,
+} from './__fixtures__/load'
 import { assemble } from './assembler'
 
 const hex = (word: number) => `0x${word.toString(16).toUpperCase().padStart(8, '0')}`
 
-function assembledWords(name: (typeof INHERITED_PROGRAMS | typeof GENERATED_PROGRAMS)[number]) {
+function assembledWords(name: FixtureName) {
   const fixture = loadFixture(name)
   const result = assemble(fixture.source)
   if (!result.ok) {
@@ -23,7 +30,7 @@ function assembledWords(name: (typeof INHERITED_PROGRAMS | typeof GENERATED_PROG
  * `.hex` the professor's assembler produced. That pairing is the one oracle nobody can
  * regenerate — see `__fixtures__/PROVENANCE.md`.
  */
-describe.each(INHERITED_PROGRAMS)('%s (inherited oracle)', (name) => {
+describe.each([...INHERITED_PROGRAMS, ...UNIT_2_PROGRAMS])('%s (inherited oracle)', (name) => {
   it('assembles word-for-word equal to its .hex', () => {
     const { actual, expected } = assembledWords(name)
 

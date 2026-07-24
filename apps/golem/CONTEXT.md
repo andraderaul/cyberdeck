@@ -50,8 +50,42 @@ _Avoid_: shell (já significa a camada impura do código no vocabulário do deck
 
 **Step**:
 O avanço de exatamente uma instrução: `step(machine) → machine`, função pura. Não conhece
-tempo nem DOM — quem tem tempo é o Console, que chama `step` N vezes por frame.
-_Avoid_: tick, cycle (um ciclo de clock não é uma instrução), instruction
+tempo nem DOM — quem tem tempo é o Console, que chama `step` N vezes por frame. O Step é a
+unidade de tempo da máquina: os dispositivos (watchdog, FPU) avançam um tick por Step, em
+lockstep com a execução — herdado do laço do emulador de referência.
+_Avoid_: tick, cycle (um ciclo de clock não é uma instrução; uma operação de FPU custa N ciclos,
+todos consumidos um por Step), instruction
+
+**Device**:
+Hardware mapeado em memória, fora da CPU mas dentro da máquina: Terminal, Watchdog, FPU.
+Um Device avança um tick por Step, em lockstep com a execução, e o programa fala com ele
+por loads/stores em endereços fixos — nunca pelo Console.
+_Avoid_: periférico (sugere algo plugável; estes são parte da máquina), I/O
+
+**Watchdog**:
+O Device que decrementa um contador a cada Step e dispara a interrupção de hardware 1 ao
+zerar. O programa o arma escrevendo contagem + bit de enable no registrador mapeado. Na
+ficção do GOLEM: a inscrição que desliga o golem que não sabe parar sozinho.
+_Avoid_: timer (genérico — este existe para matar, não para medir)
+
+**FPU**:
+O Device de ponto flutuante: registradores mapeados x, y, z e control. Uma operação custa
+N ciclos (consumidos um por Step) e sinaliza conclusão pela interrupção de hardware 2 — o
+programa espera, não bloqueia. Quirk didático herdado do Poxim (ADR 0019).
+_Avoid_: coprocessador (correto mas não usado), float unit
+
+**Interrupção**:
+O desvio de controle que a máquina toma sozinha: o PC salta para o vetor (`0x04`–`0x0C`),
+`CR` recebe a causa e `IPC` guarda o PC interrompido. Três origens: hardware 1 (Watchdog),
+hardware 2 (FPU), software (`int N`, divisão por zero, instrução inválida — exige IE ligado
+no `FR`). O Console narra cada despacho; o despacho em si é da Machine.
+_Avoid_: exceção, trap, IRQ (jargão de outras arquiteturas)
+
+**ISR**:
+A rotina *do programa* que atende uma interrupção — código do usuário nos vetores, não da
+máquina. `isr` lê `IPC`/`CR` e salta; `reti` retorna. Uma ISR é linha como outra qualquer:
+breakpoint funciona nela sem gramática nova.
+_Avoid_: handler (aceitável em prosa, mas ISR é o termo do material de referência)
 
 **Clock**:
 A taxa em que o Console dirige `step` durante um `run` — `clock 4` para assistir, `clock max`
@@ -62,4 +96,10 @@ _Avoid_: speed, fps, frequência
 Um mnemônico alternativo aceito pelo assembler para uma instrução (`jmp` para `bun`). Os
 mnemônicos herdados do Poxim continuam canônicos; os aliases existem para legibilidade sem
 quebrar as fixtures de referência (ADR 0019).
-_Avoid_: sinônimo, macro (uma macro expandiria para várias instruções — um alias é 1:1)
+_Avoid_: sinônimo, macro (é outra coisa — ver Macro; um alias é 1:1)
+
+**Macro**:
+Um mnemônico que o assembler expande para mais de uma instrução, herdado do material de
+referência: `enai rX` vira duas palavras (carrega máscara no scratch `rX`, liga o bit IE no
+`FR`). É a única macro; existe porque os Sources de referência a usam, não por conveniência.
+_Avoid_: pseudo-instrução (mesmo conceito, nome mais longo), alias (1:1, não expande)

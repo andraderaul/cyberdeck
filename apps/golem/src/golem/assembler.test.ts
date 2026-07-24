@@ -202,3 +202,69 @@ describe('source mapping', () => {
     )
   })
 })
+
+// The assembler's first Macro, and the only one. What makes it a macro rather than an alias is
+// that it expands to *two* words — see CONTEXT.md.
+describe('the enai macro', () => {
+  it('expands to the two words the reference assembler emits', () => {
+    // Pinned by all three unit-2 .hex fixtures, which carry exactly this pair.
+    expect(wordsOf('enai r1')).toEqual([0x04010020, 0x40030c61])
+  })
+
+  it('uses its operand register as the scratch, so a different register moves both words', () => {
+    const [load, or] = wordsOf('enai r2')
+
+    expect(load).not.toBe(0x04010020)
+    expect(or).not.toBe(0x40030c61)
+  })
+
+  // Two words from one line: a label after `enai` must land past both, or every jump in a
+  // reference program would be off by one.
+  it('advances the label counter by two', () => {
+    const result = assemble('enai r1\nafter:\nbun after')
+    if (!result.ok) {
+      throw new Error(`expected a clean assemble, got ${JSON.stringify(result.errors)}`)
+    }
+
+    expect(result.image.words).toHaveLength(3)
+    // `bun` to word 2 — the instruction after the expansion.
+    expect(result.image.words[2] & 0x3ffffff).toBe(2)
+  })
+
+  it('maps both of its words back to the one line that wrote them', () => {
+    const result = assemble('addi r1, r0, 1\nenai r1\nint 0')
+    if (!result.ok) {
+      throw new Error('expected a clean assemble')
+    }
+
+    expect(result.image.lineForWord).toEqual([1, 2, 2, 3])
+  })
+})
+
+describe('unit-2 operand errors', () => {
+  it('rejects enai with no register, naming the line', () => {
+    expect(errorsOf('addi r1, r0, 1\nenai')).toEqual([
+      { line: 2, message: '"enai" takes one register, e.g. enai r1' },
+    ])
+  })
+
+  it('rejects enai with more than one operand', () => {
+    expect(errorsOf('enai r1, r2')[0].message).toMatch(/takes one register/)
+  })
+
+  it('rejects enai on something that is not a register', () => {
+    expect(errorsOf('enai banana')).toEqual([{ line: 1, message: '"banana" is not a register' }])
+  })
+
+  it('rejects isr without its target', () => {
+    expect(errorsOf('isr r31, r30')).toHaveLength(1)
+  })
+
+  it('rejects reti with no register', () => {
+    expect(errorsOf('reti')).toHaveLength(1)
+  })
+
+  it('rejects int without a code', () => {
+    expect(errorsOf('int')).toHaveLength(1)
+  })
+})

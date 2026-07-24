@@ -1,6 +1,7 @@
 import { ErrorBoundary } from '@cyberdeck/deck-kit/ui'
 import { useEffect } from 'react'
 import Console from './components/console'
+import Devices from './components/devices'
 import Flags from './components/flags'
 import Memory from './components/memory'
 import Registers from './components/registers'
@@ -92,9 +93,14 @@ export default function App() {
             <Console lines={console.lines} history={console.history} onSubmit={console.submit} />
           </div>
 
-          <div className="grid gap-sm lg:min-h-0 lg:grid-rows-[minmax(0,1fr)_auto_minmax(0,1fr)_minmax(0,1fr)]">
+          {/* Devices sits directly under Flags: the IE flag and a dispatch are the same story, and
+              the countdown is the thing worth watching while a run is going. It sizes to its
+              content rather than sharing the stretch, so adding it does not squeeze Memory and the
+              Terminal — on a phone the column simply scrolls, and the countdown still reads. */}
+          <div className="grid gap-sm lg:min-h-0 lg:grid-rows-[minmax(0,1fr)_auto_auto_minmax(0,1fr)_minmax(0,1fr)]">
             <Registers machine={console.machine} />
             <Flags machine={console.machine} />
+            <Devices machine={console.machine} />
             <Memory machine={console.machine} />
             <Terminal machine={console.machine} />
           </div>

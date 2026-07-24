@@ -17,8 +17,17 @@ the Console while registers, memory, flags and the Terminal update beside you. A
 execute; every vendored reference program assembles word-for-word to its `.hex` and traces
 line-for-line against its `.out`.
 
-Out of scope, and deliberately so: units 2 and 3 of the architecture (interrupts, watchdog, FPU,
-cache), reverse execution, and video recording. See the PRD for why.
+**v2 complete** (#203, tickets #204–#211) — the whole of unit 2. Interrupts dispatch with
+user-written ISRs (`isr`, `reti`, and `enai`, the assembler's only Macro); the memory-mapped
+Watchdog and FPU tick one per Step and interrupt on their own; `load <name>` puts a reference
+program in the editor; the DEVICES panel makes both devices watchable. All four unit-2 reference
+programs are green on both oracles.
+
+`step(machine)` returns `{ machine, events }` — a dispatch is not derivable from a state diff, so
+it is reported. The trace formatter and the Console narration read that one stream.
+
+Out of scope, and deliberately so: unit 3 (the cache), reverse execution, and video recording. Its
+oracle traces are already vendored and consumer-less — see `__fixtures__/PROVENANCE.md`.
 
 ## Commands
 

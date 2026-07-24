@@ -4,11 +4,18 @@
 import { useCallback, useRef, useState } from 'react'
 import { downloadText, outputFilename } from '../export/output'
 import { assemble, type Image, wordIndexForLine } from '../golem/assembler'
-import { type Command, parseCommand } from '../golem/command'
+import { type Command, nearest, parseCommand } from '../golem/command'
 import { GREETING, helpFor, helpLines } from '../golem/help'
 import { formatMemoryDump, formatRegister, hex32 } from '../golem/inspect'
-import { PC, registerIndex } from '../golem/isa'
-import { createMachine, type Machine, step } from '../golem/machine'
+import {
+  HARDWARE_1_VECTOR,
+  HARDWARE_2_VECTOR,
+  PC,
+  registerIndex,
+  SOFTWARE_VECTOR,
+} from '../golem/isa'
+import { createMachine, type Machine, type StepEvent, step } from '../golem/machine'
+import { PROGRAM_NAMES, PROGRAMS, programNamed } from '../golem/programs'
 import { encode } from '../golem/share'
 import { formatHex, formatStep, frameTrace } from '../golem/trace'
 import { type ClockRate, useClock } from './use-clock'
@@ -59,11 +66,39 @@ function lineOfPc(machine: Machine | null, image: Image | null): number | null {
   return image.lineForWord[machine.registers[PC] >>> 2] ?? null
 }
 
-/** Frames the recorded lines for export, marking truncation when the limit was hit. */
-function wrapTrace(lines: string[]): string {
+/**
+ * One Console line per dispatch, naming the cause and the vector it landed on. Per dispatch and
+ * not per Step, which is what bounds the narration on a program that interrupts in a loop.
+ *
+ * This exists because a dispatch mid-`run` is otherwise invisible: the PC simply is somewhere
+ * else, with nothing on screen saying who moved it.
+ */
+function narrate(event: StepEvent): string {
+  switch (event.kind) {
+    case 'software-interrupt':
+      return `software interrupt — cause ${hex32(event.cause)}, vector ${hex32(SOFTWARE_VECTOR)}`
+    // Narrated even when IE is clear and no dispatch follows: "there is garbage at this address"
+    // is the more useful half of the news either way.
+    case 'invalid-instruction':
+      return `invalid instruction at ${hex32(event.pc)}`
+    // Names the device, not just the line number: "who interrupted my program" is the question
+    // the narration exists to answer.
+    case 'hardware-interrupt':
+      return event.line === 1
+        ? `hardware interrupt 1 — the watchdog, vector ${hex32(HARDWARE_1_VECTOR)}`
+        : `hardware interrupt 2 — the fpu, vector ${hex32(HARDWARE_2_VECTOR)}`
+  }
+}
+
+/**
+ * Frames the recorded lines for export, marking truncation when the limit was hit. The Terminal
+ * output rides along so an exported trace still diffs clean against the reference `.out`, which
+ * ends with what the program printed.
+ */
+function wrapTrace(lines: string[], terminal: string): string {
   const body =
     lines.length < TRACE_LIMIT ? lines : [...lines, `[TRACE TRUNCATED AT ${TRACE_LIMIT}]`]
-  return frameTrace(body)
+  return frameTrace(body, terminal)
 }
 
 /**
@@ -98,6 +133,19 @@ async function shareSource(
 }
 
 export function useConsole(initialSource: string): ConsoleState {
+  /**
+   * Whether replacing this Source would destroy anything. The starter example and a program that
+   * was itself loaded are not the operator's work, so `load` overwrites them without ceremony;
+   * anything else earns one refusal first.
+   */
+  const isDisposable = useCallback(
+    (current: string): boolean =>
+      current.trim() === '' ||
+      current === initialSource ||
+      PROGRAMS.some((program) => program.source === current),
+    [initialSource],
+  )
+
   const [source, setSourceState] = useState(initialSource)
   const [machine, setMachineState] = useState<Machine | null>(null)
   const [image, setImage] = useState<Image | null>(null)
@@ -129,6 +177,10 @@ export function useConsole(initialSource: string): ConsoleState {
     setBreakpoints(new Set(breakpointsRef.current))
   }, [])
 
+  // The program `load` is waiting for a second confirmation on. Cleared by any other command, so
+  // the confirmation cannot be answered by something typed minutes later.
+  const pendingLoadRef = useRef<string | null>(null)
+
   // The PC a run paused at, so resuming skips that one breakpoint instead of tripping it again.
   // Any step or machine replacement invalidates it — see setMachine.
   const pausedPcRef = useRef<number | null>(null)
@@ -139,25 +191,32 @@ export function useConsole(initialSource: string): ConsoleState {
     setMachineState(next)
   }, [])
 
-  /** Advances one instruction and records the trace line for it. */
-  const stepRecording = useCallback(
-    (current: Machine): Machine => {
-      const next = step(current)
-      if (traceRef.current.length < TRACE_LIMIT) {
-        traceRef.current.push(formatStep(current, next))
-      }
-      setMachine(next)
-      return next
-    },
-    [setMachine],
-  )
-
   const append = useCallback((entries: Omit<ConsoleLine, 'id'>[]) => {
     setLines((previous) => [
       ...previous,
       ...entries.map((entry, offset) => ({ ...entry, id: previous.length + offset })),
     ])
   }, [])
+
+  /**
+   * Advances one instruction, records the trace entry, and narrates anything that happened *to*
+   * the program. The narration is a Console line, never a Terminal one: the Terminal is the
+   * program's own output and a dispatch is not something the program printed.
+   */
+  const stepRecording = useCallback(
+    (current: Machine): Machine => {
+      const { machine: next, events } = step(current)
+      if (traceRef.current.length < TRACE_LIMIT) {
+        traceRef.current.push(formatStep(current, next, events))
+      }
+      if (events.length > 0) {
+        append(events.map((event) => ({ kind: 'info' as const, text: narrate(event) })))
+      }
+      setMachine(next)
+      return next
+    },
+    [append, setMachine],
+  )
 
   // One instruction. Returns false when there is nothing left to run, which stops the clock.
   //
@@ -229,6 +288,14 @@ export function useConsole(initialSource: string): ConsoleState {
         return false
       }
 
+      // Blank lines and comments assemble to zero words without error, and a machine over an
+      // empty image never halts — every fetch reads 0, an implicit nop, and no `int 0` ever
+      // arrives. Refuse here so `run` cannot start an endless run over nothing.
+      if (result.image.words.length === 0) {
+        output.push({ kind: 'error', text: 'nothing to assemble — the Source has no instructions' })
+        return false
+      }
+
       imageRef.current = result.image
       traceRef.current = []
       setImage(result.image)
@@ -253,6 +320,10 @@ export function useConsole(initialSource: string): ConsoleState {
 
   const dispatch = useCallback(
     (command: Command, output: Omit<ConsoleLine, 'id'>[]): void => {
+      if (command.kind !== 'load') {
+        pendingLoadRef.current = null
+      }
+
       switch (command.kind) {
         case 'asm':
           build(output)
@@ -322,15 +393,70 @@ export function useConsole(initialSource: string): ConsoleState {
             break
           }
 
-          if (requireMachine(output) === null) {
+          const current = requireMachine(output)
+          if (current === null) {
             break
           }
           const filename = outputFilename('trace-export')
-          downloadText(filename, `${wrapTrace(traceRef.current)}\n`)
+          downloadText(filename, `${wrapTrace(traceRef.current, current.terminal)}\n`)
           output.push({
             kind: 'info',
             text: `wrote ${filename} — ${traceRef.current.length} instructions`,
           })
+          break
+        }
+
+        case 'load': {
+          if (command.name === null) {
+            output.push({ kind: 'info', text: 'programs:' })
+            output.push(
+              ...PROGRAMS.map((program) => ({
+                kind: 'info' as const,
+                text: `  ${program.name.padEnd(14)}${program.summary}`,
+              })),
+            )
+            break
+          }
+
+          // The three-state model holds by construction rather than by warning: with a Machine
+          // alive the editor is locked, so there is nothing to load into.
+          if (machineRef.current !== null) {
+            output.push({
+              kind: 'error',
+              text: 'a machine is running — reset first, then load',
+            })
+            break
+          }
+
+          const program = programNamed(command.name)
+          if (program === null) {
+            const suggestion = nearest(command.name, PROGRAM_NAMES)
+            output.push({
+              kind: 'error',
+              text: suggestion
+                ? `no program called "${command.name}" — did you mean "${suggestion}"?`
+                : `no program called "${command.name}" — try "load" to list them`,
+            })
+            break
+          }
+
+          // Loading destroys whatever is in the editor. Work the operator typed gets one refusal
+          // first; the starter example and an already-loaded program are not work, so the
+          // signature scene — `load watchdog`, `run` — stays a single command.
+          if (!isDisposable(source) && pendingLoadRef.current !== program.name) {
+            pendingLoadRef.current = program.name
+            output.push({
+              kind: 'error',
+              text: `"load ${program.name}" would replace what you have written — run it again to confirm, or "share" first to keep a link to it`,
+            })
+            break
+          }
+
+          pendingLoadRef.current = null
+          setSourceState(program.source)
+          saveSource(program.source)
+          clearShareFragment()
+          output.push({ kind: 'info', text: `loaded ${program.name} — ${program.summary}` })
           break
         }
 
@@ -448,7 +574,17 @@ export function useConsole(initialSource: string): ConsoleState {
           break
       }
     },
-    [append, build, clock, requireMachine, setMachine, source, stepRecording, syncBreakpoints],
+    [
+      append,
+      build,
+      clock,
+      isDisposable,
+      requireMachine,
+      setMachine,
+      source,
+      stepRecording,
+      syncBreakpoints,
+    ],
   )
 
   const submit = useCallback(

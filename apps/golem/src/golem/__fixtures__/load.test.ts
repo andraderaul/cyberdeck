@@ -5,9 +5,10 @@ import {
   INHERITED_PROGRAMS,
   loadFixture,
   parseHex,
+  UNIT_2_PROGRAMS,
 } from './load'
 
-const ALL = [...INHERITED_PROGRAMS, ...GENERATED_PROGRAMS]
+const ALL = [...INHERITED_PROGRAMS, ...UNIT_2_PROGRAMS, ...GENERATED_PROGRAMS]
 
 describe('loadFixture', () => {
   it.each(ALL)('loads all three forms of %s', (name) => {

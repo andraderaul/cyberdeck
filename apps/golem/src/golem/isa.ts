@@ -76,7 +76,7 @@ export const INSTRUCTIONS: Record<string, Spec> = {
   ),
   call: f(0x25, ['x', 'y', 'imm']),
   ret: f(0x26, ['x']),
-  isr: f(0x27, ['x', 'y']),
+  isr: f(0x27, ['x', 'y', 'imm']),
   reti: f(0x28, ['x']),
   int: s(0x3f, ['imm']),
 }
@@ -123,6 +123,68 @@ export const GT = 0x04
 export const ZD = 0x08
 export const OV = 0x10
 export const IV = 0x20
+/** Interrupt enable. An interrupt — hardware or software — is dispatched only while this is set. */
+export const IE = 0x40
+
+/**
+ * Interrupt vectors, at the head of memory as *byte* addresses. Word 0 is the entry point, so a
+ * program's first instruction is the `call` that jumps past the three handlers.
+ */
+export const HARDWARE_1_VECTOR = 0x04
+export const HARDWARE_2_VECTOR = 0x08
+export const SOFTWARE_VECTOR = 0x0c
+
+/** Cause codes the machine raises itself, as opposed to the `N` an `int N` carries. */
+export const CAUSE_ZERO_DIVISION = 0x01
+export const CAUSE_INVALID_INSTRUCTION = 0x2a
+export const CAUSE_WATCHDOG = 0xe1ac04da
+
+/**
+ * The Watchdog's control register, at a **word** address like every device register. One word
+ * holds both fields: the enable bit on top, the countdown underneath.
+ */
+export const WATCHDOG_ADDRESS = 0x2020
+export const WATCHDOG_ENABLE = 0x80000000
+export const WATCHDOG_COUNTER = 0x7fffffff
+
+export const CAUSE_FPU = 0x01eee754
+
+/** The FPU's four mapped registers, also at word addresses. */
+export const FPU_X = 0x2200
+export const FPU_Y = 0x2201
+export const FPU_Z = 0x2202
+export const FPU_CONTROL = 0x2203
+
+/** The error bit the control register reads back after a faulted operation. */
+export const FPU_ERROR = 0x20
+
+/**
+ * What the low nibble of a write to `control` asks for. Anything else is undefined and faults.
+ */
+export const FPU_OPERATIONS = {
+  none: 0x0,
+  add: 0x1,
+  subtract: 0x2,
+  multiply: 0x3,
+  divide: 0x4,
+  assignX: 0x5,
+  assignY: 0x6,
+  ceiling: 0x7,
+  floor: 0x8,
+  round: 0x9,
+} as const
+
+/**
+ * Mnemonics the assembler expands into **more than one** instruction — which is exactly what
+ * separates a Macro from an Alias (`CONTEXT.md`): an alias is 1:1, a macro is not.
+ *
+ * `enai` is the only one, and it is here because the reference Sources use it, not for
+ * convenience. The expansion is pinned by the `.hex` fixtures word for word, scratch register
+ * included: the operand register is clobbered with the IE mask on the way through.
+ */
+export const MACROS: Record<string, (operand: string) => string[]> = {
+  enai: (register) => [`addi ${register}, r0, ${IE}`, `or fr, fr, ${register}`],
+}
 
 /** Words of addressable memory. Must span the Terminal at byte `0x0000888B`. */
 export const MEMORY_WORDS = 0x4000

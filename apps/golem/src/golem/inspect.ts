@@ -3,8 +3,23 @@
 // reach, and so both surfaces format a value the same way.
 
 import { hex } from './hex'
-import { byteShift, EQ, FR, GT, IV, LT, OV, registerName, ZD } from './isa'
-import type { Machine } from './machine'
+import {
+  byteShift,
+  EQ,
+  FPU_OPERATIONS,
+  FR,
+  GT,
+  IE,
+  IV,
+  LT,
+  OV,
+  registerName,
+  WATCHDOG_ADDRESS,
+  WATCHDOG_COUNTER,
+  WATCHDOG_ENABLE,
+  ZD,
+} from './isa'
+import { fpuWord, type Machine } from './machine'
 
 export type MemoryUnit = 'words' | 'bytes'
 
@@ -23,7 +38,74 @@ const FLAGS: { name: string; bit: number; meaning: string }[] = [
   { name: 'ZD', bit: ZD, meaning: 'a divide by zero happened' },
   { name: 'OV', bit: OV, meaning: 'an arithmetic result overflowed' },
   { name: 'IV', bit: IV, meaning: 'an invalid instruction was executed' },
+  { name: 'IE', bit: IE, meaning: 'interrupts are enabled' },
 ]
+
+const OPERATION_NAMES: Record<number, string> = {
+  [FPU_OPERATIONS.add]: 'add',
+  [FPU_OPERATIONS.subtract]: 'subtract',
+  [FPU_OPERATIONS.multiply]: 'multiply',
+  [FPU_OPERATIONS.divide]: 'divide',
+  [FPU_OPERATIONS.assignX]: 'x = z',
+  [FPU_OPERATIONS.assignY]: 'y = z',
+  [FPU_OPERATIONS.ceiling]: 'ceiling',
+  [FPU_OPERATIONS.floor]: 'floor',
+  [FPU_OPERATIONS.round]: 'round',
+}
+
+/** One readable row in the DEVICES panel: a label, its value, and an optional raw word beside it. */
+export interface DeviceReading {
+  label: string
+  value: string
+  /** The underlying word, where seeing the bit pattern is the point. */
+  raw?: string
+}
+
+export interface DeviceView {
+  watchdog: DeviceReading[]
+  fpu: DeviceReading[]
+}
+
+/**
+ * What the DEVICES panel shows, derived rather than stored — so "9.25 reads as 9.25 and not as
+ * 0x41140000" is a pure function with a test, not something only a DOM assertion could reach.
+ */
+export function devicesOf(machine: Machine | null): DeviceView {
+  const register = machine?.memory[WATCHDOG_ADDRESS] ?? 0
+  const enabled = (register & WATCHDOG_ENABLE) !== 0
+  const fpu = machine?.fpu
+
+  return {
+    watchdog: [
+      { label: 'enable', value: enabled ? 'armed' : 'off' },
+      {
+        label: 'counter',
+        value: String(register & WATCHDOG_COUNTER),
+        raw: hex32(register),
+      },
+    ],
+    // The raw word is the one a program would read back, not the IEEE-754 bits: the encoding is
+    // value-dependent (see ISA.md), so z = 19 shows 0x00000013 while z = 9.25 shows 0x41140000.
+    fpu: [
+      ...(['x', 'y', 'z'] as const).map((label) => {
+        const value = fpu?.[label] ?? 0
+        return { label, value: decimal(value), raw: hex32(fpuWord(value)) }
+      }),
+      {
+        label: 'operation',
+        value: fpu?.busy ? (OPERATION_NAMES[fpu.operation] ?? 'undefined') : 'idle',
+      },
+      { label: 'cycles', value: fpu?.busy ? String(fpu.remaining) : '—' },
+      { label: 'status', value: (fpu?.control ?? 0) === 0 ? 'ok' : 'error' },
+    ],
+  }
+}
+
+// Trailing zeros dropped, so a whole number reads as one — the panel exists to make a float
+// legible, and `18.5` says more than `18.500000`.
+function decimal(value: number): string {
+  return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(6)))
+}
 
 export const hex32 = (value: number) => `0x${hex(value)}`
 export const hex8 = (value: number) => hex(value & 0xff, 2)

@@ -49,6 +49,9 @@ são silenciosamente descartadas. (Não é um bug: é o mesmo contrato de MIPS.)
 **Terminal:** dispositivo de saída mapeado no endereço de **byte** `0x0000888B`. Escrever nele com
 `stb` emite um caractere. É a única saída da máquina na unidade 1.
 
+O byte escrito **continua legível no endereço**: um `ldb` posterior devolve o último byte emitido.
+O Terminal é dispositivo *e* endereço, e é assim que o `2_hello_world` confere a própria saída.
+
 ---
 
 ## Encoding
@@ -177,9 +180,9 @@ Todos os saltos são tipo S e recebem um endereço de **palavra** em `im26`; o `
 |---|---|---|---|---|
 | `0x25` | `call` | — | F | `Rx = (PC + 4) >> 2`; `PC = (Ry + N) << 2` |
 | `0x26` | `ret` | — | F | `PC = Rx << 2` |
-| `0x27` | `isr` | — | F | `Rx = IPC >> 2`; `Ry = CR` |
+| `0x27` | `isr` | — | F | `Rx = IPC >> 2`; `Ry = CR`; `PC = N << 2` |
 | `0x28` | `reti` | — | F | `PC = Rx << 2` |
-| `0x3F` | `int` | `halt` | S | interrupção de software; `int 0` encerra a simulação |
+| `0x3F` | `int` | `halt` | S | `int 0` encerra a simulação; `int N` despacha interrupção de software com causa `N` |
 
 `call` guarda o endereço de retorno como **índice de palavra**, e é por isso que `ret` faz `<< 2`.
 
@@ -198,6 +201,141 @@ unidade 1, onde só a primeira faz algo:
 | 3 | `0x0C` | handler de interrupção de software |
 
 Nas unidades 1 os três handlers são `nop`.
+
+### Despacho de interrupção
+
+Um despacho faz três coisas, sempre as mesmas: `CR` recebe a **causa**, `IPC` recebe o endereço da
+instrução **seguinte** à interrompida — é o que permite a ISR voltar com um `ret` comum — e o `PC`
+salta para o vetor.
+
+Interrupções de software são **condicionadas ao bit `IE`** (`0x40` no `FR`). Com `IE` limpo, `int N`
+não despacha.
+
+| causa | origem |
+|---|---|
+| `N` | `int N` com `N` diferente de zero |
+| `0x01` | divisão por zero |
+| `0x2A` | instrução inválida |
+
+| `0xE1AC04DA` | watchdog (hardware 1) |
+| `0x01EEE754` | FPU (hardware 2) |
+
+**`IPC` difere entre os dois tipos.** Uma interrupção de software nasce no meio da instrução, com o
+`PC` ainda sobre ela, então o retorno é `PC + 4`. Uma de hardware chega **depois** que o `PC` já
+assentou, então o retorno é o `PC` como está — que num desvio tomado é o alvo, não o desvio. As
+duas dizem a mesma coisa: "o endereço que o programa executaria em seguida".
+
+---
+
+## Watchdog
+
+Registrador no endereço de **palavra** `0x2020`. Uma palavra guarda os dois campos:
+
+| bits | campo |
+|---|---|
+| 31 | enable |
+| 30–0 | contador |
+
+O programa arma escrevendo contagem + enable (`0x80000064` = contar 100). O contador decrementa
+**um por Step**, e ao chegar a zero dispara a interrupção de hardware 1.
+
+O Step que arma **também conta**: dispositivos avançam todo Step, e o `stw` não é exceção. Uma
+contagem escrita como 100 já lê 99 ao fim daquele Step — e é justamente esse deslocamento que faz
+os 100 `bun` do `2_watchdog` fecharem exatos.
+
+### Decisões sem oráculo
+
+O `2_watchdog` arma o dispositivo uma vez, com interrupções ligadas, e encerra três instruções
+depois de disparar. Todo o resto foi decidido aqui:
+
+- **Expirar desarma.** O fixture mostra exatamente um despacho; se o contador ficasse em zero e
+  armado, dispararia a cada Step seguinte. Re-armar é trabalho do programa.
+- **Expirar com `IE` limpo desarma do mesmo jeito, e a interrupção se perde.** A contagem acabou,
+  tendo alguém escutado ou não. A alternativa — deixar pendente até `IE` subir — exige inventar
+  estado que nada na referência sugere.
+- **Com o enable limpo o dispositivo não conta.** O contador fica onde foi escrito.
+
+---
+
+## FPU
+
+Quatro registradores em endereços de **palavra**:
+
+| endereço | registrador |
+|---|---|
+| `0x2200` | x |
+| `0x2201` | y |
+| `0x2202` | z |
+| `0x2203` | control |
+
+Escrever em `control` dispara a operação; o nibble baixo escolhe qual. Ao terminar, a FPU levanta a
+interrupção de hardware 2.
+
+| op | operação | ciclos |
+|---|---|---|
+| `0` | nenhuma | 1 |
+| `1` | `z = x + y` | `\|expX - expY\| + 1` |
+| `2` | `z = x - y` | `\|expX - expY\| + 1` |
+| `3` | `z = x * y` | `\|expX - expY\| + 1` |
+| `4` | `z = x / y` (erro se `y = 0`) | `\|expX - expY\| + 1` |
+| `5` | `x = z` | 1 |
+| `6` | `y = z` | 1 |
+| `7` | `z = teto(z)` | 1 |
+| `8` | `z = piso(z)` | 1 |
+| `9` | `z = arredonda(z)` | 1 |
+| outro | indefinida — erro | 1 |
+
+Ler `control` devolve `0`, ou `0x20` se a última operação falhou. Os ciclos são consumidos um por
+Step, e o Step que **inicia** a operação já consome um — mesma forma do Watchdog.
+
+### A conversão é assimétrica
+
+Este é o comportamento mais estranho herdado, e o `2_fpu` depende dele nos dois sentidos:
+
+- **Escrever** converte **numericamente**: escrever `74` guarda o float `74.0`, não os bits
+  `0x0000004A`. É por isso que `74 / 8` dá `9.25` e não um denormal.
+- **Ler** converte de volta **dependendo do valor**: se for inteiro exato, volta como inteiro; se
+  tiver parte fracionária, voltam os **bits IEEE-754**.
+
+Ou seja, `z = 9.25` lê `0x41140000`, mas `z = 19` lê `0x00000013`. Um registrador cujo encoding
+depende do valor que carrega é indefensável como projeto — e é exatamente o que a referência faz.
+Replicado fielmente: o `2_fpu` lê dos dois jeitos e ficaria vermelho com qualquer um sozinho.
+
+### A máscara de expoente quebrada — replicada de propósito
+
+A referência lê o expoente com `(bits & 0x7F80000) >> 23`. O expoente IEEE-754 fica em
+`0x7F800000` — falta um dígito hexadecimal. Na prática ela lê quatro bits do meio da mantissa.
+
+**O GOLEM replica o bug**, ao contrário do que faz com o `ble`. A diferença é o que está em jogo:
+um `ble` quebrado envenena todo programa novo, enquanto isto só decide quantos ciclos uma operação
+é *dita* custar — ficção didática sem verdade de fundo. Corrigir deixaria todo trace da unidade 2
+vermelho em troca de nada.
+
+Os números do `2_fpu` só fecham sob a máscara quebrada: divisão custa 4, multiplicação custa 3.
+
+### Decisões sem oráculo
+
+- **Divisão por zero levanta o mesmo bit `0x20` do `control`.** A referência põe um campo `status`
+  interno que **não está mapeado em endereço nenhum** — erro que nenhum programa consegue ler. O
+  GOLEM expõe os dois erros no mesmo bit, que é o único lugar observável.
+- **Com `IE` limpo a operação completa e nada é despachado.** A referência escreve `CR` e `IPC` a
+  cada Step mesmo sem despachar; o GOLEM não, pela mesma razão do `int N` com `IE` limpo.
+
+`isr` **salta**: além de capturar `IPC` e `CR`, ele põe o `PC` em `N << 2`. É o que permite ao
+vetor caber em uma palavra — a palavra do vetor é o preâmbulo *e* o desvio para o corpo da ISR.
+
+### `enai` — a única macro
+
+Uma **Macro** expande para mais de uma instrução; um **Alias** é 1:1. `enai rX` é a única macro do
+assembler, e existe porque as fontes de referência a usam:
+
+```asm
+enai r1     // vira: addi r1, r0, 64
+            //       or fr, fr, r1
+```
+
+O registrador do operando é **scratch**: entra com a máscara `IE` e sai com ela. A expansão está
+prendida palavra a palavra pelos três `.hex` da unidade 2, que carregam exatamente esse par.
 
 ---
 
@@ -323,6 +461,39 @@ A referência monta `(ER:Rx)`, desloca, e depois faz `registradores[ER] = (ERR &
 — atribuição de um valor cujos 32 bits baixos são zero a um `uint32_t`. `ER` acaba sempre em zero.
 Bate com `1_limits`, e o GOLEM faz o mesmo.
 
+### `int N` com `IE` limpo é no-op
+
+Nenhuma fixture prende esse caso: os programas de referência ligam `IE` com `enai` antes de
+qualquer `int N`. Fica **decidido** que a instrução não faz nada — nem escreve `CR`, nem salta.
+
+A alternativa seria escrever a causa e não desviar, e isso produz um estado que ISR nenhuma sabe
+explicar: `CR` diria que houve uma interrupção que o `PC` desmente. "Interrupção condicionada"
+significa que ela não aconteceu, não que aconteceu pela metade.
+
+### Watchdog e FPU no mesmo Step — um despacho de hardware por vez
+
+A referência verifica os dois dispositivos em sequência e deixa os dois despacharem no mesmo
+ciclo: o watchdog escreve `CR`/`IPC` e salta para o vetor 1; a FPU, logo depois, sobrescreve `CR`
+com a própria causa e salva como retorno o `PC` — que já é o vetor 1. A interrupção do watchdog
+se perde num clobber que nenhuma fixture exercita, mesma categoria do `ble` quebrado.
+
+O GOLEM despacha **um hardware por Step**. O Watchdog (linha 1) leva o Step, e a conclusão da FPU
+fica **pendente**: a operação segura em zero ciclos e despacha inteira no Step seguinte, com a
+própria causa e um retorno real. Com `IE` limpo nada disso se aplica — a operação completa em
+silêncio, como já estava decidido acima.
+
+### Instrução inválida — o GOLEM não trava
+
+Com `IE` ligado, o GOLEM levanta `IV`, emite `[INVALID INSTRUCTION @ PC]` e despacha a interrupção
+de software com causa `0x2A` — que é o que o `2_interruption` mostra.
+
+Com `IE` **limpo**, o emulador de referência entra num laço que não termina, cuspindo `nop` para
+sempre (foi assim que a tentativa de fabricar oráculo de `bni` encheu o disco — ver
+`PROVENANCE.md`). O GOLEM levanta `IV` e **segue para a instrução seguinte**, como já fazia na v1.
+
+Travar não é semântica, é ausência de tratamento. E o comportamento da v1 é o que os testes de
+`biv`/`bni` dependem: sem avançar o `PC`, não há como observar a flag que a instrução inválida põe.
+
 ### Outros achados, sem impacto
 
 - **`bge` está certo por acidente**, escrito com um literal octal (`00000004`) que calha de valer 4.
@@ -334,13 +505,13 @@ Bate com `1_limits`, e o GOLEM faz o mesmo.
 
 ## Onde o oráculo não protege
 
-As fixtures herdadas exercitam 7 dos 11 branches. `2_blt` e `2_bnz`, fabricados em #135 enquanto o
+As fixtures herdadas exercitam 7 dos 11 branches. `gen_blt` e `gen_bnz`, fabricados em #135 enquanto o
 emulador de referência ainda compila, levam a 9:
 
 | branch | cobertura |
 |---|---|
 | `ble`, `bni` | **nenhuma** — só teste escrito à mão |
-| `blt`, `bnz` | fixture gerada (`2_blt`, `2_bnz`), as duas direções |
+| `blt`, `bnz` | fixture gerada (`gen_blt`, `gen_bnz`), as duas direções |
 | `bzd`, `biv` | 1 uso cada |
 | `beq`, `bgt` | 3 usos cada |
 | `bge` | 4 usos |

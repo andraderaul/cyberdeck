@@ -8,7 +8,7 @@
 
 import { hex } from './hex'
 import { CR, ER, FR, PC, registerName, unpackU } from './isa'
-import type { Machine } from './machine'
+import type { Machine, StepEvent } from './machine'
 
 // The disassembly line names registers in lower case, the effects line in upper.
 const lower = (index: number) => registerName(index)
@@ -16,6 +16,7 @@ const upper = (index: number) => registerName(index).toUpperCase()
 
 export const TRACE_START = '[START OF SIMULATION]'
 export const TRACE_END = '[END OF SIMULATION]'
+export const TRACE_TERMINAL = '[TERMINAL]'
 
 /** Type U operators that read as `Rz = Rx <op> Ry`, and which extra registers they report. */
 const BINARY_U: Record<number, { mnemonic: string; symbol: string; fr: boolean; er: boolean }> = {
@@ -54,10 +55,52 @@ const BRANCHES: Record<number, string> = {
 }
 
 /**
- * Renders the instruction that took `before` to `after` as the two lines a trace entry is: the
- * disassembly, then the effects it had. Pure, and reads only the two states it is given.
+ * The reference emulator's marker for a dispatch, emitted *after* the lines of the instruction
+ * that caused it — the order the reference writes them, and therefore the order a diff expects.
  */
-export function formatStep(before: Machine, after: Machine): string {
+export function formatEvent(event: StepEvent): string {
+  switch (event.kind) {
+    case 'software-interrupt':
+      return '[SOFTWARE INTERRUPTION]'
+    case 'invalid-instruction':
+      return `[INVALID INSTRUCTION @ 0x${hex(event.pc)}]`
+    case 'hardware-interrupt':
+      return `[HARDWARE INTERRUPTION ${event.line}]`
+  }
+}
+
+/**
+ * Renders the instruction that took `before` to `after` as the two lines a trace entry is: the
+ * disassembly, then the effects it had — followed by a marker line per event the Step raised.
+ * Pure, and reads only what it is given.
+ */
+export function formatStep(
+  before: Machine,
+  after: Machine,
+  events: readonly StepEvent[] = [],
+): string {
+  // An invalid instruction has no disassembly to print — there is no instruction. The reference
+  // emits only the marker lines, so the entry is dropped rather than rendered as `?? 0x…`.
+  if (events.some((event) => event.kind === 'invalid-instruction')) {
+    return events.map(formatEvent).join('\n')
+  }
+
+  // A hardware interrupt lands *after* the instruction finished, so the PC in `after` is the
+  // vector, not what the instruction produced. The effects line must report the instruction's
+  // own result — the branch target it reached, not where the device then sent it.
+  const hardware = events.find((event) => event.kind === 'hardware-interrupt')
+  const settled = hardware === undefined ? after : withPc(after, hardware.resume)
+
+  return [formatInstruction(before, settled), ...events.map(formatEvent)].join('\n')
+}
+
+function withPc(machine: Machine, pc: number): Machine {
+  const registers = [...machine.registers]
+  registers[PC] = pc >>> 0
+  return { ...machine, registers }
+}
+
+function formatInstruction(before: Machine, after: Machine): string {
   const instruction = (before.memory[before.registers[PC] >>> 2] ?? 0) >>> 0
   const opcode = instruction >>> 26
 
@@ -164,10 +207,19 @@ export function formatStep(before: Machine, after: Machine): string {
         `call ${lower(fx)}, ${lower(fy)}, 0x${hex(im16, 4)}`,
         `[F] ${upper(fx)} = (PC + 4) >> 2 = 0x${hex(after.registers[fx])}, PC = (${upper(fy)} + 0x${hex(im16, 4)}) << 2 = 0x${hex(after.registers[PC])}`,
       ].join('\n')
+    // `reti` reads identically to `ret` here — the reference prints the same effects line, and
+    // the two differ in intent rather than in what they do to the machine.
     case 0x26:
+    case 0x28:
       return [
-        `ret ${lower(fx)}`,
+        `${opcode === 0x26 ? 'ret' : 'reti'} ${lower(fx)}`,
         `[F] PC = ${upper(fx)} << 2 = 0x${hex(after.registers[PC])}`,
+      ].join('\n')
+
+    case 0x27:
+      return [
+        `isr ${lower(fx)}, ${lower(fy)}, 0x${hex(im16, 4)}`,
+        `[F] ${upper(fx)} = IPC >> 2 = 0x${hex(after.registers[fx])}, ${upper(fy)} = CR = 0x${hex(after.registers[fy])}, PC = 0x${hex(after.registers[PC])}`,
       ].join('\n')
 
     case 0x3f:
@@ -181,14 +233,26 @@ export function formatStep(before: Machine, after: Machine): string {
   }
 }
 
-/** Frames already-formatted trace lines the way the reference emulator frames a run. */
-export function frameTrace(lines: readonly string[]): string {
-  return [TRACE_START, ...lines, TRACE_END].join('\n')
+/**
+ * Frames already-formatted trace lines the way the reference emulator frames a run, with what the
+ * program printed appended under a `[TERMINAL]` heading.
+ *
+ * The heading appears **only when the program printed something** — the reference omits it
+ * entirely otherwise, which is why every unit-1 fixture ends without one.
+ */
+export function frameTrace(lines: readonly string[], terminal = ''): string {
+  const output = terminal === '' ? [] : [TRACE_TERMINAL, terminal]
+  return [TRACE_START, ...lines, ...output, TRACE_END].join('\n')
 }
 
 /** The whole log for collected steps, framed so it can be diffed directly against the reference. */
-export function formatTrace(steps: { before: Machine; after: Machine }[]): string {
-  return frameTrace(steps.map(({ before, after }) => formatStep(before, after)))
+export function formatTrace(
+  steps: { before: Machine; after: Machine; events?: readonly StepEvent[] }[],
+): string {
+  return frameTrace(
+    steps.map(({ before, after, events }) => formatStep(before, after, events)),
+    steps.length === 0 ? '' : steps[steps.length - 1].after.terminal,
+  )
 }
 
 /** The Image in the reference `.hex` format: one `0x`-prefixed word per line. */

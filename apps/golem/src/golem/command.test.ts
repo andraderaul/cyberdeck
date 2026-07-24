@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseCommand } from './command'
+import { nearest, parseCommand } from './command'
 
 function suggestionFor(input: string): string | null {
   const command = parseCommand(input)
@@ -98,5 +98,45 @@ describe('parseCommand', () => {
       input: 'elephant',
       suggestion: null,
     })
+  })
+})
+
+describe('load', () => {
+  it('takes a program name', () => {
+    expect(parseCommand('load watchdog')).toEqual({ kind: 'load', name: 'watchdog' })
+  })
+
+  // Unargued lists rather than erroring: someone who does not know the names is exactly the
+  // person typing a bare `load`.
+  it('parses with no argument, which is how the names get listed', () => {
+    expect(parseCommand('load')).toEqual({ kind: 'load', name: null })
+  })
+
+  it('lower-cases the name like every other argument', () => {
+    expect(parseCommand('LOAD Watchdog')).toEqual({ kind: 'load', name: 'watchdog' })
+  })
+
+  it('rejects more than one name with usage', () => {
+    expect(parseCommand('load watchdog fpu')).toEqual({
+      kind: 'bad-usage',
+      name: 'load',
+      message: 'usage: load [name]',
+    })
+  })
+
+  // Unknown *names* are the shell's business — the parser has no opinion on which programs exist,
+  // which is what keeps the grammar independent of what happens to be vendored.
+  it('parses an unknown name without judging it', () => {
+    expect(parseCommand('load nonsense')).toEqual({ kind: 'load', name: 'nonsense' })
+  })
+})
+
+describe('nearest', () => {
+  it('suggests the closest candidate from any list, not just commands', () => {
+    expect(nearest('watchdg', ['hello_world', 'interruption', 'watchdog', 'fpu'])).toBe('watchdog')
+  })
+
+  it('offers nothing when no candidate is close', () => {
+    expect(nearest('elephant', ['hello_world', 'watchdog', 'fpu'])).toBeNull()
   })
 })

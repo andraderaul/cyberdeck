@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './app'
@@ -75,7 +75,7 @@ describe('App', () => {
   it('renders a region for each surface the program needs', () => {
     render(<App />)
 
-    for (const region of ['Console', 'Registers', 'Flags', 'Memory', 'Terminal']) {
+    for (const region of ['Console', 'Registers', 'Flags', 'Devices', 'Memory', 'Terminal']) {
       expect(screen.getByRole('region', { name: region })).toBeInTheDocument()
     }
     expect(screen.getByRole('region', { name: /^Source/ })).toBeInTheDocument()
@@ -113,6 +113,34 @@ describe('the three-state model', () => {
     await type('reset')
 
     expect(editor()).not.toHaveAttribute('readonly')
+  })
+
+  // An empty Source assembles to zero words without error, and a machine over that image never
+  // halts — every fetch is an implicit nop and no `int 0` ever arrives. Both commands refuse
+  // instead of locking the editor over nothing.
+  it('refuses to assemble a Source with no instructions', async () => {
+    render(<App />)
+
+    write('')
+    await type('asm')
+
+    expect(
+      screen.getByText('nothing to assemble — the Source has no instructions'),
+    ).toBeInTheDocument()
+    expect(locked()).toBe(false)
+  })
+
+  it('refuses to run a Source of only comments, rather than running forever', async () => {
+    render(<App />)
+
+    write('// no instructions here\n\n')
+    await type('run')
+
+    expect(
+      screen.getByText('nothing to assemble — the Source has no instructions'),
+    ).toBeInTheDocument()
+    expect(locked()).toBe(false)
+    expect(screen.queryByText(/running at/)).not.toBeInTheDocument()
   })
 })
 
@@ -218,6 +246,264 @@ describe('the Terminal', () => {
     await stepTimes(30)
 
     expect(screen.getByRole('region', { name: 'Console' })).not.toHaveTextContent('Hi\n')
+  })
+})
+
+describe('load', () => {
+  it('lists the programs when given no name', async () => {
+    render(<App />)
+
+    await type('load')
+
+    expect(screen.getByText(/watchdog/)).toBeInTheDocument()
+    expect(screen.getByText(/an infinite loop losing to a countdown/)).toBeInTheDocument()
+  })
+
+  it('puts the named program in the editor', async () => {
+    render(<App />)
+
+    await type('load watchdog')
+
+    expect(sourceText()).toContain('forever_loop')
+    expect(screen.getByText(/loaded watchdog/)).toBeInTheDocument()
+  })
+
+  // The three-state model holds by construction: with a Machine alive the editor is locked, so
+  // there is nothing to load into and running code can never change underneath the operator.
+  it('refuses while a machine exists, and says what to do about it', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('load watchdog')
+
+    expect(screen.getByText(/a machine is running — reset first/)).toBeInTheDocument()
+    expect(sourceText()).not.toContain('forever_loop')
+  })
+
+  it('loads after a reset', async () => {
+    render(<App />)
+
+    await type('asm')
+    await type('reset')
+    await type('load watchdog')
+
+    expect(sourceText()).toContain('forever_loop')
+  })
+
+  it('suggests the nearest name for a typo', async () => {
+    render(<App />)
+
+    await type('load watchdg')
+
+    expect(screen.getByText(/did you mean "watchdog"/)).toBeInTheDocument()
+  })
+
+  it('points at the listing when a name is nothing like a real one', async () => {
+    render(<App />)
+
+    await type('load elephant')
+
+    expect(screen.getByText(/try "load" to list them/)).toBeInTheDocument()
+  })
+
+  // The signature scene is meant to be one command from a cold start, so the untouched starter
+  // example does not count as work worth protecting.
+  it('replaces the starter example without ceremony', async () => {
+    render(<App />)
+
+    await type('load watchdog')
+
+    expect(sourceText()).toContain('forever_loop')
+  })
+
+  it('refuses once before overwriting something the operator wrote', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('load watchdog')
+
+    expect(screen.getByText(/would replace what you have written/)).toBeInTheDocument()
+    expect(sourceText()).toContain('addi r1, r0, 20')
+  })
+
+  it('goes through when the same load is confirmed', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('load watchdog')
+    await type('load watchdog')
+
+    expect(sourceText()).toContain('forever_loop')
+  })
+
+  it('forgets a pending confirmation once something else is typed', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('load watchdog')
+    await type('breaks')
+    await type('load watchdog')
+
+    expect(sourceText()).toContain('addi r1, r0, 20')
+  })
+
+  it('assembles what it loaded', async () => {
+    render(<App />)
+
+    await type('load hello_world')
+    await type('asm')
+
+    expect(screen.getByText(/assembled \d+ words/)).toBeInTheDocument()
+  })
+})
+
+describe('the Devices panel', () => {
+  const panel = () => screen.getByRole('region', { name: 'Devices' })
+
+  it('is there before a machine exists, reading as idle', () => {
+    render(<App />)
+
+    expect(panel()).toHaveTextContent(/off/)
+    expect(panel()).toHaveTextContent(/idle/)
+  })
+
+  // The signature scene, end to end: a countdown racing an infinite loop.
+  it('shows the watchdog counting down during a run', async () => {
+    render(<App />)
+
+    await type('load watchdog')
+    await type('asm')
+    await stepTimes(12)
+
+    expect(panel()).toHaveTextContent(/armed/)
+    const early = panel().textContent
+    await stepTimes(5)
+
+    expect(panel().textContent).not.toBe(early)
+  })
+
+  it('shows the FPU registers as decoded floats, raw word beside them', async () => {
+    render(<App />)
+
+    await type('load fpu')
+    await type('asm')
+    await stepTimes(40)
+
+    // 74 / 8 — the value the reference program computes first.
+    expect(panel()).toHaveTextContent(/9\.25/)
+    expect(panel()).toHaveTextContent(/0x41140000/)
+  })
+
+  // ADR 0018: every surface but the Source editor is read-only, and Devices more strictly than
+  // most — even the Console never writes a device register.
+  it('offers no interactive affordance at all', () => {
+    render(<App />)
+
+    expect(within(panel()).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(panel()).queryByRole('textbox')).not.toBeInTheDocument()
+    expect(within(panel()).queryByRole('checkbox')).not.toBeInTheDocument()
+  })
+})
+
+describe('debugging an ISR', () => {
+  // An ISR is code on a line like any other, so it needs no new grammar to debug — `break` on the
+  // handler's line is the whole feature.
+  const WITH_HANDLER = [
+    'bun main', // 1
+    'nop', // 2
+    'nop', // 3
+    'isr r31, r30, handler', // 4
+    'handler:', // 5
+    'addi r9, r0, 1', // 6
+    'reti r31', // 7
+    'main:', // 8
+    'enai r1', // 9
+    'int 7', // 10
+    'int 0', // 11
+  ].join('\n')
+
+  it('pauses a run inside the handler', async () => {
+    render(<App />)
+    write(WITH_HANDLER)
+
+    await type('break 6')
+    await type('run')
+
+    expect(await screen.findByText(/paused at line 6/)).toBeInTheDocument()
+  })
+
+  it('narrates the dispatch that got it there', async () => {
+    render(<App />)
+    write(WITH_HANDLER)
+
+    await type('break 6')
+    await type('run')
+
+    expect(await screen.findByText(/software interrupt — cause 0x00000007/)).toBeInTheDocument()
+  })
+})
+
+describe('interrupt narration', () => {
+  // `enai` is #208's; this enables IE the way the macro will expand, so the narration can be
+  // tested on the semantics that already exist.
+  const DISPATCHES = [
+    'addi r1, r0, 64',
+    'or fr, fr, r1',
+    'int 2',
+    'int 0',
+    'int 0',
+    'sw:',
+    'int 0',
+  ].join('\n')
+
+  it('narrates a dispatch on the Console, naming cause and vector', async () => {
+    render(<App />)
+    write(DISPATCHES)
+
+    await type('asm')
+    await stepTimes(3)
+
+    expect(
+      screen.getByText(/software interrupt — cause 0x00000002, vector 0x0000000C/),
+    ).toBeInTheDocument()
+  })
+
+  // The Terminal is the program's own output; a dispatch is something that happened *to* it.
+  // The v1 separation of the two surfaces holds in v2 (ADR 0018).
+  it('keeps the narration off the Terminal', async () => {
+    render(<App />)
+    write(DISPATCHES)
+
+    await type('asm')
+    await stepTimes(3)
+
+    expect(screen.getByRole('region', { name: 'Terminal' }).textContent).not.toMatch(
+      /software interrupt/,
+    )
+  })
+
+  it('says nothing when a step interrupts nothing', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await stepTimes(3)
+
+    expect(screen.queryByText(/software interrupt/)).not.toBeInTheDocument()
+  })
+
+  it('shows the dispatch in cr and ipc like any other register', async () => {
+    render(<App />)
+    write(DISPATCHES)
+
+    await type('asm')
+    await stepTimes(3)
+    await type('reg cr')
+    await type('reg ipc')
+
+    expect(screen.getByText(/cr\s*=\s*0x00000002/i)).toBeInTheDocument()
+    expect(screen.getByText(/ipc\s*=\s*0x0000000C/i)).toBeInTheDocument()
   })
 })
 

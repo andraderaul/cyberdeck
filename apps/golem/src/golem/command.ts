@@ -14,6 +14,8 @@ export type Command =
   | { kind: 'reg'; name: string }
   | { kind: 'mem'; start: number; count: number; unit: MemoryUnit }
   | { kind: 'export'; what: 'hex' | 'trace' }
+  /** `null` when unargued, which lists the available programs rather than failing. */
+  | { kind: 'load'; name: string | null }
   | { kind: 'share' }
   | { kind: 'help'; topic: string | null }
   | { kind: 'break'; line: number }
@@ -33,6 +35,7 @@ export const COMMAND_NAMES = [
   'reg',
   'mem',
   'export',
+  'load',
   'share',
   'break',
   'breaks',
@@ -110,6 +113,15 @@ export function parseCommand(input: string): Command {
     return { kind: 'help', topic: args[0]?.toLowerCase() ?? null }
   }
 
+  // `load` with no argument lists the names rather than erroring: an operator who does not know
+  // what is on offer is the exact person typing it.
+  if (lowered === 'load') {
+    if (args.length > 1) {
+      return { kind: 'bad-usage', name: 'load', message: 'usage: load [name]' }
+    }
+    return { kind: 'load', name: args[0]?.toLowerCase() ?? null }
+  }
+
   if (lowered === 'export') {
     const what = args[0]?.toLowerCase()
     if (args.length !== 1 || (what !== 'hex' && what !== 'trace')) {
@@ -118,7 +130,7 @@ export function parseCommand(input: string): Command {
     return { kind: 'export', what }
   }
 
-  return { kind: 'unknown', input: name, suggestion: nearestCommand(lowered) }
+  return { kind: 'unknown', input: name, suggestion: nearest(lowered, COMMAND_NAMES) }
 }
 
 function parseReg(args: string[]): Command {
@@ -197,15 +209,16 @@ function parseClock(args: string[]): Command {
 }
 
 /**
- * The closest command name within a small edit distance, or `null` when nothing is close enough
- * to be worth guessing at. The threshold scales with length so `stp`→`step` suggests but a word
- * sharing a couple of letters does not.
+ * The closest of `candidates` within a small edit distance, or `null` when nothing is close
+ * enough to be worth guessing at. The threshold scales with length so `stp`→`step` suggests but
+ * a word sharing a couple of letters does not. One function for commands and program names both,
+ * rather than two subtly different notions of "close enough".
  */
-export function nearestCommand(input: string): string | null {
+export function nearest(input: string, candidates: readonly string[]): string | null {
   let best: string | null = null
   let bestDistance = Number.POSITIVE_INFINITY
 
-  for (const name of COMMAND_NAMES) {
+  for (const name of candidates) {
     const distance = editDistance(input, name)
     if (distance < bestDistance) {
       best = name
