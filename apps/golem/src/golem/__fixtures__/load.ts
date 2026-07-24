@@ -41,7 +41,13 @@ export const GENERATED_PROGRAMS = ['gen_blt', 'gen_bnz'] as const
  * Grown one slice at a time: a program joins the list on the ticket that turns it green, so the
  * suite is never red by design (the same discipline as `UNIT_2_PROGRAMS`).
  */
-export const UNIT_3_CACHE_PROGRAMS = [{ name: '3_factorial_cache', base: '1_factorial' }] as const
+export const UNIT_3_CACHE_PROGRAMS = [
+  { name: '3_factorial_cache', base: '1_factorial' },
+  // The two writing programs: `3_memory_access` walks a 64-element array with `stw`/`ldw` (the
+  // showpiece, D at 82% hit), `3_hello_world` writes the Terminal with `stb`.
+  { name: '3_memory_access_cache', base: '3_memory_access' },
+  { name: '3_hello_world_cache', base: '2_hello_world' },
+] as const
 
 /** A cache fixture: the base program's assembled words, and the cache-on reference trace. */
 export interface CacheFixture {
