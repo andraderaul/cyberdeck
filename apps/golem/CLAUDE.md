@@ -23,11 +23,22 @@ Watchdog and FPU tick one per Step and interrupt on their own; `load <name>` put
 program in the editor; the DEVICES panel makes both devices watchable. All four unit-2 reference
 programs are green on both oracles.
 
-`step(machine)` returns `{ machine, events }` — a dispatch is not derivable from a state diff, so
-it is reported. The trace formatter and the Console narration read that one stream.
+**v3 complete** (#233, tickets #234–#238) — the whole of unit 3, and the **last Poxim unit**. The
+cache is a classifier-lens, not a capability (ADR 0023): it gives the machine nothing new to do,
+costs no time, and never serves a value — it only classifies every memory access as a Hit or a
+Miss, bit-for-bit against the unit-3 oracle. Harvard I/D caches, 8 Lines × 2 Sets, 4-word blocks,
+LRU-by-AGE, `on` by default and toggled with `cache` while no Machine exists. The CACHE panel
+spotlights the Line each Step touches; the Console narrates the boletim at end of run. All ten
+`_cache.out` fixtures are green, and `cache off` traces are byte-identical to v1/v2.
 
-Out of scope, and deliberately so: unit 3 (the cache), reverse execution, and video recording. Its
-oracle traces are already vendored and consumer-less — see `__fixtures__/PROVENANCE.md`.
+`step(machine)` returns `{ machine, events }` — a dispatch is not derivable from a state diff, so
+it is reported. Cache accesses are new `StepEvent` kinds on that same stream; the trace formatter,
+the Console narration and the CACHE panel read it.
+
+Out of scope, and deliberately so — the ceiling is a documented principle, not an open question:
+**no oracle, no feature** (ADR 0019). Later course topics (virtual memory, pipeline, superscalar)
+ship no reference emulator, so they are lectures, not the project. Also out: reverse execution and
+video recording, still separate products.
 
 ## Commands
 
