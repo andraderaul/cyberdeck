@@ -10,8 +10,8 @@ No backend server — everything runs in the browser.
 | Program | Path | What it does |
 |---------|------|--------------|
 | **[ASCII//Convert](./apps/ascii)** | `apps/ascii` | Turns an image or your webcam into interactive ASCII art. **[Live demo →](https://ascii-art-converter-tawny.vercel.app/)** |
-| **GLITCH//Studio** | `apps/glitch` | Runs a fixed pipeline of glitch effects over an image or webcam — real-time preview, curated presets, and PNG / video export. **[Live demo →](https://cyberdeck-glitch-studio.vercel.app/)** |
-| **GOLEM//Console** | `apps/golem` | A 32-bit fantasy computer: write assembly, assemble it, and drive execution from a command line while registers, memory and the machine's Terminal update live. *In progress — scaffold only.* |
+| **[GLITCH//Studio](./apps/glitch)** | `apps/glitch` | Runs a fixed pipeline of glitch effects over an image or webcam — real-time preview, curated presets, and PNG / video export. **[Live demo →](https://cyberdeck-glitch-studio.vercel.app/)** |
+| **[GOLEM//Console](./apps/golem)** | `apps/golem` | A 32-bit fantasy computer: write assembly, assemble it, and drive execution from a command line while registers, memory and the machine's Terminal update live. **[Live demo →](https://cyberdeck-golem.vercel.app/)** |
 
 ## Running locally
 
@@ -69,9 +69,8 @@ Each app is its own Vercel project, both pointing at this repo:
 - **GLITCH//Studio** — a separate project with **Root Directory** set to `apps/glitch`, driven by
   [`apps/glitch/vercel.json`](./apps/glitch/vercel.json). Install and build `cd` to the repo root
   so the `@cyberdeck/deck-kit` workspace dependency resolves.
-
-GOLEM//Console follows the GLITCH pattern — its own Vercel project with **Root Directory** set to
-`apps/golem`, driven by [`apps/golem/vercel.json`](./apps/golem/vercel.json). Not yet deployed.
+- **GOLEM//Console** — follows the GLITCH pattern: its own Vercel project with **Root Directory**
+  set to `apps/golem`, driven by [`apps/golem/vercel.json`](./apps/golem/vercel.json).
 
 ### Skipping preview deploys
 
