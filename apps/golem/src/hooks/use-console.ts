@@ -4,7 +4,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { downloadText, outputFilename } from '../export/output'
 import { assemble, type Image, wordIndexForLine } from '../golem/assembler'
-import type { CacheState } from '../golem/cache'
+import type { CacheAccess, CacheState } from '../golem/cache'
+import { spotlightOf } from '../golem/cache-view'
 import { type Command, nearest, parseCommand } from '../golem/command'
 import { GREETING, helpFor, helpLines } from '../golem/help'
 import { formatMemoryDump, formatRegister, hex32 } from '../golem/inspect'
@@ -38,6 +39,8 @@ export interface ConsoleState {
   rate: ClockRate
   /** Whether the next Machine will carry the cache lens. Fixed on a live Machine; see `cache`. */
   cacheMode: boolean
+  /** The access the CACHE panel foregrounds — the last Step's data access, or its fetch. */
+  cacheSpotlight: CacheAccess | null
   /** Commands already entered, oldest first — the Console walks these with the arrow keys. */
   history: string[]
   /** Source lines carrying a breakpoint. Presentation state: they outlive the Machine. */
@@ -98,6 +101,22 @@ function narrate(event: Exclude<StepEvent, { kind: 'cache' }>): string {
  * output rides along so an exported trace still diffs clean against the reference `.out`, which
  * ends with what the program printed.
  */
+/**
+ * What a halt puts on the Console: `halted`, and — the one per-run cache moment — one boletim line
+ * per cache. The panel carries the per-access flow, so the Console stays silent on it until the end
+ * (symmetric with v2 narrating the rare event and not the continuous one).
+ */
+function haltLines(machine: Machine): Omit<ConsoleLine, 'id'>[] {
+  const lines: Omit<ConsoleLine, 'id'>[] = [{ kind: 'info', text: 'halted' }]
+  if (machine.cache !== undefined) {
+    lines.push(
+      { kind: 'info', text: formatCacheStatistics('D', machine.cache.data) },
+      { kind: 'info', text: formatCacheStatistics('I', machine.cache.instruction) },
+    )
+  }
+  return lines
+}
+
 function wrapTrace(lines: string[], terminal: string, cache?: CacheState): string {
   const body =
     lines.length < TRACE_LIMIT ? lines : [...lines, `[TRACE TRUNCATED AT ${TRACE_LIMIT}]`]
@@ -183,6 +202,10 @@ export function useConsole(initialSource: string): ConsoleState {
   const cacheModeRef = useRef(true)
   const [cacheMode, setCacheMode] = useState(true)
 
+  // The access the CACHE panel spotlights, from the most recent Step. Cleared whenever a Machine
+  // begins or is destroyed, so the panel never shows a stale line over a fresh cache.
+  const [cacheSpotlight, setCacheSpotlight] = useState<CacheAccess | null>(null)
+
   const syncBreakpoints = useCallback(() => {
     setBreakpoints(new Set(breakpointsRef.current))
   }, [])
@@ -227,6 +250,12 @@ export function useConsole(initialSource: string): ConsoleState {
       if (dispatches.length > 0) {
         append(dispatches.map((event) => ({ kind: 'info' as const, text: narrate(event) })))
       }
+      // The Line the panel will spotlight next. Absent only when the cache is off — leave the last
+      // one standing then rather than blanking the panel mid-inspection.
+      const spotlight = spotlightOf(events)
+      if (spotlight !== null) {
+        setCacheSpotlight(spotlight)
+      }
       setMachine(next)
       return next
     },
@@ -254,8 +283,9 @@ export function useConsole(initialSource: string): ConsoleState {
 
     const next = stepRecording(current)
     if (next.halted) {
-      // A run that reaches `int 0` should say so; silence reads as the clock having stalled.
-      append([{ kind: 'info', text: 'halted' }])
+      // A run that reaches `int 0` should say so; silence reads as the clock having stalled. The
+      // boletim rides along, the one per-run cache line.
+      append(haltLines(next))
       return false
     }
     return true
@@ -313,6 +343,7 @@ export function useConsole(initialSource: string): ConsoleState {
 
       imageRef.current = result.image
       traceRef.current = []
+      setCacheSpotlight(null)
       setImage(result.image)
       setMachine(createMachine(result.image, { cache: cacheModeRef.current }))
       output.push({
@@ -431,10 +462,11 @@ export function useConsole(initialSource: string): ConsoleState {
             break
           }
           const next = stepRecording(current)
-          output.push({
-            kind: 'info',
-            text: next.halted ? 'halted' : `pc = ${hex32(next.registers[PC])}`,
-          })
+          if (next.halted) {
+            output.push(...haltLines(next))
+          } else {
+            output.push({ kind: 'info', text: `pc = ${hex32(next.registers[PC])}` })
+          }
           break
         }
 
@@ -526,6 +558,7 @@ export function useConsole(initialSource: string): ConsoleState {
           clock.stop()
           imageRef.current = null
           traceRef.current = []
+          setCacheSpotlight(null)
           setMachine(null)
           setImage(null)
           output.push({ kind: 'info', text: 'machine destroyed — editor unlocked' })
@@ -679,6 +712,7 @@ export function useConsole(initialSource: string): ConsoleState {
     running: clock.running,
     rate: clock.rate,
     cacheMode,
+    cacheSpotlight,
     editable: machine === null,
     setSource,
     replaceSource,
