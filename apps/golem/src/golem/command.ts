@@ -11,6 +11,11 @@ export type Command =
   | { kind: 'run' }
   | { kind: 'stop' }
   | { kind: 'clock'; rate: number | 'max' }
+  /**
+   * The cache lens. `on`/`off` set the mode (only while no Machine exists); `null` inspects — the
+   * live Machine's statistics if one exists, otherwise the mode the next `run` will use.
+   */
+  | { kind: 'cache'; mode: 'on' | 'off' | null }
   | { kind: 'reg'; name: string }
   | { kind: 'mem'; start: number; count: number; unit: MemoryUnit }
   | { kind: 'export'; what: 'hex' | 'trace' }
@@ -32,6 +37,7 @@ export const COMMAND_NAMES = [
   'stop',
   'step',
   'clock',
+  'cache',
   'reg',
   'mem',
   'export',
@@ -77,6 +83,17 @@ export function parseCommand(input: string): Command {
 
   if (lowered === 'clock') {
     return parseClock(args)
+  }
+
+  if (lowered === 'cache') {
+    if (args.length === 0) {
+      return { kind: 'cache', mode: null }
+    }
+    const mode = args.length === 1 ? args[0].toLowerCase() : null
+    if (mode === 'on' || mode === 'off') {
+      return { kind: 'cache', mode }
+    }
+    return { kind: 'bad-usage', name: 'cache', message: 'usage: cache | cache on | cache off' }
   }
 
   if (lowered === 'reg') {

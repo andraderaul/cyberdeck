@@ -188,6 +188,60 @@ describe('stepping', () => {
   })
 })
 
+describe('the cache command', () => {
+  it('reports the mode on by default when no machine exists', async () => {
+    render(<App />)
+
+    await type('cache')
+
+    expect(screen.getByText(/cache is on/)).toBeInTheDocument()
+  })
+
+  it('toggles the mode while no machine exists, and the next run obeys it', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('cache off')
+    expect(screen.getByText('cache off — the next run runs without the lens')).toBeInTheDocument()
+
+    await type('asm')
+    await type('cache')
+
+    // A machine created with the mode off carries no cache to report.
+    expect(screen.getByText('cache is off for this machine')).toBeInTheDocument()
+  })
+
+  it('reports the live machine statistics for a cache-on run', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('step')
+    await type('cache')
+
+    // The instruction cache always has at least the fetches, so its boletim is present.
+    expect(screen.getByText(/\[CACHE I STATISTICS\]/)).toBeInTheDocument()
+  })
+
+  it('refuses to toggle while a machine exists — a trace is never half-wrapped', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('cache off')
+
+    expect(screen.getByText(/a machine exists — reset first/)).toBeInTheDocument()
+  })
+
+  it('suggests cache on a near miss', async () => {
+    render(<App />)
+
+    await type('cach')
+
+    expect(screen.getByText(/did you mean "cache"/)).toBeInTheDocument()
+  })
+})
+
 describe('the Terminal', () => {
   it('explains itself before a machine exists', () => {
     render(<App />)
@@ -906,11 +960,14 @@ describe('exporting', () => {
     )
   })
 
-  it('exports the trace of the run so far', async () => {
+  // With the cache off the trace is the v2 log, unchanged — the toggle is additive, never
+  // retroactive (spec story 20). The cache-on export is exercised just below.
+  it('exports the trace of the run so far, byte-identical to v2 with the cache off', async () => {
     const written = captureDownloads()
     render(<App />)
     write(TINY)
 
+    await type('cache off')
     await type('asm')
     await type('step')
     await type('step')
@@ -922,6 +979,23 @@ describe('exporting', () => {
     expect(lines[lines.length - 1]).toBe('[END OF SIMULATION]')
     expect(lines[1]).toBe('addi r1, r0, 20')
     expect(lines[2]).toMatch(/^\[F\] FR = 0x00000000, R1 = R0 \+ 0x0014 = 0x00000014$/)
+  })
+
+  // Default on: the exported trace carries the cache event lines before each instruction (story 19).
+  it('exports the cache event lines when the mode is on', async () => {
+    const written = captureDownloads()
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('step')
+    await type('export trace')
+
+    const lines = written[0].contents.trimEnd().split('\n')
+    expect(lines[1]).toBe('[CACHE I LINE 0 READ MISS @ 0x00000000]')
+    expect(lines).toContain('addi r1, r0, 20')
+    expect(lines[lines.length - 2]).toMatch(/^\[CACHE D STATISTICS\]/)
+    expect(lines[lines.length - 1]).toMatch(/^\[CACHE I STATISTICS\]/)
   })
 
   it.each([

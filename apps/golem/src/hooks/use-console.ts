@@ -4,6 +4,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { downloadText, outputFilename } from '../export/output'
 import { assemble, type Image, wordIndexForLine } from '../golem/assembler'
+import type { CacheState } from '../golem/cache'
 import { type Command, nearest, parseCommand } from '../golem/command'
 import { GREETING, helpFor, helpLines } from '../golem/help'
 import { formatMemoryDump, formatRegister, hex32 } from '../golem/inspect'
@@ -17,7 +18,7 @@ import {
 import { createMachine, type Machine, type StepEvent, step } from '../golem/machine'
 import { PROGRAM_NAMES, PROGRAMS, programNamed } from '../golem/programs'
 import { encode } from '../golem/share'
-import { formatHex, formatStep, frameTrace } from '../golem/trace'
+import { formatCacheStatistics, formatHex, formatStep, frameTrace } from '../golem/trace'
 import { type ClockRate, useClock } from './use-clock'
 import { clearShareFragment, saveSource } from './use-source-loading'
 
@@ -35,6 +36,8 @@ export interface ConsoleState {
   lines: ConsoleLine[]
   running: boolean
   rate: ClockRate
+  /** Whether the next Machine will carry the cache lens. Fixed on a live Machine; see `cache`. */
+  cacheMode: boolean
   /** Commands already entered, oldest first — the Console walks these with the arrow keys. */
   history: string[]
   /** Source lines carrying a breakpoint. Presentation state: they outlive the Machine. */
@@ -95,10 +98,12 @@ function narrate(event: Exclude<StepEvent, { kind: 'cache' }>): string {
  * output rides along so an exported trace still diffs clean against the reference `.out`, which
  * ends with what the program printed.
  */
-function wrapTrace(lines: string[], terminal: string): string {
+function wrapTrace(lines: string[], terminal: string, cache?: CacheState): string {
   const body =
     lines.length < TRACE_LIMIT ? lines : [...lines, `[TRACE TRUNCATED AT ${TRACE_LIMIT}]`]
-  return frameTrace(body, terminal)
+  // The cache stats footer rides along when the mode is on; with it off, `cache` is undefined and
+  // the export is byte-identical to the v2 trace.
+  return frameTrace(body, terminal, cache)
 }
 
 /**
@@ -172,6 +177,11 @@ export function useConsole(initialSource: string): ConsoleState {
   // re-entering breakpoints after every `reset` would make the feature useless.
   const breakpointsRef = useRef<Set<number>>(new Set())
   const [breakpoints, setBreakpoints] = useState<ReadonlySet<number>>(new Set())
+
+  // The cache mode the next `run` bakes into its Machine (ADR 0023). On by default, and — like the
+  // clock rate — presentation state that survives `reset`; only settable while no Machine exists.
+  const cacheModeRef = useRef(true)
+  const [cacheMode, setCacheMode] = useState(true)
 
   const syncBreakpoints = useCallback(() => {
     setBreakpoints(new Set(breakpointsRef.current))
@@ -304,7 +314,7 @@ export function useConsole(initialSource: string): ConsoleState {
       imageRef.current = result.image
       traceRef.current = []
       setImage(result.image)
-      setMachine(createMachine(result.image))
+      setMachine(createMachine(result.image, { cache: cacheModeRef.current }))
       output.push({
         kind: 'info',
         text: `assembled ${result.image.words.length} words — editor locked, reset to edit`,
@@ -367,6 +377,49 @@ export function useConsole(initialSource: string): ConsoleState {
           })
           break
 
+        case 'cache': {
+          // Bare `cache` inspects: a live Machine's statistics, or the mode the next run will use.
+          if (command.mode === null) {
+            const current = machineRef.current
+            if (current === null) {
+              output.push({
+                kind: 'info',
+                text: `cache is ${cacheModeRef.current ? 'on' : 'off'} — the next run ${cacheModeRef.current ? 'will classify each access' : 'runs without the lens'}`,
+              })
+              break
+            }
+            if (current.cache === undefined) {
+              output.push({ kind: 'info', text: 'cache is off for this machine' })
+              break
+            }
+            output.push(
+              { kind: 'info', text: formatCacheStatistics('D', current.cache.data) },
+              { kind: 'info', text: formatCacheStatistics('I', current.cache.instruction) },
+            )
+            break
+          }
+
+          // Toggling is gated on there being no Machine — the same three-state rule that freezes
+          // the editor and gates `load`, so a trace is never half-wrapped (ADR 0023).
+          if (machineRef.current !== null) {
+            output.push({
+              kind: 'error',
+              text: 'a machine exists — reset first, then cache on/off',
+            })
+            break
+          }
+          const on = command.mode === 'on'
+          cacheModeRef.current = on
+          setCacheMode(on)
+          output.push({
+            kind: 'info',
+            text: on
+              ? 'cache on — the next run will classify each access'
+              : 'cache off — the next run runs without the lens',
+          })
+          break
+        }
+
         case 'step': {
           clock.stop()
           const current = requireMachine(output)
@@ -403,7 +456,10 @@ export function useConsole(initialSource: string): ConsoleState {
             break
           }
           const filename = outputFilename('trace-export')
-          downloadText(filename, `${wrapTrace(traceRef.current, current.terminal)}\n`)
+          downloadText(
+            filename,
+            `${wrapTrace(traceRef.current, current.terminal, current.cache)}\n`,
+          )
           output.push({
             kind: 'info',
             text: `wrote ${filename} — ${traceRef.current.length} instructions`,
@@ -622,6 +678,7 @@ export function useConsole(initialSource: string): ConsoleState {
     currentLine: lineOfPc(machine, image),
     running: clock.running,
     rate: clock.rate,
+    cacheMode,
     editable: machine === null,
     setSource,
     replaceSource,

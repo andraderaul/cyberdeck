@@ -34,6 +34,24 @@ describe('parseCommand', () => {
     expect(parseCommand(input).kind).toBe('bad-usage')
   })
 
+  it.each([
+    ['cache', null],
+    ['cache on', 'on'],
+    ['cache off', 'off'],
+    ['cache ON', 'on'],
+    ['cache OFF', 'off'],
+  ])('parses %s', (input, mode) => {
+    expect(parseCommand(input)).toEqual({ kind: 'cache', mode })
+  })
+
+  it.each([
+    'cache maybe',
+    'cache on off',
+    'cache 1',
+  ])('rejects %s with usage rather than guessing', (input) => {
+    expect(parseCommand(input).kind).toBe('bad-usage')
+  })
+
   it('parses reg with a register name', () => {
     expect(parseCommand('reg r1')).toEqual({ kind: 'reg', name: 'r1' })
     expect(parseCommand('reg PC')).toEqual({ kind: 'reg', name: 'pc' })
