@@ -21,6 +21,7 @@ import {
   FPU_OPERATIONS,
   FPU_X,
   FPU_Y,
+  FPU_Z,
   FR,
   GT,
   HARDWARE_1_VECTOR,
@@ -356,6 +357,14 @@ function tickFpu(cycle: Cycle): void {
   cycle.fpu = { ...cycle.fpu, operation: 0, busy: false }
 }
 
+// Only x, y and z name a Fpu field; CONTROL is a command, not a value — a read returns the last
+// control word, a write starts an operation — so it stays a special case on both paths below.
+const FPU_FIELD: Record<number, 'x' | 'y' | 'z'> = {
+  [FPU_X]: 'x',
+  [FPU_Y]: 'y',
+  [FPU_Z]: 'z',
+}
+
 /**
  * What a read of an FPU register yields, and the strangest thing inherited from the reference:
  * **the encoding depends on the value.** A whole number comes back as that integer, anything else
@@ -369,7 +378,7 @@ function readFpuRegister(fpu: Fpu, address: number): number {
     return fpu.control >>> 0
   }
 
-  return fpuWord(address === FPU_X ? fpu.x : address === FPU_Y ? fpu.y : fpu.z)
+  return fpuWord(fpu[FPU_FIELD[address]])
 }
 
 /**
@@ -387,14 +396,7 @@ function writeFpuRegister(cycle: Cycle, address: number, word: number): void {
     return
   }
 
-  const value = fround(word >>> 0)
-  if (address === FPU_X) {
-    cycle.fpu = { ...cycle.fpu, x: value }
-  } else if (address === FPU_Y) {
-    cycle.fpu = { ...cycle.fpu, y: value }
-  } else {
-    cycle.fpu = { ...cycle.fpu, z: value }
-  }
+  cycle.fpu = { ...cycle.fpu, [FPU_FIELD[address]]: fround(word >>> 0) }
 }
 
 const isFpuRegister = (address: number): boolean => address >= FPU_X && address <= FPU_CONTROL
@@ -679,7 +681,7 @@ function mutableMemory(cycle: Cycle): number[] {
 // Devices are intercepted here, on the single memory-access path, rather than in each instruction
 // that touches memory. That is what makes `ldw`, `stw`, `push` and `pop` agree about them without
 // four copies of the same check — and it is where v3's cache attaches, as a layer rather than
-// surgery (ADR 0020 groundwork).
+// surgery.
 function readWord(cycle: Cycle, wordIndex: number): number {
   const index = wordIndex >>> 0
   if (isFpuRegister(index)) {

@@ -135,11 +135,18 @@ Rode programa novo **com limite de tempo**. Instrução inválida põe o `poxim2
 termina, cuspindo `nop` em `stdout` sem parar — foi assim que a tentativa de fabricar oráculo de
 `bni` encheu o disco antes de ser morta.
 
-O `poxim3`, da unidade 3, é o que anota cache. **Não foi preciso invocá-lo em #204** — os
-`_cache.out` já vinham gerados junto do material de referência, com a mesma data dos demais
-(2017-05-05), e foram copiados como estão. Nenhum byte destes arquivos passou por ferramenta
-nossa; se a v3 precisar de trace novo, aí sim o `rauloliveiradeandrade_201500307353_poxim3.c`
-terá que compilar, e é essa a aposta que a seção acima registra.
+O `poxim3`, da unidade 3, é o que anota cache. Os `_cache.out` já vinham gerados junto do material
+de referência, com a mesma data dos demais (2017-05-05), e foram **copiados como estão** — nenhum
+byte destes arquivos passou por ferramenta nossa, e é assim que devem ficar (fixture não se
+regenera com a ferramenta que ele testa).
+
+**A janela está aberta, e isso foi verificado, não assumido (2026-07-20).** O
+`rauloliveiradeandrade_201500307353_poxim3.c` compila limpo hoje (`clang -O2 -lm`, um único warning
+inócuo de `abs` sobre `uint32_t`), e o caminho de fabricação foi exercido ponta a ponta:
+`3_memory_access.hex` reexecutado pelo binário reproduz o `3_memory_access_cache.out` commitado
+**byte a byte**, exceto pela linha em branco final que o emulador não emite — a mesma divergência
+já documentada nos herdados. A aposta da seção acima deixa de ser aposta: quando a v3 precisar de
+trace de cache novo, o oráculo responde.
 
 Enquanto esse binário compilar, dá para **fabricar oráculo novo**: escrever um programa que
 exercite um branch sem cobertura, rodar por ele e guardar o `.out`. Os pares `.s`/`.hex`, não —

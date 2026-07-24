@@ -123,7 +123,7 @@ export const GT = 0x04
 export const ZD = 0x08
 export const OV = 0x10
 export const IV = 0x20
-/** Interrupt enable. A software interrupt is dispatched only while this is set. */
+/** Interrupt enable. An interrupt — hardware or software — is dispatched only while this is set. */
 export const IE = 0x40
 
 /**
