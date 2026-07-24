@@ -75,7 +75,7 @@ describe('App', () => {
   it('renders a region for each surface the program needs', () => {
     render(<App />)
 
-    for (const region of ['Console', 'Registers', 'Flags', 'Devices', 'Memory', 'Terminal']) {
+    for (const region of ['Console', 'Registers', 'Flags', 'Devices', 'Cache', 'Memory', 'Terminal']) {
       expect(screen.getByRole('region', { name: region })).toBeInTheDocument()
     }
     expect(screen.getByRole('region', { name: /^Source/ })).toBeInTheDocument()
@@ -185,6 +185,55 @@ describe('stepping', () => {
     await type('stepp')
 
     expect(screen.getByText(/did you mean "step"/)).toBeInTheDocument()
+  })
+})
+
+describe('the CACHE panel', () => {
+  const cachePanel = () => screen.getByRole('region', { name: 'Cache' })
+
+  it('spotlights the fetch the moment a Step makes one', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('step')
+
+    // The first Step is a fetch: the instruction cache, line 0, a READ MISS (cold).
+    expect(within(cachePanel()).getByLabelText(/READ MISS at 0x00000000/)).toBeInTheDocument()
+    // Both Sets of the spotlit Line are shown in full.
+    expect(within(cachePanel()).getByText('set 0')).toBeInTheDocument()
+    expect(within(cachePanel()).getByText('set 1')).toBeInTheDocument()
+  })
+
+  it('says nothing until a machine exists, then nothing again once the cache is off', async () => {
+    render(<App />)
+    expect(within(cachePanel()).getByText(/No machine/)).toBeInTheDocument()
+
+    write(TINY)
+    await type('cache off')
+    await type('asm')
+    expect(within(cachePanel()).getByText(/Cache off for this machine/)).toBeInTheDocument()
+  })
+
+  it('narrates the boletim, one line per cache, when a run halts', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await stepTimes(4) // addi, addi, add, int 0 — the fourth Step halts
+
+    expect(screen.getByText(/\[CACHE D STATISTICS\]/)).toBeInTheDocument()
+    expect(screen.getByText(/\[CACHE I STATISTICS\]/)).toBeInTheDocument()
+  })
+
+  it('offers memory_access as a loadable program — the signature scene, one command away', async () => {
+    render(<App />)
+
+    await type('load memory_access')
+
+    expect(screen.getByText(/loaded memory_access/)).toBeInTheDocument()
+    // The showpiece is now in the editor, ready for `run`.
+    expect(sourceText()).toMatch(/memory_access|array|ldw/i)
   })
 })
 
