@@ -107,9 +107,10 @@ function percentage(value: number, total: number): number {
 /** One `[CACHE …STATISTICS]` boletim line for a cache, in the reference's format. */
 export function formatCacheStatistics(kind: 'D' | 'I', cache: Cache): string {
   const total = cache.hits + cache.misses
-  const hit = percentage(cache.hits, total)
-  const miss = percentage(cache.misses, total)
-  return `[CACHE ${kind} STATISTICS] #Hit = ${cache.hits} (${hit}%), #Miss = ${cache.misses} (${miss}%)`
+  // A cache with no accesses reports 0% rather than NaN — reachable only by inspecting mid-run a
+  // data cache no load/store has touched yet; every reference program's footer has a real total.
+  const percent = (value: number) => (total === 0 ? 0 : percentage(value, total))
+  return `[CACHE ${kind} STATISTICS] #Hit = ${cache.hits} (${percent(cache.hits)}%), #Miss = ${cache.misses} (${percent(cache.misses)}%)`
 }
 
 /**
