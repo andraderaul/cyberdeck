@@ -47,6 +47,15 @@ export const UNIT_3_CACHE_PROGRAMS = [
   // showpiece, D at 82% hit), `3_hello_world` writes the Terminal with `stb`.
   { name: '3_memory_access_cache', base: '3_memory_access' },
   { name: '3_hello_world_cache', base: '2_hello_world' },
+  // The rest of the unit-1/2 programs re-run through the lens — LRU eviction (AGE into the
+  // thousands), recursion's stack churn, and the device programs all classify unchanged.
+  { name: '3_fibonacci_cache', base: '1_fibonacci' },
+  { name: '3_recursive_factorial_cache', base: '1_recursive_factorial' },
+  { name: '3_recursive_fibonacci_cache', base: '1_recursive_fibonacci' },
+  { name: '3_limits_cache', base: '1_limits' },
+  { name: '3_interruption_cache', base: '2_interruption' },
+  { name: '3_watchdog_cache', base: '2_watchdog' },
+  { name: '3_fpu_cache', base: '2_fpu' },
 ] as const
 
 /** A cache fixture: the base program's assembled words, and the cache-on reference trace. */
