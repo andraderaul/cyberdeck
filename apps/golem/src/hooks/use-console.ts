@@ -4,6 +4,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { downloadText, outputFilename } from '../export/output'
 import { assemble, type Image, wordIndexForLine } from '../golem/assembler'
+import type { CacheAccess, CacheState } from '../golem/cache'
+import { spotlightOf } from '../golem/cache-view'
 import { type Command, nearest, parseCommand } from '../golem/command'
 import { GREETING, helpFor, helpLines } from '../golem/help'
 import { formatMemoryDump, formatRegister, hex32 } from '../golem/inspect'
@@ -17,7 +19,7 @@ import {
 import { createMachine, type Machine, type StepEvent, step } from '../golem/machine'
 import { PROGRAM_NAMES, PROGRAMS, programNamed } from '../golem/programs'
 import { encode } from '../golem/share'
-import { formatHex, formatStep, frameTrace } from '../golem/trace'
+import { formatCacheStatisticsPair, formatHex, formatStep, frameTrace } from '../golem/trace'
 import { type ClockRate, useClock } from './use-clock'
 import { clearShareFragment, saveSource } from './use-source-loading'
 
@@ -35,6 +37,10 @@ export interface ConsoleState {
   lines: ConsoleLine[]
   running: boolean
   rate: ClockRate
+  /** Whether the next Machine will carry the cache lens. Fixed on a live Machine; see `cache`. */
+  cacheMode: boolean
+  /** The access the CACHE panel foregrounds — the last Step's data access, or its fetch. */
+  cacheSpotlight: CacheAccess | null
   /** Commands already entered, oldest first — the Console walks these with the arrow keys. */
   history: string[]
   /** Source lines carrying a breakpoint. Presentation state: they outlive the Machine. */
@@ -73,7 +79,7 @@ function lineOfPc(machine: Machine | null, image: Image | null): number | null {
  * This exists because a dispatch mid-`run` is otherwise invisible: the PC simply is somewhere
  * else, with nothing on screen saying who moved it.
  */
-function narrate(event: StepEvent): string {
+function narrate(event: Exclude<StepEvent, { kind: 'cache' }>): string {
   switch (event.kind) {
     case 'software-interrupt':
       return `software interrupt — cause ${hex32(event.cause)}, vector ${hex32(SOFTWARE_VECTOR)}`
@@ -95,10 +101,27 @@ function narrate(event: StepEvent): string {
  * output rides along so an exported trace still diffs clean against the reference `.out`, which
  * ends with what the program printed.
  */
-function wrapTrace(lines: string[], terminal: string): string {
+/**
+ * What a halt puts on the Console: `halted`, and — the one per-run cache moment — one boletim line
+ * per cache. The panel carries the per-access flow, so the Console stays silent on it until the end
+ * (symmetric with v2 narrating the rare event and not the continuous one).
+ */
+function haltLines(machine: Machine): Omit<ConsoleLine, 'id'>[] {
+  const lines: Omit<ConsoleLine, 'id'>[] = [{ kind: 'info', text: 'halted' }]
+  if (machine.cache !== undefined) {
+    lines.push(
+      ...formatCacheStatisticsPair(machine.cache).map((text) => ({ kind: 'info' as const, text })),
+    )
+  }
+  return lines
+}
+
+function wrapTrace(lines: string[], terminal: string, cache?: CacheState): string {
   const body =
     lines.length < TRACE_LIMIT ? lines : [...lines, `[TRACE TRUNCATED AT ${TRACE_LIMIT}]`]
-  return frameTrace(body, terminal)
+  // The cache stats footer rides along when the mode is on; with it off, `cache` is undefined and
+  // the export is byte-identical to the v2 trace.
+  return frameTrace(body, terminal, cache)
 }
 
 /**
@@ -173,6 +196,15 @@ export function useConsole(initialSource: string): ConsoleState {
   const breakpointsRef = useRef<Set<number>>(new Set())
   const [breakpoints, setBreakpoints] = useState<ReadonlySet<number>>(new Set())
 
+  // The cache mode the next `run` bakes into its Machine (ADR 0023). On by default, and — like the
+  // clock rate — presentation state that survives `reset`; only settable while no Machine exists.
+  const cacheModeRef = useRef(true)
+  const [cacheMode, setCacheMode] = useState(true)
+
+  // The access the CACHE panel spotlights, from the most recent Step. Cleared whenever a Machine
+  // begins or is destroyed, so the panel never shows a stale line over a fresh cache.
+  const [cacheSpotlight, setCacheSpotlight] = useState<CacheAccess | null>(null)
+
   const syncBreakpoints = useCallback(() => {
     setBreakpoints(new Set(breakpointsRef.current))
   }, [])
@@ -209,8 +241,19 @@ export function useConsole(initialSource: string): ConsoleState {
       if (traceRef.current.length < TRACE_LIMIT) {
         traceRef.current.push(formatStep(current, next, events))
       }
-      if (events.length > 0) {
-        append(events.map((event) => ({ kind: 'info' as const, text: narrate(event) })))
+      // Cache accesses happen on every Step; narrating each would drown the Console (the panel
+      // carries the per-access flow). Only dispatches are narrated — one line per event.
+      const dispatches = events.filter(
+        (event): event is Exclude<StepEvent, { kind: 'cache' }> => event.kind !== 'cache',
+      )
+      if (dispatches.length > 0) {
+        append(dispatches.map((event) => ({ kind: 'info' as const, text: narrate(event) })))
+      }
+      // The Line the panel will spotlight next. Absent only when the cache is off — leave the last
+      // one standing then rather than blanking the panel mid-inspection.
+      const spotlight = spotlightOf(events)
+      if (spotlight !== null) {
+        setCacheSpotlight(spotlight)
       }
       setMachine(next)
       return next
@@ -239,8 +282,9 @@ export function useConsole(initialSource: string): ConsoleState {
 
     const next = stepRecording(current)
     if (next.halted) {
-      // A run that reaches `int 0` should say so; silence reads as the clock having stalled.
-      append([{ kind: 'info', text: 'halted' }])
+      // A run that reaches `int 0` should say so; silence reads as the clock having stalled. The
+      // boletim rides along, the one per-run cache line.
+      append(haltLines(next))
       return false
     }
     return true
@@ -298,8 +342,9 @@ export function useConsole(initialSource: string): ConsoleState {
 
       imageRef.current = result.image
       traceRef.current = []
+      setCacheSpotlight(null)
       setImage(result.image)
-      setMachine(createMachine(result.image))
+      setMachine(createMachine(result.image, { cache: cacheModeRef.current }))
       output.push({
         kind: 'info',
         text: `assembled ${result.image.words.length} words — editor locked, reset to edit`,
@@ -362,6 +407,51 @@ export function useConsole(initialSource: string): ConsoleState {
           })
           break
 
+        case 'cache': {
+          // Bare `cache` inspects: a live Machine's statistics, or the mode the next run will use.
+          if (command.mode === null) {
+            const current = machineRef.current
+            if (current === null) {
+              output.push({
+                kind: 'info',
+                text: `cache is ${cacheModeRef.current ? 'on' : 'off'} — the next run ${cacheModeRef.current ? 'will classify each access' : 'runs without the lens'}`,
+              })
+              break
+            }
+            if (current.cache === undefined) {
+              output.push({ kind: 'info', text: 'cache is off for this machine' })
+              break
+            }
+            output.push(
+              ...formatCacheStatisticsPair(current.cache).map((text) => ({
+                kind: 'info' as const,
+                text,
+              })),
+            )
+            break
+          }
+
+          // Toggling is gated on there being no Machine — the same three-state rule that freezes
+          // the editor and gates `load`, so a trace is never half-wrapped (ADR 0023).
+          if (machineRef.current !== null) {
+            output.push({
+              kind: 'error',
+              text: 'a machine exists — reset first, then cache on/off',
+            })
+            break
+          }
+          const on = command.mode === 'on'
+          cacheModeRef.current = on
+          setCacheMode(on)
+          output.push({
+            kind: 'info',
+            text: on
+              ? 'cache on — the next run will classify each access'
+              : 'cache off — the next run runs without the lens',
+          })
+          break
+        }
+
         case 'step': {
           clock.stop()
           const current = requireMachine(output)
@@ -373,10 +463,11 @@ export function useConsole(initialSource: string): ConsoleState {
             break
           }
           const next = stepRecording(current)
-          output.push({
-            kind: 'info',
-            text: next.halted ? 'halted' : `pc = ${hex32(next.registers[PC])}`,
-          })
+          if (next.halted) {
+            output.push(...haltLines(next))
+          } else {
+            output.push({ kind: 'info', text: `pc = ${hex32(next.registers[PC])}` })
+          }
           break
         }
 
@@ -398,7 +489,10 @@ export function useConsole(initialSource: string): ConsoleState {
             break
           }
           const filename = outputFilename('trace-export')
-          downloadText(filename, `${wrapTrace(traceRef.current, current.terminal)}\n`)
+          downloadText(
+            filename,
+            `${wrapTrace(traceRef.current, current.terminal, current.cache)}\n`,
+          )
           output.push({
             kind: 'info',
             text: `wrote ${filename} — ${traceRef.current.length} instructions`,
@@ -465,6 +559,7 @@ export function useConsole(initialSource: string): ConsoleState {
           clock.stop()
           imageRef.current = null
           traceRef.current = []
+          setCacheSpotlight(null)
           setMachine(null)
           setImage(null)
           output.push({ kind: 'info', text: 'machine destroyed — editor unlocked' })
@@ -617,6 +712,8 @@ export function useConsole(initialSource: string): ConsoleState {
     currentLine: lineOfPc(machine, image),
     running: clock.running,
     rate: clock.rate,
+    cacheMode,
+    cacheSpotlight,
     editable: machine === null,
     setSource,
     replaceSource,

@@ -339,6 +339,74 @@ prendida palavra a palavra pelos três `.hex` da unidade 2, que carregam exatame
 
 ---
 
+## Cache
+
+A cache da unidade 3 é uma **lente**, não um caminho de dados (ADR 0023). Ela nunca fica entre a
+CPU e a memória: o valor de um `ldw` vem sempre da memória. A cache só **observa** cada acesso,
+classifica em Hit ou Miss e conta a razão. Existe apenas com o modo ligado, fixado na criação da
+Machine — nunca no meio de um `run`. Com o modo desligado o Step se comporta exatamente como na v2:
+nenhum evento de cache, trace byte a byte idêntico.
+
+**Harvard, 8 Lines × 2 Sets, bloco de 4 words, substituição LRU.** Uma cache para o *fetch* (I) e
+outra para dado (D: `ldw`/`ldb`/`pop`/`stw`/`stb`/`push`). Os campos saem do endereço de byte
+(índice de palavra `<< 2`):
+
+| campo | bits | máscara |
+|---|---|---|
+| Line | 6–4 | `0x00000070` |
+| word no bloco | 3–2 | `0x0000000C` |
+| Tag | 14–7 | `0x00007F80` |
+
+A **Tag tem 8 bits**: os bits de endereço acima do 14 são descartados, então dois blocos a
+`0x8000` words de distância colidem. É um limite da referência, replicado.
+
+**AGE é o contador LRU.** A cada acesso, todo Set válido *daquela* cache envelhece em um; o Set
+referenciado zera. No Miss com as duas vias válidas, a vítima é a mais velha — empate fica no Set 0
+(a referência decide com `>=`). O AGE é o que o trace imprime.
+
+**Leitura.** Miss preenche (read-allocate) o bloco inteiro a partir da memória, com wrap em `cont`
+(o comprimento da imagem carregada) — um bloco que ultrapassa o fim da imagem volta para a word 0,
+como o `(mask+i) % cont` da referência. O teste de Hit compara **a Tag e o dado**: acerta só se a
+Tag bate *e* a palavra em cache ainda é igual à da memória.
+
+### Escrita — os quirks da referência, replicados
+
+Escrever nunca serve valor e a cache é observadora, mas a referência tem três peculiaridades que os
+fixtures prendem. Replicadas de propósito, como a máscara de expoente da FPU, porque corrigir
+qualquer uma joga vermelho em todo programa que escreve.
+
+- **Write-through.** A memória é sempre atualizada num `store` — a cache só observa. Já é verdade no
+  caminho de memória; a cache não muda nada disso.
+- **Sem write-allocate.** Um Miss de escrita **não** preenche a Line. Só leitura aloca. É por isso
+  que em `3_memory_access` cada elemento aparece como `WRITE MISS` (o `stw`, não aloca) seguido de
+  `READ MISS` (o `ldw`, aloca) antes de virar Hit.
+- **O Hit de escrita cacheia a palavra da memória *depois* do store, não o registrador.** A
+  classificação de uma escrita acontece após o store ter aterrissado (o `stb` da referência mescla
+  o byte na memória antes de classificar). Num `stw` isso é o valor escrito — cache e memória
+  concordam. Num `stb` é o byte mesclado na palavra ao redor, que difere do registrador de origem:
+  a palavra em cache passa a discordar do que o `stb` "queria" guardar. Somado ao teste de Hit
+  comparar o dado, é o mecanismo pelo qual uma escrita que muda a memória sem casar com o Set faz a
+  próxima leitura daquele endereço virar Miss. Fixado por `1_limits`, o único programa cujos `stb`
+  dão Hit sobre uma Line já povoada — onde `dados[1]` vira `0x43424300` (o byte mesclado), não
+  `0x00000043` (o registrador). Um "conserto" que cacheasse o registrador passaria despercebido num
+  trace de 200 linhas e iria vermelho só aqui.
+
+**Registradores de dispositivo não passam pela cache.** `ldw`/`stw` no Watchdog (`0x2020`) ou na
+FPU (`0x2200`–`0x2203`) e `ldb`/`stb` no Terminal (`0x0000888B`) são atendidos direto — nenhuma
+linha de cache, nenhum acesso contabilizado. Só o *fetch* é sempre classificado (I-cache).
+
+**O boletim.** No fim do `run`, uma linha por cache, D antes de I:
+
+```
+[CACHE D STATISTICS] #Hit = 158 (82%), #Miss = 34 (18%)
+[CACHE I STATISTICS] #Hit = 513 (99%), #Miss = 4 (1%)
+```
+
+As porcentagens usam o `%.f` da referência — arredonda para o inteiro mais próximo, empate para o
+**par** (round-half-even) — para o boletim bater byte a byte, não só de perto.
+
+---
+
 ## Sintaxe do assembler
 
 A sintaxe vem das fixtures `.s` de referência — não é invenção nossa.
