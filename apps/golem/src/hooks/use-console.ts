@@ -19,7 +19,7 @@ import {
 import { createMachine, type Machine, type StepEvent, step } from '../golem/machine'
 import { PROGRAM_NAMES, PROGRAMS, programNamed } from '../golem/programs'
 import { encode } from '../golem/share'
-import { formatCacheStatistics, formatHex, formatStep, frameTrace } from '../golem/trace'
+import { formatCacheStatisticsPair, formatHex, formatStep, frameTrace } from '../golem/trace'
 import { type ClockRate, useClock } from './use-clock'
 import { clearShareFragment, saveSource } from './use-source-loading'
 
@@ -110,8 +110,7 @@ function haltLines(machine: Machine): Omit<ConsoleLine, 'id'>[] {
   const lines: Omit<ConsoleLine, 'id'>[] = [{ kind: 'info', text: 'halted' }]
   if (machine.cache !== undefined) {
     lines.push(
-      { kind: 'info', text: formatCacheStatistics('D', machine.cache.data) },
-      { kind: 'info', text: formatCacheStatistics('I', machine.cache.instruction) },
+      ...formatCacheStatisticsPair(machine.cache).map((text) => ({ kind: 'info' as const, text })),
     )
   }
   return lines
@@ -424,8 +423,10 @@ export function useConsole(initialSource: string): ConsoleState {
               break
             }
             output.push(
-              { kind: 'info', text: formatCacheStatistics('D', current.cache.data) },
-              { kind: 'info', text: formatCacheStatistics('I', current.cache.instruction) },
+              ...formatCacheStatisticsPair(current.cache).map((text) => ({
+                kind: 'info' as const,
+                text,
+              })),
             )
             break
           }

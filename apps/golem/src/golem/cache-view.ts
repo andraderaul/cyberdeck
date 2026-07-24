@@ -2,7 +2,7 @@
 // of the component so "what the spotlight shows" is a testable function, the same seam devicesOf
 // and the memory dump use. The panel is read-only (ADR 0018); this only reads.
 
-import type { Cache, CacheAccess, CacheSet } from './cache'
+import type { Cache, CacheAccess, CacheKind, CacheOp, CacheResult, CacheSet } from './cache'
 import { hex } from './hex'
 import type { Machine, StepEvent } from './machine'
 
@@ -24,8 +24,8 @@ export interface CacheStripCell {
 }
 
 export interface CacheAccessView {
-  op: 'READ' | 'WRITE'
-  result: 'HIT' | 'MISS'
+  op: CacheOp
+  result: CacheResult
   address: string
 }
 
@@ -33,7 +33,7 @@ export interface CacheView {
   /** `no-machine` and `off` are the two empty states; `on` carries the rest of the fields. */
   status: 'no-machine' | 'off' | 'on'
   /** Which cache the spotlight shows — data when a Step touched it, else the instruction fetch. */
-  foreground: 'I' | 'D'
+  foreground: CacheKind
   line: number
   /** The access this Step made against the foregrounded cache, or null before the first Step. */
   access: CacheAccessView | null
@@ -77,7 +77,7 @@ function setView(set: CacheSet, index: number): CacheSetView {
   }
 }
 
-const EMPTY = { foreground: 'I' as const, line: 0, access: null, sets: [], strip: [] }
+const EMPTY = { foreground: 'I' as CacheKind, line: 0, access: null, sets: [], strip: [] }
 
 /**
  * The panel model: which cache is foregrounded, the spotlit Line's two Sets in full, and the

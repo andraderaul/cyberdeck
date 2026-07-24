@@ -161,17 +161,6 @@ function fill(
   set.data = [0, 1, 2, 3].map((offset) => (memory[(base + offset) % cont] ?? 0) >>> 0)
 }
 
-function access(
-  cache: CacheKind,
-  op: CacheOp,
-  result: CacheResult,
-  line: number,
-  address: number,
-  sets: [CacheSet, CacheSet],
-): CacheAccess {
-  return { cache, op, result, line, address, sets }
-}
-
 /**
  * Classifies one memory access against a cache, mutating it and returning the access as the trace
  * will render it. The value is *not* returned — memory stays the source of truth (ADR 0023); this
@@ -202,93 +191,66 @@ export function classify(
   const sets = cache.lines[line]
   const [set0, set1] = sets
 
+  // Records the verdict against the invariants of this access — the counter it moves, and the Set
+  // dump the trace renders (captured by the caller so a miss shows pre-fill and a hit post-reset).
+  const record = (result: CacheResult, dump: [CacheSet, CacheSet]): CacheAccess => {
+    if (result === 'HIT') {
+      cache.hits++
+    } else {
+      cache.misses++
+    }
+    return { cache: kind, op, result, line, address: byteAddress, sets: dump }
+  }
+
   // A Hit needs the Tag to match *and* the cached word to still equal memory — the reference's
   // own test, and the mechanism by which a stale Set (after a byte store) reads as a Miss.
   const matches = (set: WorkingSet): boolean =>
     set.valid && set.tag === tag && set.data[word] === memoryWord
 
+  const readHit = (set: WorkingSet): CacheAccess => {
+    set.age = 0
+    return record('HIT', snapshot(sets))
+  }
+
+  const readMiss = (victim: WorkingSet): CacheAccess => {
+    const dump = snapshot(sets)
+    fill(victim, tag, index, memory, state.cont)
+    return record('MISS', dump)
+  }
+
   if (op === 'READ') {
     if (!set0.valid && !set1.valid) {
-      cache.misses++
-      const dump = snapshot(sets)
-      fill(set0, tag, index, memory, state.cont)
-      return access(kind, op, 'MISS', line, byteAddress, dump)
+      return readMiss(set0)
     }
-
     if (set0.valid && !set1.valid) {
-      if (matches(set0)) {
-        set0.age = 0
-        cache.hits++
-        return access(kind, op, 'HIT', line, byteAddress, snapshot(sets))
-      }
-      cache.misses++
-      const dump = snapshot(sets)
-      fill(set1, tag, index, memory, state.cont)
-      return access(kind, op, 'MISS', line, byteAddress, dump)
+      return matches(set0) ? readHit(set0) : readMiss(set1)
     }
-
-    // Both valid.
+    // Both valid: hit either Set, or evict the older on a miss (ties to Set 0, the reference's `>=`).
     if (matches(set0)) {
-      set0.age = 0
-      cache.hits++
-      return access(kind, op, 'HIT', line, byteAddress, snapshot(sets))
+      return readHit(set0)
     }
     if (matches(set1)) {
-      set1.age = 0
-      cache.hits++
-      return access(kind, op, 'HIT', line, byteAddress, snapshot(sets))
+      return readHit(set1)
     }
-    cache.misses++
-    const dump = snapshot(sets)
-    // Evict the older Set; ties go to Set 0, as the reference's `>=` decides.
-    fill(set0.age >= set1.age ? set0 : set1, tag, index, memory, state.cont)
-    return access(kind, op, 'MISS', line, byteAddress, dump)
+    return readMiss(set0.age >= set1.age ? set0 : set1)
   }
 
   // WRITE: write-through (memory is updated by the caller regardless), and no write-allocate — a
-  // miss never fills. The hit test here is Tag-only, matching the reference; on a hit the cached
-  // word is overwritten with the stored register value.
-  if (!set0.valid && !set1.valid) {
-    cache.misses++
-    return access(kind, op, 'MISS', line, byteAddress, snapshot(sets))
+  // miss never fills. The hit test is Tag-only, matching the reference; on a hit the Set is
+  // dumped *before* its word is overwritten with the freshly stored memory word.
+  const writeHit = (target: WorkingSet): CacheAccess => {
+    target.valid = true
+    target.age = 0
+    const dump = snapshot(sets)
+    target.data[word] = memoryWord >>> 0
+    return record('HIT', dump)
   }
 
-  if (set0.valid && !set1.valid) {
-    if (set0.tag === tag) {
-      return writeHit(cache, kind, line, byteAddress, sets, set0, word, memoryWord)
-    }
-    cache.misses++
-    return access(kind, op, 'MISS', line, byteAddress, snapshot(sets))
+  if (set0.valid && set0.tag === tag) {
+    return writeHit(set0)
   }
-
-  // Both valid.
-  if (set0.tag === tag) {
-    return writeHit(cache, kind, line, byteAddress, sets, set0, word, memoryWord)
+  if (set1.valid && set1.tag === tag) {
+    return writeHit(set1)
   }
-  if (set1.tag === tag) {
-    return writeHit(cache, kind, line, byteAddress, sets, set1, word, memoryWord)
-  }
-  cache.misses++
-  return access(kind, op, 'MISS', line, byteAddress, snapshot(sets))
-}
-
-// A write hit: the Set is refreshed (valid, age 0) and dumped *before* its word is overwritten, so
-// the trace shows the pre-write data — then the freshly stored memory word lands, possibly stale
-// against the register (a byte store) and so turning the next read of the address into a Miss.
-function writeHit(
-  cache: WorkingCache,
-  kind: CacheKind,
-  line: number,
-  byteAddress: number,
-  sets: WorkingSet[],
-  target: WorkingSet,
-  word: number,
-  memoryWord: number,
-): CacheAccess {
-  target.valid = true
-  target.age = 0
-  const dump = snapshot(sets)
-  target.data[word] = memoryWord >>> 0
-  cache.hits++
-  return access(kind, 'WRITE', 'HIT', line, byteAddress, dump)
+  return record('MISS', snapshot(sets))
 }

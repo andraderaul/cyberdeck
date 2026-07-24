@@ -1,5 +1,5 @@
 import { cn } from '@cyberdeck/deck-kit/utils'
-import type { CacheAccess } from '../golem/cache'
+import type { CacheAccess, CacheKind, CacheResult } from '../golem/cache'
 import {
   type CacheAccessView,
   type CacheSetView,
@@ -42,7 +42,7 @@ export default function Cache({ machine, spotlight }: CacheProps) {
 
 // HIT is cheap and affirmative; a MISS reached all the way to memory, so it carries the cost —
 // amber, and a breath (ADR 0023: the cost of a miss lives here, in the presentation, never in step).
-const hitColour = (result: 'HIT' | 'MISS') => (result === 'HIT' ? 'text-cyan' : 'text-warning')
+const hitColour = (result: CacheResult) => (result === 'HIT' ? 'text-cyan' : 'text-warning')
 
 function Lens({ view }: { view: CacheView }) {
   return (
@@ -63,7 +63,7 @@ function Header({
   line,
   access,
 }: {
-  foreground: 'I' | 'D'
+  foreground: CacheKind
   line: number
   access: CacheAccessView | null
 }) {
@@ -87,7 +87,7 @@ function Header({
   )
 }
 
-function SetCell({ set, result }: { set: CacheSetView; result: 'HIT' | 'MISS' | null }) {
+function SetCell({ set, result }: { set: CacheSetView; result: CacheResult | null }) {
   return (
     <div
       className={cn(
@@ -127,7 +127,7 @@ const HEAT: Record<CacheStripCell['heat'], string> = {
   hot: 'bg-violet border-violet',
 }
 
-function Strip({ cells, foreground }: { cells: CacheStripCell[]; foreground: 'I' | 'D' }) {
+function Strip({ cells, foreground }: { cells: CacheStripCell[]; foreground: CacheKind }) {
   return (
     <div>
       <div className="mb-1 font-mono text-fg-subtle text-xs">

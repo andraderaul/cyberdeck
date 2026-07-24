@@ -113,6 +113,11 @@ export function formatCacheStatistics(kind: 'D' | 'I', cache: Cache): string {
   return `[CACHE ${kind} STATISTICS] #Hit = ${cache.hits} (${percent(cache.hits)}%), #Miss = ${cache.misses} (${percent(cache.misses)}%)`
 }
 
+/** The two boletim lines for a run, data cache before instruction — the reference's order. */
+export function formatCacheStatisticsPair(cache: CacheState): [string, string] {
+  return [formatCacheStatistics('D', cache.data), formatCacheStatistics('I', cache.instruction)]
+}
+
 /**
  * Renders the instruction that took `before` to `after` as the two lines a trace entry is: the
  * disassembly, then the effects it had — followed by a marker line per event the Step raised.
@@ -125,14 +130,14 @@ export function formatStep(
 ): string {
   // Cache accesses render *before* the instruction (fetch, then load/store), interrupt markers
   // after — one event stream, two positions. Partition by kind.
-  const cache = events.filter((event) => event.kind === 'cache')
+  const cacheEvents = events.filter((event) => event.kind === 'cache')
   const markers = events.filter((event) => event.kind !== 'cache')
-  const before_ = cache.map(formatEvent)
+  const preludeLines = cacheEvents.map(formatEvent)
 
   // An invalid instruction has no disassembly to print — there is no instruction. The reference
   // emits only the marker lines, so the entry is dropped rather than rendered as `?? 0x…`.
   if (markers.some((event) => event.kind === 'invalid-instruction')) {
-    return [...before_, ...markers.map(formatEvent)].join('\n')
+    return [...preludeLines, ...markers.map(formatEvent)].join('\n')
   }
 
   // A hardware interrupt lands *after* the instruction finished, so the PC in `after` is the
@@ -141,7 +146,9 @@ export function formatStep(
   const hardware = markers.find((event) => event.kind === 'hardware-interrupt')
   const settled = hardware === undefined ? after : withPc(after, hardware.resume)
 
-  return [...before_, formatInstruction(before, settled), ...markers.map(formatEvent)].join('\n')
+  return [...preludeLines, formatInstruction(before, settled), ...markers.map(formatEvent)].join(
+    '\n',
+  )
 }
 
 function withPc(machine: Machine, pc: number): Machine {
@@ -293,9 +300,7 @@ function formatInstruction(before: Machine, after: Machine): string {
 export function frameTrace(lines: readonly string[], terminal = '', cache?: CacheState): string {
   const output = terminal === '' ? [] : [TRACE_TERMINAL, terminal]
   // The boletim closes the run: one line per cache, data before instruction, after the end marker.
-  const statistics = cache
-    ? [formatCacheStatistics('D', cache.data), formatCacheStatistics('I', cache.instruction)]
-    : []
+  const statistics = cache ? formatCacheStatisticsPair(cache) : []
   return [TRACE_START, ...lines, ...output, TRACE_END, ...statistics].join('\n')
 }
 
