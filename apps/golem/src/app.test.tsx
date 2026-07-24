@@ -75,7 +75,15 @@ describe('App', () => {
   it('renders a region for each surface the program needs', () => {
     render(<App />)
 
-    for (const region of ['Console', 'Registers', 'Flags', 'Devices', 'Cache', 'Memory', 'Terminal']) {
+    for (const region of [
+      'Console',
+      'Registers',
+      'Flags',
+      'Devices',
+      'Cache',
+      'Memory',
+      'Terminal',
+    ]) {
       expect(screen.getByRole('region', { name: region })).toBeInTheDocument()
     }
     expect(screen.getByRole('region', { name: /^Source/ })).toBeInTheDocument()

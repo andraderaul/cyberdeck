@@ -76,6 +76,7 @@ function Header({
         <span className="text-fg-subtle">awaiting first access</span>
       ) : (
         <span
+          role="status"
           className={cn(hitColour(access.result), access.result === 'MISS' && 'animate-pulse')}
           aria-label={`${access.op} ${access.result} at ${access.address}`}
         >
@@ -132,7 +133,7 @@ function Strip({ cells, foreground }: { cells: CacheStripCell[]; foreground: 'I'
       <div className="mb-1 font-mono text-fg-subtle text-xs">
         {foreground === 'D' ? 'D' : 'I'} lines
       </div>
-      <div className="flex gap-1" aria-label={`${foreground} cache lines`}>
+      <div className="flex gap-1">
         {cells.map((cell) => (
           <div
             key={cell.index}
