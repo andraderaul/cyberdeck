@@ -15,6 +15,12 @@ código, mas é versionado e deployado de forma independente (ver ADR 0011 e ADR
   emulador e um Console de linha de comando, com registradores, memória e Terminal visíveis
   ao vivo durante a execução. **Em construção** — o modelo está fixado e o scaffold existe; o
   assembler, a Machine e o Console ainda não.
+- **SPRAWL//Atlas** (`apps/sprawl`) — o mapa de capacidade de troca de dados do mundo como luz:
+  cada pixel vale N gigabytes, a janela logarítmica é contínua, e em `1 px = 1 GB` a tela satura
+  em branco (OVERFLOW) até você reescalar mais grosso e a estrutura emergir. Inspirado na passagem
+  do *Neuromancer*. É a **primeira peça, não ferramenta**, do deck — não consome material do
+  usuário, e a régua de sucesso é a primeira tela, não a retenção (ADR 0021). Dado real via
+  snapshot vendorizado do PeeringDB (ADR 0022). **Conceito** — decidido, ainda não construído.
 
 ## Shared package
 
@@ -57,6 +63,16 @@ código, mas é versionado e deployado de forma independente (ver ADR 0011 e ADR
   mesma saída, sem tempo), enquanto o GOLEM é uma máquina de estados no tempo. Por isso o
   Export não é um artefato visual — é um link compartilhável com o Source, e `.hex`/trace como
   comandos.
+- **Ferramenta vs. peça — o deck admite uma exceção, e só uma** — ASCII, GLITCH e GOLEM são
+  *ferramentas*: cada um consome material do usuário e vale `f(seu_input)`, e a régua é a
+  retenção. SPRAWL//Atlas é a primeira **peça**: não tem entrada de usuário, o "material" é a
+  função de mapeamento (onde a janela log cai, o viewport), e a régua é a *primeira tela* (ADR
+  0021). Ele ainda obedece ao padrão de núcleo do deck — o core puro é `project(dataset, escala,
+  viewport) → RenderInstruction[]`, stateless-no-tempo como ASCII/GLITCH — e por isso o Export é
+  um link que codifica escala+viewport, na mesma moeda do GOLEM. A fronteira é dura: uma segunda
+  peça é o deck perdendo identidade; o default para "mais uma peça" é não. O dado real chega por
+  um pipeline novo pro deck — snapshot vendorizado do PeeringDB, commitado e datado (ADR 0022) —
+  que fica no app, não no Deck Kit, até um segundo consumidor provar a junção.
 - **"Shell" e "Console" não são sinônimos aqui** — *shell* continua significando a camada
   impura do código (imperative shell / functional core) em todo o deck; **Console** é o painel
   de linha de comando do GOLEM. E, dentro do GOLEM, **Terminal** é o dispositivo de saída da
