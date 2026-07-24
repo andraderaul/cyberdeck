@@ -73,7 +73,7 @@ function lineOfPc(machine: Machine | null, image: Image | null): number | null {
  * This exists because a dispatch mid-`run` is otherwise invisible: the PC simply is somewhere
  * else, with nothing on screen saying who moved it.
  */
-function narrate(event: StepEvent): string {
+function narrate(event: Exclude<StepEvent, { kind: 'cache' }>): string {
   switch (event.kind) {
     case 'software-interrupt':
       return `software interrupt — cause ${hex32(event.cause)}, vector ${hex32(SOFTWARE_VECTOR)}`
@@ -209,8 +209,13 @@ export function useConsole(initialSource: string): ConsoleState {
       if (traceRef.current.length < TRACE_LIMIT) {
         traceRef.current.push(formatStep(current, next, events))
       }
-      if (events.length > 0) {
-        append(events.map((event) => ({ kind: 'info' as const, text: narrate(event) })))
+      // Cache accesses happen on every Step; narrating each would drown the Console (the panel
+      // carries the per-access flow). Only dispatches are narrated — one line per event.
+      const dispatches = events.filter(
+        (event): event is Exclude<StepEvent, { kind: 'cache' }> => event.kind !== 'cache',
+      )
+      if (dispatches.length > 0) {
+        append(dispatches.map((event) => ({ kind: 'info' as const, text: narrate(event) })))
       }
       setMachine(next)
       return next

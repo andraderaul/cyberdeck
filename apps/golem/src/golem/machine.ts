@@ -6,6 +6,15 @@
 // (byte 0 is the most significant). That distinction is the ISA's main source of confusion.
 
 import type { Image } from './assembler'
+import {
+  type CacheAccess,
+  type CacheState,
+  classify,
+  cloneCacheState,
+  createCacheState,
+  freezeCacheState,
+  type WorkingCacheState,
+} from './cache'
 import { floatBits, referenceExponent } from './float'
 import {
   byteShift,
@@ -71,6 +80,12 @@ export interface Machine {
   /** Characters written to the memory-mapped Terminal, in the order the program emitted them. */
   readonly terminal: string
   readonly fpu: Fpu
+  /**
+   * The cache lens — present only when the Machine was created with the mode on (ADR 0023). Fixed
+   * at creation for the Machine's whole life, so a trace is never half-wrapped. Absent, and `step`
+   * behaves exactly as v2: no cache events, byte-identical traces.
+   */
+  readonly cache?: CacheState
 }
 
 const fround = Math.fround
@@ -101,26 +116,43 @@ export type StepEvent =
    * trace must print as that instruction's effect, since the dispatch happened after it.
    */
   | { kind: 'hardware-interrupt'; line: 1 | 2; resume: number }
+  /**
+   * One memory access classified by the cache lens. Emitted before the instruction it belongs to
+   * (the fetch, then any load/store), the opposite of the interrupt markers — the trace formatter
+   * partitions this stream by kind. Carries the Set snapshot the trace and the panel render.
+   */
+  | { kind: 'cache'; access: CacheAccess }
 
 export interface StepResult {
   readonly machine: Machine
   readonly events: readonly StepEvent[]
 }
 
-/** Instantiates a machine with the Image loaded at word 0 and every register cleared. */
-export function createMachine(image: Image): Machine {
+/**
+ * Instantiates a machine with the Image loaded at word 0 and every register cleared. `cache` bakes
+ * the lens in at creation and cannot change afterwards (ADR 0023) — the Console gates the toggle
+ * on there being no Machine, so a live Machine has the cache for its whole life or never.
+ */
+export function createMachine(image: Image, options: { cache?: boolean } = {}): Machine {
   const memory = new Array<number>(MEMORY_WORDS).fill(0)
   image.words.forEach((word, index) => {
     memory[index] = word >>> 0
   })
 
-  return {
+  const machine: Machine = {
     registers: new Array<number>(REGISTER_COUNT).fill(0),
     memory,
     halted: false,
     terminal: '',
     fpu: IDLE_FPU,
   }
+
+  // `cont` is the image length — the modulus the reference wraps a block fill on. An empty image
+  // has no memory to fetch, so the cache would divide by zero on its first classify; guard it off.
+  if (options.cache && image.words.length > 0) {
+    return { ...machine, cache: createCacheState(image.words.length) }
+  }
+  return machine
 }
 
 /** Mutable working state for one instruction, collapsed back into a Machine at the end of `step`. */
@@ -135,6 +167,8 @@ interface Cycle {
   jumped: boolean
   events: StepEvent[]
   fpu: Fpu
+  /** The working cache lens for this Step, or null when the mode is off. */
+  cache: WorkingCacheState | null
 }
 
 /**
@@ -159,8 +193,19 @@ export function step(machine: Machine): StepResult {
     jumped: false,
     events: [],
     fpu: machine.fpu,
+    cache: machine.cache ? cloneCacheState(machine.cache) : null,
   }
   cycle.registers[IR] = instruction
+
+  // The instruction fetch is the I-cache access, classified before the instruction runs — the
+  // reference order (fetch, then any load/store, then the instruction). The value is unaffected:
+  // the fetch already happened above, straight from memory.
+  if (cycle.cache) {
+    cycle.events.push({
+      kind: 'cache',
+      access: classify(cycle.cache, 'I', 'READ', wordIndex, cycle.memory),
+    })
+  }
 
   execute(cycle, instruction)
 
@@ -177,14 +222,16 @@ export function step(machine: Machine): StepResult {
     tickFpu(cycle)
   }
 
+  const next: Machine = {
+    registers: cycle.registers,
+    memory: cycle.writable ?? cycle.memory,
+    halted: cycle.halted,
+    terminal: cycle.terminal,
+    fpu: cycle.fpu,
+  }
+
   return {
-    machine: {
-      registers: cycle.registers,
-      memory: cycle.writable ?? cycle.memory,
-      halted: cycle.halted,
-      terminal: cycle.terminal,
-      fpu: cycle.fpu,
-    },
+    machine: cycle.cache ? { ...next, cache: freezeCacheState(cycle.cache) } : next,
     events: cycle.events,
   }
 }
@@ -401,6 +448,28 @@ function writeFpuRegister(cycle: Cycle, address: number, word: number): void {
 
 const isFpuRegister = (address: number): boolean => address >= FPU_X && address <= FPU_CONTROL
 
+// Word loads/stores of a device register are not memory accesses and the reference does not cache
+// them — the Watchdog and the FPU answer directly. Byte ops screen the Terminal instead (below).
+const isDeviceWord = (wordIndex: number): boolean =>
+  wordIndex === WATCHDOG_ADDRESS || isFpuRegister(wordIndex)
+
+/**
+ * Classifies one data access through the D-cache, appending the event. A pure observer: it reads
+ * memory only to fill and to test, and never changes what the instruction loads or stores. `end`
+ * is the word index. A write must be classified *after* its store has landed, so a write hit
+ * caches the word memory now holds.
+ */
+function classifyData(cycle: Cycle, op: 'READ' | 'WRITE', end: number): void {
+  if (cycle.cache === null) {
+    return
+  }
+  const memory = cycle.writable ?? cycle.memory
+  cycle.events.push({
+    kind: 'cache',
+    access: classify(cycle.cache, 'D', op, end >>> 0, memory),
+  })
+}
+
 function execute(cycle: Cycle, instruction: number): void {
   const opcode = instruction >>> 26
   const r = cycle.registers
@@ -492,27 +561,55 @@ function execute(cycle: Cycle, instruction: number): void {
       write(cycle, fx, r[fy] ^ im16)
       break
 
-    case 0x14:
-      write(cycle, fx, readWord(cycle, r[fy] + im16))
+    case 0x14: {
+      const wordIndex = (r[fy] + im16) >>> 0
+      if (!isDeviceWord(wordIndex)) {
+        classifyData(cycle, 'READ', wordIndex)
+      }
+      write(cycle, fx, readWord(cycle, wordIndex))
       break
-    case 0x15:
-      write(cycle, fx, readByte(cycle, r[fy] + im16))
+    }
+    case 0x15: {
+      const byteAddress = (r[fy] + im16) >>> 0
+      if (byteAddress !== TERMINAL_ADDRESS) {
+        classifyData(cycle, 'READ', byteAddress >>> 2)
+      }
+      write(cycle, fx, readByte(cycle, byteAddress))
       break
-    case 0x16:
-      writeWord(cycle, r[fx] + im16, r[fy])
+    }
+    // Classified after the store, so a write hit caches the word memory now holds — the reference
+    // order (its byte store merges memory first). For a word store that is the value stored.
+    case 0x16: {
+      const wordIndex = (r[fx] + im16) >>> 0
+      writeWord(cycle, wordIndex, r[fy])
+      if (!isDeviceWord(wordIndex)) {
+        classifyData(cycle, 'WRITE', wordIndex)
+      }
       break
-    case 0x17:
-      writeByte(cycle, r[fx] + im16, r[fy] & 0xff)
+    }
+    // The cached word becomes the byte merged into its surrounding word, not the whole register —
+    // so a write hit leaves the Set stale and the next read of the address Misses (see ISA.md).
+    case 0x17: {
+      const byteAddress = (r[fx] + im16) >>> 0
+      writeByte(cycle, byteAddress, r[fy] & 0xff)
+      if (byteAddress !== TERMINAL_ADDRESS) {
+        classifyData(cycle, 'WRITE', byteAddress >>> 2)
+      }
       break
+    }
 
     // MEM[Rx--] = Ry, and MEM[++Ry] on the way back out.
-    case 0x18:
-      writeWord(cycle, r[ux], r[uy])
+    case 0x18: {
+      const wordIndex = r[ux] >>> 0
+      writeWord(cycle, wordIndex, r[uy])
+      classifyData(cycle, 'WRITE', wordIndex)
       write(cycle, ux, r[ux] - 1)
       break
+    }
     case 0x19:
       write(cycle, uy, r[uy] + 1)
       write(cycle, ux, readWord(cycle, cycle.registers[uy]))
+      classifyData(cycle, 'READ', cycle.registers[uy])
       break
 
     case 0x1a:
