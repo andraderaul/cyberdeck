@@ -1,5 +1,96 @@
 # @cyberdeck/golem
 
+## 0.3.0
+
+### Minor Changes
+
+- 620bb3e: The FPU — the second Device, driven entirely by the program through memory-mapped `x`, `y`, `z`
+  and `control` registers. Writing an operation to `control` starts work that costs cycles, consumed
+  one per Step, and completion fires hardware interrupt 2. Faults — a zero divisor, an undefined
+  operation — raise an error bit the program can read back.
+
+  Devices are now intercepted on the machine's single memory-access path, so `ldw`, `stw`, `push` and
+  `pop` all agree about them without four copies of the same check.
+
+  `2_fpu` runs end to end, which makes all four unit-2 reference programs green — the whole of the
+  unit, against the reference oracle.
+
+- 620bb3e: ISRs are writable: `isr` and `reti` assemble and execute per the reference spec, and `enai` enters
+  as the assembler's first macro — expanding to the two words the reference assembler emits, scratch
+  register and all.
+
+  The remaining software-interrupt causes land with them. A division by zero raises cause `0x01` and
+  an invalid instruction cause `0x2A`, both gated on `IE`, and an invalid instruction names its PC in
+  the trace. Malformed `isr`, `reti`, `int` and `enai` operands now fail at assemble time with a line
+  number and a specific message.
+
+  A breakpoint on an ISR line pauses a run inside the handler — an ISR is a line like any other, so
+  debugging one needs no new grammar.
+
+  `2_interruption` now assembles word-for-word to its `.hex` and runs trace-for-trace against its
+  `.out`.
+
+- 620bb3e: The DEVICES panel, where the invisible machinery becomes watchable: the Watchdog's counter
+  descending a tick per Step beside its enable bit, and the FPU's x, y and z as decoded floats
+  alongside the raw words they really are, with the in-flight operation and its remaining cycles.
+
+  The IE flag joins the named-flags display, so "interrupts are off" is legible at a glance rather
+  than something you deduce from a dispatch that never came.
+
+  Read-only like every panel but the Source editor — and more strictly than most, since even the
+  Console never writes a device register. Talking to Devices is the program's job.
+
+- 620bb3e: A byte written to the Terminal now stays readable at its address, so a program can `ldb` back what
+  it just printed. The Terminal is a device _and_ an address; the character still echoes to the
+  Terminal panel exactly as before.
+
+  Exported traces gained the reference emulator's `[TERMINAL]` section, which carries the program's
+  output under the trace and only appears when the program printed something.
+
+  With those two, `2_hello_world` — the first unit-2 reference program — assembles word-for-word to
+  its `.hex` and runs trace-for-trace against its `.out`.
+
+- 620bb3e: The Watchdog — the first Device with a clock. Its control register is memory-mapped at word
+  `0x2020`, holding an enable bit and a countdown; a program arms it by writing both. The counter
+  decrements once per Step, in lockstep with execution, and fires hardware interrupt 1 when it runs
+  out, narrated on the Console and marked `[HARDWARE INTERRUPTION 1]` in the trace.
+
+  `2_watchdog` now runs end to end, which makes the signature scene real: `load watchdog`, `run`, and
+  watch an infinite loop lose to a countdown.
+
+- 620bb3e: New Console command: `load <name>` puts one of the vendored reference programs in the editor —
+  `hello_world`, `interruption`, `watchdog` or `fpu`. GOLEM's equivalent of the deck's presets,
+  expressed in the grammar this program already chose.
+
+  `load` with no argument lists what is available with a one-line summary each, and an unknown name
+  gets the nearest real one suggested, like any Console typo. It refuses while a Machine exists, so
+  running code can never change underneath you, and it asks for confirmation once before overwriting
+  a program you wrote yourself — the starter example and an already-loaded program are replaced
+  without ceremony, so `load watchdog` then `run` stays two commands from a cold start.
+
+- 620bb3e: `int N` with a nonzero code now dispatches a software interrupt — the cause lands in `CR`, the
+  interrupted PC in `IPC`, and the PC jumps to the software vector, gated on the `IE` flag. `int 0`
+  still ends the simulation, and `halt` is still its alias.
+
+  The Console narrates every dispatch on its own surface, naming the cause and the vector, so an
+  interrupt taken mid-`run` is something you watch rather than deduce from a changed PC. Exported
+  traces carry the reference emulator's `[SOFTWARE INTERRUPTION]` marker, so they stay diffable.
+
+### Patch Changes
+
+- 620bb3e: One hardware dispatch per Step. When the Watchdog and the FPU run out on the same Step, the
+  Watchdog takes it and the FPU's interrupt stays pending, landing whole on the Step after — where
+  before the second dispatch overwrote `CR`/`IPC` with the hardware-1 vector as the return address,
+  losing the Watchdog's interrupt to a clobber inherited from the reference emulator.
+
+  The DEVICES panel now shows the FPU registers' raw words in the machine's own value-dependent
+  encoding, so the word beside `z = 19` is the `0x00000013` a program would actually read back.
+
+- 620bb3e: `asm` and `run` refuse a Source that assembles to zero words — blank lines and comments produced
+  an empty image without error, and `run` over it started a run that could never halt: every fetch
+  of zeroed memory is an implicit nop, and no `int 0` ever arrives. The Console now answers
+  `nothing to assemble — the Source has no instructions` and leaves the editor unlocked.
+
 ## 0.2.0
 
 ### Minor Changes
