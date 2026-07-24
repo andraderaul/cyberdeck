@@ -103,3 +103,31 @@ Um mnemônico que o assembler expande para mais de uma instrução, herdado do m
 referência: `enai rX` vira duas palavras (carrega máscara no scratch `rX`, liga o bit IE no
 `FR`). É a única macro; existe porque os Sources de referência a usam, não por conveniência.
 _Avoid_: pseudo-instrução (mesmo conceito, nome mais longo), alias (1:1, não expande)
+
+**Cache**:
+A lente que classifica cada acesso à memória como Hit ou Miss e conta a razão entre eles —
+herdada da unidade 3 do Poxim (ADR 0023). *Não é um Device*: o programa não a endereça, não
+fala com ela, e ela **nunca serve valor** — o valor vem sempre da memória, que é sempre a
+verdade; a Cache só rotula o acesso. Harvard: uma para instrução (o fetch), uma para dado
+(`ldw`/`stw`/`ldb`/`stb`). 8 Lines × 2 Sets, bloco de 4 words, substituição LRU. Só existe com
+o modo ligado (`cache on`), fixado na criação da Machine — nunca no meio de um `run`.
+_Avoid_: memória rápida (não serve dado — mente sobre o que ela é), buffer, Device (o programa não a toca)
+
+**Line / Set**:
+O índice derivado do endereço (8 Lines) e as duas vias associativas dentro de uma Line (2 Sets).
+Um acesso mapeia para uma Line; o classificador procura o bloco nos dois Sets dela e, no Miss,
+despeja o Set mais velho.
+_Avoid_: via/way (Set é o termo do material), linha de cache (ambíguo com linha de código-fonte)
+
+**Hit / Miss**:
+O veredito do classificador num acesso: Hit se o bloco está num Set da Line, Miss caso contrário.
+O par é a unidade de observação da v3; o boletim narrado no fim do `run` conta os dois por Cache.
+_Avoid_: acerto/erro isolados (o par é o termo), falta (ambíguo)
+
+**AGE / Tag**:
+Os dois campos que o classificador guarda por Set. **Tag** é o identificador de bloco comparado
+no teste de Hit — e, quirk herdado, o teste compara *também o dado*, então uma escrita que muda
+a memória sem atualizar o Set faz a próxima leitura virar Miss (ADR 0023). **AGE** é o contador
+LRU: zera quando o Set é referenciado, incrementa nos válidos a cada acesso; o mais velho é a
+vítima do despejo. O AGE é o que o trace imprime e o que o holofote do painel anima.
+_Avoid_: id (Tag é o nome do material), LRU (é a *política*; AGE é o *mecanismo* visível)
