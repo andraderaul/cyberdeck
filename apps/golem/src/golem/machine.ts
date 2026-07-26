@@ -182,7 +182,6 @@ export function step(machine: Machine): StepResult {
   }
 
   const wordIndex = machine.registers[PC] >>> 2
-  const instruction = (machine.memory[wordIndex] ?? 0) >>> 0
 
   const cycle: Cycle = {
     registers: [...machine.registers],
@@ -195,17 +194,11 @@ export function step(machine: Machine): StepResult {
     fpu: machine.fpu,
     cache: machine.cache ? cloneCacheState(machine.cache) : null,
   }
-  cycle.registers[IR] = instruction
 
   // The instruction fetch is the I-cache access, classified before the instruction runs — the
-  // reference order (fetch, then any load/store, then the instruction). The value is unaffected:
-  // the fetch already happened above, straight from memory.
-  if (cycle.cache) {
-    cycle.events.push({
-      kind: 'cache',
-      access: classify(cycle.cache, 'I', 'READ', wordIndex, cycle.memory),
-    })
-  }
+  // reference order (fetch, then any load/store, then the instruction).
+  const instruction = fetch(cycle, wordIndex)
+  cycle.registers[IR] = instruction
 
   execute(cycle, instruction)
 
@@ -561,56 +554,27 @@ function execute(cycle: Cycle, instruction: number): void {
       write(cycle, fx, r[fy] ^ im16)
       break
 
-    case 0x14: {
-      const wordIndex = (r[fy] + im16) >>> 0
-      if (!isDeviceWord(wordIndex)) {
-        classifyData(cycle, 'READ', wordIndex)
-      }
-      write(cycle, fx, readWord(cycle, wordIndex))
+    case 0x14:
+      write(cycle, fx, load(cycle, (r[fy] + im16) >>> 0))
       break
-    }
-    case 0x15: {
-      const byteAddress = (r[fy] + im16) >>> 0
-      if (byteAddress !== TERMINAL_ADDRESS) {
-        classifyData(cycle, 'READ', byteAddress >>> 2)
-      }
-      write(cycle, fx, readByte(cycle, byteAddress))
+    case 0x15:
+      write(cycle, fx, loadByte(cycle, (r[fy] + im16) >>> 0))
       break
-    }
-    // Classified after the store, so a write hit caches the word memory now holds — the reference
-    // order (its byte store merges memory first). For a word store that is the value stored.
-    case 0x16: {
-      const wordIndex = (r[fx] + im16) >>> 0
-      writeWord(cycle, wordIndex, r[fy])
-      if (!isDeviceWord(wordIndex)) {
-        classifyData(cycle, 'WRITE', wordIndex)
-      }
+    case 0x16:
+      store(cycle, (r[fx] + im16) >>> 0, r[fy])
       break
-    }
-    // The cached word becomes the byte merged into its surrounding word, not the whole register —
-    // but it still equals what memory now holds, so a write hit keeps the Set consistent and a
-    // later read of the address Hits (see ISA.md).
-    case 0x17: {
-      const byteAddress = (r[fx] + im16) >>> 0
-      writeByte(cycle, byteAddress, r[fy] & 0xff)
-      if (byteAddress !== TERMINAL_ADDRESS) {
-        classifyData(cycle, 'WRITE', byteAddress >>> 2)
-      }
+    case 0x17:
+      storeByte(cycle, (r[fx] + im16) >>> 0, r[fy] & 0xff)
       break
-    }
 
     // MEM[Rx--] = Ry, and MEM[++Ry] on the way back out.
-    case 0x18: {
-      const wordIndex = r[ux] >>> 0
-      writeWord(cycle, wordIndex, r[uy])
-      classifyData(cycle, 'WRITE', wordIndex)
+    case 0x18:
+      store(cycle, r[ux] >>> 0, r[uy])
       write(cycle, ux, r[ux] - 1)
       break
-    }
     case 0x19:
       write(cycle, uy, r[uy] + 1)
-      write(cycle, ux, readWord(cycle, cycle.registers[uy]))
-      classifyData(cycle, 'READ', cycle.registers[uy])
+      write(cycle, ux, load(cycle, cycle.registers[uy]))
       break
 
     case 0x1a:
@@ -776,10 +740,10 @@ function mutableMemory(cycle: Cycle): number[] {
   return cycle.writable
 }
 
-// Devices are intercepted here, on the single memory-access path, rather than in each instruction
-// that touches memory. That is what makes `ldw`, `stw`, `push` and `pop` agree about them without
-// four copies of the same check — and it is where v3's cache attaches, as a layer rather than
-// surgery.
+// The raw word path. Devices are intercepted here so `ldw`, `stw`, `push` and `pop` agree about
+// them without four copies of the same check. It never classifies: the cache attaches one layer
+// up, on the memory-access surface below, so the byte read-modify-write can reuse this path
+// without emitting a phantom access.
 function readWord(cycle: Cycle, wordIndex: number): number {
   const index = wordIndex >>> 0
   if (isFpuRegister(index)) {
@@ -825,4 +789,60 @@ function writeByte(cycle: Cycle, byteAddress: number, value: number): void {
   const shift = byteShift(address)
   const word = readWord(cycle, wordIndex)
   mutableMemory(cycle)[wordIndex] = ((word & ~(0xff << shift)) | ((value & 0xff) << shift)) >>> 0
+}
+
+// The memory-access surface. Every cache classification the machine makes happens here, and only
+// here — the one seam that owns the device/Terminal guard, the read-before / write-after order and
+// the byte→word index math. The opcodes name the access; the surface decides whether and when it
+// touches the cache, then delegates to the raw word/byte path above. Instruction fetch and data
+// load/store are the same act to the caller, so they read the same way here (ADR 0023).
+
+// The instruction fetch: an I-cache access, no device guard (code never lives in device space).
+function fetch(cycle: Cycle, wordIndex: number): number {
+  const index = wordIndex >>> 0
+  if (cycle.cache) {
+    cycle.events.push({
+      kind: 'cache',
+      access: classify(cycle.cache, 'I', 'READ', index, cycle.memory),
+    })
+  }
+  return (cycle.memory[index] ?? 0) >>> 0
+}
+
+// A word load, classified before the read. Read order is immaterial — the read mutates nothing —
+// so `pop` (which classified after in the old code) is byte-identical through here.
+function load(cycle: Cycle, wordIndex: number): number {
+  if (!isDeviceWord(wordIndex)) {
+    classifyData(cycle, 'READ', wordIndex)
+  }
+  return readWord(cycle, wordIndex)
+}
+
+// A word store, classified after the write so a write hit caches the word memory now holds. `push`
+// routes through here too and so inherits the device guard: a push whose stack pointer lands in
+// device space no longer classifies — undefined territory no reference program reaches (see the
+// push/pop test), and the raw path already diverts such a word to the device, not the D-cache.
+function store(cycle: Cycle, wordIndex: number, value: number): void {
+  writeWord(cycle, wordIndex, value)
+  if (!isDeviceWord(wordIndex)) {
+    classifyData(cycle, 'WRITE', wordIndex)
+  }
+}
+
+// A byte load. The Terminal is the only device screened for byte ops; classified on the word the
+// byte lives in, before the read.
+function loadByte(cycle: Cycle, byteAddress: number): number {
+  if (byteAddress !== TERMINAL_ADDRESS) {
+    classifyData(cycle, 'READ', byteAddress >>> 2)
+  }
+  return readByte(cycle, byteAddress)
+}
+
+// A byte store. The raw write merges the byte into its surrounding word first; classified after,
+// on that word, so a later read of the address Hits (see ISA.md).
+function storeByte(cycle: Cycle, byteAddress: number, value: number): void {
+  writeByte(cycle, byteAddress, value)
+  if (byteAddress !== TERMINAL_ADDRESS) {
+    classifyData(cycle, 'WRITE', byteAddress >>> 2)
+  }
 }
