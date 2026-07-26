@@ -91,7 +91,11 @@ export default function SettingsEditor({ settings, onChange }: Props) {
   return (
     <div className="flex flex-col gap-sm">
       {/* The panel sits above the row so the canvas is never what gets covered (ADR 0020). */}
-      <div className="min-h-[92px]">
+      {/* Reserve the tallest tool's height (color mode — two chip rows) so switching tools doesn't
+          reflow the strip. Unlike GLITCH's editor this holds at every breakpoint, not just mobile:
+          charset and color mode are groups of one that fill the panel with their own chip grids at
+          all widths, so they never collapse into the slider group's single-row height. */}
+      <div className="min-h-[120px]">
         {focus === 'charset' && (
           <fieldset
             className="flex flex-col gap-xs border-none p-0 m-0"

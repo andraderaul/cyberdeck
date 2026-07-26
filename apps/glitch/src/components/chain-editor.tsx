@@ -314,7 +314,11 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
   return (
     <div className="flex flex-col gap-sm">
       {/* The panel sits above the row so the canvas is never what gets covered (ADR 0020). */}
-      <div className="min-h-[92px]">
+      {/* On mobile the params stack (the sm grid flows into columns only at ≥640px), so each
+          Effect's stacked height differs — 1 to 3 controls. Reserve the tallest (pixel sort: a
+          toggle + two sliders) so switching Effects doesn't reflow the strip. At sm every Effect is
+          one row, so the floor drops back to the single-row height. */}
+      <div className="min-h-[240px] sm:min-h-[92px]">
         {focusedLink ? (
           <div className="flex flex-col gap-xs">
             <div className="flex items-center gap-2xs">
