@@ -40,9 +40,12 @@ export default function Cache({ machine, spotlight }: CacheProps) {
   )
 }
 
-// HIT is cheap and affirmative; a MISS reached all the way to memory, so it carries the cost —
-// amber, and a breath (ADR 0023: the cost of a miss lives here, in the presentation, never in step).
-const hitColour = (result: CacheResult) => (result === 'HIT' ? 'text-cyan' : 'text-warning')
+// HIT is cheap and affirmative; a MISS reached all the way to memory, so it carries the cost — its
+// own hue, and a breath (ADR 0023: the cost of a miss lives here, in the presentation, never in
+// step). The two are a result pair rather than info and warning (ADR 0024): a Miss is not the tool
+// warning you about anything, it is the classifier's other answer, and a Theme has to be able to
+// pick both together. The word HIT or MISS carries the distinction where hue cannot.
+const hitColour = (result: CacheResult) => (result === 'HIT' ? 'text-hit' : 'text-miss')
 
 function Lens({ view }: { view: CacheView }) {
   return (
@@ -70,7 +73,7 @@ function Header({
   return (
     <div className="flex items-baseline justify-between gap-sm font-mono text-xs">
       <span className="text-fg-muted">
-        <span className="text-violet">{foreground === 'D' ? 'DATA' : 'INSTR'}</span> · line {line}
+        <span className="text-accent">{foreground === 'D' ? 'DATA' : 'INSTR'}</span> · line {line}
       </span>
       {access === null ? (
         <span className="text-fg-subtle">awaiting first access</span>
@@ -92,7 +95,7 @@ function SetCell({ set, result }: { set: CacheSetView; result: CacheResult | nul
     <div
       className={cn(
         'border p-xs font-mono text-xs',
-        set.valid ? 'border-base bg-elevated' : 'border-base/50 text-fg-subtle',
+        set.valid ? 'border-base bg-bg-elevated' : 'border-base/50 text-fg-subtle',
       )}
     >
       <div className="mb-1 flex justify-between">
@@ -123,8 +126,8 @@ function SetCell({ set, result }: { set: CacheSetView; result: CacheResult | nul
 // without the panel drowning in 32 data words — the spotlight above carries the detail.
 const HEAT: Record<CacheStripCell['heat'], string> = {
   empty: 'bg-transparent border-base/40',
-  cold: 'bg-violet/30 border-base',
-  hot: 'bg-violet border-violet',
+  cold: 'bg-accent/30 border-base',
+  hot: 'bg-accent border-accent',
 }
 
 function Strip({ cells, foreground }: { cells: CacheStripCell[]; foreground: CacheKind }) {
@@ -140,7 +143,7 @@ function Strip({ cells, foreground }: { cells: CacheStripCell[]; foreground: Cac
             className={cn(
               'h-4 flex-1 border',
               HEAT[cell.heat],
-              cell.spotlit && 'ring-1 ring-cyan ring-offset-0',
+              cell.spotlit && 'ring-1 ring-info ring-offset-0',
             )}
             title={`line ${cell.index}: ${cell.heat}${cell.spotlit ? ' (spotlit)' : ''}`}
           />

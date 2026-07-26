@@ -88,7 +88,7 @@ export default function Console({ lines, history, onSubmit }: ConsoleProps) {
             draftRef.current = ''
           }}
         >
-          <span aria-hidden className="text-violet">
+          <span aria-hidden className="text-accent">
             &gt;
           </span>
           <input
@@ -109,7 +109,7 @@ export default function Console({ lines, history, onSubmit }: ConsoleProps) {
             autoCapitalize="off"
             autoCorrect="off"
             enterKeyHint="send"
-            className="min-w-0 flex-1 bg-transparent outline-none focus-visible:ring-1 focus-visible:ring-violet"
+            className="min-w-0 flex-1 bg-transparent outline-none focus-visible:ring-1 focus-visible:ring-accent"
           />
         </form>
       </div>

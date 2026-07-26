@@ -65,11 +65,11 @@ export default function App() {
         {/* The deck's shared shell: same header rhythm and border as ASCII//Convert and
             GLITCH//Studio, so the three read as one collection. */}
         <header className="flex shrink-0 items-center gap-sm border-base border-b px-sm py-sm sm:px-lg">
-          <span className="font-bold text-base text-violet tracking-wide">GOLEM//CONSOLE</span>
-          <span className="hidden text-slate text-xs sm:block">—</span>
+          <span className="font-bold text-base text-accent tracking-wide">GOLEM//CONSOLE</span>
+          <span className="hidden text-fg-faint text-xs sm:block">—</span>
           <span className="hidden text-fg-muted text-xs sm:block">watch the machine think</span>
           <p className="ml-auto font-mono text-fg-muted text-xs" aria-live="polite">
-            {console.running ? <span className="text-violet">running</span> : 'idle'}
+            {console.running ? <span className="text-accent">running</span> : 'idle'}
             <span className="hidden sm:inline">
               {' · clock '}
               {console.rate === 'max' ? 'max' : `${console.rate}/s`}
