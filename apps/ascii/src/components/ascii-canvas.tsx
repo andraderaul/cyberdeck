@@ -152,7 +152,7 @@ export default function AsciiCanvas({
       <canvas ref={canvasRef} className="w-full h-full block bg-bg [image-rendering:pixelated]" />
       <div className="absolute top-xs right-xs flex items-center gap-xs">
         {isLive && (
-          <span className="flex items-center gap-2xs font-mono text-xs text-hot-pink border border-hot-pink px-sm py-2xs rounded-xs select-none">
+          <span className="flex items-center gap-2xs font-mono text-xs text-danger border border-danger px-sm py-2xs rounded-xs select-none">
             <span className="motion-safe:animate-pulse" aria-hidden="true">
               ◉
             </span>{' '}
@@ -174,7 +174,7 @@ export default function AsciiCanvas({
             // is deliberately not also a live region: the timer ticks once a second, and announcing
             // it every second would talk over the user for the length of the take.
             aria-label={`stop recording — ${formatElapsedTime(elapsedSeconds)} elapsed`}
-            className="flex items-center gap-2xs font-mono text-xs text-hot-pink border border-hot-pink px-sm py-2xs rounded-xs select-none cursor-pointer transition-colors duration-fast hover:bg-shadow"
+            className="flex items-center gap-2xs font-mono text-xs text-danger border border-danger px-sm py-2xs rounded-xs select-none cursor-pointer transition-colors duration-fast hover:bg-bg-elevated"
           >
             <span className="motion-safe:animate-pulse" aria-hidden="true">
               ●
@@ -193,7 +193,7 @@ export default function AsciiCanvas({
             aria-label={isMirrored ? 'disable mirror' : 'enable mirror'}
             className={cn(
               OVERLAY_BUTTON,
-              isMirrored ? 'border-violet text-violet bg-accent-ghost' : OVERLAY_BUTTON_REST,
+              isMirrored ? 'border-accent text-accent bg-accent-ghost' : OVERLAY_BUTTON_REST,
             )}
           >
             ⇋{!isTouchDevice && ' mirror'}

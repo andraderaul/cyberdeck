@@ -32,8 +32,8 @@ export default function SourceEditor({
       <div className="flex h-full min-h-0 flex-col gap-2">
         {/* Says why, not just that: a disabled box with no explanation reads as a broken page. */}
         {!editable && (
-          <p className="shrink-0 border-violet border-l-2 bg-violet/10 px-2 py-1 text-fg-muted text-xs">
-            A Machine is running this code. <code className="text-violet">reset</code> to edit.
+          <p className="shrink-0 border-accent border-l-2 bg-accent/10 px-2 py-1 text-fg-muted text-xs">
+            A Machine is running this code. <code className="text-accent">reset</code> to edit.
           </p>
         )}
 
@@ -43,7 +43,7 @@ export default function SourceEditor({
             onChange={(event) => onChange(event.target.value)}
             spellCheck={false}
             aria-label="Assembly source"
-            className="min-h-0 flex-1 resize-none bg-transparent font-mono text-sm leading-relaxed outline-none focus-visible:ring-1 focus-visible:ring-violet"
+            className="min-h-0 flex-1 resize-none bg-transparent font-mono text-sm leading-relaxed outline-none focus-visible:ring-1 focus-visible:ring-accent"
           />
         ) : (
           <Listing source={source} breakpoints={breakpoints} currentLine={currentLine} />
@@ -85,9 +85,9 @@ function Listing({
             aria-current={active ? 'step' : undefined}
             className={cn(
               'flex gap-2 whitespace-pre',
-              // Violet fill rather than a text colour, so the marker stays legible against the
+              // An accent fill rather than a text colour, so the marker stays legible against the
               // dimmed listing instead of competing with it.
-              active && 'bg-violet/20 text-fg',
+              active && 'bg-accent/20 text-fg',
               !active && 'text-fg-muted',
             )}
           >

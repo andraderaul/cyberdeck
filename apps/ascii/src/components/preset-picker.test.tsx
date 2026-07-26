@@ -64,7 +64,7 @@ describe('PresetPicker', () => {
     const diverged: ConversionSettings = { ...activePreset.settings, brightness: 1.9 }
     renderPicker({ settings: diverged, activePresetId: activePreset.id })
     const btn = screen.getByRole('button', { name: `${activePreset.name} (modified)` })
-    expect(btn.querySelector('span.text-electric')?.textContent).toBe('*')
+    expect(btn.querySelector('span.text-warning')?.textContent).toBe('*')
   })
 
   it('does not mark modified when settings exactly match the active preset', () => {

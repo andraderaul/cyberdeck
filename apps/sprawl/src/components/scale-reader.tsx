@@ -19,7 +19,7 @@ export default function ScaleReader({ reader, overflow }: Props) {
       className={cn(
         'absolute top-xs left-xs flex items-center gap-xs',
         'font-mono text-xs px-sm py-2xs rounded-xs bg-bg select-none pointer-events-none',
-        overflow ? 'text-electric border border-electric' : 'text-cyan border border-cyan',
+        overflow ? 'text-warning border border-warning' : 'text-info border border-info',
       )}
     >
       <span>{reader.text}</span>

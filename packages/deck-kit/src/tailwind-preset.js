@@ -4,30 +4,21 @@
 export default {
   theme: {
     extend: {
+      // Semantic only. The literal hue names — violet, cyan, hot-pink, electric, void, abyss,
+      // shadow, slate, muted, dim, ghost — used to sit here beside these, and that is exactly why
+      // the literal vocabulary kept winning: it was the shorter of two spellings and nothing
+      // objected. They are `ice`'s vocabulary, not the deck's (ADR 0024), so a component naming one
+      // pins itself to a single Theme. The kit's vocabulary guard fails the build if one comes back.
       colors: {
-        // Primitives
-        violet: 'var(--violet)',
-        'deep-violet': 'var(--deep-violet)',
-        'soft-violet': 'var(--soft-violet)',
-        cyan: 'var(--cyan)',
-        'deep-cyan': 'var(--deep-cyan)',
-        'soft-cyan': 'var(--soft-cyan)',
-        'hot-pink': 'var(--hot-pink)',
-        'deep-pink': 'var(--deep-pink)',
-        'soft-pink': 'var(--soft-pink)',
-        electric: 'var(--electric)',
-        void: 'var(--void)',
-        abyss: 'var(--abyss)',
-        shadow: 'var(--shadow)',
-        slate: 'var(--slate)',
-        muted: 'var(--muted)',
-        dim: 'var(--dim)',
-        ghost: 'var(--ghost)',
-        // Semantic
         accent: 'var(--accent)',
+        'fg-strong': 'var(--fg-strong)',
         fg: 'var(--fg)',
         'fg-muted': 'var(--fg-muted)',
         'fg-subtle': 'var(--fg-subtle)',
+        // Below the Theme Contract's floor by design — never text that carries meaning.
+        'fg-dim': 'var(--fg-dim)',
+        'fg-faint': 'var(--fg-faint)',
+        'fg-on-accent': 'var(--fg-on-accent)',
         bg: 'var(--bg)',
         'bg-surface': 'var(--bg-surface)',
         'bg-elevated': 'var(--bg-elevated)',
@@ -35,9 +26,16 @@ export default {
         info: 'var(--color-info)',
         danger: 'var(--color-danger)',
         warning: 'var(--color-warning)',
+        // Roles the deck drew before it had names for them (ADR 0024)
+        phosphor: 'var(--color-phosphor)',
+        link: 'var(--color-link)',
+        hit: 'var(--color-hit)',
+        miss: 'var(--color-miss)',
         // Transparent state surfaces
         'accent-ghost': 'var(--bg-accent-ghost)',
         'accent-dim': 'var(--bg-accent-dim)',
+        // Not `--accent-soft`, which is a chosen lighter hue with no consumer today — this is the
+        // 12% tint, and the name is the one components already use.
         'accent-soft': 'var(--bg-accent-soft)',
         'danger-ghost': 'var(--bg-danger-ghost)',
         'info-ghost': 'var(--bg-info-ghost)',

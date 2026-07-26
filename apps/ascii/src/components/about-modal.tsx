@@ -8,7 +8,7 @@ export default function AboutModal({ onClose }: Props) {
   return (
     <Modal
       onClose={onClose}
-      title={<span className="text-violet font-bold tracking-wide text-base">ASCII//CONVERT</span>}
+      title={<span className="text-accent font-bold tracking-wide text-base">ASCII//CONVERT</span>}
       ariaLabel="About"
       variant="default"
     >
@@ -42,7 +42,7 @@ export default function AboutModal({ onClose }: Props) {
           href="https://github.com/andraderaul/ascii-art-converter"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs font-mono tracking-wide transition-all text-cyan no-underline"
+          className="text-xs font-mono tracking-wide transition-all text-link no-underline"
         >
           source code →
         </a>
@@ -50,7 +50,7 @@ export default function AboutModal({ onClose }: Props) {
           href="https://www.linkedin.com/in/andraderaul/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs font-mono tracking-wide transition-all text-cyan no-underline"
+          className="text-xs font-mono tracking-wide transition-all text-link no-underline"
         >
           author →
         </a>

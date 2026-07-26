@@ -22,14 +22,14 @@ export default function CityLabels({ labels }: Props) {
         .map((label) => (
           <span
             key={label.text}
-            className="absolute font-mono text-[10px] tracking-wide text-ghost whitespace-nowrap"
+            className="absolute font-mono text-[10px] tracking-wide text-fg whitespace-nowrap"
             style={{
               left: label.x,
               top: label.y,
               transform: 'translate(8px, -50%)',
               // A dark glow is the label's own background (ADR 0013) — it holds over any brightness
               // the canvas paints beneath without an opaque chip on every city.
-              textShadow: '0 0 4px var(--void), 0 0 4px var(--void)',
+              textShadow: '0 0 4px var(--bg), 0 0 4px var(--bg)',
               opacity: 0.55 + 0.45 * label.brightness,
             }}
           >

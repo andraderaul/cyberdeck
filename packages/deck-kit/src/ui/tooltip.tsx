@@ -47,7 +47,7 @@ export default function Tooltip({ id, content }: Props) {
         aria-label="more info"
         aria-expanded={visible}
         aria-describedby={id}
-        className="font-mono text-xs text-fg-subtle hover:text-violet transition-colors cursor-help p-0 bg-transparent border-none leading-none"
+        className="font-mono text-xs text-fg-subtle hover:text-accent transition-colors cursor-help p-0 bg-transparent border-none leading-none"
         onMouseEnter={() => setVisible(true)}
         onMouseLeave={() => setVisible(false)}
         onFocus={() => {
@@ -74,7 +74,7 @@ export default function Tooltip({ id, content }: Props) {
         role="tooltip"
         aria-hidden={!visible}
         className={cn(
-          'absolute z-10 max-w-48 w-max p-xs bg-shadow border border-slate rounded-xs font-mono text-xs text-fg-muted leading-relaxed',
+          'absolute z-10 max-w-48 w-max p-xs bg-bg-elevated border border-base rounded-xs font-mono text-xs text-fg-muted leading-relaxed',
           'top-full left-0 mt-2xs',
           visible ? 'block' : 'hidden',
         )}

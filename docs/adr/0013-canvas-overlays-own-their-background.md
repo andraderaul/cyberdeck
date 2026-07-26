@@ -81,7 +81,8 @@ rather than in the styling — the kind of divergence ADR 0011 expects hand-copy
 
 **Positive:**
 - `apps/glitch/src/contrast.test.ts` is added, extending ADR 0009's regression guard to this app and
-  pinning the pairs the chips now depend on.
+  pinning the pairs the chips now depend on. *(It moved into the deck kit in ADR 0024, which holds
+  these same pairs for every Theme rather than for one palette.)*
 - ADR 0009 is left as written. It records an audit that happened, and its methodology — pinning token
   pairs — is not wrong; this ADR names the surface that methodology cannot describe.
 

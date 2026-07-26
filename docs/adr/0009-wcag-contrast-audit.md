@@ -2,7 +2,13 @@
 
 ## Status
 
-Accepted
+Accepted · **guard superseded by [ADR 0024](0024-themes-named-and-guarded-visual-language.md)**
+
+The audit below stands as the record of what was measured and why. Its *regression guard* does not:
+it pinned hex values by hand, in two programs of four, from a file the tokens left in ADR 0014. It
+is now the Theme Contract, which resolves the real token values and holds every Theme to them.
+Where this document names a literal hue, read the role it plays — the literal vocabulary was
+retired in ADR 0024, so `--violet` is `--accent`, `--muted` is `--fg-dim`, and so on.
 
 **Date:** 2026-05-20 · **Related:** issue #38, issue #16
 
@@ -150,6 +156,6 @@ exception for purely decorative structural separators and document it here. If i
 
 ## Implementation Notes
 
-Regression guard: `src/contrast.test.ts` pins the hex values of `--fg-subtle` and `--fg-muted`
+Regression guard (since generalised — see Status): `src/contrast.test.ts` pins the hex values of `--fg-subtle` and `--fg-muted`
 against the 4.5:1 threshold on all three surface backgrounds. If either token is adjusted to a value
 that fails, the test catches it at CI.

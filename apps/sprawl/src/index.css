@@ -33,7 +33,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* The deck's only opaque-accent surface, which is why --fg-on-accent exists as a role. */
 ::selection {
-  background: var(--violet);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--fg-on-accent);
 }

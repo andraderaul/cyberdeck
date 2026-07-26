@@ -18,7 +18,7 @@ const PROVIDERS: Record<AIProviderName, { label: string; keyUrl: string }> = {
 }
 
 const inputCls = cn(
-  'w-full bg-abyss border border-slate text-ghost font-mono text-sm rounded-xs',
+  'w-full bg-bg-surface border border-base text-fg font-mono text-sm rounded-xs',
   '[padding:var(--input-padding)]',
 )
 
@@ -42,12 +42,12 @@ export default function ApiKeyModal({ current, onSave, onRemove, onClose }: Prop
   return (
     <Modal
       onClose={onClose}
-      title={<span className="text-violet font-bold tracking-wide text-sm">⚿ AI CONFIG</span>}
+      title={<span className="text-accent font-bold tracking-wide text-sm">⚿ AI CONFIG</span>}
       ariaLabel="AI configuration"
       variant="cyber"
     >
       <div className="flex flex-col gap-sm">
-        <label htmlFor="ai-provider" className="text-dim text-xs tracking-wide">
+        <label htmlFor="ai-provider" className="text-fg-muted text-xs tracking-wide">
           PROVIDER
         </label>
         <select
@@ -67,14 +67,14 @@ export default function ApiKeyModal({ current, onSave, onRemove, onClose }: Prop
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`get ${provider} api key`}
-          className="text-xs font-mono tracking-wide text-cyan no-underline hover:underline"
+          className="text-xs font-mono tracking-wide text-link no-underline hover:underline"
         >
           get api key →
         </a>
       </div>
 
       <div className="flex flex-col gap-sm">
-        <label htmlFor="ai-key" className="text-dim text-xs tracking-wide">
+        <label htmlFor="ai-key" className="text-fg-muted text-xs tracking-wide">
           API KEY
         </label>
         <input

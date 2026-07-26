@@ -89,11 +89,14 @@ describe('App', () => {
     expect(screen.getByRole('region', { name: /^Source/ })).toBeInTheDocument()
   })
 
-  // ADR 0018: the Console is the only control grammar, so the shell ships no buttons.
-  it('exposes no interactive control outside the Console', () => {
+  // ADR 0018: the Console is the only control grammar, so nothing that drives the machine is
+  // clickable. The rule is about *this program's* controls — the header's Theme control is deck
+  // chrome, changes how the deck looks rather than what the machine does, and is deliberately
+  // outside it (ADR 0024). Scoping to `main` is what keeps the guard honest about which it is.
+  it('exposes no interactive control over the machine', () => {
     render(<App />)
 
-    expect(screen.queryAllByRole('button')).toHaveLength(0)
+    expect(within(screen.getByRole('main')).queryAllByRole('button')).toHaveLength(0)
   })
 })
 
@@ -743,6 +746,25 @@ describe('breakpoints and the current line', () => {
     await type('breaks')
 
     expect(screen.getByText('breakpoints: 3')).toBeInTheDocument()
+  })
+})
+
+describe('the Theme control', () => {
+  afterEach(() => {
+    window.localStorage.clear()
+    document.documentElement.removeAttribute('data-theme')
+  })
+
+  // One assertion, because the roster, the cycling order, the persistence and the accessible name
+  // are all covered in the deck kit where the control lives (ADR 0024). What is only true here is
+  // that the program mounts it and that it reaches the document.
+  it('changes the Theme the whole document is drawn in', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /^theme:/ }))
+
+    expect(document.documentElement.getAttribute('data-theme')).toBe('construct')
   })
 })
 

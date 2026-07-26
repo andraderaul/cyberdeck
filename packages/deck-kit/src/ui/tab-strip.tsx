@@ -46,7 +46,7 @@ export default function TabStrip<Id extends string>({ tabs, ariaLabel, children 
               className={cn(
                 'px-sm py-xs font-mono text-xs tracking-wide border-b-2 transition-colors',
                 isActive
-                  ? 'text-violet border-violet'
+                  ? 'text-accent border-accent'
                   : 'text-fg-muted border-transparent hover:text-fg',
               )}
             >

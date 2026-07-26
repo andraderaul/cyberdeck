@@ -18,7 +18,7 @@ export default function HoverInspector({ hover }: Props) {
   return (
     <div className="absolute inset-0 pointer-events-none">
       <span
-        className="absolute block rounded-pill border border-cyan"
+        className="absolute block rounded-pill border border-info"
         style={{
           left: hover.point.x,
           top: hover.point.y,
@@ -28,7 +28,7 @@ export default function HoverInspector({ hover }: Props) {
         }}
       />
       <span
-        className="absolute font-mono text-xs px-sm py-2xs rounded-xs bg-bg border border-cyan text-cyan whitespace-nowrap"
+        className="absolute font-mono text-xs px-sm py-2xs rounded-xs bg-bg border border-info text-info whitespace-nowrap"
         style={{ left: hover.x, top: hover.y, transform: 'translate(12px, -130%)' }}
       >
         {formatInspection(hover.point)}

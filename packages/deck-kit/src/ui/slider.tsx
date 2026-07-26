@@ -45,7 +45,7 @@ export default function Slider({
           <Label>{label}</Label>
           {tooltip}
         </div>
-        <span className="text-violet text-xs">{format(value)}</span>
+        <span className="text-accent text-xs">{format(value)}</span>
       </div>
       <div className="relative">
         <input
@@ -76,7 +76,7 @@ export default function Slider({
             aria-hidden="true"
             className={cn(
               'absolute w-0.5 h-2 -translate-x-1/2 top-1/2 -translate-y-1/2 rounded-pill pointer-events-none',
-              isAtDefault ? 'bg-violet' : 'bg-slate',
+              isAtDefault ? 'bg-accent' : 'bg-bg-overlay',
             )}
             style={{ left: pct(defaultValue, min, max) }}
           />

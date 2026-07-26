@@ -36,9 +36,11 @@ export default function Terminal({ machine }: TerminalProps) {
               : 'Nothing printed yet.'}
           </p>
         ) : (
-          // `pre-wrap` so the program's own newlines and spacing render as written. Cyan marks
-          // this as the machine's voice — the Console answers in the foreground colour.
-          <output className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words font-mono text-cyan text-sm leading-snug">
+          // `pre-wrap` so the program's own newlines and spacing render as written. The phosphor
+          // marks this as the machine's voice — the Console answers in the foreground colour. It is
+          // its own role rather than "info" (ADR 0024): what it says is not information the tool is
+          // offering, it is the machine talking, and a Theme is free to make it green.
+          <output className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words font-mono text-phosphor text-sm leading-snug">
             {output}
           </output>
         )}

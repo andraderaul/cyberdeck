@@ -111,14 +111,16 @@ See `docs/voice-tone.md` in the repo for the full surface map and examples table
 
 ### Colors
 
-A neon-on-near-black palette. Four hues only — violet, cyan, hot-pink, electric-yellow — over a five-stop near-black ramp tinted ever-so-slightly toward violet (`#0a0a0f → #c8c8e0`).
+A neon-on-near-black palette. Four hues only, over a five-stop near-black ramp tinted ever-so-slightly toward violet (`#0a0a0f → #c8c8e0`).
 
-- **Violet `#b829ff`** is the primary accent. The wordmark, primary button border, active toggle state, slider thumb, focus ring, AI-configured state.
-- **Cyan `#00e5ff`** is secondary / info. Secondary buttons, `source code →` link, `LOW` threat, tag badges.
-- **Hot Pink `#ff2d78`** is destructive / live. Webcam `LIVE` indicator, capture and record controls, `HIGH`/`CRITICAL` threat, error toast border.
-- **Electric `#ffe600`** is warning. `MODERATE` threat and quota/parse errors. Used sparingly.
+**The hexes below are `ice` — one Theme of three (ADR 0024), and the one the deck shipped with. Every one of them is reached by its *role*, never by its name.** `text-accent`, never `text-violet`: the literal names are `ice`'s own vocabulary and are not in the Tailwind preset at all, so naming one renders unstyled and fails the kit's vocabulary guard. Read the four bullets as "what the accent looks like in `ice`", not as "what to type".
 
-Surfaces are layered black-violets, not flat black: `--void` (page) → `--abyss` (cards/inputs) → `--shadow` (elevated panels, toasts) → `--slate` (borders, dividers). This subtle violet undertone is what differentiates the look from a generic dark-mode editor.
+- **`accent` — violet `#b829ff` in `ice`.** The wordmark, primary button border, active toggle state, slider thumb, focus ring, AI-configured state.
+- **`info` — cyan `#00e5ff` in `ice`.** Secondary buttons, `source code →` link, `LOW` threat, tag badges.
+- **`danger` — hot-pink `#ff2d78` in `ice`.** Webcam `LIVE` indicator, capture and record controls, `HIGH`/`CRITICAL` threat, error toast border.
+- **`warning` — electric yellow `#ffe600` in `ice`.** `MODERATE` threat and quota/parse errors. Used sparingly.
+
+Surfaces are layered, not flat black: `--bg` (page) → `--bg-surface` (cards/inputs) → `--bg-elevated` (elevated panels, toasts) → `--bg-overlay` (borders, dividers). In `ice` these carry a subtle violet undertone, which is what differentiates the look from a generic dark-mode editor; in another Theme they carry that Theme's, and the *layering* is the part that never changes.
 
 Color is **never** the only signal — every colored element has an accompanying glyph (`◉` for live, `✕` for auth failed, `◈` for analyze, `⚠` for warning).
 
@@ -140,8 +142,8 @@ Two scales: micro (`--gap-*`, 4–64px on a 4/8 grid) for component-internal lay
 ### Backgrounds
 
 - **No images.** No full-bleed photos, no gradients, no patterns. The canvas is the image, and it's user-supplied ASCII output.
-- The page background is flat `--void` (`#0a0a0f`). Cards are flat `--abyss`. Elevation is signaled by **borders + a slightly lighter fill**, never by shadow.
-- The one exception: a soft transparency tint on hover/active state surfaces (`rgba(184, 41, 255, 0.05–0.12)`) over the dark base.
+- The page background is flat `--bg` (`#0a0a0f` in `ice`). Cards are flat `--bg-surface`. Elevation is signaled by **borders + a slightly lighter fill**, never by shadow.
+- The one exception: a soft transparency tint on hover/active state surfaces — `--bg-accent-ghost` through `--bg-accent-soft`, a 5–12% mix of the accent over the dark base. Reach for those tokens; they follow the Theme, and a hand-written `rgba(184, 41, 255, …)` does not.
 
 ### Animation
 
@@ -160,41 +162,41 @@ No bouncy entrances. No fade-up-on-scroll. No motion paths.
 
 The `Button` component ships with six variants. Use them by semantic intent — never by color alone.
 
-| Variant | Color | Semantic intent | Used for |
+| Variant | Role | Semantic intent | Used for |
 |---|---|---|---|
-| `primary` | violet, 2px border, bg-accent-bg | Primary export action | PNG Export |
-| `secondary` | cyan, 1px border, bg-info-bg | Secondary/informational action | TXT Export, AI retry |
-| `danger` | hot-pink, 1px border, bg-danger-ghost | Active live / destructive | Capture |
-| `record` | hot-pink, 1px border, bg-transparent | Live action initiation | Start recording |
-| `analyze` | violet, 1px border, bg-accent-ghost | AI analysis action | Scan & analyze |
-| `ghost` | base border, transparent | Neutral/utility | Camera switch |
+| `primary` | `accent`, 2px border, `bg-accent-bg` | Primary export action | PNG Export |
+| `secondary` | `info`, 1px border, `bg-info-bg` | Secondary/informational action | TXT Export, AI retry |
+| `danger` | `danger`, 1px border, `bg-danger-ghost` | Active live / destructive | Capture |
+| `record` | `danger`, 1px border, `bg-transparent` | Live action initiation | Start recording |
+| `analyze` | `accent`, 1px border, `bg-accent-ghost` | AI analysis action | Scan & analyze |
+| `ghost` | `border-base`, transparent | Neutral/utility | Camera switch |
 
-Two color groups:
-- **Hot-pink register** (`record` + `danger`) — live-feed workflow. `record` (transparent bg) initiates; `danger` (tinted bg) is active/destructive. Stopping a Recording is **not** a Button: the canvas REC badge is the stop, so a take stays stoppable from any tab (ADR 0020).
-- **Cyan register** (`secondary`) — export and informational actions only.
+Two registers, and they are named by role rather than by hue because that is what makes them survive a Theme — "the live register and the export register do not overlap" holds in every Theme; "hot-pink and cyan do not overlap" only held while there was one palette:
+- **Danger register** (`record` + `danger`) — live-feed workflow. `record` (transparent bg) initiates; `danger` (tinted bg) is active/destructive. Stopping a Recording is **not** a Button: the canvas REC badge is the stop, so a take stays stoppable from any tab (ADR 0020).
+- **Info register** (`secondary`) — export and informational actions only.
 
 See `docs/adr/0008-button-variant-taxonomy.md` for the full rationale.
 
 ### Hover / press states
 
 - **Buttons:** color and border stay the same; the background fill brightens by one step (e.g. `bg-transparent` → `bg-accent-ghost`). No size changes.
-- **Toggle buttons (in a `ToggleGroup`):** inactive option has `border-base / text-fg-muted`; active option has `border-violet / bg-accent-soft / text-violet`. Switching is instantaneous in tone but eased over 150ms.
-- **Sliders:** the thumb has a `0 0 6px var(--violet)` glow always; no separate hover state.
+- **Toggle buttons (in a `ToggleGroup`):** inactive option has `border-base / text-fg-muted`; active option has `border-accent / bg-accent-soft / text-accent`. Switching is instantaneous in tone but eased over 150ms.
+- **Sliders:** the thumb has a `0 0 6px var(--accent)` glow always; no separate hover state.
 - **Press:** no shrink, no scale. The button just briefly looks "darker" because the underlying fill is transparent and the press inverts it momentarily via native styling.
 
 ### Borders
 
-- **1px solid `--slate`** is the default border. It's on every card, input, modal, divider, and inactive toggle.
-- **2px solid `--violet`** is reserved for primary buttons and the top edge of the cyber-variant modal (a single 2px accent line at the top, 1px on the other three sides).
+- **1px solid `--border-color-base`** is the default border. It's on every card, input, modal, divider, and inactive toggle.
+- **2px solid `--accent`** is reserved for primary buttons and the top edge of the cyber-variant modal (a single 2px accent line at the top, 1px on the other three sides).
 - Borders are how this UI delineates everything. There is no "card with shadow" treatment.
 
 ### Shadows
 
 Almost none. The only inner/outer shadows in the system:
 
-- Slider thumb: `box-shadow: 0 0 6px var(--violet)` (a soft glow).
-- Toast: `box-shadow: 0 0 12px rgba(255, 45, 120, 0.15)` (a pink-tinted halo to mark it as urgent).
-- Threat level CRITICAL: `text-shadow: 0 0 8px var(--hot-pink)` on the text itself.
+- Slider thumb: `box-shadow: 0 0 6px var(--accent)` (a soft glow).
+- Toast: `box-shadow: 0 0 12px color-mix(in srgb, var(--color-danger) 15%, transparent)` (a halo in the role's own hue, to mark it as urgent).
+- Threat level CRITICAL: `text-shadow: 0 0 8px var(--color-danger)` on the text itself.
 
 If you're tempted to add `box-shadow: 0 4px 12px rgba(0,0,0,0.4)` — don't. Use a border.
 
@@ -204,8 +206,8 @@ None. There is no scrim, no fade-to-black at the bottom of an image, no protecte
 
 ### Transparency & blur
 
-- Modal overlay: `rgba(8, 8, 18, 0.72)` + `backdrop-blur-sm`. This is the only place blur is used.
-- Surface tints: 5–12% violet over dark for hover/active fills.
+- Modal overlay: `var(--bg-modal-overlay)` + `backdrop-blur-sm`. This is the only place blur is used. The scrim is the base surface thinned to 72%, not the accent thinned — an accent-tinted scrim reads as a colour wash the moment the accent stops being violet.
+- Surface tints: 5–12% accent over dark for hover/active fills — `--bg-accent-ghost` / `--bg-accent-dim` / `--bg-accent-soft`, which mix from the accent and so follow the Theme.
 - No frosted-glass cards, no acrylic panels, no translucent sidebars.
 
 ### Corner radii
@@ -218,17 +220,17 @@ None. There is no scrim, no fade-to-black at the bottom of an image, no protecte
 
 ### Card anatomy
 
-A card is: `background: var(--abyss)` + `border: 1px solid var(--slate)` + `border-radius: 2px` + `padding: 32px (--gap-xl)`. That's it. No shadow, no gradient, no left-border accent color. Variants:
+A card is: `background: var(--bg-surface)` + `border: 1px solid var(--border-color-base)` + `border-radius: 2px` + `padding: 32px (--gap-xl)`. That's it. No shadow, no gradient, no left-border accent color. Variants:
 
-- **Cyber modal:** add `border-top: 2px solid var(--violet)`. The single thickened top edge is the only thing that distinguishes a "cyber" surface from a regular surface.
-- **Threat readout** (inside the analysis modal): the inset has a dynamic border + tinted background colored by threat level — `border: 1px solid var(--cyan|electric|hot-pink|muted)` over a 7–12% same-color background.
+- **Cyber modal:** add `border-top: 2px solid var(--accent)`. The single thickened top edge is the only thing that distinguishes a "cyber" surface from a regular surface.
+- **Threat readout** (inside the analysis modal): the inset has a dynamic border + tinted background colored by threat level — `border: 1px solid var(--color-info|--color-warning|--color-danger|--fg-muted)` over a 7–12% mix of that same role, so a Theme cannot leave the readout wearing `ice`'s pink on a green field.
 
 ### Layout rules
 
 - **Single-screen app.** No scroll except inside modal content. The canvas is the only flexible region.
 - **Fixed top header** (`py-sm px-lg`, 1px bottom border) with the wordmark on the left and small `about` / `⚿ ai config` buttons on the right.
 - **The Control Strip** (ADR 0020) is the whole control surface, at *both* breakpoints: a horizontal, bottom-anchored bar of tabs — **PRESETS | EDIT | OUT** — over a single panel, with the canvas visible above it at all times. There is no sidebar, no bottom sheet, and no always-visible export bar; those were replaced, and the canvas never gets occluded by controls.
-- Tabs are lowercase, the active one marked by a 2px violet bottom border. Only the active panel is mounted.
+- Tabs are lowercase, the active one marked by a 2px accent bottom border. Only the active panel is mounted.
 - Inside EDIT, the tools are chips in a horizontally scrollable row and the focused tool's control fills the panel above — one control in focus at a time on mobile, the whole sibling group side by side at `sm`.
 - Modals are centered, max-width 480px (default) or `max-w-sm` (cyber).
 
@@ -245,7 +247,7 @@ There is no curated imagery in this brand. The "imagery" is whatever the user pr
 ### The complete glyph set used in the app
 
 ```
-⬆      upload arrow (in the upload dropzone, violet, text-lg)
+⬆      upload arrow (in the upload dropzone, accent, text-lg)
 ↑      compact upload arrow (in toggle labels)
 ◉      filled circle — LIVE / webcam mode active
 ○      hollow circle — webcam starting / inactive
@@ -285,16 +287,16 @@ binary     01
 
 - **Never substitute Material Icons, Heroicons, Lucide, Phosphor, or emoji.** The brand's icon system *is* the monospace glyph repertoire. A `Lucide-react` `Upload` icon would break the visual language.
 - **If you need a "new" icon, find a Unicode glyph that fits.** Common stops: `◆ ◇ ◊ ▲ △ ▼ ▽ ◀ ◁ ▶ ▷ ▣ ▢ ▦ ▩ █ ▌ ▐ ▬ ▭ ☰ ⌘ ⌥ ⌃ ⌫ ⏎ ⏏ ⌖ ⌬ ⎈ ⎊ ⏧`. Geometric Shapes, Box Drawing, and Miscellaneous Technical blocks are all in-vocabulary.
-- **Color the glyph by its semantic role.** `text-violet` for primary actions, `text-cyan` for info, `text-hot-pink` for live/destructive, `text-electric` for warning, `text-fg-muted` for inactive.
+- **Color the glyph by its semantic role.** `text-accent` for primary actions, `text-info` for info, `text-danger` for live/destructive, `text-warning` for warning, `text-fg-muted` for inactive.
 - **Render at the size of the surrounding text or one step up.** The upload zone uses `text-lg` (24px) for the `⬆`; toggle labels include `↑` at the same size as the label.
 
 ### Logo / wordmark
 
-`ASCII//CONVERT` set in `--font-display` (Departure Mono), bold, `tracking-wide`, color `--violet`. The double slash is intentional — it reads as a path-separator and a glitchy seam at once. See `assets/wordmark.svg` for a vector-rendered version usable on dark backgrounds.
+`ASCII//CONVERT` set in `--font-display` (Departure Mono), bold, `tracking-wide`, color `--accent`. The double slash is intentional — it reads as a path-separator and a glitchy seam at once. See `assets/wordmark.svg` for a vector-rendered version usable on dark backgrounds.
 
 ### Favicon
 
-The product currently ships with the default Vite favicon. `assets/favicon.svg` provides a brand-correct replacement: violet `▓` on `--void`.
+The product currently ships with the default Vite favicon. `assets/favicon.svg` provides a brand-correct replacement: an accent-coloured `▓` on `--bg`.
 
 ---
 
@@ -309,7 +311,7 @@ The product currently ships with the default Vite favicon. `assets/favicon.svg` 
 
 1. `@import "/colors_and_type.css"` (or copy the `:root` block into your file).
 2. Wrap everything in a `body` that uses `var(--font-mono)` on `var(--bg)`.
-3. Reach for tokens, never raw hex. `var(--violet)` not `#b829ff`.
+3. Reach for **semantic** tokens, never a raw hex and never a primitive. `var(--accent)`, not `#b829ff` and not `var(--violet)` — the deck's look is a set of named Themes and only the semantic layer varies between them (ADR 0024).
 4. Match casing: lowercase for product copy, UPPERCASE + wide tracking for "system" labels.
 5. Add a glyph next to every colored signal. No bare color.
 6. Use 1px borders, 2px radii, monospace everything. If you reach for `box-shadow` or `rounded-lg`, stop.

@@ -1,10 +1,15 @@
 /* ============================================================
    CYBERPUNK DESIGN SYSTEM — CSS TOKENS
    Shared visual language for every program on the deck (ADR 0014).
+
+   The visual language is a set of named Themes (ADR 0024). A Theme redefines the *semantic* layer
+   and nothing else: the primitives below are `ice`'s own vocabulary, so this root block — which
+   defines the semantic layer in terms of them — *is* `ice`. Everything past the semantic layer
+   (component tokens, tints, borders) derives, so a Theme never has to restate it.
    ============================================================ */
 
 :root {
-  /* Colors — Primitives */
+  /* Colors — Primitives (`ice`'s vocabulary; a Theme does not restate these) */
   --violet: #b829ff;
   --deep-violet: #7b1fa2;
   --soft-violet: #d888ff;
@@ -30,17 +35,37 @@
   --ghost: #c8c8e0;
   --white: #eeeef8;
 
-  /* Colors — Semantic */
+  /* ----------------------------------------------------------
+     Colors — Semantic. The only layer a Theme redefines, and the only one a component is
+     allowed to name (ADR 0024).
+     ---------------------------------------------------------- */
+
   --accent: var(--violet);
+  /* Chosen colours, not computed ones — the deep cyan below is a hand-picked teal, not a darkened
+     cyan — so a Theme restates them rather than deriving them. */
   --accent-deep: var(--deep-violet);
   --accent-soft: var(--soft-violet);
 
+  /* The foreground scale, brightest to faintest. The two AA-small steps are pinned by the Theme
+     Contract; --fg-dim and --fg-faint are below the floor by design and must never carry text —
+     they are placeholders, disabled labels, rules and decorative marks. */
+  --fg-strong: var(--white);
   --fg: var(--ghost);
   --fg-muted: var(--dim);
-  /* --muted  (#6b6b9a) as text fails WCAG AA everywhere — use --fg-subtle or --fg-muted instead.
-     --dim    (#9898c0) on --void: 7.1:1, on --abyss: 6.9:1, on --shadow: 6.2:1 — passes AA.
-     --fg-subtle (#8080b2) on --void: 5.3:1, --abyss: 5.1:1, --shadow: 4.6:1 — passes AA. */
   --fg-subtle: #8080b2;
+  --fg-dim: var(--muted);
+  --fg-faint: var(--slate);
+
+  /* The one foreground that stands on the accent rather than on a surface — a selection highlight
+     is the only place the deck paints text on an opaque accent. It has to be restated per Theme and
+     cannot be derived: whether it wants to be lighter or darker than the accent depends on how
+     bright that accent is, which is the whole question.
+
+     Pure black rather than --void, and this is the only place in the deck that is true. `ice` drew
+     --white here for years and measured 3.80:1, below the floor the rest of the palette clears;
+     going the other way, --void measures 4.51:1 and black 4.80:1. On a pin the whole roster has to
+     meet, the 0.3 of headroom is worth the one literal. */
+  --fg-on-accent: #000000;
 
   --bg: var(--void);
   --bg-surface: var(--abyss);
@@ -50,26 +75,41 @@
   --color-info: var(--cyan);
   --color-info-deep: var(--deep-cyan);
   --color-info-soft: var(--soft-cyan);
-  --color-info-bg: #001a1e;
 
   --color-danger: var(--hot-pink);
   --color-danger-deep: var(--deep-pink);
   --color-danger-soft: var(--soft-pink);
-  --color-danger-bg: #1e0010;
 
   --color-warning: var(--electric);
   --color-warning-deep: var(--deep-electric);
   --color-warning-soft: var(--soft-electric);
-  --color-warning-bg: #1a1a00;
 
-  --color-accent-bg: #1a0a2e;
+  /* Roles the deck drew before it had names for them (ADR 0024). A phosphor is the machine's own
+     voice, not "info"; a Hit and a Miss are a result pair, not info and warning. */
+  --color-phosphor: var(--cyan);
+  --color-link: var(--cyan);
+  --color-hit: var(--cyan);
+  --color-miss: var(--electric);
 
-  --bg-accent-ghost: rgba(184, 41, 255, 0.05);
-  --bg-accent-dim: rgba(184, 41, 255, 0.08);
-  --bg-accent-soft: rgba(184, 41, 255, 0.12);
-  --bg-danger-ghost: rgba(255, 45, 120, 0.08);
-  --bg-info-ghost: rgba(0, 229, 255, 0.06);
-  --bg-modal-overlay: rgba(8, 8, 18, 0.72);
+  /* ----------------------------------------------------------
+     Colors — Derived. Every one of these is a background or a tint, which is exactly where the
+     Theme Contract does not look: the guard never has to evaluate a mix or composite a
+     translucent surface. Deriving deeper would turn a small parser into a colour engine.
+     ---------------------------------------------------------- */
+
+  --color-accent-bg: color-mix(in srgb, var(--accent) 10%, var(--bg));
+  --color-info-bg: color-mix(in srgb, var(--color-info) 10%, var(--bg));
+  --color-danger-bg: color-mix(in srgb, var(--color-danger) 10%, var(--bg));
+  --color-warning-bg: color-mix(in srgb, var(--color-warning) 10%, var(--bg));
+
+  --bg-accent-ghost: color-mix(in srgb, var(--accent) 5%, transparent);
+  --bg-accent-dim: color-mix(in srgb, var(--accent) 8%, transparent);
+  --bg-accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --bg-danger-ghost: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  --bg-info-ghost: color-mix(in srgb, var(--color-info) 6%, transparent);
+  /* The scrim under a modal is the base surface thinned, not the accent thinned — an accent-tinted
+     scrim reads as a colour wash the moment the accent stops being violet. */
+  --bg-modal-overlay: color-mix(in srgb, var(--bg) 72%, transparent);
 
   /* Typography */
   --font-mono: "IBM Plex Mono", "Departure Mono", monospace;
@@ -122,17 +162,17 @@
   --border-width-accent: 2px;
   --border-width-thick: 3px;
 
-  --border-color-subtle: var(--shadow);
-  --border-color-base: var(--slate);
-  --border-color-strong: var(--muted);
+  --border-color-subtle: var(--bg-elevated);
+  --border-color-base: var(--bg-overlay);
+  --border-color-strong: var(--fg-dim);
 
-  --border-subtle: 1px solid var(--shadow);
-  --border-base: 1px solid var(--slate);
-  --border-strong: 1px solid var(--muted);
-  --border-accent: 2px solid var(--violet);
-  --border-info: 1px solid var(--cyan);
-  --border-danger: 1px solid var(--hot-pink);
-  --border-warning: 1px solid var(--electric);
+  --border-subtle: 1px solid var(--border-color-subtle);
+  --border-base: 1px solid var(--border-color-base);
+  --border-strong: 1px solid var(--border-color-strong);
+  --border-accent: 2px solid var(--accent);
+  --border-info: 1px solid var(--color-info);
+  --border-danger: 1px solid var(--color-danger);
+  --border-warning: 1px solid var(--color-warning);
 
   /* Border Radius */
   --radius-none: 0px;
@@ -141,8 +181,13 @@
   --radius-md: 6px;
   --radius-pill: 999px;
 
+  /* ============================================================
+     Components. These name roles rather than primitives — a component token pointing at a
+     primitive would leave every button violet the moment the Theme changed (ADR 0024).
+     ============================================================ */
+
   /* Components — Cards */
-  --card-bg: var(--abyss);
+  --card-bg: var(--bg-surface);
   --card-border: var(--border-base);
   --card-padding: var(--gap-xl);
   --card-gap: var(--gap-lg);
@@ -154,31 +199,31 @@
   --btn-radius: var(--radius-xs);
 
   --btn-primary-padding: 14px 32px;
-  --btn-primary-border: 2px solid var(--violet);
-  --btn-primary-color: var(--violet);
+  --btn-primary-border: var(--border-accent);
+  --btn-primary-color: var(--accent);
   --btn-primary-bg: transparent;
   --btn-primary-size: 14px;
   --btn-primary-weight: var(--weight-bold);
 
   --btn-secondary-padding: 10px 24px;
-  --btn-secondary-border: 1px solid var(--cyan);
-  --btn-secondary-color: var(--cyan);
+  --btn-secondary-border: var(--border-info);
+  --btn-secondary-color: var(--color-info);
   --btn-secondary-bg: transparent;
   --btn-secondary-size: 13px;
   --btn-secondary-weight: var(--weight-medium);
 
   --btn-ghost-padding: 10px 24px;
-  --btn-ghost-border: 1px solid var(--slate);
-  --btn-ghost-color: var(--muted);
+  --btn-ghost-border: var(--border-base);
+  --btn-ghost-color: var(--fg-dim);
   --btn-ghost-bg: transparent;
   --btn-ghost-size: 13px;
 
   /* Components — Inputs */
-  --input-bg: var(--abyss);
+  --input-bg: var(--bg-surface);
   --input-border: var(--border-base);
-  --input-border-focus: 1px solid var(--violet);
-  --input-color: var(--ghost);
-  --input-placeholder: var(--muted);
+  --input-border-focus: 1px solid var(--accent);
+  --input-color: var(--fg);
+  --input-placeholder: var(--fg-dim);
   --input-padding: 10px 14px;
   --input-font-size: var(--text-sm);
   --input-radius: var(--radius-xs);
@@ -201,4 +246,114 @@
 
   /* Sections */
   --section-gap: var(--gap-2xl);
+}
+
+/* ============================================================
+   THEMES (ADR 0024)
+
+   The root block above is `ice` — the deck's original look, named for the first time. A Theme is
+   this and nothing more: a redefinition of the semantic layer. Everything else follows, because
+   the tints derive and the component tokens point at roles.
+
+   Every Theme is dark. This is not a light mode: the neon-on-near-black relationship *is* the
+   deck's register, and the accent palette does not survive a light surface — `ice`'s cyan measures
+   roughly 1.5:1 on white. A light Theme is a different palette and a separate audit.
+
+   Designing one is this list of values and nothing else — no component changes, no new tokens, no
+   second sweep, because the tints derive and the component tokens point at roles. *Landing* one is
+   this block plus the name, in `THEMES` and in the three hand-inlined pre-paint scripts; the deck
+   has no shared HTML, so that copy is accepted (ADR 0024) and the roster guard is what keeps the
+   five in step. Say five rather than one: a comment that undercounts the work is how the fifth
+   copy gets missed.
+
+   It has to clear the Theme Contract, which the guard beside this file proves against these values
+   rather than against a hand-copy — a Theme that fails it is not a Theme, it is a proposal that was
+   turned down.
+
+   The names come from the fictions' interior vocabulary, never from their titles: the deck names
+   things in single evocative words and has never cited a work. It also avoids a collision —
+   `matrix` and `neon` are already ASCII//Convert Color Modes, in a neighbouring control.
+   ============================================================ */
+
+/* Green phosphor: the screen of a machine that only ever knew how to display one colour. Its
+   accent and its phosphor are deliberately the same value — that single-hue insistence is the
+   whole point of the look, and the other roles exist only so the deck can still tell you
+   something went wrong. */
+[data-theme="construct"] {
+  --accent: #2bff88;
+  --accent-deep: #0f8f4a;
+  --accent-soft: #a8ffcf;
+
+  --fg-strong: #e8fff2;
+  --fg: #c2f0d4;
+  --fg-muted: #8fd4ab;
+  --fg-subtle: #6fb98d;
+  --fg-dim: #4d8564;
+  --fg-faint: #22392b;
+
+  --bg: #040a06;
+  --bg-surface: #0a140e;
+  --bg-elevated: #132218;
+  --bg-overlay: #22392b;
+
+  --color-info: #5ce1c0;
+  --color-info-deep: #1c8f78;
+  --color-info-soft: #b6f5e6;
+
+  --color-danger: #ff5f6d;
+  --color-danger-deep: #a81d2b;
+  --color-danger-soft: #ffb0b6;
+
+  --color-warning: #ffd166;
+  --color-warning-deep: #b08a1e;
+  --color-warning-soft: #ffe9b3;
+
+  --fg-on-accent: #04120a;
+
+  --color-phosphor: #2bff88;
+  --color-link: #5ce1c0;
+  --color-hit: #5ce1c0;
+  --color-miss: #ffd166;
+}
+
+/* Grey and sodium-vapour amber: Gibson's washed-out sky, and the streetlight under it. The
+   surfaces lose their blue cast entirely, which is what stops the amber reading as a warning
+   badge pinned to `ice`. */
+[data-theme="chiba"] {
+  --accent: #ffb340;
+  --accent-deep: #b3701a;
+  --accent-soft: #ffd9a0;
+
+  --fg-strong: #f2f0e9;
+  --fg: #d8d5cb;
+  --fg-muted: #adaa9e;
+  --fg-subtle: #8f8c80;
+  --fg-dim: #6b6960;
+  --fg-faint: #37352e;
+
+  --bg: #0d0d0c;
+  --bg-surface: #151412;
+  --bg-elevated: #22211d;
+  --bg-overlay: #37352e;
+
+  --color-info: #8fbcd4;
+  --color-info-deep: #3f6a80;
+  --color-info-soft: #cde3ef;
+
+  --color-danger: #ff6b5e;
+  --color-danger-deep: #a83428;
+  --color-danger-soft: #ffb4ac;
+
+  --color-warning: #ffe066;
+  --color-warning-deep: #b39a1e;
+  --color-warning-soft: #fff2b8;
+
+  --fg-on-accent: #17110a;
+
+  /* An amber CRT rather than a green one — the machine still has one voice, it is just a
+     different tube. */
+  --color-phosphor: #ffb340;
+  --color-link: #8fbcd4;
+  --color-hit: #8fbcd4;
+  --color-miss: #ffe066;
 }

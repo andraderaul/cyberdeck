@@ -74,10 +74,10 @@ describe('AnalysisModal', () => {
     expect(screen.queryByRole('button', { name: /✕/i })).not.toBeInTheDocument()
   })
 
-  it('loading helper text does not use text-muted (fails WCAG AA)', () => {
+  it('keeps the loading helper off --fg-dim, which sits below the contrast floor', () => {
     render(<AnalysisModal state={{ status: 'loading' }} onClose={vi.fn()} />)
     const helper = screen.getByText(/interfacing with ai provider/i)
-    expect(helper.className.split(/\s+/)).not.toContain('text-muted')
+    expect(helper.className.split(/\s+/)).not.toContain('text-fg-dim')
   })
 
   it('renders a redundant aria-hidden icon for CRITICAL threat level', () => {

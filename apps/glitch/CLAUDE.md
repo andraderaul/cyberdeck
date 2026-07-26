@@ -209,7 +209,8 @@ constraint on any overlay added later, not just the ones there now (`CANVAS_OVER
 token-on-token, and this is the one surface in the app where the backdrop isn't a token at all: it's
 the user's artwork, and the Chain can paint any color under a chip. Translucency can't fix that —
 no alpha survives an arbitrary backdrop — so the chips stand on an opaque `bg-bg` and hold the
-audited ratio. `src/contrast.test.ts` pins the pairs.
+audited ratio. The deck kit's Theme Contract guard pins the pairs — for every Theme, from the
+real token values rather than a hand-copy (ADR 0024).
 
 This is a real divergence from ASCII//Convert, whose identical-looking badges need no such thing:
 `paintFrame()` fills that canvas with `#0a0a0f` (`--void`) before drawing, so its overlays already

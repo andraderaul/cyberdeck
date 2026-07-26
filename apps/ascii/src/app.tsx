@@ -1,6 +1,6 @@
 import { normalizeError } from '@cyberdeck/deck-kit/errors'
 import { useRecording } from '@cyberdeck/deck-kit/recording'
-import { EmptyStateHero, ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
+import { EmptyStateHero, ErrorBoundary, ThemeControl, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { analyzeCanvas, toAnalysisState } from './ai/analysis-service'
 import type { AnalysisState } from './ai/types'
@@ -152,10 +152,14 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen">
       <header className="py-sm px-sm sm:px-lg border-b border-base flex items-center gap-sm shrink-0">
-        <span className="text-violet text-base font-bold tracking-wide">ASCII//CONVERT</span>
-        <span className="text-slate text-xs hidden sm:block">—</span>
+        <span className="text-accent text-base font-bold tracking-wide">ASCII//CONVERT</span>
+        <span className="text-fg-faint text-xs hidden sm:block">—</span>
         <span className="text-fg-muted text-xs hidden sm:block">image → ascii art</span>
         <div className="ml-auto flex items-center gap-xs">
+          {/* Deck chrome rather than the artefact's: it changes what the program is drawn in, where
+              a Color Mode changes what the conversion paints. They are neighbours here, so the
+              Theme names deliberately avoid `matrix` and `neon` (ADR 0024). */}
+          <ThemeControl />
           <HeaderButton variant="neutral" onClick={() => setActiveModal({ kind: 'about' })}>
             about
           </HeaderButton>

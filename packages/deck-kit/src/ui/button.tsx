@@ -1,11 +1,11 @@
 import { cn } from '../utils/cn'
 
 const VARIANT_CLASSES = {
-  primary: 'border-2 border-violet bg-accent-bg text-violet font-bold',
+  primary: 'border-2 border-accent bg-accent-bg text-accent font-bold',
   secondary: 'border border-info bg-info-bg text-info font-medium',
-  danger: 'border border-hot-pink bg-danger-ghost text-hot-pink font-bold',
-  record: 'border border-hot-pink bg-transparent text-hot-pink font-medium',
-  analyze: 'border border-violet bg-accent-ghost text-violet',
+  danger: 'border border-danger bg-danger-ghost text-danger font-bold',
+  record: 'border border-danger bg-transparent text-danger font-medium',
+  analyze: 'border border-accent bg-accent-ghost text-accent',
   ghost: 'border border-base bg-transparent text-fg-muted',
 } as const
 

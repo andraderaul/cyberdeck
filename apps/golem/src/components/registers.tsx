@@ -23,7 +23,7 @@ export default function Registers({ machine }: RegistersProps) {
   return (
     <Panel title="Registers">
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-xs">
-        <dt className="text-violet">{registerName(PC)}</dt>
+        <dt className="text-accent">{registerName(PC)}</dt>
         <dd className="text-right tabular-nums">{hex32(machine.registers[PC])}</dd>
 
         {Array.from({ length: GENERAL_REGISTERS }, (_, index) => (

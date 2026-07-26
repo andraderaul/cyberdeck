@@ -7,8 +7,10 @@ import type { ProjectedLine } from './basemap'
 import type { RenderInstruction, Viewport } from './types'
 
 /**
- * --void: the dark field the world is light against. Hardcoded rather than read off a CSS token —
- * a canvas context can't resolve `var(--void)`, and this is the one true background of the piece.
+ * The dark field the world is light against. Hardcoded rather than read off a CSS token — a canvas
+ * context can't resolve `var(--bg)`, and this is the one true background of *the piece*, which is
+ * the reason SPRAWL//Atlas takes no Theme at all (ADR 0021, ADR 0024): recolouring it by setting
+ * would be recolouring a work.
  */
 const FIELD = '#0a0a0f'
 
@@ -22,9 +24,12 @@ const GLOW_MIN_DIAMETER = 3
 const GLOW_MAX_DIAMETER = 11
 
 /**
- * Builds the reusable glow sprite: a radial gradient from a hot white-cyan core to transparent
- * --soft-cyan. Rendered once by the shell and handed to `paintFrame`; a canvas context is required,
- * so this is impure and never runs in the pure core.
+ * Builds the reusable glow sprite: a radial gradient from a hot white-cyan core out to a
+ * transparent halo. Rendered once by the shell and handed to `paintFrame`; a canvas context is
+ * required, so this is impure and never runs in the pure core.
+ *
+ * Hardcoded for the same reason `FIELD` is, and it is the other half of the same decision: the
+ * field and this light *are* the piece (ADR 0021), which is why no Theme reaches either.
  */
 export function createGlowSprite(): HTMLCanvasElement {
   const sprite = document.createElement('canvas')
@@ -37,7 +42,7 @@ export function createGlowSprite(): HTMLCanvasElement {
   const mid = SPRITE_SIZE / 2
   const gradient = ctx.createRadialGradient(mid, mid, 0, mid, mid, mid)
   gradient.addColorStop(0, 'rgba(224, 255, 255, 1)') // white-hot core
-  gradient.addColorStop(0.25, 'rgba(128, 244, 255, 0.65)') // --soft-cyan halo
+  gradient.addColorStop(0.25, 'rgba(128, 244, 255, 0.65)') // the halo the bloom is made of
   gradient.addColorStop(1, 'rgba(128, 244, 255, 0)')
   ctx.fillStyle = gradient
   ctx.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE)

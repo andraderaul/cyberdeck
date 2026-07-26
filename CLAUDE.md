@@ -30,7 +30,7 @@ was that app, and the condition fired: **`packages/deck-kit`** now holds the pro
 
 | Package | What crosses the seam |
 |---------|----------------------|
-| **`@cyberdeck/deck-kit`** | Visual language (`tokens.css` + Tailwind preset), `ui/` primitives, framework-neutral `hooks/` and `utils/`, the operational-error *mechanism*, the Recording core |
+| **`@cyberdeck/deck-kit`** | Visual language (`tokens.css` + Tailwind preset + the Themes and their guards), `ui/` primitives, framework-neutral `hooks/` and `utils/`, the operational-error *mechanism*, the Recording core |
 
 Consumed **as source** — `exports` point at `src/*` and each app's Vite transpiles it. No build
 step, no `dist/`, no build ordering, which keeps the light-tooling stance intact. One non-obvious
@@ -77,6 +77,17 @@ but no longer drive versioning.
 Any PR that changes app behavior runs `npm run changeset` and commits the generated file. PRs
 touching only docs, CI, or tooling don't need one. On merge to `main`, CI opens a "Version
 Packages" PR; merging that one applies the bumps and tags the release. See `.changeset/README.md`.
+
+## Name the role, not the hue
+
+Deck-wide. The visual language is a set of named Themes — `ice`, `construct`, `chiba` — and only
+the *semantic* layer varies between them (ADR 0024). Write `text-accent`, never `text-violet`;
+`bg-bg-elevated`, never `bg-shadow`. The primitive hue names are `ice`'s vocabulary and are not in
+the Tailwind preset at all, so naming one renders unstyled rather than erroring — which is why the
+kit's vocabulary guard fails the build with the class, the file and the line.
+
+SPRAWL//Atlas is excluded from Themes by explicit decision (ADR 0021, ADR 0024), but not from this
+rule: it promotes like everything else and simply never sets the theme attribute.
 
 ## Comment convention
 

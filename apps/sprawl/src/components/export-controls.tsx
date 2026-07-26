@@ -47,7 +47,7 @@ export default function ExportControls({ position, basemap, canvasRef }: Props) 
       <button
         type="button"
         onClick={copyLink}
-        className="px-sm py-2xs rounded-xs bg-bg border border-violet text-violet font-bold tracking-wide cursor-pointer transition-colors duration-fast hover:bg-accent-soft"
+        className="px-sm py-2xs rounded-xs bg-bg border border-accent text-accent font-bold tracking-wide cursor-pointer transition-colors duration-fast hover:bg-accent-soft"
       >
         ⊕ share link
       </button>

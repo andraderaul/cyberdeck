@@ -12,7 +12,7 @@ export default function Chip({ selected, className, children, ...props }: Props)
       aria-pressed={selected}
       className={cn(
         'flex items-center gap-2xs px-sm py-2xs rounded-xs border font-mono text-xs transition-colors min-h-[44px]',
-        selected ? 'border-violet text-violet' : 'border-base text-fg-muted hover:border-dim',
+        selected ? 'border-accent text-accent' : 'border-base text-fg-muted hover:border-fg-muted',
         props.disabled && 'opacity-40 cursor-not-allowed',
         className,
       )}
