@@ -219,6 +219,52 @@ export function unpackU(field: keyof typeof FIELD_U, word: number): number {
 }
 
 /**
+ * Every field of an encoded word, unpacked in all three forms at once — `ux`/`uy` are the type U
+ * six-bit registers, `fx`/`fy` the type F five-bit ones, `im16`/`im26` the two immediate widths.
+ * A caller reads the fields its opcode uses and ignores the rest.
+ */
+export interface Decoded {
+  opcode: number
+  z: number
+  ux: number
+  uy: number
+  fx: number
+  fy: number
+  im16: number
+  im26: number
+}
+
+/**
+ * Take an encoded word apart in exactly one place, rather than re-deriving the fields wherever the
+ * word is read — which is what both the machine's `execute` and the trace's disassembler do. The
+ * inverse of `packU`, homed beside it.
+ */
+export function decode(word: number): Decoded {
+  return {
+    opcode: word >>> 26,
+    z: unpackU('z', word),
+    ux: unpackU('x', word),
+    uy: unpackU('y', word),
+    fx: (word >>> 5) & 0x1f,
+    fy: word & 0x1f,
+    im16: (word >>> 10) & 0xffff,
+    im26: word & 0x3ffffff,
+  }
+}
+
+/**
+ * The inverse of `INSTRUCTIONS`: an opcode back to its canonical mnemonic. The one place opcode →
+ * name is spelled — the trace disassembler reads it rather than re-listing the mapping. Assembler
+ * aliases live in `ALIASES`, not `INSTRUCTIONS`, so the inverse is unambiguous.
+ */
+export const MNEMONIC_BY_OPCODE: Record<number, string> = Object.fromEntries(
+  Object.entries(INSTRUCTIONS).map(([mnemonic, spec]) => [spec.opcode, mnemonic]),
+)
+
+/** The eleven conditional-branch opcodes — the S form minus `int`, which the trace formats apart. */
+export const BRANCH_OPCODE_SET: ReadonlySet<number> = new Set(Object.values(BRANCH_OPCODES))
+
+/**
  * How far to shift a word to reach the byte at `address`. Byte 0 of a word is its **most
  * significant** — big-endian within the word — which `1_limits` pins: the word 0x41424300 yields
  * 0x41 at offset 0 and 0x43 at offset 2.

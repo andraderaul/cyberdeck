@@ -8,7 +8,7 @@
 
 import type { Cache, CacheAccess, CacheState } from './cache'
 import { hex } from './hex'
-import { CR, ER, FR, PC, registerName, unpackU } from './isa'
+import { BRANCH_OPCODE_SET, CR, decode, ER, FR, MNEMONIC_BY_OPCODE, PC, registerName } from './isa'
 import type { Machine, StepEvent } from './machine'
 
 // The disassembly line names registers in lower case, the effects line in upper.
@@ -19,40 +19,29 @@ export const TRACE_START = '[START OF SIMULATION]'
 export const TRACE_END = '[END OF SIMULATION]'
 export const TRACE_TERMINAL = '[TERMINAL]'
 
-/** Type U operators that read as `Rz = Rx <op> Ry`, and which extra registers they report. */
-const BINARY_U: Record<number, { mnemonic: string; symbol: string; fr: boolean; er: boolean }> = {
-  0: { mnemonic: 'add', symbol: '+', fr: true, er: false },
-  2: { mnemonic: 'sub', symbol: '-', fr: true, er: false },
-  4: { mnemonic: 'mul', symbol: '*', fr: true, er: true },
-  6: { mnemonic: 'div', symbol: '/', fr: true, er: true },
-  12: { mnemonic: 'and', symbol: '&', fr: false, er: false },
-  16: { mnemonic: 'or', symbol: '|', fr: false, er: false },
-  18: { mnemonic: 'xor', symbol: '^', fr: false, er: false },
+// The operator metadata the disassembler adds on top of the mnemonic (which comes from the ISA):
+// the printed symbol, and whether the effects line reports FR and ER. Keyed by opcode.
+
+/** Type U operators that read as `Rz = Rx <op> Ry`. */
+const BINARY_U: Record<number, { symbol: string; fr: boolean; er: boolean }> = {
+  0: { symbol: '+', fr: true, er: false },
+  2: { symbol: '-', fr: true, er: false },
+  4: { symbol: '*', fr: true, er: true },
+  6: { symbol: '/', fr: true, er: true },
+  12: { symbol: '&', fr: false, er: false },
+  16: { symbol: '|', fr: false, er: false },
+  18: { symbol: '^', fr: false, er: false },
 }
 
 /** Type F operators that read as `Rx = Ry <op> N`. */
-const BINARY_F: Record<number, { mnemonic: string; symbol: string; fr: boolean; er: boolean }> = {
-  1: { mnemonic: 'addi', symbol: '+', fr: true, er: false },
-  3: { mnemonic: 'subi', symbol: '-', fr: true, er: false },
-  5: { mnemonic: 'muli', symbol: '*', fr: true, er: true },
-  7: { mnemonic: 'divi', symbol: '/', fr: true, er: true },
-  13: { mnemonic: 'andi', symbol: '&', fr: false, er: false },
-  17: { mnemonic: 'ori', symbol: '|', fr: false, er: false },
-  19: { mnemonic: 'xori', symbol: '^', fr: false, er: false },
-}
-
-const BRANCHES: Record<number, string> = {
-  26: 'bun',
-  27: 'beq',
-  28: 'blt',
-  29: 'bgt',
-  30: 'bne',
-  31: 'ble',
-  32: 'bge',
-  33: 'bzd',
-  34: 'bnz',
-  35: 'biv',
-  36: 'bni',
+const BINARY_F: Record<number, { symbol: string; fr: boolean; er: boolean }> = {
+  1: { symbol: '+', fr: true, er: false },
+  3: { symbol: '-', fr: true, er: false },
+  5: { symbol: '*', fr: true, er: true },
+  7: { symbol: '/', fr: true, er: true },
+  13: { symbol: '&', fr: false, er: false },
+  17: { symbol: '|', fr: false, er: false },
+  19: { symbol: '^', fr: false, er: false },
 }
 
 /**
@@ -159,15 +148,7 @@ function withPc(machine: Machine, pc: number): Machine {
 
 function formatInstruction(before: Machine, after: Machine): string {
   const instruction = (before.memory[before.registers[PC] >>> 2] ?? 0) >>> 0
-  const opcode = instruction >>> 26
-
-  const z = unpackU('z', instruction)
-  const ux = unpackU('x', instruction)
-  const uy = unpackU('y', instruction)
-  const fx = (instruction >>> 5) & 0x1f
-  const fy = instruction & 0x1f
-  const im16 = (instruction >>> 10) & 0xffff
-  const im26 = instruction & 0x3ffffff
+  const { opcode, z, ux, uy, fx, fy, im16, im26 } = decode(instruction)
 
   // Reported after the instruction ran, which is why both states are needed.
   const flags = () => `FR = 0x${hex(after.registers[FR])}, `
@@ -175,26 +156,27 @@ function formatInstruction(before: Machine, after: Machine): string {
 
   const binaryU = BINARY_U[opcode]
   if (binaryU) {
-    const { mnemonic, symbol, fr, er } = binaryU
+    const { symbol, fr, er } = binaryU
     return [
-      `${mnemonic} ${lower(z)}, ${lower(ux)}, ${lower(uy)}`,
+      `${MNEMONIC_BY_OPCODE[opcode]} ${lower(z)}, ${lower(ux)}, ${lower(uy)}`,
       `[U] ${fr ? flags() : ''}${er ? extension() : ''}${upper(z)} = ${upper(ux)} ${symbol} ${upper(uy)} = 0x${hex(after.registers[z])}`,
     ].join('\n')
   }
 
   const binaryF = BINARY_F[opcode]
   if (binaryF) {
-    const { mnemonic, symbol, fr, er } = binaryF
+    const { symbol, fr, er } = binaryF
     return [
-      `${mnemonic} ${lower(fx)}, ${lower(fy)}, ${im16}`,
+      `${MNEMONIC_BY_OPCODE[opcode]} ${lower(fx)}, ${lower(fy)}, ${im16}`,
       `[F] ${fr ? flags() : ''}${er ? extension() : ''}${upper(fx)} = ${upper(fy)} ${symbol} 0x${hex(im16, 4)} = 0x${hex(after.registers[fx])}`,
     ].join('\n')
   }
 
-  if (opcode in BRANCHES) {
-    return [`${BRANCHES[opcode]} 0x${hex(im26)}`, `[S] PC = 0x${hex(after.registers[PC])}`].join(
-      '\n',
-    )
+  if (BRANCH_OPCODE_SET.has(opcode)) {
+    return [
+      `${MNEMONIC_BY_OPCODE[opcode]} 0x${hex(im26)}`,
+      `[S] PC = 0x${hex(after.registers[PC])}`,
+    ].join('\n')
   }
 
   switch (opcode) {
