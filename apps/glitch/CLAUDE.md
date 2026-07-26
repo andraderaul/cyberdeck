@@ -103,9 +103,9 @@ carry this app's terms (`'image'` / `'live'`), and the lifecycle side-effects ar
 than Effects — `Effect` already means a pure `PixelBuffer` transform here, and the collision would
 be a trap.
 
-The lifecycle is copied whole, so `switchCamera` / `facingMode` ride along with no control surfacing
-them: #82 scoped in the Live Source, not camera choice. Front camera only until an issue asks
-otherwise.
+The lifecycle is copied whole, so `switchCamera` / `facingMode` ride along; `GlitchCanvas` surfaces
+`switchCamera` as the front/rear switch control on touch devices, the same gate ASCII//Convert uses.
+The front camera still opens by default.
 
 `onFacingModeChange` is wired, so the front camera opens mirrored (ADR 0016). Mirror is shared with
 ASCII//Convert in mechanism as well as feature: both flip the Source on the sampling `drawImage`,

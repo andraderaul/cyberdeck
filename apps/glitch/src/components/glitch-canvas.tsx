@@ -18,6 +18,14 @@ export const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
 const CANVAS_OVERLAY_CHROME = 'font-mono text-xs px-sm py-2xs rounded-xs bg-bg select-none'
 
 /**
+ * Rest state shared by the source-tuning buttons — mirror (off), switch-camera, clear. The border,
+ * cursor and transition ride here rather than on `CANVAS_OVERLAY_CHROME`, which the LIVE / REC
+ * badges also wear and must not read as clickable. Mirrors ASCII//Convert's `OVERLAY_BUTTON_REST`.
+ */
+const CANVAS_OVERLAY_BUTTON_REST =
+  'border border-base text-fg-muted cursor-pointer transition-colors duration-fast hover:text-fg hover:border-strong'
+
+/**
  * `HTMLMediaElement.HAVE_ENOUGH_DATA`, spelled out rather than read off the global: happy-dom
  * ships the class without its readiness constants, so the global reads `undefined` and every
  * `readyState >=` comparison would silently be false.
@@ -36,6 +44,7 @@ interface Props {
   onStopRecording?: () => void
   isMirrored?: boolean
   onMirrorToggle?: () => void
+  onSwitchCamera?: () => void | Promise<void>
 }
 
 /**
@@ -55,6 +64,7 @@ export default function GlitchCanvas({
   onStopRecording,
   isMirrored = false,
   onMirrorToggle,
+  onSwitchCamera,
 }: Props) {
   const hiddenRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
 
@@ -161,13 +171,23 @@ export default function GlitchCanvas({
             aria-label={isMirrored ? 'disable mirror' : 'enable mirror'}
             className={cn(
               CANVAS_OVERLAY_CHROME,
-              'cursor-pointer transition-colors duration-fast',
               isMirrored
-                ? 'border border-violet text-violet'
-                : 'border border-base text-fg-muted hover:text-fg hover:border-strong',
+                ? 'border border-violet text-violet cursor-pointer transition-colors duration-fast'
+                : CANVAS_OVERLAY_BUTTON_REST,
             )}
           >
             ⇋{!isTouchDevice && ' mirror'}
+          </button>
+        )}
+        {/* Front/rear only makes sense on a device that has both — same gate ASCII's switch uses. */}
+        {isLive && isTouchDevice && onSwitchCamera && (
+          <button
+            type="button"
+            onClick={() => void onSwitchCamera()}
+            aria-label="switch camera"
+            className={cn(CANVAS_OVERLAY_CHROME, CANVAS_OVERLAY_BUTTON_REST)}
+          >
+            ⇄
           </button>
         )}
         <button
@@ -175,10 +195,7 @@ export default function GlitchCanvas({
           onClick={onClearSource}
           title="clear source"
           aria-label="clear source"
-          className={cn(
-            CANVAS_OVERLAY_CHROME,
-            'text-fg-muted border border-base cursor-pointer transition-colors duration-fast hover:text-fg hover:border-strong',
-          )}
+          className={cn(CANVAS_OVERLAY_CHROME, CANVAS_OVERLAY_BUTTON_REST)}
         >
           ✕ clear
         </button>

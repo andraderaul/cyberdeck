@@ -37,7 +37,11 @@ export default function App() {
 
   const handleMirrorToggle = useCallback(() => setIsMirrored((prev) => !prev), [])
 
-  const { state: webcam, switchMode } = useWebcamState(handleLiveSource, handleFacingModeChange)
+  const {
+    state: webcam,
+    switchMode,
+    switchCamera,
+  } = useWebcamState(handleLiveSource, handleFacingModeChange)
   const {
     isSupported: canRecord,
     isRecording,
@@ -114,6 +118,7 @@ export default function App() {
                   onStopRecording={stopRecording}
                   isMirrored={isMirrored}
                   onMirrorToggle={handleMirrorToggle}
+                  onSwitchCamera={switchCamera}
                 />
               ) : (
                 <EmptyStateHero
