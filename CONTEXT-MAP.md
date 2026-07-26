@@ -4,6 +4,10 @@
 app é um "programa" que roda no deck e compartilha a linguagem visual e os padrões de
 código, mas é versionado e deployado de forma independente (ver ADR 0011 e ADR 0012).
 
+As decisões arquiteturais de todo o deck vivem em [`docs/adr/`](./docs/adr/). ADRs novos seguem o
+template padrão em [`docs/adr/TEMPLATE.md`](./docs/adr/TEMPLATE.md) — uma decisão por arquivo, em
+inglês.
+
 ## Contexts
 
 - [ASCII//Convert](./apps/ascii/CONTEXT.md) — converte uma Source Image ou Live Source num
