@@ -1,7 +1,7 @@
 # GOLEM inherits the Poxim ISA bit-for-bit, and keeps its mnemonics canonical
 
 GOLEM//Console's instruction set is not designed — it is inherited, unchanged at the bit level, from
-**Poxim**, the didactic 32-bit architecture used in the Arquitetura de Computadores course (UFS, 2017).
+**Poxim**, the didactic 32-bit architecture used in the Computer Architecture course (UFS, 2017).
 "GOLEM" is the name and the fiction; the encoding, the register file (`R0–R31` plus `PC`, `IR`, `ER`,
 `FR`, `CR`, `IPC`), the memory-mapped Terminal at `0x0000888B` and the 42 mnemonics are Poxim's. The
 original mnemonics stay canonical; readable **aliases** (`jmp` for `bun`, `halt` for `int`) are accepted

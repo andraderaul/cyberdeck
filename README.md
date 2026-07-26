@@ -9,10 +9,10 @@ No backend server — everything runs in the browser.
 
 | Program | Path | What it does |
 |---------|------|--------------|
-| **[ASCII//Convert](./apps/ascii)** | `apps/ascii` | Turns an image or your webcam into interactive ASCII art. **[Live demo →](https://ascii-art-converter-tawny.vercel.app/)** |
-| **[GLITCH//Studio](./apps/glitch)** | `apps/glitch` | Runs a fixed pipeline of glitch effects over an image or webcam — real-time preview, curated presets, and PNG / video export. **[Live demo →](https://cyberdeck-glitch-studio.vercel.app/)** |
-| **[GOLEM//Console](./apps/golem)** | `apps/golem` | A 32-bit fantasy computer: write assembly, assemble it, and drive execution from a command line while registers, memory and the machine's Terminal update live. **[Live demo →](https://cyberdeck-golem.vercel.app/)** |
-| **[SPRAWL//Atlas](./apps/sprawl)** | `apps/sprawl` | The deck's first *piece, not tool*: renders the world's connected capacity as light from a vendored PeeringDB snapshot. It opens blown white and you repair it by sliding the scale coarser, until the structure emerges from the overflow. **[Live demo →](https://atlas-sprawl.vercel.app/)** |
+| **[ASCII//Convert](./apps/ascii)** | `apps/ascii` | Image or webcam → interactive ASCII art. **[Live →](https://ascii-art-converter-tawny.vercel.app/)** |
+| **[GLITCH//Studio](./apps/glitch)** | `apps/glitch` | A glitch-effect pipeline over image or webcam — live preview, presets, PNG / video export. **[Live →](https://cyberdeck-glitch-studio.vercel.app/)** |
+| **[GOLEM//Console](./apps/golem)** | `apps/golem` | A 32-bit fantasy computer: write assembly, assemble it, run it from a command line as registers, memory and the Terminal update live. **[Live →](https://cyberdeck-golem.vercel.app/)** |
+| **[SPRAWL//Atlas](./apps/sprawl)** | `apps/sprawl` | The deck's first *piece, not tool*: the world's connected capacity as light. Opens blown white; you repair it by sliding the scale coarser until structure emerges. **[Live →](https://atlas-sprawl.vercel.app/)** |
 
 ## Running locally
 
@@ -52,47 +52,18 @@ seams obvious, so the proven-shared surface was extracted into
 generic browser plumbing. It's consumed as source (no build step) and is deliberately *not* a
 domain core: each app's pipeline stays in the app ([ADR 0014](./docs/adr/0014-deck-kit-shared-package.md)).
 
-## Credits
-
-GOLEM//Console's instruction set is inherited from **Poxim**, the didactic 32-bit architecture
-used in the Arquitetura de Computadores course at **UFS (Universidade Federal de Sergipe)**, 2017.
-The encoding, register file, and 42 mnemonics are Poxim's; the reference programs under
-`apps/golem/src/golem/__fixtures__/` are the course's example project, kept verbatim as test
-oracles. Credit to the course and its instructor —
-[ADR 0019](./docs/adr/0019-golem-isa-inherited-from-poxim.md) explains why the ISA was inherited
-rather than designed.
-
 ## Deploys
 
-Each app is its own Vercel project, both pointing at this repo:
+Each app is its own Vercel project pointing at this repo. ASCII//Convert builds from the root
+`vercel.json`; the rest set **Root Directory** to their `apps/<name>` and are driven by a nested
+`vercel.json` that `cd`s to the repo root so the `@cyberdeck/deck-kit` workspace dependency resolves.
 
-- **ASCII//Convert** — the root `vercel.json` builds it (`outputDirectory: apps/ascii/dist`), so
-  the existing project needed no dashboard change after the monorepo move.
-- **GLITCH//Studio** — a separate project with **Root Directory** set to `apps/glitch`, driven by
-  [`apps/glitch/vercel.json`](./apps/glitch/vercel.json). Install and build `cd` to the repo root
-  so the `@cyberdeck/deck-kit` workspace dependency resolves.
-- **GOLEM//Console** — follows the GLITCH pattern: its own Vercel project with **Root Directory**
-  set to `apps/golem`, driven by [`apps/golem/vercel.json`](./apps/golem/vercel.json).
-- **SPRAWL//Atlas** — the same pattern again: its own Vercel project with **Root Directory** set to
-  `apps/sprawl`, driven by [`apps/sprawl/vercel.json`](./apps/sprawl/vercel.json).
-
-### Skipping preview deploys
-
-Each project's `ignoreCommand` skips its build (exit `0`) when the diff touches nothing that
-project ships. Four details are load-bearing:
-
-- **`packages/deck-kit` is in every project's list** — all three apps consume it as source
-  ([ADR 0014](./docs/adr/0014-deck-kit-shared-package.md)). Watching only an app's own directory
-  would silently stop deploying Deck Kit changes.
-- **The range is `$VERCEL_GIT_PREVIOUS_SHA..HEAD`** — the last successful deploy of *that project
-  on that branch*. `HEAD^` would see only the newest commit, so a code commit pushed ahead of a
-  docs commit would skip.
-- **`':(exclude)**/*.md'`** — markdown inside an app (`apps/glitch/CLAUDE.md`) ships nothing.
-- **It fails toward deploying.** Production, a branch's first deploy (empty previous SHA), and any
-  git error all build. A false skip hides; a false build costs a minute.
-
-Paths are relative to where the command runs, hence the `cd ../..` in the nested configs. Vercel
-does not read `.github/workflows/ci.yml` — that has its own `paths-ignore`.
+Each project's `ignoreCommand` skips its build when the diff touches nothing it ships. It watches
+the app plus `packages/deck-kit` (consumed as source by all,
+[ADR 0014](./docs/adr/0014-deck-kit-shared-package.md)), diffs over
+`$VERCEL_GIT_PREVIOUS_SHA..HEAD` (that project's last deploy on the branch), excludes `**/*.md`, and
+fails toward deploying — production, a branch's first deploy, and any git error all build. CI's
+`paths-ignore` is separate; Vercel does not read it.
 
 ## Contributing
 
@@ -100,6 +71,16 @@ Commits follow [conventional commits](https://www.conventionalcommits.org/) (enf
 commitlint). Releases run on [Changesets](./.changeset/README.md), per app — a PR that changes
 app behavior adds one with `npm run changeset`
 ([ADR 0012](./docs/adr/0012-changesets-per-app-versioning.md)).
+
+## Credits
+
+GOLEM//Console's instruction set is inherited from **Poxim**, the didactic 32-bit architecture
+used in the Computer Architecture course at **UFS (Universidade Federal de Sergipe)**, 2017.
+The encoding, register file, and 42 mnemonics are Poxim's; the reference programs under
+`apps/golem/src/golem/__fixtures__/` are the course's example project, kept verbatim as test
+oracles. Credit to the course and its instructor —
+[ADR 0019](./docs/adr/0019-golem-isa-inherited-from-poxim.md) explains why the ISA was inherited
+rather than designed.
 
 ## License
 
