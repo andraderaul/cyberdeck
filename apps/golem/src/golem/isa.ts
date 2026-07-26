@@ -221,9 +221,7 @@ export function unpackU(field: keyof typeof FIELD_U, word: number): number {
 /**
  * Every field of an encoded word, unpacked in all three forms at once — `ux`/`uy` are the type U
  * six-bit registers, `fx`/`fy` the type F five-bit ones, `im16`/`im26` the two immediate widths.
- * A caller reads the fields its opcode uses and ignores the rest, which is what both the machine's
- * `execute` and the trace's disassembler do. Homed here, beside `packU`, so the word is taken apart
- * in exactly one place rather than re-derived wherever it is read.
+ * A caller reads the fields its opcode uses and ignores the rest.
  */
 export interface Decoded {
   opcode: number
@@ -236,6 +234,11 @@ export interface Decoded {
   im26: number
 }
 
+/**
+ * Take an encoded word apart in exactly one place, rather than re-deriving the fields wherever the
+ * word is read — which is what both the machine's `execute` and the trace's disassembler do. The
+ * inverse of `packU`, homed beside it.
+ */
 export function decode(word: number): Decoded {
   return {
     opcode: word >>> 26,
@@ -251,8 +254,8 @@ export function decode(word: number): Decoded {
 
 /**
  * The inverse of `INSTRUCTIONS`: an opcode back to its canonical mnemonic. The one place opcode →
- * name is spelled — the trace disassembler reads it rather than re-listing the mapping. Aliases are
- * not inverted: a disassembly names the canonical instruction.
+ * name is spelled — the trace disassembler reads it rather than re-listing the mapping. Assembler
+ * aliases live in `ALIASES`, not `INSTRUCTIONS`, so the inverse is unambiguous.
  */
 export const MNEMONIC_BY_OPCODE: Record<number, string> = Object.fromEntries(
   Object.entries(INSTRUCTIONS).map(([mnemonic, spec]) => [spec.opcode, mnemonic]),

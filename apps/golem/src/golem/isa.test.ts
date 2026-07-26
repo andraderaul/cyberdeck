@@ -1,5 +1,5 @@
 // The encoding-table invariants the fixtures cannot reach. A green trace diff exercises only the
-// opcodes the reference programs actually run — 9 of 11 branches, per CLAUDE.md — so `decode` and
+// opcodes the reference programs actually run — 7 of 11 branches, per CLAUDE.md — so `decode` and
 // the opcode→mnemonic inverse are pinned here directly rather than left to the oracle.
 
 import { describe, expect, it } from 'vitest'

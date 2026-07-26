@@ -472,7 +472,6 @@ function classifyData(cycle: Cycle, op: 'READ' | 'WRITE', end: number): void {
 
 function execute(cycle: Cycle, instruction: number): void {
   const r = cycle.registers
-  // Type U reads six-bit register fields, type F five plus an im16 — `decode` unpacks all of them.
   const { opcode, z, ux, uy, fx, fy, im16, im26 } = decode(instruction)
 
   switch (opcode) {
