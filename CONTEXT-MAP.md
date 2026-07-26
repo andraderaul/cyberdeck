@@ -20,7 +20,11 @@ código, mas é versionado e deployado de forma independente (ver ADR 0011 e ADR
   em branco (OVERFLOW) até você reescalar mais grosso e a estrutura emergir. Inspirado na passagem
   do *Neuromancer*. É a **primeira peça, não ferramenta**, do deck — não consome material do
   usuário, e a régua de sucesso é a primeira tela, não a retenção (ADR 0021). Dado real via
-  snapshot vendorizado do PeeringDB (ADR 0022). **Conceito** — decidido, ainda não construído.
+  snapshot vendorizado do PeeringDB (ADR 0022). **v1 completo** (`apps/sprawl`, #225–#230): abre em
+  OVERFLOW sobre o snapshot real, você reescreve a escala mais grossa (wheel/drag/setas) e a
+  estrutura emerge; labels de cidade + hover orientam sem basemap; `B` liga o gabarito de costa
+  conquistado; e o export é um link que abre o outro na mesma escala. Eixo de tempo e viewport
+  pan/zoom ficam adiados (ADR 0021).
 
 ## Shared package
 
