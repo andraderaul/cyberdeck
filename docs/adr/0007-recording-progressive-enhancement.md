@@ -1,32 +1,66 @@
-# Recording — progressive enhancement sem fallback GIF
+# ADR 0007 — Recording — progressive enhancement, no GIF fallback
 
-A feature de Recording precisa gravar o canvas ASCII como vídeo no browser, sem backend. A decisão central é: o que fazer em browsers que não suportam `canvas.captureStream()` + `MediaRecorder` de forma confiável (principalmente iOS Safari)?
+## Status
 
-## Decisão
+Accepted
 
-Implementar Recording com `canvas.captureStream(15)` + `MediaRecorder` e format detection em runtime. Em browsers sem suporte, o controle de Record simplesmente não é exibido — **sem fallback para GIF ou outro formato**.
+## Context
 
-## Justificativa
+The Recording feature needs to record the ASCII canvas as video in the browser, with no backend.
+The central question is: what to do in browsers that do not reliably support
+`canvas.captureStream()` + `MediaRecorder` (mainly iOS Safari)?
 
-O caminho alternativo — GIF via `gif.js` com Web Worker — funcionaria em todos os browsers mas introduz uma dependência de terceiro com encoder JS pesado, encoding mais lento que o tempo real, e qualidade visivelmente inferior (paleta de 256 cores). Para um app cujo diferencial é a qualidade visual do canvas ASCII, GIF seria uma degradação perceptível.
+## Decision
 
-`MediaRecorder` com format detection (`isTypeSupported`) cobre Chrome, Firefox e Edge sem dependências novas. Safari desktop funciona com `video/mp4`. iOS Safari é o único caso problemático — e o público-alvo primário do app é desktop.
+Implement Recording with `canvas.captureStream(15)` + `MediaRecorder` and runtime format detection.
+In browsers without support, the Record control is simply not shown — **no fallback to GIF or any
+other format**.
 
-Esconder o botão em vez de degradar preserva a percepção de qualidade: o usuário no iPhone simplesmente não vê a opção, em vez de receber um GIF de qualidade inferior.
+The alternative path — GIF via `gif.js` with a Web Worker — would work in every browser but
+introduces a third-party dependency with a heavy JS encoder, encoding slower than real time, and
+visibly inferior quality (256-color palette). For an app whose differentiator is the visual quality
+of the ASCII canvas, GIF would be a perceptible degradation.
 
-## Considered Options
+`MediaRecorder` with format detection (`isTypeSupported`) covers Chrome, Firefox, and Edge with no
+new dependencies. Safari desktop works with `video/mp4`. iOS Safari is the only problematic case —
+and the app's primary target audience is desktop.
 
-- **GIF via `gif.js` + Web Worker** — descartado: dependência nova, encoding lento, qualidade inferior (256 cores), bundle maior.
-- **ffmpeg.wasm** — descartado: bundle ~30MB, latência de inicialização, complexidade desproporcional para o escopo.
-- **Progressive enhancement (escolhido)** — zero dependências, qualidade máxima onde suportado, ausência silenciosa onde não.
+Hiding the button instead of degrading preserves the perception of quality: the user on an iPhone
+simply does not see the option, rather than receiving a lower-quality GIF.
 
-## Format detection
+## Considered Alternatives
 
-Ordem de preferência testada em runtime:
+- **GIF via `gif.js` + Web Worker.**
+  - *Cons:* new dependency, slow encoding, inferior quality (256 colors), larger bundle.
+  - *Rejected because:* it would degrade the very thing the app is built around — canvas visual
+    quality.
+- **ffmpeg.wasm.**
+  - *Cons:* ~30MB bundle, initialization latency.
+  - *Rejected because:* the complexity is disproportionate to the scope.
+
+## Consequences
+
+**Positive:**
+- Zero new dependencies; maximum quality where the platform supports it.
+- No quality-degrading fallback ships — the ASCII canvas fidelity is never compromised.
+
+**Negative:**
+- On iOS Safari the Record control is absent entirely — a silent absence rather than a message.
+- Relies on runtime feature detection, so support is discovered per-browser rather than declared
+  up front.
+
+## Related ADRs
+
+- None.
+
+## Implementation Notes
+
+Format detection — preference order tested at runtime:
 
 1. `video/webm;codecs=vp9`
 2. `video/webm;codecs=vp8`
 3. `video/webm`
 4. `video/mp4`
 
-O primeiro tipo suportado pelo browser é usado. A extensão do arquivo exportado é mapeada a partir do mimeType resultante.
+The first type supported by the browser is used. The exported file's extension is mapped from the
+resulting `mimeType`.

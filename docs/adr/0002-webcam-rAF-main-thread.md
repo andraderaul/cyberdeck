@@ -1,27 +1,58 @@
-# Webcam live feed — rAF loop na thread principal
+# ADR 0002 — Webcam live feed — rAF loop on the main thread
 
-O modo webcam precisa amostrar frames do `HTMLVideoElement` e renderizar ASCII continuamente. A abordagem escolhida usa `requestAnimationFrame` com throttle de ~15fps rodando inteiramente na thread principal do browser.
+## Status
 
-## Decisão
+Accepted
 
-`renderFrame()` é chamada a cada ~66ms via `requestAnimationFrame`. O throttle é feito comparando timestamps: se o delta desde o último render for menor que 66ms, o frame é descartado. Só frames com `readyState >= HAVE_ENOUGH_DATA` são processados.
+## Context
 
-## Justificativa
+Webcam mode needs to sample frames from the `HTMLVideoElement` and render ASCII continuously. This
+requires a per-frame loop that reads video pixels, converts them, and paints the canvas — without
+janking the browser's main thread.
 
-15fps é suficiente para ASCII ao vivo — o output não tem a fidelidade visual de um vídeo real e o olho humano não percebe a diferença acima de ~10fps para arte ASCII. A implementação reutiliza `renderFrame()` extraída do fluxo de imagem estática sem nenhuma nova dependência.
+## Decision
 
-## Caminho de upgrade: Web Worker + OffscreenCanvas
+Drive rendering with `requestAnimationFrame`, throttled to ~15fps, running entirely on the browser's
+main thread. `renderFrame()` is called roughly every 66ms; the throttle compares timestamps and drops
+a frame when the delta since the last render is under 66ms. Only frames with
+`readyState >= HAVE_ENOUGH_DATA` are processed.
 
-Se travamentos forem reportados (especialmente em resolução alta ou hardware lento), o caminho correto é mover `renderFrame()` para um `Worker` usando `OffscreenCanvas`:
+15fps is enough for live ASCII — the output does not carry the visual fidelity of real video, and the
+eye does not perceive a difference above ~10fps for ASCII art. The implementation reuses
+`renderFrame()`, already extracted from the static-image flow, with no new dependency.
 
-1. Transferir o canvas visível para o Worker via `canvas.transferControlToOffscreen()`
-2. Passar frames do vídeo via `ImageBitmap` (criado com `createImageBitmap(videoEl)` na thread principal)
-3. Worker recebe o `ImageBitmap`, executa `convertImage()` e renderiza no `OffscreenCanvas`
-4. Comunicação via `postMessage` com transferables — sem cópias de memória
+## Considered Alternatives
 
-Isso move toda a CPU de conversão para fora da thread de UI, eliminando o risco de jank. O refactor é isolado em `ascii-canvas.tsx` e no novo worker — a API pública do componente não muda.
+- **Move to a Web Worker immediately.**
+  - *Cons:* Adds ~2–3× complexity with no perceptible gain at 15fps.
+  - *Rejected because:* The cost isn't worth paying until jank is actually reported.
+- **`setTimeout` throttle.**
+  - *Rejected because:* `rAF` is paused automatically when the tab is backgrounded, saving CPU;
+    `setTimeout` keeps firing.
 
-## Considered Options
+## Consequences
 
-- **Web Worker imediato** — descartado: adiciona ~2–3x de complexidade sem ganho perceptível a 15fps. Endereçar quando/se travamentos forem reportados.
-- **setTimeout throttle** — preterido em favor de rAF: rAF é pausado automaticamente quando a aba fica em background, economizando CPU.
+**Positive:**
+- Zero new dependencies; reuses the existing static-image render path.
+- rAF pauses in background tabs, so an idle webcam tab spends no CPU.
+
+**Negative:**
+- All conversion CPU runs on the UI thread, so very high resolutions or slow hardware can jank. The
+  upgrade path (Web Worker + OffscreenCanvas) is recorded below rather than built now.
+
+## Related ADRs
+
+- ADR 0005 — Pure/impure boundary with RenderInstruction.
+
+## Implementation Notes
+
+Upgrade path if jank is reported (especially at high resolution or on slow hardware): move
+`renderFrame()` into a `Worker` using `OffscreenCanvas`.
+
+1. Transfer the visible canvas to the Worker via `canvas.transferControlToOffscreen()`.
+2. Pass video frames as `ImageBitmap` (created with `createImageBitmap(videoEl)` on the main thread).
+3. The Worker receives the `ImageBitmap`, runs `convertImage()`, and renders to the `OffscreenCanvas`.
+4. Communication is via `postMessage` with transferables — no memory copies.
+
+This moves all conversion CPU off the UI thread, eliminating the jank risk. The refactor is isolated to
+`ascii-canvas.tsx` and the new worker — the component's public API does not change.

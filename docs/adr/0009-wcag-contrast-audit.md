@@ -1,25 +1,26 @@
-# ADR 0009 — WCAG AA Contrast Audit and Remediation
+# ADR 0009 — WCAG AA contrast audit and remediation
 
-**Date:** 2026-05-20  
-**Status:** Accepted  
-**Related:** issue #38, issue #16
+## Status
 
----
+Accepted
+
+**Date:** 2026-05-20 · **Related:** issue #38, issue #16
 
 ## Context
 
-Issue #16 listed a contrast audit as a deliverable but it was never completed. Issue #38 reopened the requirement. This ADR documents the systematic audit, the pairs that fail, what was fixed, and what was intentionally left as-is.
+Issue #16 listed a contrast audit as a deliverable but it was never completed. Issue #38 reopened
+the requirement. This ADR documents the systematic audit, the pairs that fail, what was fixed, and
+what was intentionally left as-is.
 
-All ratios are computed using the WCAG 2.1 relative luminance formula (IEC 61966-2-1 sRGB). Thresholds:
+All ratios are computed using the WCAG 2.1 relative luminance formula (IEC 61966-2-1 sRGB).
+Thresholds:
 - **AA-small**: ≥ 4.5:1 (text under 18pt / 14pt bold)
 - **AA-large**: ≥ 3:1 (text 18pt+ or 14pt+ bold)
 - **Non-text**: ≥ 3:1 (WCAG 1.4.11, UI components and graphical objects)
 
 Surface backgrounds in use: `--void #0a0a0f`, `--abyss #0f0f1a`, `--shadow #1a1a2e`.
 
----
-
-## Audit results — text token pairs
+### Audit results — text token pairs
 
 All foreground tokens against the three dark surface backgrounds.
 
@@ -36,7 +37,7 @@ All foreground tokens against the three dark surface backgrounds.
 | `--hot-pink` | `#ff2d78` | 5.55:1 | 5.35:1 | 4.79:1 | **PASS** all surfaces |
 | `--electric` | `#ffe600` | 15.59:1 | 15.02:1 | 13.46:1 | **PASS** all surfaces |
 
-## Audit results — non-text / border token pairs (WCAG 1.4.11)
+### Audit results — non-text / border token pairs (WCAG 1.4.11)
 
 | Token | Value | On void | On abyss | Non-text 3:1 |
 |---|---|---|---|---|
@@ -44,19 +45,21 @@ All foreground tokens against the three dark surface backgrounds.
 | `--shadow` | `#1a1a2e` | 1.16:1 | 1.12:1 | **FAIL** |
 | `--muted` | `#6b6b9a` | 3.95:1 | 3.80:1 | PASS |
 
----
-
-## Decisions
+## Decision
 
 ### Fixed: `--fg-subtle` token value
 
-`#7e7eaf` passed on `--void` and `--abyss` but failed by 0.04 on `--shadow` (4.46:1 vs 4.5:1 required). Bumped to `#8080b2` (+2 on each channel, same 240° hue, preserves R=G relationship). Now passes on all three surfaces with headroom.
+`#7e7eaf` passed on `--void` and `--abyss` but failed by 0.04 on `--shadow` (4.46:1 vs 4.5:1
+required). Bumped to `#8080b2` (+2 on each channel, same 240° hue, preserves the R=G relationship).
+Now passes on all three surfaces with headroom.
 
-The token comment in `index.css` was also corrected — the previous comment cited 4.7:1 on `--void`, which was inaccurate; the correct value was 5.16:1 for the old value and 5.29:1 for the new value.
+The token comment in `index.css` was also corrected — the previous comment cited 4.7:1 on `--void`,
+which was inaccurate; the correct value was 5.16:1 for the old value and 5.29:1 for the new value.
 
 ### Fixed: `text-muted` replaced with `text-fg-subtle` in UI text
 
-`--muted` used as a text color fails AA-small everywhere (3.41–3.95:1). All five occurrences in UI components were changed to `text-fg-subtle`:
+`--muted` used as a text color fails AA-small everywhere (3.41–3.95:1). All five occurrences in UI
+components were changed to `text-fg-subtle`:
 
 | File | Location |
 |---|---|
@@ -68,9 +71,14 @@ The token comment in `index.css` was also corrected — the previous comment cit
 
 ### Intentional exception: `THREAT_COLOR.UNKNOWN` in analysis-modal
 
-`THREAT_COLOR.UNKNOWN` uses `var(--muted)` as a runtime inline style for the threat-level text and border when the AI scan returns an UNKNOWN result. This is a cyberpunk register element — the intentional visual de-emphasis signals that no threat has been determined. The UNKNOWN state is styled to recede into the background on purpose.
+`THREAT_COLOR.UNKNOWN` uses `var(--muted)` as a runtime inline style for the threat-level text and
+border when the AI scan returns an UNKNOWN result. This is a cyberpunk register element — the
+intentional visual de-emphasis signals that no threat has been determined. The UNKNOWN state is
+styled to recede into the background on purpose.
 
-Changing this to a higher-contrast token would make UNKNOWN visually indistinguishable from LOW (cyan) or MODERATE (electric), undermining the threat-level communication hierarchy. Flagged as an accepted exception.
+Changing this to a higher-contrast token would make UNKNOWN visually indistinguishable from LOW
+(cyan) or MODERATE (electric), undermining the threat-level communication hierarchy. Flagged as an
+accepted exception.
 
 ### Intentional exception: `text-violet text-xs` in analysis-modal (AI Analysis surface)
 
@@ -81,23 +89,67 @@ analysis-modal.tsx:42  <span className="text-violet font-bold tracking-wider tex
 analysis-modal.tsx:51  <span className="animate-pulse text-violet text-xs tracking-wider">▸ SCANNING VISUAL FEED...</span>
 ```
 
-`--violet #b829ff` on `--abyss #0f0f1a` = 4.35:1, which fails AA-small (4.5:1 required). At `text-xs` (11px), even `font-bold` does not qualify as AA-large (which requires ≥ 14pt bold ≈ 18.67px).
+`--violet #b829ff` on `--abyss #0f0f1a` = 4.35:1, which fails AA-small (4.5:1 required). At `text-xs`
+(11px), even `font-bold` does not qualify as AA-large (which requires ≥ 14pt bold ≈ 18.67px).
 
 These two instances are accepted cyberpunk-register exceptions:
-- The modal title and scan-in-progress animation are decorative / atmospheric labels, not body copy or interactive affordance text.
-- The AI Analysis modal is the highest-density cyberpunk surface in the product; tightening its accent color to meet AA-small would visually weaken the neon glitch aesthetic that communicates the register.
-- Both elements have a nearby readable description or status indicator at a passing contrast (`text-ghost` body text, loading animation text), so no critical information is lost.
+- The modal title and scan-in-progress animation are decorative / atmospheric labels, not body copy
+  or interactive affordance text.
+- The AI Analysis modal is the highest-density cyberpunk surface in the product; tightening its
+  accent color to meet AA-small would visually weaken the neon glitch aesthetic that communicates
+  the register.
+- Both elements have a nearby readable description or status indicator at a passing contrast
+  (`text-ghost` body text, loading animation text), so no critical information is lost.
 
-This exception is limited to these two specific locations. Any future addition of `text-violet text-xs` on `--abyss` or darker backgrounds should be evaluated individually before being granted the same exception.
+This exception is limited to these two specific locations. Any future addition of `text-violet
+text-xs` on `--abyss` or darker backgrounds should be evaluated individually before being granted
+the same exception.
 
 ### Intentional exception: border tokens below WCAG 1.4.11
 
-`--slate` (borders, `border-base`) and `--shadow` (subtle borders, `border-subtle`) both fail the 3:1 non-text contrast requirement against dark backgrounds. These borders are structural/decorative separators in the cyberpunk design system — they demarcate regions rather than convey interactive affordance or state. No interactive component relies solely on a `--slate` border to signal its interactive nature; buttons and inputs also use text labels, icons, or focus outlines.
+`--slate` (borders, `border-base`) and `--shadow` (subtle borders, `border-subtle`) both fail the
+3:1 non-text contrast requirement against dark backgrounds. These borders are structural/decorative
+separators in the cyberpunk design system — they demarcate regions rather than convey interactive
+affordance or state. No interactive component relies solely on a `--slate` border to signal its
+interactive nature; buttons and inputs also use text labels, icons, or focus outlines.
 
-Raising these tokens to 3:1 would require `--slate` to lighten from `#2a2a4a` to approximately `#4a4a6a`, which significantly alters the dark cyberpunk palette. The decision is to accept this exception for purely decorative structural separators and document it here. If interactive borders (e.g., form inputs) are ever styled with `--slate` alone, they should be revisited at that time.
+Raising these tokens to 3:1 would require `--slate` to lighten from `#2a2a4a` to approximately
+`#4a4a6a`, which significantly alters the dark cyberpunk palette. The decision is to accept this
+exception for purely decorative structural separators and document it here. If interactive borders
+(e.g., form inputs) are ever styled with `--slate` alone, they should be revisited at that time.
 
----
+## Considered Alternatives
 
-## Regression guard
+- **Raise every failing token to pass its threshold.**
+  - *Cons:* would flatten the threat-level hierarchy (UNKNOWN becomes indistinguishable from LOW /
+    MODERATE) and weaken the neon glitch aesthetic on the highest-density cyberpunk surface.
+  - *Rejected because:* several failures are intentional cyberpunk-register de-emphasis
+    (`THREAT_COLOR.UNKNOWN`, the two `text-violet text-xs` labels) rather than accessibility gaps in
+    functional text.
+- **Lighten the border tokens (`--slate` toward `#4a4a6a`) to meet 3:1.**
+  - *Cons:* significantly alters the dark cyberpunk palette.
+  - *Rejected because:* `--slate` and `--shadow` are purely decorative structural separators; no
+    interactive component relies on them alone to convey affordance or state.
 
-`src/contrast.test.ts` pins the hex values of `--fg-subtle` and `--fg-muted` against the 4.5:1 threshold on all three surface backgrounds. If either token is adjusted to a value that fails, the test catches it at CI.
+## Consequences
+
+**Positive:**
+- `--fg-subtle` now passes AA-small on all three surfaces with headroom, and the five `text-muted`
+  UI occurrences now pass by switching to `text-fg-subtle`.
+- The `index.css` token comment now reflects accurate ratios.
+
+**Negative:**
+- Documented accepted exceptions remain below threshold (`THREAT_COLOR.UNKNOWN`, the two
+  `text-violet text-xs` labels, and the `--slate` / `--shadow` border tokens). Each exception is
+  scoped to specific locations, and any future similar use must be evaluated individually before
+  reusing the exception.
+
+## Related ADRs
+
+- None.
+
+## Implementation Notes
+
+Regression guard: `src/contrast.test.ts` pins the hex values of `--fg-subtle` and `--fg-muted`
+against the 4.5:1 threshold on all three surface backgrounds. If either token is adjusted to a value
+that fails, the test catches it at CI.
