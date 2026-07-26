@@ -13,6 +13,7 @@ versioned and deployed independently.
 | **ASCII//Convert** | `apps/ascii` | Image / webcam → interactive ASCII art |
 | **GLITCH//Studio** | `apps/glitch` | Glitch effect pipeline over image / webcam (tracer bullet — image → Channel Shift → PNG Export) |
 | **GOLEM//Console** | `apps/golem` | A 32-bit fantasy computer — write assembly, assemble it, drive execution from a command line while registers, memory and the Terminal update live (ADRs 0018, 0019) |
+| **SPRAWL//Atlas** | `apps/sprawl` | The deck's first *piece, not tool* (ADR 0021) — the world's connected capacity as light, repaired at a coarser scale until structure emerges from the overflow. Ships a vendored PeeringDB snapshot (ADR 0022) |
 
 Each app owns its `CLAUDE.md` and `CONTEXT.md` — read the one for the app you're working in.
 `CONTEXT-MAP.md` maps the deck; `docs/adr/` holds all architectural decisions, deck-wide.
