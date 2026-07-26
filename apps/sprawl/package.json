@@ -2,7 +2,7 @@
   "name": "@cyberdeck/sprawl",
   "description": "A piece, not a tool (ADR 0021): the world's connected capacity as light, repaired at a coarser scale until structure emerges from the overflow.",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "type": "module",
   "scripts": {
