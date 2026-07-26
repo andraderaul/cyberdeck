@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   contrastRatio,
+  declaredPrimitives,
   declaredThemes,
   findLiteralHues,
   RETIRED_HUE_CLASSES,
   resolveTokens,
+  srgbDistance,
 } from './audit'
 
 // Inline fixtures throughout: the module is text in, findings out, so nothing here touches a real
@@ -175,10 +177,52 @@ describe('findLiteralHues', () => {
   })
 })
 
+describe('srgbDistance', () => {
+  it('is zero for a colour against itself', () => {
+    expect(srgbDistance('#5ce1c0', '#5ce1c0')).toBe(0)
+  })
+
+  it('stays small for a near-identical pair — the failure the Hit/Miss pin exists to catch', () => {
+    expect(srgbDistance('#5ce1c0', '#5ce1c8')).toBeLessThan(20)
+  })
+
+  it('is large for two colours a reader would never confuse', () => {
+    expect(srgbDistance('#00e5ff', '#ffe600')).toBeGreaterThan(300)
+  })
+
+  it('refuses a value it cannot read, rather than scoring it zero', () => {
+    expect(() => srgbDistance('#00e5ff', 'var(--color-miss)')).toThrow()
+  })
+})
+
+describe('declaredPrimitives', () => {
+  it('finds the literals no Theme restates', () => {
+    expect(declaredPrimitives(CSS)).toEqual(['--cyan', '--violet'])
+  })
+
+  it('leaves out a literal a Theme does restate — that one is semantic', () => {
+    expect(declaredPrimitives(CSS)).not.toContain('--bg')
+  })
+
+  it('leaves out chains and mixes, which have a primitive underneath rather than being one', () => {
+    expect(declaredPrimitives(CSS)).not.toContain('--fg')
+    expect(declaredPrimitives(CSS)).not.toContain('--tint')
+    expect(declaredPrimitives(CSS)).not.toContain('--border-base')
+  })
+})
+
 describe('RETIRED_HUE_CLASSES', () => {
-  it('carries the primitive names the Tailwind preset no longer exposes', () => {
+  it('carries the primitive names the stylesheet declares', () => {
     expect(RETIRED_HUE_CLASSES).toContain('violet')
     expect(RETIRED_HUE_CLASSES).toContain('abyss')
     expect(RETIRED_HUE_CLASSES).not.toContain('accent')
+  })
+
+  // The three that never had a Tailwind class, and so were missed by a list built from the
+  // preset's removals — while `var(--white)` pins a rule to `ice` exactly as `var(--violet)` does.
+  it('carries the primitives that never had a class to lose', () => {
+    expect(RETIRED_HUE_CLASSES).toContain('white')
+    expect(RETIRED_HUE_CLASSES).toContain('deep-electric')
+    expect(RETIRED_HUE_CLASSES).toContain('soft-electric')
   })
 })

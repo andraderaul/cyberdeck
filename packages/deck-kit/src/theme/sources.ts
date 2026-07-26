@@ -82,6 +82,13 @@ export function colourBearingSources(): Source[] {
     if (existsSync(src)) {
       walk(src, root, out)
     }
+    // The shell each program is served in. It sits outside `src/`, so a walk of the source tree
+    // misses it entirely — and it is the one file that carries a `<style>` block and the inline
+    // pre-paint script, which is to say the two places a hue could be named before React exists.
+    const html = join(root, APPS_FROM_ROOT, program, 'index.html')
+    if (existsSync(html)) {
+      out.push({ path: relative(root, html), source: readFileSync(html, 'utf8') })
+    }
   }
   walk(join(root, 'packages/deck-kit/src'), root, out)
   return out.filter(({ path }) => !EXEMPT.includes(path))

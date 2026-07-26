@@ -23,6 +23,13 @@ real token values and holds every Theme to a stated contract, a vocabulary guard
 the class, file and line if a retired name comes back, and a roster guard that keeps the
 TypeScript, the Theme blocks and each program's inlined pre-paint script in agreement.
 
+The vocabulary guard bans every primitive the stylesheet declares, derived from the stylesheet
+rather than listed by hand — a literal colour no Theme restates *is* `ice`'s vocabulary, which is
+the definition that also catches `--white` and the two electric variants. Those never had a
+Tailwind class to lose, so a ban list written from the preset's removals walked straight past them
+while `var(--white)` pinned a rule to `ice` just as surely as `var(--violet)` would. It reads each
+program's `index.html` too, which is where a hue could be named before React exists.
+
 `--fg-on-accent` is new: a selection highlight is the only place the deck paints text on an opaque
 accent, and it is the one pair a Theme cannot get right by accident — whether the text wants to be
 lighter or darker depends on how bright that accent is. The contract pins it at AA-small.

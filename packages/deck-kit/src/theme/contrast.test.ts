@@ -7,7 +7,7 @@
 // hand-mirror failure being removed, and it would pin exactly what Themes need to be free to change.
 
 import { describe, expect, it } from 'vitest'
-import { contrastRatio, declaredThemes, resolveTokens } from './audit'
+import { contrastRatio, declaredThemes, resolveTokens, srgbDistance } from './audit'
 import { readTokensCss } from './sources'
 
 const css = readTokensCss()
@@ -23,6 +23,10 @@ const AA_SMALL = 4.5
 // WCAG 1.4.11 — the floor for something you have to be able to *see* rather than read: a border,
 // a focus ring, a chip's outline.
 const NON_TEXT = 3
+
+// sRGB units, on a scale that tops out around 441. Not a WCAG figure — nothing in WCAG measures
+// two foregrounds against each other — so it is set from the roster instead. See the Hit/Miss pin.
+const DISTINCT = 120
 
 describe.each(THEMES)('Theme `%s` meets the contract', (theme) => {
   const tokens = resolveTokens(css, theme)
@@ -70,14 +74,23 @@ describe.each(THEMES)('Theme `%s` meets the contract', (theme) => {
     expect(ratio('--fg-on-accent', '--accent')).toBeGreaterThanOrEqual(AA_SMALL)
   })
 
-  // A Hit and a Miss are a classifier's two answers (ADR 0023), so a Theme that spelled both the
-  // same colour would pass every pin above and still lose the lens. This is deliberately an
-  // inequality and not a ratio: luminance contrast is the wrong instrument for two foregrounds —
-  // `ice`'s cyan and electric measure 1.2:1 against each other and are unmistakable — and the
-  // right one, a perceptual colour difference, is the colour engine this guard must not become.
-  // What carries the distinction for a reader who cannot use hue is the word HIT or MISS itself.
+  // A Hit and a Miss are a classifier's two answers (ADR 0023), so a Theme whose two answers look
+  // alike passes every pin above and still loses the lens.
+  //
+  // Deliberately not a contrast ratio: luminance is the wrong instrument for two foregrounds —
+  // `ice`'s cyan and electric measure 1.2:1 against each other and are unmistakable. Deliberately
+  // not a perceptual ΔE either: that is the colour engine this guard must not become. A straight
+  // sRGB distance is the crudest thing that separates *near-identical* from *distinct*, which is
+  // the only distinction being asked for.
+  //
+  // The floor is set below the tightest pair the roster actually ships — `chiba`'s washed blue
+  // against its amber, at 161 — with room for a Theme to be subtler than any of these and none for
+  // one to rename the same colour twice. What carries the distinction for a reader who cannot use
+  // hue at all is the word HIT or MISS itself.
   it('does not spell a Hit and a Miss the same colour', () => {
-    expect(tokens['--color-hit']).not.toBe(tokens['--color-miss'])
+    expect(srgbDistance(tokens['--color-hit'], tokens['--color-miss'])).toBeGreaterThanOrEqual(
+      DISTINCT,
+    )
   })
 
   // ADR 0013: an overlay on a canvas stands on its own opaque surface, because no alpha survives

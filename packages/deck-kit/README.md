@@ -56,7 +56,7 @@ Three guards in `src/theme/` keep it honest, and all three run in the ordinary t
 | Guard | What it proves |
 |-------|----------------|
 | **contrast** | every Theme meets the Theme Contract, resolved from the real token values |
-| **vocabulary** | no source in any program or in the kit names a retired hue |
+| **vocabulary** | no source, stylesheet or `index.html` in any program or in the kit names a primitive — the ban list is asserted against every literal in `tokens.css` that no Theme restates, so it cannot drift from the stylesheet |
 | **roster** | the TypeScript, the Theme blocks and the hand-inlined scripts agree — and SPRAWL//Atlas still has no script, which is deliberate (ADR 0021) |
 
 Their pure half is `src/theme/audit.ts`: text in, findings out, no filesystem.

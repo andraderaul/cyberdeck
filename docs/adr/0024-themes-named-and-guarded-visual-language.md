@@ -57,9 +57,20 @@ and the role tint backgrounds — become `color-mix()` over their semantic sourc
 `soft` variants do not: they are chosen colours, not computed ones. The line falls exactly where the
 contrast guard does not look, so the guard never evaluates a colour mix.
 
-**The literal hue vocabulary is retired from the preset, and two guards live in the kit.** A
+**The literal hue vocabulary is retired from the preset, and three guards live in the kit.** A
 contrast guard resolves `tokens.css` and proves every Theme meets the contract below; a vocabulary
-guard proves no source has gone back to naming a literal hue.
+guard proves no source has gone back to naming a literal hue; a roster guard keeps the TypeScript,
+the Theme blocks and the hand-inlined pre-paint scripts in agreement.
+
+**What counts as a literal hue is derived, not listed.** A primitive is a `:root` colour written as
+a literal that no Theme restates — that is precisely what makes a name `ice`'s vocabulary rather
+than the deck's, and it is why `--fg-subtle` and `--fg-on-accent` are semantic despite also being
+hexes. The vocabulary guard's ban list is asserted against that definition. The alternative, a list
+written from what the preset dropped, is narrower than it looks: `--white`, `--deep-electric` and
+`--soft-electric` never had a class to lose, so such a list walks past them while `var(--white)` in
+a stylesheet pins that rule to `ice` exactly as `var(--violet)` would. The scan reads each program's
+`index.html` as well as its sources, because a `<style>` block and the inlined pre-paint script are
+the two places a hue can be named before React exists.
 
 **The contract every Theme must meet:** subtle foreground, muted foreground and danger at 4.5:1 on
 all three surfaces; accent at 4.5:1 on the base surface *and* 3:1 (WCAG 1.4.11, non-text) on all
@@ -78,11 +89,16 @@ near-white on a bright accent measures 1.3:1. `ice` drew `--white` here and neve
 below AA before Themes existed. This is the one pin where sparing the incumbent was not necessary,
 which is why it has no second tier.
 
-Telling a Hit from a Miss is asserted as an *inequality* rather than a ratio — luminance contrast is
-the wrong instrument for two foregrounds (`ice`'s cyan and electric measure 1.2:1 against each other
-and are unmistakable), and the right one, a perceptual colour difference, is the colour engine the
-guard must not become. What carries the distinction for a reader who cannot use hue is the word HIT
-or MISS itself.
+Telling a Hit from a Miss is asserted as an *sRGB distance* rather than a contrast ratio. Luminance
+is the wrong instrument for two foregrounds — `ice`'s cyan and electric measure 1.2:1 against each
+other and are unmistakable — and the right one, a perceptual ΔE in a uniform colour space, is the
+colour engine the guard must not become. A straight-line distance between two hexes is the crudest
+thing that separates *near-identical* from *distinct*, which is the only distinction being asked
+for. The floor is 120 on a scale topping out near 441, set below the tightest pair the roster ships
+(`chiba`'s washed blue against its amber, at 161): room for a Theme to be subtler than any of
+these, none for one to spell the same colour twice. A plain inequality was considered and is too
+weak — it passes two hues eight units apart, which is the failure this pin exists to catch. What
+carries the distinction for a reader who cannot use hue at all is the word HIT or MISS itself.
 
 **Selection is the user's, in the header, as a control that cycles.** Persistence is per origin
 because the programs deploy to four origins on a public-suffix domain; no program links to another,

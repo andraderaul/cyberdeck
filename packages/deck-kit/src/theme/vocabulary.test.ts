@@ -7,14 +7,26 @@
 // ADR 0009's guard, so coverage stops depending on which program someone remembered.
 
 import { describe, expect, it } from 'vitest'
-import { findLiteralHues } from './audit'
-import { colourBearingSources } from './sources'
+import { declaredPrimitives, findLiteralHues, RETIRED_HUE_CLASSES } from './audit'
+import { colourBearingSources, readTokensCss } from './sources'
 
 const files = colourBearingSources()
 
 describe('the literal hue vocabulary is retired', () => {
   it('has something to look at', () => {
     expect(files.length).toBeGreaterThan(50)
+  })
+
+  // The ban list is only a guard while it matches the stylesheet, and it was first written from
+  // what the Tailwind preset dropped — which silently missed the three primitives that never had a
+  // class to lose. This holds it to the definition instead: every literal colour no Theme restates
+  // is `ice`'s vocabulary, so every one of them is banned.
+  it('bans every primitive the stylesheet declares', () => {
+    const banned = RETIRED_HUE_CLASSES as readonly string[]
+    const unbanned = declaredPrimitives(readTokensCss())
+      .map((token) => token.slice('--'.length))
+      .filter((name) => !banned.includes(name))
+    expect(unbanned).toEqual([])
   })
 
   it.each(files)('$path names roles, not hues', ({ path, source }) => {

@@ -38,8 +38,9 @@ _Avoid_: info, texto do terminal
 **Par de resultado (Hit / Miss)**:
 As duas respostas de um classificador (ADR 0023), nomeadas juntas porque um Theme precisa escolher
 as duas de uma vez. Um Miss não é a ferramenta avisando de nada — é a outra resposta. O contrato
-exige apenas que não sejam a *mesma* cor: contraste de luminância é o instrumento errado para dois
-primeiros planos, e o certo seria um motor de cor.
+exige que estejam a uma *distância* mínima em sRGB, não que apenas tenham grafias diferentes:
+contraste de luminância é o instrumento errado para dois primeiros planos, e o certo — um ΔE
+perceptual — seria o motor de cor que a guarda não pode virar.
 _Avoid_: warning, erro, cache miss como falha
 
 ## As guardas
@@ -49,7 +50,10 @@ texto entra, achados saem, sem sistema de arquivos.
 
 **Guarda de contraste**: resolve `tokens.css` e prova o Theme Contract para todo Theme declarado.
 **Guarda de vocabulário**: prova que nenhuma fonte, em nenhum programa, voltou a nomear um matiz
-literal — e falha dizendo a classe, o arquivo e a linha, porque a correção é mecânica.
+literal — e falha dizendo a classe, o arquivo e a linha, porque a correção é mecânica. O que conta
+como matiz literal é *derivado* do `tokens.css`, não listado: um primitivo é uma cor do `:root`
+escrita como literal que nenhum Theme redefine. Ela lê os `index.html` também, onde uma cor pode
+ser nomeada antes do React existir.
 **Guarda do roster**: o roster existe em três lugares que não podem se importar — o TypeScript
 daqui, os blocos de Theme do `tokens.css`, e um script inline por programa. Esta as mantém juntas,
 e é também o que mantém a exclusão do SPRAWL//Atlas de pé.

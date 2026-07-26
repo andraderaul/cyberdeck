@@ -1,9 +1,11 @@
-// The pure half of the deck's two Theme guards (ADR 0024). Text in, findings out — nothing here
-// touches the filesystem, so every rule is testable against a string. The guards themselves are
-// thin wrappers that read the real `tokens.css` and the real program sources and hand them here.
+// The pure half of the deck's three Theme guards — the Contract, the vocabulary and the roster
+// (ADR 0024). Text in, findings out — nothing here touches the filesystem, so every rule is
+// testable against a string. The guards themselves are thin wrappers that read the real
+// `tokens.css` and the real program sources and hand them here.
 //
-// One module rather than two: token resolution and banned-class detection are the same shape,
-// have the same consumer, and belong in the same place.
+// One module rather than three: token resolution, banned-class detection and the contrast
+// arithmetic are all string-in / number-or-findings-out, share the same three consumers, and
+// splitting them would buy an import graph and nothing else.
 
 /** A token name (`--accent`) to the literal it resolves to, with every `var()` chain followed. */
 export type TokenMap = Record<string, string>
@@ -58,6 +60,35 @@ export function declaredThemes(css: string): string[] {
   return [...names]
 }
 
+/** The only shape a primitive is written in — a bare hex, never a `var()` chain or a mix. */
+const HEX_LITERAL = /^#[\da-f]{3,8}$/i
+
+/**
+ * The primitives a stylesheet declares: a `:root` colour written as a literal that no Theme block
+ * restates. That is exactly what makes a name `ice`'s vocabulary rather than the deck's, and it is
+ * why the semantic tokens that also happen to be literals — `--fg-subtle`, `--fg-on-accent` — do
+ * not come back: every Theme redefines them.
+ *
+ * Derived from the stylesheet rather than listed, so the vocabulary guard's ban list can be held to
+ * it. A primitive added tomorrow is banned tomorrow, instead of whenever someone remembers.
+ */
+export function declaredPrimitives(css: string): string[] {
+  const clean = withoutComments(css)
+  const root = declarationsOf(blockOf(clean, /:root\s*(?={)/) ?? '')
+
+  const restated = new Set<string>()
+  for (const theme of declaredThemes(css)) {
+    const block = blockOf(clean, new RegExp(`\\[data-theme=['"]${theme}['"]\\]\\s*(?={)`))
+    for (const name of Object.keys(declarationsOf(block ?? ''))) {
+      restated.add(name)
+    }
+  }
+
+  return Object.keys(root)
+    .filter((name) => HEX_LITERAL.test(root[name]) && !restated.has(name))
+    .sort()
+}
+
 /**
  * The token values a named Theme resolves to: the root block, overlaid by the Theme's own block,
  * with `var()` chains followed to the literal underneath.
@@ -106,9 +137,18 @@ export type LiteralHueFinding = {
 }
 
 /**
- * The primitive colour names the Tailwind preset no longer exposes (ADR 0024). Naming one is what
- * pins a component to a single Theme and breaks the rest in that one corner, so it fails the
- * vocabulary guard instead of shipping.
+ * Every primitive `tokens.css` declares (ADR 0024). Naming one is what pins a component to a single
+ * Theme and breaks the rest in that one corner, so it fails the vocabulary guard instead of
+ * shipping.
+ *
+ * The list is *every primitive*, not *what the Tailwind preset dropped*, and the difference is the
+ * hole this closes. `--white`, `--deep-electric` and `--soft-electric` never had a class to lose,
+ * so a list built from the preset's removals walks past them — while `var(--white)` in a program's
+ * stylesheet pins that rule to `ice` exactly as surely as `var(--violet)` would. A primitive is
+ * banned because it is `ice`'s vocabulary, not because Tailwind once spelled it.
+ *
+ * `white` therefore also bans Tailwind's own built-in `text-white`. That is the intent: the deck's
+ * brightest foreground is `--fg-strong`, which a Theme restates and `#fff` does not.
  */
 export const RETIRED_HUE_CLASSES = [
   'violet',
@@ -121,6 +161,8 @@ export const RETIRED_HUE_CLASSES = [
   'deep-pink',
   'soft-pink',
   'electric',
+  'deep-electric',
+  'soft-electric',
   'void',
   'abyss',
   'shadow',
@@ -128,6 +170,7 @@ export const RETIRED_HUE_CLASSES = [
   'muted',
   'dim',
   'ghost',
+  'white',
 ] as const
 
 /**
@@ -216,6 +259,22 @@ export function contrastRatio(fg: string, bg: string): number {
   const lighter = Math.max(relativeLuminance(fg), relativeLuminance(bg))
   const darker = Math.min(relativeLuminance(fg), relativeLuminance(bg))
   return (lighter + 0.05) / (darker + 0.05)
+}
+
+/**
+ * Straight-line distance between two hex colours in sRGB, 0 to ~441.
+ *
+ * Deliberately the crudest instrument that answers the question, because the question is only
+ * "are these two the same colour with a different name". Luminance contrast cannot answer it —
+ * two foregrounds can be unmistakable and still measure 1.2:1 — and the instrument that answers it
+ * properly, a perceptual ΔE in a uniform colour space, is the colour engine these guards must not
+ * become. This is arithmetic on six hex digits, and it separates *near-identical* from *distinct*,
+ * which is the whole job.
+ */
+export function srgbDistance(a: string, b: string): number {
+  const [ar, ag, ab] = channels(a)
+  const [br, bg, bb] = channels(b)
+  return Math.sqrt((ar - br) ** 2 + (ag - bg) ** 2 + (ab - bb) ** 2)
 }
 
 function relativeLuminance(hex: string): number {
