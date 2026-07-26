@@ -14,7 +14,19 @@ export interface DataPoint {
   lng: number
   /** Connected capacity in Mbps (sum of netixlan.speed). Drives brightness through the log window. */
   capacity: number
+  /** The city — what the map labels (#228). */
   label?: string
+  /** ISO 2-letter country code, for hover inspection (#228). */
+  country?: string
+}
+
+/** A dated snapshot: the points plus the provenance the UI credits on screen (ADR 0022). */
+export interface Dataset {
+  /** `YYYY-MM` for a vendored snapshot. */
+  asOf: string
+  measure: string
+  source: string
+  points: DataPoint[]
 }
 
 /**

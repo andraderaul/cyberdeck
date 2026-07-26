@@ -1,22 +1,35 @@
 import { describe, expect, it } from 'vitest'
-import { DATASET, maxCapacity, skeletonScale } from './dataset'
-import { brightnessFor } from './project'
+import { DATASET, maxCapacity } from './dataset'
 
-describe('DATASET (sample snapshot)', () => {
-  it('carries provenance and points in the pure-core shape', () => {
-    expect(DATASET.asOf).toBe('sample')
-    expect(DATASET.points.length).toBeGreaterThanOrEqual(12)
-    for (const point of DATASET.points) {
-      expect(typeof point.lat).toBe('number')
-      expect(typeof point.lng).toBe('number')
+describe('DATASET (vendored PeeringDB snapshot)', () => {
+  it('is a dated snapshot, not "traffic" (ADR 0022)', () => {
+    expect(DATASET.asOf).toMatch(/^\d{4}-\d{2}$/)
+    expect(DATASET.measure).toMatch(/connected capacity/i)
+    expect(DATASET.measure).not.toMatch(/traffic/i)
+    expect(DATASET.source).not.toMatch(/traffic/i)
+  })
+
+  it('carries the real worldwide set in the pure-core shape', () => {
+    expect(DATASET.points.length).toBeGreaterThan(500)
+    for (const point of DATASET.points.slice(0, 50)) {
+      expect(point.lat).toBeGreaterThanOrEqual(-90)
+      expect(point.lat).toBeLessThanOrEqual(90)
+      expect(point.lng).toBeGreaterThanOrEqual(-180)
+      expect(point.lng).toBeLessThanOrEqual(180)
       expect(point.capacity).toBeGreaterThan(0)
     }
   })
 
-  it('spans several orders of magnitude — the spread the log window needs (ADR 0022)', () => {
+  it('spans several orders of magnitude — the spread the log window needs (ADR 0021)', () => {
     const caps = DATASET.points.map((p) => p.capacity)
     const decades = Math.log10(Math.max(...caps) / Math.min(...caps))
-    expect(decades).toBeGreaterThan(2)
+    expect(decades).toBeGreaterThan(3)
+  })
+
+  it('is sorted by capacity descending — the order #228 reads "strongest N" off', () => {
+    for (let i = 1; i < Math.min(DATASET.points.length, 100); i++) {
+      expect(DATASET.points[i - 1].capacity).toBeGreaterThanOrEqual(DATASET.points[i].capacity)
+    }
   })
 })
 
@@ -32,13 +45,5 @@ describe('maxCapacity', () => {
 
   it('returns 0 for an empty set', () => {
     expect(maxCapacity([])).toBe(0)
-  })
-})
-
-describe('skeletonScale', () => {
-  it('anchors the top of the window at the dataset max, so the brightest point is white', () => {
-    const scale = skeletonScale(DATASET.points)
-    expect(scale.topCapacity).toBe(maxCapacity(DATASET.points))
-    expect(brightnessFor(scale.topCapacity, scale)).toBeCloseTo(1)
   })
 })

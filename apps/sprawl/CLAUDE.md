@@ -39,8 +39,14 @@ snapshot (ADR 0022), no backend, no runtime fetch.
 - **Impure shell** (`src/atlas/paint.ts`): `paintFrame()` is the *only* canvas-touching function.
   Additive compositing (`globalCompositeOperation = 'lighter'`) makes dense regions bloom — points
   are painted as light, not markers.
-- **Data** (`src/atlas/dataset.ts`): loads the committed snapshot behind a `Dataset` type. Swapping
-  the sample for the real vendored file (#227) changes nothing downstream.
+- **Data** (`src/atlas/dataset.ts`): loads the committed vendored snapshot (ADR 0022) through the
+  generated `src/data/snapshot.ts` pointer, which imports the dated `dataset-YYYY-MM.json`. The pure
+  core only sees the `Dataset` shape, so re-vendoring a newer month changes nothing downstream.
+- **Data pipeline** (`scripts/`): `aggregate.mjs` is the pure join (PeeringDB rows → points,
+  unit-tested); `vendor-dataset.mjs` is the impure shell that fetches and writes the dated snapshot +
+  the generated pointer (`npm run vendor:dataset`). A scheduled CI job
+  (`.github/workflows/vendor-sprawl-dataset.yml`) re-runs it and opens a PR on drift. Lives in the
+  app, not deck-kit — single consumer (ADR 0022).
 - **Shell component** (`src/components/atlas-canvas.tsx`): owns *when* to repaint (resize), sizes the
   backing store to `devicePixelRatio`, and calls the pure pair. It holds no scale logic — #226 lifts
   scale to live state here.
