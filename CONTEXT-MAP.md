@@ -20,7 +20,9 @@ código, mas é versionado e deployado de forma independente (ver ADR 0011 e ADR
   em branco (OVERFLOW) até você reescalar mais grosso e a estrutura emergir. Inspirado na passagem
   do *Neuromancer*. É a **primeira peça, não ferramenta**, do deck — não consome material do
   usuário, e a régua de sucesso é a primeira tela, não a retenção (ADR 0021). Dado real via
-  snapshot vendorizado do PeeringDB (ADR 0022). **Conceito** — decidido, ainda não construído.
+  snapshot vendorizado do PeeringDB (ADR 0022). **Em construção** — o walking skeleton existe
+  (`apps/sprawl`: dataset → `project` puro → `paintFrame`, escala fixa); a gramática de escala,
+  o dado real, labels, basemap e o link compartilhável seguem por issue.
 
 ## Shared package
 
