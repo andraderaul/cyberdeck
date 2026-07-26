@@ -8,11 +8,12 @@ Read `CONTEXT.md` for the domain language and the piece-not-tool framing (ADR 00
 
 ## Status
 
-Walking skeleton (#225) + the scale instrument (#226): the map opens in OVERFLOW (`1 px = 1 Gbps`,
-honestly blown white) and you repair it by sliding the log window coarser — wheel, drag or arrow
-keys over the canvas — while the always-visible reader tracks `1 px ≈ N Gbps/Tbps` live and flips
-out of its OVERFLOW voice once structure emerges. The vendored PeeringDB snapshot (#227), labels +
-hover (#228), the earned basemap (#229) and the shareable link (#230) build on this seam.
+**v1 complete** (#225–#230). The map opens in OVERFLOW (`1 px = 1 Gbps`, honestly blown white) on the
+real vendored PeeringDB snapshot; you repair it by sliding the log window coarser — wheel, drag or
+arrow keys over the canvas — while the always-visible reader tracks `1 px ≈ N Gbps/Tbps` live and
+flips out of its OVERFLOW voice as structure emerges. City labels + hover orient without a basemap;
+`B` toggles the earned coastline gabarito; the export is a shareable link that opens the recipient at
+the same scale (PNG a quiet secondary). A time axis and a pan/zoom viewport are deferred (ADR 0021).
 
 ## Commands
 
@@ -52,6 +53,11 @@ snapshot (ADR 0022), no backend, no runtime fetch.
   Natural Earth 110m coastline onto the *same* equirectangular frame as the points; `paintBasemap`
   strokes it faintly over the light. Off by default (the first screen is pure light on dark), toggled
   by `B` or the `BasemapToggle` chip — a confirming gabarito, not the ground (ADR 0021, P6).
+- **Shareable link** (#230): `encodeView`/`decodeView` (pure, `src/atlas/share.ts`) round-trip the
+  scale position (and basemap) through a URL query. App boots from `window.location.search` and keeps
+  the address bar synced (`replaceState`), so the artifact *is* state (ADR 0021) — the link opens the
+  recipient at the same point in the vertigo, deterministic on the fixed snapshot. `ExportControls`
+  foregrounds the link and offers PNG (`shareOrDownloadCanvas`) as a quiet secondary.
 - **Shell component** (`src/components/atlas-canvas.tsx`): the gesture surface + the paint. One
   projection runs in **CSS space** (`useElementSize` + `project`) and is shared by the canvas paint
   (context scaled to `devicePixelRatio` via `setTransform`) and the DOM overlays, so labels and hover

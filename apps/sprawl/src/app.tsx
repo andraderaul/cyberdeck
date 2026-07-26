@@ -3,8 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DATASET } from './atlas/dataset'
 import { topCityLabels } from './atlas/labels'
 import { project } from './atlas/project'
+import { decodeView, encodeView } from './atlas/share'
 import AtlasCanvas from './components/atlas-canvas'
 import BasemapToggle from './components/basemap-toggle'
+import ExportControls from './components/export-controls'
 import { useElementSize } from './hooks/use-element-size'
 import { useHover } from './hooks/use-hover'
 import { useScale } from './hooks/use-scale'
@@ -22,7 +24,15 @@ const CITY_LABEL_MIN_DISTANCE = 52
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const { scale, position, reader, overflow } = useScale(containerRef, DATASET.points)
+
+  // Boot from a shared link (#230): the URL encodes the scale (and basemap) the sender left, so the
+  // recipient opens at the same point in the vertigo and keeps sliding. Read once, on mount.
+  const bootView = useRef(decodeView(window.location.search)).current
+  const { scale, position, reader, overflow } = useScale(
+    containerRef,
+    DATASET.points,
+    bootView.position,
+  )
 
   // One projection in CSS space, shared by the canvas paint and the DOM overlays (labels, hover).
   const size = useElementSize(containerRef)
@@ -36,7 +46,7 @@ export default function App() {
   // The earned basemap (#229): off by default, so the first screen is pure light on dark. `B`
   // toggles it — the key Case reached for — and the corner chip makes that discoverable (and gives
   // touch the same reach). Toggling never touches scale or viewport.
-  const [basemap, setBasemap] = useState(false)
+  const [basemap, setBasemap] = useState(bootView.basemap ?? false)
   const toggleBasemap = useCallback(() => setBasemap((on) => !on), [])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -47,6 +57,13 @@ export default function App() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [toggleBasemap])
+
+  // Keep the address bar in sync with the view, so the URL is always the shareable link — the
+  // artifact *is* state (ADR 0021). replaceState, not push: sliding is not navigation history.
+  useEffect(() => {
+    const query = encodeView({ position, basemap })
+    window.history.replaceState?.(null, '', `${window.location.pathname}?${query}`)
+  }, [position, basemap])
 
   return (
     <div className="flex flex-col h-screen">
@@ -80,6 +97,7 @@ export default function App() {
           />
         </ErrorBoundary>
 
+        <ExportControls position={position} basemap={basemap} canvasRef={canvasRef} />
         <BasemapToggle on={basemap} onToggle={toggleBasemap} />
 
         {/* The provenance credit (ADR 0022): named as connected capacity, never "traffic". */}
