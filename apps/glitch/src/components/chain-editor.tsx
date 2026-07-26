@@ -27,6 +27,15 @@ import {
 import { type ChipBounds, dropTargetAt, isDragGesture } from './chain-drag'
 
 /**
+ * The params panel's reserved height. On mobile the params stack (the sm grid flows into columns
+ * only at ≥640px), so each Effect's stacked height differs — 1 to 3 controls. Reserve the tallest
+ * (pixel sort: a toggle + two sliders) so switching Effects doesn't reflow the strip. At sm every
+ * Effect is one row, so the floor drops back to the single-row height. A full class string, not an
+ * interpolated `min-h-[${n}px]` — Tailwind only emits arbitrary values it can see literally.
+ */
+const PANEL_MIN_HEIGHT = 'min-h-[240px] sm:min-h-[92px]'
+
+/**
  * Every slider here spans the unit interval; the two params with no natural 0..1 bound
  * (`CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE`) get their ranges from the core.
  */
@@ -314,11 +323,7 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
   return (
     <div className="flex flex-col gap-sm">
       {/* The panel sits above the row so the canvas is never what gets covered (ADR 0020). */}
-      {/* On mobile the params stack (the sm grid flows into columns only at ≥640px), so each
-          Effect's stacked height differs — 1 to 3 controls. Reserve the tallest (pixel sort: a
-          toggle + two sliders) so switching Effects doesn't reflow the strip. At sm every Effect is
-          one row, so the floor drops back to the single-row height. */}
-      <div className="min-h-[240px] sm:min-h-[92px]">
+      <div className={PANEL_MIN_HEIGHT}>
         {focusedLink ? (
           <div className="flex flex-col gap-xs">
             <div className="flex items-center gap-2xs">

@@ -5,6 +5,16 @@ import { getModePalette } from '../ascii/renderer'
 import type { Charset, ColorMode, ConversionSettings } from '../ascii/types'
 import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
 
+/**
+ * The params panel's reserved height. Reserve the tallest tool's height (color mode — two chip
+ * rows) so switching tools doesn't reflow the strip. Unlike GLITCH's editor this holds at every
+ * breakpoint, not just mobile: charset and color mode are groups of one that fill the panel with
+ * their own chip grids at all widths, so they never collapse into the slider group's single-row
+ * height. A full class string, not an interpolated `min-h-[${n}px]` — Tailwind only emits arbitrary
+ * values it can see literally.
+ */
+const PANEL_MIN_HEIGHT = 'min-h-[120px]'
+
 const RESOLUTION_RANGE = { min: 6, max: 24, step: 1 }
 const BRIGHTNESS_RANGE = { min: 0.5, max: 2.0, step: 0.05 }
 const CONTRAST_RANGE = { min: 0.5, max: 3.0, step: 0.05 }
@@ -91,11 +101,7 @@ export default function SettingsEditor({ settings, onChange }: Props) {
   return (
     <div className="flex flex-col gap-sm">
       {/* The panel sits above the row so the canvas is never what gets covered (ADR 0020). */}
-      {/* Reserve the tallest tool's height (color mode — two chip rows) so switching tools doesn't
-          reflow the strip. Unlike GLITCH's editor this holds at every breakpoint, not just mobile:
-          charset and color mode are groups of one that fill the panel with their own chip grids at
-          all widths, so they never collapse into the slider group's single-row height. */}
-      <div className="min-h-[120px]">
+      <div className={PANEL_MIN_HEIGHT}>
         {focus === 'charset' && (
           <fieldset
             className="flex flex-col gap-xs border-none p-0 m-0"
