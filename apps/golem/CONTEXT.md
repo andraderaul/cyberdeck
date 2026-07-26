@@ -113,6 +113,16 @@ verdade; a Cache só rotula o acesso. Harvard: uma para instrução (o fetch), u
 o modo ligado (`cache on`), fixado na criação da Machine — nunca no meio de um `run`.
 _Avoid_: memória rápida (não serve dado — mente sobre o que ela é), buffer, Device (o programa não a toca)
 
+**Superfície de acesso à memória**:
+A junção única por onde a Machine faz *toda* classificação de cache — `fetch` (o I-cache),
+`load`/`store` e `loadByte`/`storeByte` (o D-cache). É ela que decide o guard de Device/Terminal,
+a ordem (leitura classifica antes, escrita depois) e a conta de byte→word; as instruções só
+nomeiam o acesso. Fica sobre a camada crua (`readWord`/`writeWord`), que nunca classifica — por
+isso o read-modify-write de um `stb` reusa a camada crua sem emitir um acesso fantasma. Todo
+opcode que toca memória passa por aqui, então `push`/`pop` herdam o mesmo guard de `ldw`/`stw`:
+uma pilha que cai em espaço de Device é um acesso a Device, não classificado.
+_Avoid_: caminho de memória (ambíguo com a camada crua), MMU (não traduz endereço)
+
 **Line / Set**:
 O índice derivado do endereço (8 Lines) e as duas vias associativas dentro de uma Line (2 Sets).
 Um acesso mapeia para uma Line; o classificador procura o bloco nos dois Sets dela e, no Miss,

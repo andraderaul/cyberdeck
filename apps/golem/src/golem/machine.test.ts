@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { assemble } from './assembler'
+import type { CacheAccess } from './cache'
 import { floatBits } from './float'
 import {
   CAUSE_FPU,
@@ -932,5 +933,48 @@ describe('the Terminal', () => {
     ].join('\n')
 
     expect(run(source, 400).terminal).toBe('Hello from GOLEM\n')
+  })
+})
+
+// The push/pop device guard the oracle can never reach. No reference program points the stack
+// pointer into device space, so the fixtures say nothing about it — but `push`/`pop` route through
+// the same `store`/`load` memory-access surface as `stw`/`ldw`, and inherit its device guard by
+// design: a stack access that lands on a device word is a device access, not a cacheable one. The
+// raw path already diverts such a word to the device rather than memory (see `writeWord`). This
+// pins that decision so a future refactor can't silently revert it.
+describe('push/pop into device space', () => {
+  function dataAccesses(source: string, limit = 20): CacheAccess[] {
+    const result = assemble(source)
+    if (!result.ok) {
+      throw new Error(`bad fixture source: ${JSON.stringify(result.errors)}`)
+    }
+    let machine = createMachine(result.image, { cache: true })
+    const data: CacheAccess[] = []
+    for (let i = 0; i < limit && !machine.halted; i++) {
+      const stepped = step(machine)
+      for (const event of stepped.events) {
+        if (event.kind === 'cache' && event.access.cache === 'D') {
+          data.push(event.access)
+        }
+      }
+      machine = stepped.machine
+    }
+    return data
+  }
+
+  it('classifies a push to real memory but not one to a device word', () => {
+    const toMemory = dataAccesses(['addi r3, r0, 256', 'push r3, r1', 'int 0'].join('\n'))
+    expect(toMemory.map((access) => access.op)).toEqual(['WRITE'])
+
+    const toDevice = dataAccesses([`addi r3, r0, ${FPU_X}`, 'push r3, r1', 'int 0'].join('\n'))
+    expect(toDevice).toEqual([])
+  })
+
+  it('classifies a pop from real memory but not one from a device word', () => {
+    const fromMemory = dataAccesses(['addi r2, r0, 255', 'pop r3, r2', 'int 0'].join('\n'))
+    expect(fromMemory.map((access) => access.op)).toEqual(['READ'])
+
+    const fromDevice = dataAccesses([`addi r2, r0, ${FPU_X - 1}`, 'pop r3, r2', 'int 0'].join('\n'))
+    expect(fromDevice).toEqual([])
   })
 })
