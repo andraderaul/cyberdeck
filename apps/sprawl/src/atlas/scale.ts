@@ -83,17 +83,16 @@ export function isOverflow(points: readonly DataPoint[], scale: Scale): boolean 
   return clippedFraction(points, scale) >= OVERFLOW_CLIP_THRESHOLD
 }
 
-/** The live scale unit: value + unit + a `1 px ≈ …` string. The number *is* the vertigo — the
- *  reader is what turns the gesture into scale rather than a dimmer (ADR 0021). Honest unit: the
- *  measure is connected capacity, so its unit is per-second (Gbps / Tbps), never a storage GB. */
-export interface ScaleUnit {
+/** A connected-capacity magnitude formatted for screen: value + unit. Honest unit — the measure is
+ *  connected capacity, so it is per-second (Gbps / Tbps), never a storage GB. Shared by the scale
+ *  reader (#226) and hover inspection (#228) so `1 px ≈ N` and a point's value speak one language. */
+export interface CapacityUnit {
   value: number
   unit: string
-  text: string
 }
 
-export function formatScaleUnit(scale: Scale): ScaleUnit {
-  const gbps = scale.topCapacity / 1000
+export function formatCapacity(mbps: number): CapacityUnit {
+  const gbps = mbps / 1000
   const [value, unit] = gbps >= 1000 ? [gbps / 1000, 'Tbps'] : [gbps, 'Gbps']
   const rounded =
     value >= 100
@@ -101,5 +100,16 @@ export function formatScaleUnit(scale: Scale): ScaleUnit {
       : value >= 10
         ? Math.round(value * 10) / 10
         : Number(value.toPrecision(2))
-  return { value: rounded, unit, text: `1 px ≈ ${rounded} ${unit}` }
+  return { value: rounded, unit }
+}
+
+/** The live scale unit: the capacity magnitude plus a `1 px ≈ …` string. The number *is* the
+ *  vertigo — the reader is what turns the gesture into scale rather than a dimmer (ADR 0021). */
+export interface ScaleUnit extends CapacityUnit {
+  text: string
+}
+
+export function formatScaleUnit(scale: Scale): ScaleUnit {
+  const { value, unit } = formatCapacity(scale.topCapacity)
+  return { value, unit, text: `1 px ≈ ${value} ${unit}` }
 }

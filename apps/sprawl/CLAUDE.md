@@ -47,9 +47,14 @@ snapshot (ADR 0022), no backend, no runtime fetch.
   the generated pointer (`npm run vendor:dataset`). A scheduled CI job
   (`.github/workflows/vendor-sprawl-dataset.yml`) re-runs it and opens a PR on drift. Lives in the
   app, not deck-kit — single consumer (ADR 0022).
-- **Shell component** (`src/components/atlas-canvas.tsx`): owns *when* to repaint (resize), sizes the
-  backing store to `devicePixelRatio`, and calls the pure pair. It holds no scale logic — #226 lifts
-  scale to live state here.
+- **Shell component** (`src/components/atlas-canvas.tsx`): the gesture surface + the paint. One
+  projection runs in **CSS space** (`useElementSize` + `project`) and is shared by the canvas paint
+  (context scaled to `devicePixelRatio` via `setTransform`) and the DOM overlays, so labels and hover
+  land in the same coordinate space the map is drawn in.
+- **Overlays** (#228): `topCityLabels` (pure, `src/atlas/labels.ts`) picks the strongest cities,
+  spatially thinned so the dense European core doesn't pile names into a smear; `nearestPoint` +
+  `formatInspection` (pure, `src/atlas/inspect.ts`) drive hover. `useHover` hit-tests the pointer;
+  `CityLabels` / `HoverInspector` render them. Both carry their own contrast over the artwork (ADR 0013).
 
 ## Design system
 

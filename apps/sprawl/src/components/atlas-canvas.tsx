@@ -1,40 +1,50 @@
 import { type RefObject, useEffect, useRef } from 'react'
-import { DATASET } from '../atlas/dataset'
+import type { CityLabel } from '../atlas/labels'
 import { createGlowSprite, paintFrame } from '../atlas/paint'
-import { project } from '../atlas/project'
 import type { ScaleUnit } from '../atlas/scale'
-import type { Scale, Viewport } from '../atlas/types'
+import type { RenderInstruction } from '../atlas/types'
+import type { Size } from '../hooks/use-element-size'
+import type { Hover } from '../hooks/use-hover'
+import CityLabels from './city-labels'
+import HoverInspector from './hover-inspector'
 import ScaleReader from './scale-reader'
 
 interface Props {
   containerRef: RefObject<HTMLDivElement>
   canvasRef: RefObject<HTMLCanvasElement>
-  scale: Scale
+  /** CSS-pixel size of the frame; the projection is already in this space. */
+  size: Size
+  /** The projected frame in CSS px — shared by the paint below and the overlays. */
+  instructions: readonly RenderInstruction[]
   position: number
   reader: ScaleUnit
   overflow: boolean
+  labels: readonly CityLabel[]
+  hover: Hover | null
 }
 
 /**
  * The imperative shell around the canvas, and the scale instrument's surface (ADR 0020): the whole
- * map *is* the control. `containerRef` is the gesture target `useScale` binds to (wheel / drag /
- * keys), so it carries the slider ARIA and is focusable. The canvas repaints whenever the scale
- * changes — the pure `project → paintFrame` pair driven by the live window.
+ * map *is* the control. `containerRef` is the gesture target `useScale`/`useHover` bind to, so it
+ * carries the slider ARIA and is focusable. The canvas is drawn in CSS space with the context scaled
+ * to devicePixelRatio, so the one projection feeds both the paint and the DOM overlays.
  */
 export default function AtlasCanvas({
   containerRef,
   canvasRef,
-  scale,
+  size,
+  instructions,
   position,
   reader,
   overflow,
+  labels,
+  hover,
 }: Props) {
   const spriteRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
-    const container = containerRef.current
-    if (!canvas || !container) {
+    if (!canvas || size.width === 0 || size.height === 0) {
       return
     }
     const ctx = canvas.getContext('2d')
@@ -44,30 +54,14 @@ export default function AtlasCanvas({
     if (!spriteRef.current) {
       spriteRef.current = createGlowSprite()
     }
-    const sprite = spriteRef.current
-
-    const render = () => {
-      const dpr = window.devicePixelRatio || 1
-      const cssWidth = container.clientWidth
-      const cssHeight = container.clientHeight
-      if (cssWidth === 0 || cssHeight === 0) {
-        return
-      }
-      canvas.width = Math.round(cssWidth * dpr)
-      canvas.height = Math.round(cssHeight * dpr)
-      const viewport: Viewport = { width: canvas.width, height: canvas.height }
-      paintFrame(ctx, project(DATASET.points, scale, viewport), viewport, sprite, dpr)
-    }
-
-    render()
-    // ResizeObserver is absent in some non-browser test environments; the first paint still lands.
-    if (typeof ResizeObserver === 'undefined') {
-      return
-    }
-    const observer = new ResizeObserver(render)
-    observer.observe(container)
-    return () => observer.disconnect()
-  }, [canvasRef, containerRef, scale])
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = Math.round(size.width * dpr)
+    canvas.height = Math.round(size.height * dpr)
+    // Draw in CSS px: the backing store is device px, so scale the context once and everything
+    // downstream — glow diameters, overlay coords — speaks one coordinate space.
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    paintFrame(ctx, instructions, size, spriteRef.current)
+  }, [canvasRef, size, instructions])
 
   return (
     <div
@@ -84,6 +78,8 @@ export default function AtlasCanvas({
       {/* Decorative — the interactive semantics live on the slider container above; the canvas has
           no role or label, so a screen reader skips it without needing aria-hidden. */}
       <canvas ref={canvasRef} className="w-full h-full block bg-bg pointer-events-none" />
+      <CityLabels labels={labels} />
+      <HoverInspector hover={hover} />
       <ScaleReader reader={reader} overflow={overflow} />
     </div>
   )

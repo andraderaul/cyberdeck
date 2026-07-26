@@ -26,4 +26,10 @@ describe('SPRAWL//Atlas', () => {
     expect(screen.getByText(/PeeringDB connected capacity/)).toBeInTheDocument()
     expect(screen.queryByText(/traffic/i)).not.toBeInTheDocument()
   })
+
+  it('labels the strongest cities for orientation without a basemap (#228)', () => {
+    render(<App />)
+    // Frankfurt is the top connected-capacity metro in the vendored snapshot.
+    expect(screen.getByText('FRANKFURT')).toBeInTheDocument()
+  })
 })
