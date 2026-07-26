@@ -29,7 +29,7 @@ export default function CityLabels({ labels }: Props) {
               transform: 'translate(8px, -50%)',
               // A dark glow is the label's own background (ADR 0013) — it holds over any brightness
               // the canvas paints beneath without an opaque chip on every city.
-              textShadow: '0 0 4px #0a0a0f, 0 0 4px #0a0a0f',
+              textShadow: '0 0 4px var(--void), 0 0 4px var(--void)',
               opacity: 0.55 + 0.45 * label.brightness,
             }}
           >
