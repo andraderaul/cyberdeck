@@ -1,5 +1,13 @@
 # @cyberdeck/glitch
 
+## 0.7.0
+
+### Minor Changes
+
+- c1b0361: Surface the front/rear camera switch on the Live Source. The webcam lifecycle already carried
+  `switchCamera`; GLITCH//Studio now exposes it as a canvas overlay control on touch devices, the same
+  gate ASCII//Convert uses.
+
 ## 0.6.2
 
 ### Patch Changes
