@@ -3,6 +3,7 @@
 // single incandescent smear (ADR 0021: Europe flaring into one supernova). A pre-rendered radial
 // sprite is what makes that cheap enough to repaint thousands of points on every scale tick.
 
+import type { ProjectedLine } from './basemap'
 import type { RenderInstruction, Viewport } from './types'
 
 // --void: the dark field the world is light against. Hardcoded rather than read off a CSS token —
@@ -71,4 +72,32 @@ export function paintFrame(
   // Leave the context neutral so later overlay draws (labels, basemap) aren't additive.
   ctx.globalCompositeOperation = 'source-over'
   ctx.globalAlpha = 1
+}
+
+// --muted at low alpha: the outline is a faint gabarito, not the ground the light sits on (ADR 0021).
+const COASTLINE_STROKE = 'rgba(107, 107, 154, 0.34)'
+
+/**
+ * Strokes the coastline gabarito over the frame (#229). Drawn after `paintFrame` and thin/dim, so it
+ * *confirms* the structure rather than becoming the ground beneath it — the light stays the star.
+ * Non-additive plain strokes; the caller decides whether to invoke it at all (off by default).
+ */
+export function paintBasemap(ctx: CanvasRenderingContext2D, lines: readonly ProjectedLine[]): void {
+  ctx.globalCompositeOperation = 'source-over'
+  ctx.globalAlpha = 1
+  ctx.strokeStyle = COASTLINE_STROKE
+  // 1 CSS px — the context is already scaled to devicePixelRatio, so this stays a hairline on HiDPI.
+  ctx.lineWidth = 1
+  for (const line of lines) {
+    ctx.beginPath()
+    for (let i = 0; i < line.length; i++) {
+      const { x, y } = line[i]
+      if (i === 0) {
+        ctx.moveTo(x, y)
+      } else {
+        ctx.lineTo(x, y)
+      }
+    }
+    ctx.stroke()
+  }
 }

@@ -51,7 +51,10 @@ Use these terms precisely.
 - **#228 labels + hover** ✅ — city names on the strongest, spatially-thinned nodes (orientation
   without a basemap) and hover inspection revealing `city, country · N Gbps`. One CSS-space
   projection now feeds both the canvas paint and the DOM overlays.
-- **#229 earned basemap**, **#230 shareable link (+ PNG)**.
+- **#229 earned basemap** ✅ — a continental outline (vendored Natural Earth 110m coastline), off by
+  default and toggled with `B`, registered on the same equirectangular frame as the points so it
+  *confirms* a guess rather than being the ground the light sits on.
+- **#230 shareable link (+ PNG)**.
 
 A **time axis** (successive dated snapshots) is deliberately *out of v1* (ADR 0021); the dated
 filename keeps that door open for free.

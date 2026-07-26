@@ -1,9 +1,10 @@
 import { ErrorBoundary } from '@cyberdeck/deck-kit/ui'
-import { useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DATASET } from './atlas/dataset'
 import { topCityLabels } from './atlas/labels'
 import { project } from './atlas/project'
 import AtlasCanvas from './components/atlas-canvas'
+import BasemapToggle from './components/basemap-toggle'
 import { useElementSize } from './hooks/use-element-size'
 import { useHover } from './hooks/use-hover'
 import { useScale } from './hooks/use-scale'
@@ -31,6 +32,21 @@ export default function App() {
     [instructions],
   )
   const hover = useHover(containerRef, instructions)
+
+  // The earned basemap (#229): off by default, so the first screen is pure light on dark. `B`
+  // toggles it — the key Case reached for — and the corner chip makes that discoverable (and gives
+  // touch the same reach). Toggling never touches scale or viewport.
+  const [basemap, setBasemap] = useState(false)
+  const toggleBasemap = useCallback(() => setBasemap((on) => !on), [])
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === 'b' || e.key === 'B') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        toggleBasemap()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [toggleBasemap])
 
   return (
     <div className="flex flex-col h-screen">
@@ -60,8 +76,11 @@ export default function App() {
             overflow={overflow}
             labels={labels}
             hover={hover}
+            basemap={basemap}
           />
         </ErrorBoundary>
+
+        <BasemapToggle on={basemap} onToggle={toggleBasemap} />
 
         {/* The provenance credit (ADR 0022): named as connected capacity, never "traffic". */}
         <p className="absolute bottom-xs right-xs text-fg-subtle text-xs font-mono select-none pointer-events-none">
