@@ -74,9 +74,10 @@ The visual language lives in `@cyberdeck/deck-kit` (ADR 0014): `src/index.css` i
 `content` is load-bearing — without it the kit primitives' classes are purged at build (root
 `CLAUDE.md`).
 
-The canvas is the piece. Its two colors are pinned in `paint.ts`: `--void` (`#0a0a0f`) as the dark
-field and `--soft-cyan` (`#80f4ff`) as the light. They are hardcoded there because a canvas context
-can't resolve a CSS token — the one place in the app a color isn't a token reference.
+The canvas is the piece. Its two colors live in `paint.ts` — `--void` (`#0a0a0f`) as the dark field
+and `--soft-cyan` (`#80f4ff`) as the light — the one place in the app a color isn't a token
+reference, because a canvas context can't resolve a CSS token. Everywhere else (DOM, overlays) reads
+the tokens: even the label glow's dark backing is `var(--void)`, not a repeated literal.
 
 ## Key files
 
