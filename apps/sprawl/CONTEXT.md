@@ -54,7 +54,12 @@ Use these terms precisely.
 - **#229 earned basemap** ✅ — a continental outline (vendored Natural Earth 110m coastline), off by
   default and toggled with `B`, registered on the same equirectangular frame as the points so it
   *confirms* a guess rather than being the ground the light sits on.
-- **#230 shareable link (+ PNG)**.
+- **#230 shareable link (+ PNG)** ✅ — the export is *state*: a URL encodes the scale (and basemap),
+  so the link opens the recipient at the same point in the vertigo and they keep sliding.
+  Deterministic (fixed snapshot). PNG is a quiet secondary — a still for a wallpaper.
+
+**v1 is complete.** A time axis (successive dated snapshots) and a pan/zoom viewport are deliberately
+deferred (ADR 0021); the dated filename and the key-based share query keep both doors open additively.
 
 A **time axis** (successive dated snapshots) is deliberately *out of v1* (ADR 0021); the dated
 filename keeps that door open for free.

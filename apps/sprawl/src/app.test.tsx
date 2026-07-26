@@ -1,8 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import App from './app'
 
 describe('SPRAWL//Atlas', () => {
+  // Each test starts from a bare URL — the boot-from-link test sets its own, and the sync effect
+  // rewrites the address bar, so without this a prior test's scale would leak into the next.
+  beforeEach(() => {
+    window.history.replaceState(null, '', '/')
+  })
+
   it('opens in OVERFLOW — the first screen is honestly blown out (ADR 0021)', () => {
     render(<App />)
     expect(screen.getByTestId('overflow-flag')).toBeInTheDocument()
@@ -55,5 +61,25 @@ describe('SPRAWL//Atlas', () => {
     const toggle = screen.getByRole('button', { name: /outline/i })
     fireEvent.click(toggle)
     expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('foregrounds the share link and offers PNG as a secondary export (#230)', () => {
+    render(<App />)
+    expect(screen.getByRole('button', { name: /share link/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /png/i })).toBeInTheDocument()
+  })
+
+  it('keeps the address bar in sync so the URL is the shareable link (#230)', () => {
+    render(<App />)
+    // Opens in OVERFLOW (position 0), so the synced link encodes s=0.000.
+    expect(window.location.search).toBe('?s=0.000')
+  })
+
+  it('boots from a shared link at the encoded scale, not OVERFLOW (#230)', () => {
+    window.history.replaceState(null, '', '/?s=1.000&b=1')
+    render(<App />)
+    // The coarse end is not blown out, so no OVERFLOW flag — the recipient lands where the sender was.
+    expect(screen.queryByTestId('overflow-flag')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /outline/i })).toHaveAttribute('aria-pressed', 'true')
   })
 })
