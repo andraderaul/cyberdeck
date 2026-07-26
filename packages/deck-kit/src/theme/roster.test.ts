@@ -23,7 +23,7 @@ describe('the hand-inlined pre-paint scripts agree', () => {
   const scripts = prePaintScripts()
 
   it('finds one in every program that has a Theme control', () => {
-    expect(scripts.map((script) => script.program).sort()).toEqual(['golem'])
+    expect(scripts.map((script) => script.program).sort()).toEqual(['ascii', 'glitch', 'golem'])
   })
 
   // SPRAWL//Atlas is excluded by explicit decision (ADR 0021, ADR 0024): its pixels are neither

@@ -1,5 +1,5 @@
 import { useRecording } from '@cyberdeck/deck-kit/recording'
-import { EmptyStateHero, ErrorBoundary, useToastError } from '@cyberdeck/deck-kit/ui'
+import { EmptyStateHero, ErrorBoundary, ThemeControl, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import ControlStrip from './components/control-strip'
 import GlitchCanvas from './components/glitch-canvas'
@@ -91,6 +91,9 @@ export default function App() {
         <span className="text-accent text-base font-bold tracking-wide">GLITCH//STUDIO</span>
         <span className="text-fg-faint text-xs hidden sm:block">—</span>
         <span className="text-fg-muted text-xs hidden sm:block">image → glitch</span>
+        {/* Deck chrome rather than the artefact's, which is why it is here and not in the Control
+            Strip — PRESETS | EDIT | OUT are all about the Chain being made (ADR 0020, 0024). */}
+        <ThemeControl className="ml-auto" />
       </header>
 
       {/* One column at both breakpoints now: the Strip below carries every control, so there is no
