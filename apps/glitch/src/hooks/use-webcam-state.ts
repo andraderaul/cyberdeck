@@ -7,8 +7,8 @@ import { useCallback, useEffect, useReducer, useRef } from 'react'
 //
 // onFacingModeChange is wired (ADR 0016): the flip is real — the Source is mirrored on the sampling
 // draw, before the Chain — so the front camera can auto-mirror without Export disagreeing with
-// the preview. The lifecycle is kept whole, so `switchCamera` and `facingMode` are carried without a
-// control surfacing them yet — #82 scoped in the Live Source, not camera choice.
+// the preview. `switchCamera` toggles `facingMode` between front and rear; GlitchCanvas surfaces it
+// as the switch-camera control on touch devices, mirroring ASCII//Convert.
 
 /** Which Source is feeding the Chain: a static Source Image, or the Live Source (webcam). */
 export type SourceMode = 'image' | 'live'
