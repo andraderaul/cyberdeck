@@ -74,10 +74,12 @@ The visual language lives in `@cyberdeck/deck-kit` (ADR 0014): `src/index.css` i
 `content` is load-bearing — without it the kit primitives' classes are purged at build (root
 `CLAUDE.md`).
 
-The canvas is the piece. Its two colors live in `paint.ts` — `--void` (`#0a0a0f`) as the dark field
-and `--soft-cyan` (`#80f4ff`) as the light — the one place in the app a color isn't a token
-reference, because a canvas context can't resolve a CSS token. Everywhere else (DOM, overlays) reads
-the tokens: even the label glow's dark backing is `var(--bg)`, not a repeated literal.
+The canvas is the piece. Its two colors live in `paint.ts` as bare literals — `#0a0a0f` as the dark
+field and `#80f4ff` as the light — the one place in the app a color isn't a token reference, because
+a canvas context can't resolve a CSS token. They are literals rather than roles for a second reason
+too: this program takes no Theme, so these two are fixed for good and have no role to name. Every
+other surface (DOM, overlays) reads the tokens: even the label glow's dark backing is `var(--bg)`,
+not a repeated literal.
 
 **SPRAWL//Atlas is the one program excluded from Themes, deliberately** (ADR 0024). Its pixels are
 neither chrome nor the user's — they are the piece, and the piece *is* cyan light against the dark

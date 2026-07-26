@@ -20,13 +20,13 @@ interface Props {
  * They name roles rather than hues, and the wash behind each one is mixed from the same role, so a
  * Theme cannot leave this modal wearing `ice`'s pink over a green field (ADR 0024).
  */
-const THREAT_META: Record<ThreatLevel, { icon: string; color: string; bgAlpha: string }> = {
-  CRITICAL: { icon: '‼', color: 'var(--color-danger)', bgAlpha: wash('--color-danger', 12) },
-  HIGH: { icon: '✕', color: 'var(--color-danger)', bgAlpha: wash('--color-danger', 7) },
-  MODERATE: { icon: '◐', color: 'var(--color-warning)', bgAlpha: wash('--color-warning', 7) },
-  LOW: { icon: '○', color: 'var(--color-info)', bgAlpha: wash('--color-info', 7) },
+const THREAT_META: Record<ThreatLevel, { icon: string; color: string; bg: string }> = {
+  CRITICAL: { icon: '‼', color: 'var(--color-danger)', bg: wash('--color-danger', 12) },
+  HIGH: { icon: '✕', color: 'var(--color-danger)', bg: wash('--color-danger', 7) },
+  MODERATE: { icon: '◐', color: 'var(--color-warning)', bg: wash('--color-warning', 7) },
+  LOW: { icon: '○', color: 'var(--color-info)', bg: wash('--color-info', 7) },
   // --fg-dim sits below the contrast floor by design, so it colours the chip and never the copy.
-  UNKNOWN: { icon: '◌', color: 'var(--fg-muted)', bgAlpha: wash('--fg-dim', 7) },
+  UNKNOWN: { icon: '◌', color: 'var(--fg-muted)', bg: wash('--fg-dim', 7) },
 }
 
 type ErrorStatus = Extract<
@@ -112,7 +112,7 @@ export default function AnalysisModal({ state, onClose, onRetry }: Props) {
           <div
             className="flex items-center justify-between px-md py-[10px]"
             style={{
-              background: THREAT_META[state.analysis.threatLevel].bgAlpha,
+              background: THREAT_META[state.analysis.threatLevel].bg,
               border: `1px solid ${THREAT_META[state.analysis.threatLevel].color}`,
             }}
           >
