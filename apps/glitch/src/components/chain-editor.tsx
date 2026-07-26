@@ -364,7 +364,11 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
             </div>
           </div>
         ) : (
-          <fieldset className="flex flex-col gap-xs border-none p-0 m-0">
+          // min-w-0 defeats the UA fieldset's `min-inline-size: min-content`: without it the
+          // fieldset refuses to shrink below the palette chips' combined width and overflows the
+          // viewport on mobile instead of letting its row scroll (the chain row below wins the same
+          // fight with flex-1 min-w-0).
+          <fieldset className="flex flex-col gap-xs border-none p-0 m-0 min-w-0">
             <legend className="w-full mb-2xs">
               <Label>add effect</Label>
             </legend>

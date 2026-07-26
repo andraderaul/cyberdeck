@@ -93,8 +93,11 @@ export default function SettingsEditor({ settings, onChange }: Props) {
       {/* The panel sits above the row so the canvas is never what gets covered (ADR 0020). */}
       <div className="min-h-[92px]">
         {focus === 'charset' && (
+          // min-w-0 defeats the UA fieldset's `min-inline-size: min-content`: without it the
+          // fieldset refuses to shrink below its chip row's width and overflows the viewport (the
+          // charset row is wide enough to overflow even at sm) instead of letting the row scroll.
           <fieldset
-            className="flex flex-col gap-xs border-none p-0 m-0"
+            className="flex flex-col gap-xs border-none p-0 m-0 min-w-0"
             aria-describedby="tooltip-charset"
           >
             <legend className="w-full mb-2xs flex items-center gap-2xs">
@@ -136,8 +139,10 @@ export default function SettingsEditor({ settings, onChange }: Props) {
         )}
 
         {focus === 'colorMode' && (
+          // min-w-0 for the same reason as charset: without it the fieldset won't shrink below its
+          // two chip rows and overflows the viewport on mobile instead of letting them scroll.
           <fieldset
-            className="flex flex-col gap-xs border-none p-0 m-0"
+            className="flex flex-col gap-xs border-none p-0 m-0 min-w-0"
             aria-describedby="tooltip-color-mode"
           >
             <legend className="w-full mb-2xs flex items-center gap-2xs">
