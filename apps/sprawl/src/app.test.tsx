@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import App from './app'
 
@@ -31,5 +31,29 @@ describe('SPRAWL//Atlas', () => {
     render(<App />)
     // Frankfurt is the top connected-capacity metro in the vendored snapshot.
     expect(screen.getByText('FRANKFURT')).toBeInTheDocument()
+  })
+
+  it('opens with the basemap off — pure light on dark (#229)', () => {
+    render(<App />)
+    expect(screen.getByRole('button', { name: /outline/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+
+  it('toggles the earned basemap with the B key', () => {
+    render(<App />)
+    const toggle = screen.getByRole('button', { name: /outline/i })
+    fireEvent.keyDown(window, { key: 'b' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.keyDown(window, { key: 'b' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('toggles the basemap by clicking the chip, for touch', () => {
+    render(<App />)
+    const toggle = screen.getByRole('button', { name: /outline/i })
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
   })
 })

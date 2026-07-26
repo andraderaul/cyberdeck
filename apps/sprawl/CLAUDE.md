@@ -46,7 +46,12 @@ snapshot (ADR 0022), no backend, no runtime fetch.
   unit-tested); `vendor-dataset.mjs` is the impure shell that fetches and writes the dated snapshot +
   the generated pointer (`npm run vendor:dataset`). A scheduled CI job
   (`.github/workflows/vendor-sprawl-dataset.yml`) re-runs it and opens a PR on drift. Lives in the
-  app, not deck-kit — single consumer (ADR 0022).
+  app, not deck-kit — single consumer (ADR 0022). `vendor-coastline.mjs` (`npm run vendor:coastline`)
+  is a one-off vendor of the earned basemap's coastline — no schedule; coastlines don't drift.
+- **Earned basemap** (#229): `projectCoastline` (pure, `src/atlas/basemap.ts`) projects a vendored
+  Natural Earth 110m coastline onto the *same* equirectangular frame as the points; `paintBasemap`
+  strokes it faintly over the light. Off by default (the first screen is pure light on dark), toggled
+  by `B` or the `BasemapToggle` chip — a confirming gabarito, not the ground (ADR 0021, P6).
 - **Shell component** (`src/components/atlas-canvas.tsx`): the gesture surface + the paint. One
   projection runs in **CSS space** (`useElementSize` + `project`) and is shared by the canvas paint
   (context scaled to `devicePixelRatio` via `setTransform`) and the DOM overlays, so labels and hover

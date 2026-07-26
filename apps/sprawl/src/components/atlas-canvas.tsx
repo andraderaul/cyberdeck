@@ -1,6 +1,7 @@
 import { type RefObject, useEffect, useRef } from 'react'
+import { projectCoastline } from '../atlas/basemap'
 import type { CityLabel } from '../atlas/labels'
-import { createGlowSprite, paintFrame } from '../atlas/paint'
+import { createGlowSprite, paintBasemap, paintFrame } from '../atlas/paint'
 import type { ScaleUnit } from '../atlas/scale'
 import type { RenderInstruction } from '../atlas/types'
 import type { Size } from '../hooks/use-element-size'
@@ -21,6 +22,7 @@ interface Props {
   overflow: boolean
   labels: readonly CityLabel[]
   hover: Hover | null
+  basemap: boolean
 }
 
 /**
@@ -39,6 +41,7 @@ export default function AtlasCanvas({
   overflow,
   labels,
   hover,
+  basemap,
 }: Props) {
   const spriteRef = useRef<HTMLCanvasElement | null>(null)
 
@@ -61,7 +64,12 @@ export default function AtlasCanvas({
     // downstream — glow diameters, overlay coords — speaks one coordinate space.
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     paintFrame(ctx, instructions, size, spriteRef.current)
-  }, [canvasRef, size, instructions])
+    // The gabarito is toggled on over the light — off by default, so the first screen is pure light
+    // on dark (ADR 0021). Registered on the same frame as the points via the shared projection.
+    if (basemap) {
+      paintBasemap(ctx, projectCoastline(size))
+    }
+  }, [canvasRef, size, instructions, basemap])
 
   return (
     <div
