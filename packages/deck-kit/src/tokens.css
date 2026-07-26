@@ -259,9 +259,16 @@
    deck's register, and the accent palette does not survive a light surface — `ice`'s cyan measures
    roughly 1.5:1 on white. A light Theme is a different palette and a separate audit.
 
-   Adding one is this list of values and nothing else. It has to clear the Theme Contract, which
-   the guard beside this file proves against these values rather than against a hand-copy — a
-   Theme that fails it is not a Theme, it is a proposal that was turned down.
+   Designing one is this list of values and nothing else — no component changes, no new tokens, no
+   second sweep, because the tints derive and the component tokens point at roles. *Landing* one is
+   this block plus the name, in `THEMES` and in the three hand-inlined pre-paint scripts; the deck
+   has no shared HTML, so that copy is accepted (ADR 0024) and the roster guard is what keeps the
+   five in step. Say five rather than one: a comment that undercounts the work is how the fifth
+   copy gets missed.
+
+   It has to clear the Theme Contract, which the guard beside this file proves against these values
+   rather than against a hand-copy — a Theme that fails it is not a Theme, it is a proposal that was
+   turned down.
 
    The names come from the fictions' interior vocabulary, never from their titles: the deck names
    things in single evocative words and has never cited a work. It also avoids a collision —

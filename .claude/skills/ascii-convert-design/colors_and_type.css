@@ -3,6 +3,12 @@
    Cyberpunk client-side ASCII art converter
    Convenience copy of packages/deck-kit/src/tokens.css (ADR 0014)
    for standalone prototypes — if the two disagree, the kit wins.
+
+   This copy is `ice` only: the deck's visual language is three named Themes now (ADR 0024), and
+   the kit's file carries the other two plus the roles the tracer named (--color-phosphor,
+   --color-link, --color-hit, --color-miss). A prototype does not need them; anything shipping
+   into an app does, and takes them from the kit rather than from here. Reach for the semantic
+   names below in either case — the primitives above them are `ice`'s own vocabulary.
    ============================================================ */
 
 /* Fonts ----------------------------------------------------- */
@@ -63,9 +69,15 @@
   --accent-deep: var(--deep-violet);
   --accent-soft: var(--soft-violet);
 
+  --fg-strong: var(--white);
   --fg: var(--ghost);
   --fg-muted: var(--dim);
   --fg-subtle: var(--muted);
+
+  /* The one foreground that stands on the accent rather than on a surface. Black rather than
+     --white: white on this violet measures 3.80:1, below the floor the rest of the palette
+     clears, and black measures 4.80:1. */
+  --fg-on-accent: #000000;
 
   --bg: var(--void);
   --bg-surface: var(--abyss);
@@ -261,8 +273,8 @@ body {
 }
 
 ::selection {
-  background: var(--violet);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--fg-on-accent);
 }
 
 /* Display heading — the "ASCII//CONVERT" wordmark / hero titles */

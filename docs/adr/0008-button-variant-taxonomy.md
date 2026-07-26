@@ -2,7 +2,18 @@
 
 ## Status
 
-Accepted
+Accepted · **vocabulary superseded by [ADR 0024](0024-themes-named-and-guarded-visual-language.md)**
+
+The taxonomy below stands: six variants, and the two registers that must not overlap. Its
+*spelling* does not. This ADR was written when the deck had one palette and named it directly, so
+it says hot-pink where the code now says `danger` and violet where the code now says `accent` —
+the literal vocabulary was retired in ADR 0024, and the classes it quotes no longer exist. Read a
+hue below as the role it stands for: violet → `accent`, cyan → `info`, hot-pink → `danger`.
+
+That substitution is what makes the taxonomy survive Themes at all. "The live-feed register and
+the export register do not overlap" is a statement about roles, and it holds in `construct` and
+`chiba` exactly as it held in `ice`. "Hot-pink and cyan do not overlap" would have been a statement
+about one palette, and would have been false the moment a second one shipped.
 
 ## Context
 
@@ -24,6 +35,7 @@ exclusively the live-feed register (hot-pink). These two groups do not overlap.
 Add a `record` variant — hot-pink, transparent background, 1px border:
 
 ```ts
+// As written in 2026-05. The spelling is now `border-danger` / `text-danger` — see Status.
 record: 'border border-hot-pink bg-transparent text-hot-pink font-medium',
 ```
 

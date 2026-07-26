@@ -11,6 +11,13 @@ interface Props {
  * program-level controls — and it shows the Theme in force rather than the one it would move to,
  * because the label has to answer "what am I looking at" before "what happens if I press it".
  *
+ * **Cycling stops paying at about four Themes, and this control has to be replaced rather than fed
+ * past that.** It trades discoverability for width — the header's right edge is already contested
+ * at mobile widths in two programs — and the trade only holds while any Theme is two activations
+ * away. A fifth entry in `THEMES` is the signal to make this a popover, not to keep cycling.
+ * The limit is asserted beside the roster itself; it is restated here because this control is
+ * where the cost of exceeding it is actually paid.
+ *
  * Born in the kit rather than duplicated first: the usual discipline is to extract at the second
  * caller once the diff is empty (ADR 0014), but the callers are known to be identical on day one
  * and there is no per-program variation to discover, so duplicating would be ceremony.
