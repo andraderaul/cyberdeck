@@ -148,8 +148,8 @@ export default function GlitchCanvas({
               'flex items-center gap-2xs text-hot-pink border border-hot-pink',
               // `bg-shadow`, not the translucent `bg-danger-ghost` a hover state would normally
               // take: this chip sits on the user's artwork, so ADR 0013's opaque-background rule
-              // binds every state it has, not just the resting one. --hot-pink on --shadow is
-              // pinned in src/contrast.test.ts.
+              // binds every state it has, not just the resting one. The pair is pinned by the
+              // deck kit's Theme Contract guard, for every Theme (ADR 0024).
               'cursor-pointer transition-colors duration-fast hover:bg-shadow',
             )}
           >
