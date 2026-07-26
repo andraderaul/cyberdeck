@@ -40,7 +40,7 @@ export interface Scale {
   topCapacity: number
 }
 
-/** The canvas frame the projection paints into. `#226`/`#230` extend this with pan/zoom. */
+/** The canvas frame the projection paints into. A pan/zoom viewport is deferred out of v1 (ADR 0021). */
 export interface Viewport {
   width: number
   height: number
