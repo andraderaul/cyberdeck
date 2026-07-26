@@ -8,10 +8,11 @@ Read `CONTEXT.md` for the domain language and the piece-not-tool framing (ADR 00
 
 ## Status
 
-Walking skeleton (#225): the layer stack is thin but complete — a committed sample dataset → the
-pure `project(dataset, scale, viewport)` → `paintFrame(ctx, …)`, rendered at a fixed scale. The
-scale gesture (#226), the vendored PeeringDB snapshot (#227), labels + hover (#228), the earned
-basemap (#229) and the shareable link (#230) build on this seam.
+Walking skeleton (#225) + the scale instrument (#226): the map opens in OVERFLOW (`1 px = 1 Gbps`,
+honestly blown white) and you repair it by sliding the log window coarser — wheel, drag or arrow
+keys over the canvas — while the always-visible reader tracks `1 px ≈ N Gbps/Tbps` live and flips
+out of its OVERFLOW voice once structure emerges. The vendored PeeringDB snapshot (#227), labels +
+hover (#228), the earned basemap (#229) and the shareable link (#230) build on this seam.
 
 ## Commands
 
@@ -59,10 +60,14 @@ can't resolve a CSS token — the one place in the app a color isn't a token ref
 
 - `src/atlas/types.ts` — `DataPoint`, `Scale`, `Viewport`, `RenderInstruction` (the DOM-free core)
 - `src/atlas/project.ts` — `project()`, `projectLatLng()`, `brightnessFor()`, `WINDOW_DECADES`
-- `src/atlas/paint.ts` — `paintFrame()`: the only canvas-touching function
+- `src/atlas/scale.ts` — the pure scale instrument: `scaleRange()`, `scaleAt()`, `positionOf()`,
+  `clippedFraction()`, `isOverflow()`, `formatScaleUnit()`, `OVERFLOW_TOP_CAPACITY_MBPS`
+- `src/atlas/paint.ts` — `paintFrame()` + `createGlowSprite()`: the only canvas-touching functions
 - `src/atlas/dataset.ts` — `DATASET`, `Dataset`, `maxCapacity()`, `skeletonScale()`
 - `src/data/dataset-sample.json` — the #225 stand-in; #227 adds the vendored `dataset-YYYY-MM.json`
-- `src/components/atlas-canvas.tsx` — the imperative shell around the canvas
+- `src/hooks/use-scale.ts` — `useScale()`: binds wheel / drag / arrow keys on the map to the scale
+- `src/components/atlas-canvas.tsx` — the imperative shell + the scale surface (the map *is* the control)
+- `src/components/scale-reader.tsx` — the always-visible live reader / OVERFLOW voice
 - `../../docs/adr/0021-*`, `0022-*` — the piece-not-tool and vendored-snapshot decisions
 
 ## Comment convention

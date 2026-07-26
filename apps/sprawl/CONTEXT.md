@@ -41,8 +41,9 @@ Use these terms precisely.
 ## v1 scope (by issue)
 
 - **#225 walking skeleton** ✅ — scaffold, pure `project`/`paintFrame`, sample dataset, fixed scale.
-- **#226 scale instrument** — OVERFLOW on load, continuous wheel/drag gesture over the canvas, always-
-  visible live scale reader.
+- **#226 scale instrument** ✅ — OVERFLOW on load, continuous wheel/drag/arrow-key gesture over the
+  canvas (the map *is* the control), always-visible live scale reader that flips out of its OVERFLOW
+  voice as structure emerges.
 - **#227 vendored snapshot** — the PeeringDB fetch/aggregate script + scheduled CI drift job + real
   dated dataset.
 - **#228 labels + hover**, **#229 earned basemap**, **#230 shareable link (+ PNG)**.
