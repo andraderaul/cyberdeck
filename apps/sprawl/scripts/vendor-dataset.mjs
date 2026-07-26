@@ -69,8 +69,8 @@ export const SNAPSHOT: Dataset = dataset as Dataset
 `
 }
 
-// Compact JSON — the points array is large; pretty-printing would triple the committed size for no
-// gain (the diff that matters is per-point capacity, and git shows it either way).
+/** Compact JSON — the points array is large; pretty-printing would triple the committed size for no
+ *  gain (the diff that matters is per-point capacity, and git shows it either way). */
 function serialize(dataset) {
   return `${JSON.stringify(dataset)}\n`
 }
