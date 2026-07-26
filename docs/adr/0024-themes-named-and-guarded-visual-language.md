@@ -76,11 +76,13 @@ accident — whether the text wants to be lighter or darker depends on how brigh
 near-white on a bright accent measures 1.3:1. `ice` drew `--white` here and never cleared the floor
 (3.80:1); it draws black now (4.80:1), which keeps the Theme's colour and fixes a pair that was
 below AA before Themes existed. This is the one pin where sparing the incumbent was not necessary,
-which is why it has no second tier. Telling a Hit from a Miss is asserted
-as an *inequality* rather than a ratio — luminance contrast is the wrong instrument for two
-foregrounds (`ice`'s cyan and electric measure 1.2:1 against each other and are unmistakable), and
-the right one, a perceptual colour difference, is the colour engine the guard must not become. What
-carries the distinction for a reader who cannot use hue is the word HIT or MISS itself.
+which is why it has no second tier.
+
+Telling a Hit from a Miss is asserted as an *inequality* rather than a ratio — luminance contrast is
+the wrong instrument for two foregrounds (`ice`'s cyan and electric measure 1.2:1 against each other
+and are unmistakable), and the right one, a perceptual colour difference, is the colour engine the
+guard must not become. What carries the distinction for a reader who cannot use hue is the word HIT
+or MISS itself.
 
 **Selection is the user's, in the header, as a control that cycles.** Persistence is per origin
 because the programs deploy to four origins on a public-suffix domain; no program links to another,
