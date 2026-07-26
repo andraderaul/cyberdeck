@@ -36,7 +36,7 @@ export default function PresetPicker({ settings, activePresetId, onSelect }: Pro
             >
               {preset.name}
               {isModified && (
-                <span aria-hidden="true" className="text-electric">
+                <span aria-hidden="true" className="text-warning">
                   *
                 </span>
               )}

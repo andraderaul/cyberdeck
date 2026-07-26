@@ -42,8 +42,8 @@ export default function AiConfigBanner({ onConfigure }: Props) {
       className="flex items-center justify-between gap-sm px-md py-xs bg-bg-elevated border border-base rounded-xs font-mono"
     >
       <p className="text-xs text-fg-muted">
-        <span className="text-violet">AI Analyze</span> is available — add an{' '}
-        <span className="text-violet">AI Config</span> to scan your ASCII art.
+        <span className="text-accent">AI Analyze</span> is available — add an{' '}
+        <span className="text-accent">AI Config</span> to scan your ASCII art.
       </p>
       <div className="flex items-center gap-xs shrink-0">
         <Button variant="analyze" className="text-xs" onClick={onConfigure}>

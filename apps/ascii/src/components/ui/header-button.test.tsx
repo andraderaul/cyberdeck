@@ -27,16 +27,16 @@ describe('HeaderButton', () => {
   it('applies accent-text variant classes', () => {
     render(<HeaderButton variant="accent-text">ai configured</HeaderButton>)
     const btn = screen.getByRole('button', { name: 'ai configured' })
-    expect(btn.className).toContain('text-violet')
-    expect(btn.className).toContain('hover:border-violet')
+    expect(btn.className).toContain('text-accent')
+    expect(btn.className).toContain('hover:border-accent')
   })
 
   it('applies accent-fill variant classes', () => {
     render(<HeaderButton variant="accent-fill">configure ai</HeaderButton>)
     const btn = screen.getByRole('button', { name: 'configure ai' })
-    expect(btn.className).toContain('border-violet')
+    expect(btn.className).toContain('border-accent')
     expect(btn.className).toContain('bg-accent-ghost')
-    expect(btn.className).toContain('text-violet')
+    expect(btn.className).toContain('text-accent')
   })
 
   it('passes through onClick handler', () => {
@@ -86,6 +86,6 @@ describe('HeaderButton', () => {
     render(<HeaderButton variant="neutral">x</HeaderButton>)
     const btn = screen.getByRole('button')
     expect(btn.className).toContain('focus-visible:outline')
-    expect(btn.className).toContain('focus-visible:outline-violet')
+    expect(btn.className).toContain('focus-visible:outline-accent')
   })
 })

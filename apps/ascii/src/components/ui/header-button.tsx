@@ -1,9 +1,9 @@
 import { cn } from '@cyberdeck/deck-kit/utils'
 
 const VARIANT_CLASSES = {
-  neutral: 'border-transparent text-fg-subtle hover:border-base hover:text-ghost',
-  'accent-text': 'border-transparent text-violet hover:border-violet',
-  'accent-fill': 'border-violet bg-accent-ghost text-violet hover:bg-accent-dim',
+  neutral: 'border-transparent text-fg-subtle hover:border-base hover:text-fg',
+  'accent-text': 'border-transparent text-accent hover:border-accent',
+  'accent-fill': 'border-accent bg-accent-ghost text-accent hover:bg-accent-dim',
 } as const
 
 interface Props extends React.ComponentProps<'button'> {
@@ -20,7 +20,7 @@ export default function HeaderButton({ variant, className, children, ...props }:
         'rounded-pill border bg-transparent px-xs py-2xs',
         'font-mono text-xs tracking-wide',
         'cursor-pointer transition-all duration-fast',
-        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet',
+        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
         VARIANT_CLASSES[variant],
         className,
       )}

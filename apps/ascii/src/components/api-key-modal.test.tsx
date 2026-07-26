@@ -13,10 +13,10 @@ function renderModal(current: Parameters<typeof ApiKeyModal>[0]['current'] = nul
 }
 
 describe('ApiKeyModal helper text contrast', () => {
-  it('API key helper text does not use text-muted (fails WCAG AA)', () => {
+  it('keeps the helper text off --fg-dim, which sits below the contrast floor', () => {
     renderModal()
     const helper = screen.getByText(/your key stays in your browser/i)
-    expect(helper.className.split(/\s+/)).not.toContain('text-muted')
+    expect(helper.className.split(/\s+/)).not.toContain('text-fg-dim')
   })
 })
 

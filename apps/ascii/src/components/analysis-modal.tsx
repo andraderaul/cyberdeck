@@ -31,28 +31,28 @@ const ERROR_META: Record<
   'auth-error': {
     icon: '✕',
     title: 'AUTH FAILED',
-    color: 'text-hot-pink',
+    color: 'text-danger',
     message: 'Invalid or expired API key. Review your key in settings and try again.',
     retryable: false,
   },
   'quota-error': {
     icon: '◈',
     title: 'QUOTA EXCEEDED',
-    color: 'text-electric',
+    color: 'text-warning',
     message: "API quota limit reached. Check your plan and billing in your provider's dashboard.",
     retryable: false,
   },
   'parse-error': {
     icon: '◈',
     title: 'FEED CORRUPTED',
-    color: 'text-electric',
+    color: 'text-warning',
     message: 'Analysis feed returned unexpected data. No threat assessment available.',
     retryable: true,
   },
   'network-error': {
     icon: '◈',
     title: 'TRANSMISSION FAILURE',
-    color: 'text-electric',
+    color: 'text-warning',
     message: 'Connection to provider lost. Check your network and try again.',
     retryable: true,
   },
@@ -65,7 +65,7 @@ function ScanErrorState({ status, onRetry }: { status: ErrorStatus; onRetry?: ()
       <span className={cn('text-sm tracking-wide', meta.color)}>
         {meta.icon} {meta.title}
       </span>
-      <span className="text-dim text-xs leading-normal">{meta.message}</span>
+      <span className="text-fg-muted text-xs leading-normal">{meta.message}</span>
       {meta.retryable && onRetry && (
         <Button variant="secondary" onClick={onRetry} className="self-start mt-sm">
           retry
@@ -80,7 +80,7 @@ export default function AnalysisModal({ state, onClose, onRetry }: Props) {
     <Modal
       onClose={onClose}
       title={
-        <span className="text-violet font-bold tracking-wider text-xs">◈ NEURAL SCAN RESULTS</span>
+        <span className="text-accent font-bold tracking-wider text-xs">◈ NEURAL SCAN RESULTS</span>
       }
       ariaLabel="Neural scan results"
       variant="cyber"
@@ -89,7 +89,7 @@ export default function AnalysisModal({ state, onClose, onRetry }: Props) {
     >
       {state.status === 'loading' && (
         <div className="flex-1 flex flex-col items-center justify-center gap-md py-xl">
-          <span className="animate-pulse text-violet text-xs tracking-wider">
+          <span className="animate-pulse text-accent text-xs tracking-wider">
             ▸ SCANNING VISUAL FEED...
           </span>
           <span className="text-fg-subtle text-xs">interfacing with AI Provider</span>
@@ -106,7 +106,7 @@ export default function AnalysisModal({ state, onClose, onRetry }: Props) {
               border: `1px solid ${THREAT_META[state.analysis.threatLevel].color}`,
             }}
           >
-            <span className="text-dim text-xs tracking-wide">THREAT LEVEL</span>
+            <span className="text-fg-muted text-xs tracking-wide">THREAT LEVEL</span>
             <span className="flex items-center gap-xs">
               <span data-testid="threat-icon" aria-hidden="true">
                 {THREAT_META[state.analysis.threatLevel].icon}
@@ -127,7 +127,7 @@ export default function AnalysisModal({ state, onClose, onRetry }: Props) {
             </span>
           </div>
 
-          <p className="text-ghost text-sm leading-normal m-0">{state.analysis.description}</p>
+          <p className="text-fg text-sm leading-normal m-0">{state.analysis.description}</p>
 
           <div className="flex flex-wrap gap-xs lowercase">
             {state.analysis.tags.map((tag) => (

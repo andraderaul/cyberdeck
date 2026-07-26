@@ -163,24 +163,24 @@ describe('App header buttons', () => {
     expect(aiBtn.className).toContain('min-h-[44px]')
   })
 
-  it('configure ai button has border-violet at rest when aiConfig is null', () => {
+  it('configure ai button has border-accent at rest when aiConfig is null', () => {
     mockUseAIConfig.mockReturnValue({ config: null, save: vi.fn(), remove: vi.fn() })
     render(<App />)
     const aiBtn = screen.getByRole('button', { name: /configure ai/i })
-    expect(aiBtn.className.split(/\s+/)).toContain('border-violet')
+    expect(aiBtn.className.split(/\s+/)).toContain('border-accent')
   })
 
-  it('about button does not use text-muted (fails WCAG AA)', () => {
+  it('keeps the about button off --fg-dim, which sits below the contrast floor', () => {
     render(<App />)
     const aboutBtn = screen.getByRole('button', { name: /about/i })
-    expect(aboutBtn.className.split(/\s+/)).not.toContain('text-muted')
+    expect(aboutBtn.className.split(/\s+/)).not.toContain('text-fg-dim')
   })
 
-  it('configure ai button does not use text-muted (fails WCAG AA)', () => {
+  it('keeps the configure ai button off --fg-dim, which sits below the contrast floor', () => {
     mockUseAIConfig.mockReturnValue({ config: null, save: vi.fn(), remove: vi.fn() })
     render(<App />)
     const aiBtn = screen.getByRole('button', { name: /configure ai/i })
-    expect(aiBtn.className.split(/\s+/)).not.toContain('text-muted')
+    expect(aiBtn.className.split(/\s+/)).not.toContain('text-fg-dim')
   })
 
   it('configure ai button has transparent border at rest when aiConfig is set', () => {
@@ -189,6 +189,6 @@ describe('App header buttons', () => {
     const aiBtn = screen.getByRole('button', { name: /ai configured/i })
     const tokens = aiBtn.className.split(/\s+/)
     expect(tokens).toContain('border-transparent')
-    expect(tokens).not.toContain('border-violet')
+    expect(tokens).not.toContain('border-accent')
   })
 })

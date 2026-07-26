@@ -34,12 +34,12 @@ body {
 }
 
 ::selection {
-  background: var(--violet);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--fg-strong);
 }
 
 ::placeholder {
-  color: var(--muted);
+  color: var(--fg-dim);
 }
 
 /* Range inputs */
@@ -55,13 +55,13 @@ input[type="range"] {
 
 input[type="range"]::-webkit-slider-runnable-track {
   height: 2px;
-  background: var(--slate);
+  background: var(--bg-overlay);
   border-radius: 1px;
 }
 
 input[type="range"]::-moz-range-track {
   height: 2px;
-  background: var(--slate);
+  background: var(--bg-overlay);
   border-radius: 1px;
   border: none;
 }
@@ -73,19 +73,19 @@ input[type="range"]::-webkit-slider-thumb {
   height: 20px;
   margin-top: -9px; /* center on 2px track */
   border-radius: 50%;
-  background: var(--violet);
+  background: var(--accent);
   cursor: pointer;
-  border: 2px solid var(--void);
-  box-shadow: 0 0 6px var(--violet);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 6px var(--accent);
 }
 
 input[type="range"]::-moz-range-thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--violet);
+  background: var(--accent);
   cursor: pointer;
-  border: 2px solid var(--void);
-  box-shadow: 0 0 6px var(--violet);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 6px var(--accent);
   box-sizing: border-box;
 }

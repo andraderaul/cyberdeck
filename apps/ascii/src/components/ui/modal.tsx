@@ -49,7 +49,7 @@ export default function Modal({
           'relative flex flex-col p-xl',
           variant === 'default'
             ? 'gap-lg bg-elevated max-w-[480px] w-[90%] rounded-sm border border-base'
-            : 'gap-md bg-abyss border border-slate border-t-2 border-t-violet w-full max-w-sm',
+            : 'gap-md bg-bg-surface border border-base border-t-2 border-t-accent w-full max-w-sm',
           containerClassName,
         )}
       >

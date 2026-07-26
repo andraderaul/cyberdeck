@@ -112,10 +112,10 @@ describe('Modal', () => {
   })
 
   describe('close button contrast', () => {
-    it('does not use text-muted (fails WCAG AA)', () => {
+    it('stays off --fg-dim, which sits below the contrast floor', () => {
       renderModal()
       const closeBtn = screen.getByRole('button', { name: '✕' })
-      expect(closeBtn.className.split(/\s+/)).not.toContain('text-muted')
+      expect(closeBtn.className.split(/\s+/)).not.toContain('text-fg-dim')
     })
   })
 
