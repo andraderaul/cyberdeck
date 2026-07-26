@@ -121,7 +121,7 @@ export default function GlitchCanvas({
           <span
             className={cn(
               CANVAS_OVERLAY_CHROME,
-              'flex items-center gap-2xs text-hot-pink border border-hot-pink',
+              'flex items-center gap-2xs text-danger border border-danger',
             )}
           >
             <span className="motion-safe:animate-pulse" aria-hidden="true">
@@ -145,12 +145,12 @@ export default function GlitchCanvas({
             aria-label={`stop recording — ${formatElapsedTime(elapsedSeconds)} elapsed`}
             className={cn(
               CANVAS_OVERLAY_CHROME,
-              'flex items-center gap-2xs text-hot-pink border border-hot-pink',
-              // `bg-shadow`, not the translucent `bg-danger-ghost` a hover state would normally
+              'flex items-center gap-2xs text-danger border border-danger',
+              // `bg-bg-elevated`, not the translucent `bg-danger-ghost` a hover state would normally
               // take: this chip sits on the user's artwork, so ADR 0013's opaque-background rule
               // binds every state it has, not just the resting one. The pair is pinned by the
               // deck kit's Theme Contract guard, for every Theme (ADR 0024).
-              'cursor-pointer transition-colors duration-fast hover:bg-shadow',
+              'cursor-pointer transition-colors duration-fast hover:bg-bg-elevated',
             )}
           >
             <span className="motion-safe:animate-pulse" aria-hidden="true">
@@ -172,7 +172,7 @@ export default function GlitchCanvas({
             className={cn(
               CANVAS_OVERLAY_CHROME,
               isMirrored
-                ? 'border border-violet text-violet cursor-pointer transition-colors duration-fast'
+                ? 'border border-accent text-accent cursor-pointer transition-colors duration-fast'
                 : CANVAS_OVERLAY_BUTTON_REST,
             )}
           >

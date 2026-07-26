@@ -349,7 +349,7 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
                       ? `duplicate ${EFFECT_LABELS[focusedLink.type]} — unavailable, a second ${EFFECT_LABELS[focusedLink.type]} with the same settings changes nothing`
                       : `duplicate ${EFFECT_LABELS[focusedLink.type]}`
                   }
-                  className="text-dim hover:text-fg disabled:opacity-40 disabled:hover:text-dim px-2xs rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-electric"
+                  className="text-fg-muted hover:text-fg disabled:opacity-40 disabled:hover:text-fg-muted px-2xs rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning"
                 >
                   <span aria-hidden="true">⧉</span>
                 </button>
@@ -357,7 +357,7 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
                   type="button"
                   onClick={() => onRemove(focusedLink.id)}
                   aria-label={`remove ${EFFECT_LABELS[focusedLink.type]}`}
-                  className="text-dim hover:text-hot px-2xs rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-electric"
+                  className="text-fg-muted hover:text-danger px-2xs rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning"
                 >
                   <span aria-hidden="true">✕</span>
                 </button>
@@ -511,7 +511,7 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
 
       {/* A live region, not a static hint: the message appears mid-interaction, and a user who just
           hit the limit is the one who most needs to be told why the palette went quiet. */}
-      <p role="status" className="text-2xs text-dim">
+      <p role="status" className="text-2xs text-fg-muted">
         {isFull
           ? `chain is full — ${MAX_CHAIN_LENGTH} effects max. remove one to add another.`
           : `${chain.length} of ${MAX_CHAIN_LENGTH} effects`}
