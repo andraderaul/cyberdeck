@@ -588,7 +588,8 @@ function execute(cycle: Cycle, instruction: number): void {
       break
     }
     // The cached word becomes the byte merged into its surrounding word, not the whole register —
-    // so a write hit leaves the Set stale and the next read of the address Misses (see ISA.md).
+    // but it still equals what memory now holds, so a write hit keeps the Set consistent and a
+    // later read of the address Hits (see ISA.md).
     case 0x17: {
       const byteAddress = (r[fx] + im16) >>> 0
       writeByte(cycle, byteAddress, r[fy] & 0xff)

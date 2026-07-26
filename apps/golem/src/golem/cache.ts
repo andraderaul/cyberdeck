@@ -167,9 +167,11 @@ function fill(
  * only observes, counts and, on a miss or write-hit, updates the cache's own bookkeeping.
  *
  * `end` is the word index. A write is classified *after* the store has landed in memory, and a
- * write hit caches `memory[end]` — the whole word as memory now holds it. For a word store that is
- * the value stored; for a *byte* store it is the byte merged into the surrounding word, so the
- * cached word disagrees with the register and the next read of that address is classified a Miss.
+ * write hit caches `memory[end]` — the whole word as memory now holds it, not the register. For a
+ * word store the two are equal; for a *byte* store the cached word is the byte merged into the
+ * surrounding word. Caching what memory holds keeps the Set consistent with memory, so a later read
+ * of a written word Hits (the data-comparison test in `matches` finds no disagreement). It is a
+ * write *miss* — no-write-allocate — that leaves an address uncached and Misses on its next read.
  */
 export function classify(
   state: WorkingCacheState,

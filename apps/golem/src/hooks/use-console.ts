@@ -37,8 +37,6 @@ export interface ConsoleState {
   lines: ConsoleLine[]
   running: boolean
   rate: ClockRate
-  /** Whether the next Machine will carry the cache lens. Fixed on a live Machine; see `cache`. */
-  cacheMode: boolean
   /** The access the CACHE panel foregrounds — the last Step's data access, or its fetch. */
   cacheSpotlight: CacheAccess | null
   /** Commands already entered, oldest first — the Console walks these with the arrow keys. */
@@ -199,7 +197,6 @@ export function useConsole(initialSource: string): ConsoleState {
   // The cache mode the next `run` bakes into its Machine (ADR 0023). On by default, and — like the
   // clock rate — presentation state that survives `reset`; only settable while no Machine exists.
   const cacheModeRef = useRef(true)
-  const [cacheMode, setCacheMode] = useState(true)
 
   // The access the CACHE panel spotlights, from the most recent Step. Cleared whenever a Machine
   // begins or is destroyed, so the panel never shows a stale line over a fresh cache.
@@ -442,7 +439,6 @@ export function useConsole(initialSource: string): ConsoleState {
           }
           const on = command.mode === 'on'
           cacheModeRef.current = on
-          setCacheMode(on)
           output.push({
             kind: 'info',
             text: on
@@ -712,7 +708,6 @@ export function useConsole(initialSource: string): ConsoleState {
     currentLine: lineOfPc(machine, image),
     running: clock.running,
     rate: clock.rate,
-    cacheMode,
     cacheSpotlight,
     editable: machine === null,
     setSource,
