@@ -17,7 +17,7 @@ export default function Panel({ title, children, className }: PanelProps) {
     <section
       className={cn(
         // A floor for the stacked mobile layout, where the grid rows no longer size these.
-        'flex min-h-0 flex-col overflow-hidden border border-base bg-surface',
+        'flex min-h-0 flex-col overflow-hidden border border-base bg-bg-surface',
         'min-h-[8rem] lg:min-h-0',
         className,
       )}
