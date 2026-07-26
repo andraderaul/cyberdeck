@@ -15,7 +15,7 @@ const SOURCE =
   'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_coastline.geojson'
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data', 'coastline.json')
 
-// ~11 km — coarse enough to halve the file, fine enough that "that smear is Europe" still confirms.
+/** ~11 km — coarse enough to halve the file, fine enough that "that smear is Europe" still confirms. */
 const COORD_DECIMALS = 1
 
 function roundTo(value, decimals) {

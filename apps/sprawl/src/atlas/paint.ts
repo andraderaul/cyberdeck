@@ -6,8 +6,10 @@
 import type { ProjectedLine } from './basemap'
 import type { RenderInstruction, Viewport } from './types'
 
-// --void: the dark field the world is light against. Hardcoded rather than read off a CSS token —
-// a canvas context can't resolve `var(--void)`, and this is the one true background of the piece.
+/**
+ * --void: the dark field the world is light against. Hardcoded rather than read off a CSS token —
+ * a canvas context can't resolve `var(--void)`, and this is the one true background of the piece.
+ */
 const FIELD = '#0a0a0f'
 
 /** Edge of the sprite canvas in px. The glow fills it; points are drawn scaled down from here. */
@@ -74,7 +76,7 @@ export function paintFrame(
   ctx.globalAlpha = 1
 }
 
-// --muted at low alpha: the outline is a faint gabarito, not the ground the light sits on (ADR 0021).
+/** --muted at low alpha: the outline is a faint gabarito, not the ground the light sits on (ADR 0021). */
 const COASTLINE_STROKE = 'rgba(107, 107, 154, 0.34)'
 
 /**
