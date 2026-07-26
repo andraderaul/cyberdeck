@@ -797,7 +797,9 @@ function writeByte(cycle: Cycle, byteAddress: number, value: number): void {
 // touches the cache, then delegates to the raw word/byte path above. Instruction fetch and data
 // load/store are the same act to the caller, so they read the same way here (ADR 0023).
 
-// The instruction fetch: an I-cache access, no device guard (code never lives in device space).
+/**
+ * The instruction fetch: an I-cache access, no device guard (code never lives in device space).
+ */
 function fetch(cycle: Cycle, wordIndex: number): number {
   const index = wordIndex >>> 0
   if (cycle.cache) {
@@ -809,8 +811,10 @@ function fetch(cycle: Cycle, wordIndex: number): number {
   return (cycle.memory[index] ?? 0) >>> 0
 }
 
-// A word load, classified before the read. Read order is immaterial — the read mutates nothing —
-// so `pop` (which classified after in the old code) is byte-identical through here.
+/**
+ * A word load, classified before the read. Read order is immaterial — the read mutates nothing —
+ * so `pop` (which classified after in the old code) is byte-identical through here.
+ */
 function load(cycle: Cycle, wordIndex: number): number {
   if (!isDeviceWord(wordIndex)) {
     classifyData(cycle, 'READ', wordIndex)
@@ -818,10 +822,12 @@ function load(cycle: Cycle, wordIndex: number): number {
   return readWord(cycle, wordIndex)
 }
 
-// A word store, classified after the write so a write hit caches the word memory now holds. `push`
-// routes through here too and so inherits the device guard: a push whose stack pointer lands in
-// device space no longer classifies — undefined territory no reference program reaches (see the
-// push/pop test), and the raw path already diverts such a word to the device, not the D-cache.
+/**
+ * A word store, classified after the write so a write hit caches the word memory now holds. `push`
+ * routes through here too and so inherits the device guard: a push whose stack pointer lands in
+ * device space no longer classifies — undefined territory no reference program reaches (see the
+ * push/pop test), and the raw path already diverts such a word to the device, not the D-cache.
+ */
 function store(cycle: Cycle, wordIndex: number, value: number): void {
   writeWord(cycle, wordIndex, value)
   if (!isDeviceWord(wordIndex)) {
@@ -829,8 +835,10 @@ function store(cycle: Cycle, wordIndex: number, value: number): void {
   }
 }
 
-// A byte load. The Terminal is the only device screened for byte ops; classified on the word the
-// byte lives in, before the read.
+/**
+ * A byte load. The Terminal is the only device screened for byte ops; classified on the word the
+ * byte lives in, before the read.
+ */
 function loadByte(cycle: Cycle, byteAddress: number): number {
   if (byteAddress !== TERMINAL_ADDRESS) {
     classifyData(cycle, 'READ', byteAddress >>> 2)
@@ -838,8 +846,10 @@ function loadByte(cycle: Cycle, byteAddress: number): number {
   return readByte(cycle, byteAddress)
 }
 
-// A byte store. The raw write merges the byte into its surrounding word first; classified after,
-// on that word, so a later read of the address Hits (see ISA.md).
+/**
+ * A byte store. The raw write merges the byte into its surrounding word first; classified after,
+ * on that word, so a later read of the address Hits (see ISA.md).
+ */
 function storeByte(cycle: Cycle, byteAddress: number, value: number): void {
   writeByte(cycle, byteAddress, value)
   if (byteAddress !== TERMINAL_ADDRESS) {
