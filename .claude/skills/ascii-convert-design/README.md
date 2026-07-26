@@ -178,23 +178,23 @@ See `docs/adr/0008-button-variant-taxonomy.md` for the full rationale.
 ### Hover / press states
 
 - **Buttons:** color and border stay the same; the background fill brightens by one step (e.g. `bg-transparent` → `bg-accent-ghost`). No size changes.
-- **Toggle buttons (in a `ToggleGroup`):** inactive option has `border-base / text-fg-muted`; active option has `border-violet / bg-accent-soft / text-violet`. Switching is instantaneous in tone but eased over 150ms.
-- **Sliders:** the thumb has a `0 0 6px var(--violet)` glow always; no separate hover state.
+- **Toggle buttons (in a `ToggleGroup`):** inactive option has `border-base / text-fg-muted`; active option has `border-accent / bg-accent-soft / text-accent`. Switching is instantaneous in tone but eased over 150ms.
+- **Sliders:** the thumb has a `0 0 6px var(--accent)` glow always; no separate hover state.
 - **Press:** no shrink, no scale. The button just briefly looks "darker" because the underlying fill is transparent and the press inverts it momentarily via native styling.
 
 ### Borders
 
-- **1px solid `--slate`** is the default border. It's on every card, input, modal, divider, and inactive toggle.
-- **2px solid `--violet`** is reserved for primary buttons and the top edge of the cyber-variant modal (a single 2px accent line at the top, 1px on the other three sides).
+- **1px solid `--border-color-base`** is the default border. It's on every card, input, modal, divider, and inactive toggle.
+- **2px solid `--accent`** is reserved for primary buttons and the top edge of the cyber-variant modal (a single 2px accent line at the top, 1px on the other three sides).
 - Borders are how this UI delineates everything. There is no "card with shadow" treatment.
 
 ### Shadows
 
 Almost none. The only inner/outer shadows in the system:
 
-- Slider thumb: `box-shadow: 0 0 6px var(--violet)` (a soft glow).
-- Toast: `box-shadow: 0 0 12px rgba(255, 45, 120, 0.15)` (a pink-tinted halo to mark it as urgent).
-- Threat level CRITICAL: `text-shadow: 0 0 8px var(--hot-pink)` on the text itself.
+- Slider thumb: `box-shadow: 0 0 6px var(--accent)` (a soft glow).
+- Toast: `box-shadow: 0 0 12px color-mix(in srgb, var(--color-danger) 15%, transparent)` (a halo in the role's own hue, to mark it as urgent).
+- Threat level CRITICAL: `text-shadow: 0 0 8px var(--color-danger)` on the text itself.
 
 If you're tempted to add `box-shadow: 0 4px 12px rgba(0,0,0,0.4)` — don't. Use a border.
 
@@ -285,16 +285,16 @@ binary     01
 
 - **Never substitute Material Icons, Heroicons, Lucide, Phosphor, or emoji.** The brand's icon system *is* the monospace glyph repertoire. A `Lucide-react` `Upload` icon would break the visual language.
 - **If you need a "new" icon, find a Unicode glyph that fits.** Common stops: `◆ ◇ ◊ ▲ △ ▼ ▽ ◀ ◁ ▶ ▷ ▣ ▢ ▦ ▩ █ ▌ ▐ ▬ ▭ ☰ ⌘ ⌥ ⌃ ⌫ ⏎ ⏏ ⌖ ⌬ ⎈ ⎊ ⏧`. Geometric Shapes, Box Drawing, and Miscellaneous Technical blocks are all in-vocabulary.
-- **Color the glyph by its semantic role.** `text-violet` for primary actions, `text-cyan` for info, `text-hot-pink` for live/destructive, `text-electric` for warning, `text-fg-muted` for inactive.
+- **Color the glyph by its semantic role.** `text-accent` for primary actions, `text-info` for info, `text-danger` for live/destructive, `text-warning` for warning, `text-fg-muted` for inactive.
 - **Render at the size of the surrounding text or one step up.** The upload zone uses `text-lg` (24px) for the `⬆`; toggle labels include `↑` at the same size as the label.
 
 ### Logo / wordmark
 
-`ASCII//CONVERT` set in `--font-display` (Departure Mono), bold, `tracking-wide`, color `--violet`. The double slash is intentional — it reads as a path-separator and a glitchy seam at once. See `assets/wordmark.svg` for a vector-rendered version usable on dark backgrounds.
+`ASCII//CONVERT` set in `--font-display` (Departure Mono), bold, `tracking-wide`, color `--accent`. The double slash is intentional — it reads as a path-separator and a glitchy seam at once. See `assets/wordmark.svg` for a vector-rendered version usable on dark backgrounds.
 
 ### Favicon
 
-The product currently ships with the default Vite favicon. `assets/favicon.svg` provides a brand-correct replacement: violet `▓` on `--void`.
+The product currently ships with the default Vite favicon. `assets/favicon.svg` provides a brand-correct replacement: an accent-coloured `▓` on `--bg`.
 
 ---
 
@@ -309,7 +309,7 @@ The product currently ships with the default Vite favicon. `assets/favicon.svg` 
 
 1. `@import "/colors_and_type.css"` (or copy the `:root` block into your file).
 2. Wrap everything in a `body` that uses `var(--font-mono)` on `var(--bg)`.
-3. Reach for tokens, never raw hex. `var(--violet)` not `#b829ff`.
+3. Reach for **semantic** tokens, never a raw hex and never a primitive. `var(--accent)`, not `#b829ff` and not `var(--violet)` — the deck's look is a set of named Themes and only the semantic layer varies between them (ADR 0024).
 4. Match casing: lowercase for product copy, UPPERCASE + wide tracking for "system" labels.
 5. Add a glyph next to every colored signal. No bare color.
 6. Use 1px borders, 2px radii, monospace everything. If you reach for `box-shadow` or `rounded-lg`, stop.

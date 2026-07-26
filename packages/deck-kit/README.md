@@ -16,8 +16,9 @@ is fine, nothing else consumes it.
 | Import | What |
 |--------|------|
 | `@cyberdeck/deck-kit/utils` | `cn`, `isTouchDevice`, `loadImageFile`, `shareOrDownloadBlob`, `shareOrDownloadCanvas` |
-| `@cyberdeck/deck-kit/ui` | `Button`, `TabStrip`, and the rest of the primitives |
-| `@cyberdeck/deck-kit/tokens.css` | the CSS custom properties (design tokens) |
+| `@cyberdeck/deck-kit/ui` | `Button`, `TabStrip`, `ThemeControl`, and the rest of the primitives |
+| `@cyberdeck/deck-kit/theme` | the Theme roster and its resolution rule — `THEMES`, `resolveTheme`, `nextTheme`, the storage key and the attribute |
+| `@cyberdeck/deck-kit/tokens.css` | the CSS custom properties (design tokens), including every Theme |
 | `@cyberdeck/deck-kit/tailwind-preset` | the Tailwind `theme` |
 
 ## Consuming the visual language — the one non-obvious constraint
@@ -32,3 +33,27 @@ An app that renders a kit primitive must:
    ```
 3. **Add `../../packages/deck-kit/src/**/*.{ts,tsx}` to its Tailwind `content` glob** — otherwise the
    primitives' utility classes are never seen by the scanner and get purged at build.
+
+## Themes
+
+The visual language is a set of named Themes (ADR 0024): `ice` (the default and the fallback),
+`construct` and `chiba`. All three are dark — the deck has no modes, it has Themes.
+
+**Name the role, not the hue.** `text-accent`, never `text-violet`. The primitive hue names are
+`ice`'s vocabulary and no longer exist in the preset at all, so naming one renders unstyled rather
+than erroring. Adding a Theme is a block of semantic values in `tokens.css` and nothing else: the
+tints derive from their source hue and the component tokens point at roles.
+
+A program that offers a Theme mounts `<ThemeControl />` in its header and inlines the blocking
+pre-paint script in its `index.html` — the one in `apps/golem/index.html` is the copy to take.
+Without the script the default palette paints for a frame before the choice arrives.
+
+Three guards in `src/theme/` keep it honest, and all three run in the ordinary test command:
+
+| Guard | What it proves |
+|-------|----------------|
+| **contrast** | every Theme meets the Theme Contract, resolved from the real token values |
+| **vocabulary** | no source in any program or in the kit names a retired hue |
+| **roster** | the TypeScript, the Theme blocks and the hand-inlined scripts agree — and SPRAWL//Atlas still has no script, which is deliberate (ADR 0021) |
+
+Their pure half is `src/theme/audit.ts`: text in, findings out, no filesystem.

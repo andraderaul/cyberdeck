@@ -67,6 +67,13 @@ three; ADR 0013's canvas-overlay pairs on their own opaque surface. The two-tier
 the hole without failing the incumbent — `ice`'s violet clears 4.5:1 on the base surface and 3:1
 everywhere — and matches how the accent is actually used: mostly border, ring and chip.
 
+The roles the tracer named join it on the same terms: phosphor, link, Hit and Miss are read as text
+on a panel, so they answer to AA-small on all three surfaces. Telling a Hit from a Miss is asserted
+as an *inequality* rather than a ratio — luminance contrast is the wrong instrument for two
+foregrounds (`ice`'s cyan and electric measure 1.2:1 against each other and are unmistakable), and
+the right one, a perceptual colour difference, is the colour engine the guard must not become. What
+carries the distinction for a reader who cannot use hue is the word HIT or MISS itself.
+
 **Selection is the user's, in the header, as a control that cycles.** Persistence is per origin
 because the programs deploy to four origins on a public-suffix domain; no program links to another,
 so the split never surfaces in a session.
@@ -116,6 +123,9 @@ neighbouring control in the same program.
 **Negative:**
 - A one-off promotion of ~150 sites, behaviour-zero but wide. It must never share a change with a
   Theme, or the "nothing changed" reviewability is lost.
+- The roster now exists in three places that cannot import each other — this package's TypeScript,
+  the Theme blocks in `tokens.css`, and one hand-inlined script per themed program. A third guard,
+  the roster guard, is what holds them together and what keeps SPRAWL//Atlas's exclusion in place.
 - The pre-paint script is hand-inlined in three programs; the deck has no shared HTML.
 - SPRAWL//Atlas takes patch version bumps for a feature it does not have, because the kit is
   versioned and internal dependencies bump on change.
@@ -145,6 +155,19 @@ gains the Themes and the control, then GLITCH//Studio, then ASCII//Convert. GOLE
 tracer because it has the smallest literal surface, no canvas of user pixels, and both hard
 vocabulary questions — the Terminal's phosphor and the Cache lens's hit/miss pair are roles that do
 not exist yet and must be named once, before the other programs promote against them.
+
+## Implementation Notes — what the tracer found
+
+Two classes that have never rendered, in surfaces that looked fine because they were transparent
+over an already-dark parent: `bg-surface` on GOLEM//Console's every panel and `bg-elevated` on
+ASCII//Convert's default modal. The colours are keyed `bg-surface` and `bg-elevated`, so the
+background utilities are `bg-bg-surface` and `bg-bg-elevated`; the short spellings generate nothing
+and Tailwind has no way to say so. The promotion is the first thing that has ever read every colour
+class in the deck, which is how they surfaced.
+
+The literal `--muted` grey is now `--fg-dim`, and the scale documents both it and `--fg-faint` as
+sitting below the contrast floor. ADR 0009's four "does not use `text-muted`" tests therefore keep
+asserting exactly what they meant, against a name that says why.
 
 ## Questions / Future Work
 
