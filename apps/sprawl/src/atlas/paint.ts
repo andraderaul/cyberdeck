@@ -7,8 +7,10 @@ import type { ProjectedLine } from './basemap'
 import type { RenderInstruction, Viewport } from './types'
 
 /**
- * --void: the dark field the world is light against. Hardcoded rather than read off a CSS token —
- * a canvas context can't resolve `var(--void)`, and this is the one true background of the piece.
+ * The dark field the world is light against. Hardcoded rather than read off a CSS token — a canvas
+ * context can't resolve `var(--bg)`, and this is the one true background of *the piece*, which is
+ * the reason SPRAWL//Atlas takes no Theme at all (ADR 0021, ADR 0024): recolouring it by setting
+ * would be recolouring a work.
  */
 const FIELD = '#0a0a0f'
 

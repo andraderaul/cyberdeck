@@ -34,6 +34,6 @@ body {
 }
 
 ::selection {
-  background: var(--violet);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--fg-strong);
 }

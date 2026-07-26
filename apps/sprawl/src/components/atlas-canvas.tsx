@@ -81,7 +81,7 @@ export default function AtlasCanvas({
       aria-valuemax={100}
       aria-valuenow={Math.round(position * 100)}
       aria-valuetext={overflow ? `${reader.text}, overflow` : reader.text}
-      className="relative w-full h-full cursor-ew-resize touch-none outline-none focus-visible:ring-1 focus-visible:ring-cyan"
+      className="relative w-full h-full cursor-ew-resize touch-none outline-none focus-visible:ring-1 focus-visible:ring-info"
     >
       {/* Decorative — the interactive semantics live on the slider container above; the canvas has
           no role or label, so a screen reader skips it without needing aria-hidden. */}

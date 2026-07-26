@@ -2,7 +2,7 @@
 // can stay text-in / findings-out. Only the guard tests import this.
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 
 const TOKENS_FROM_ROOT = 'packages/deck-kit/src/tokens.css'
 const APPS_FROM_ROOT = 'apps'
@@ -38,6 +38,42 @@ export function programs(): string[] {
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort()
+}
+
+/** A source file the vocabulary guard reads, with the path a failure should name. */
+export type Source = { path: string; source: string }
+
+const SOURCE_EXTENSIONS = ['.ts', '.tsx']
+
+function walk(dir: string, root: string, out: Source[]): void {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      if (entry.name !== 'node_modules' && entry.name !== 'dist') {
+        walk(path, root, out)
+      }
+    } else if (SOURCE_EXTENSIONS.some((ext) => entry.name.endsWith(ext))) {
+      out.push({ path: relative(root, path), source: readFileSync(path, 'utf8') })
+    }
+  }
+}
+
+/**
+ * Every source file in every program and in the kit — the whole surface a colour class can be
+ * written on. This module is skipped, and only this one: the retired names are its subject matter,
+ * so it is the one file where naming them is the job rather than the offence.
+ */
+export function colourBearingSources(): Source[] {
+  const root = repoRoot()
+  const out: Source[] = []
+  for (const program of programs()) {
+    const src = join(root, APPS_FROM_ROOT, program, 'src')
+    if (existsSync(src)) {
+      walk(src, root, out)
+    }
+  }
+  walk(join(root, 'packages/deck-kit/src'), root, out)
+  return out.filter(({ path }) => !path.startsWith(join('packages/deck-kit/src/theme')))
 }
 
 /**

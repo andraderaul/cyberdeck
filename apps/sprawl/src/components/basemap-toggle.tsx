@@ -21,7 +21,7 @@ export default function BasemapToggle({ on, onToggle }: Props) {
         'absolute bottom-xs left-xs font-mono text-xs px-sm py-2xs rounded-xs bg-bg select-none',
         'cursor-pointer transition-colors duration-fast',
         on
-          ? 'border border-cyan text-cyan'
+          ? 'border border-info text-info'
           : 'border border-base text-fg-muted hover:text-fg hover:border-strong',
       )}
     >
