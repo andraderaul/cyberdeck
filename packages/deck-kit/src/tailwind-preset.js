@@ -25,9 +25,13 @@ export default {
         ghost: 'var(--ghost)',
         // Semantic
         accent: 'var(--accent)',
+        'fg-strong': 'var(--fg-strong)',
         fg: 'var(--fg)',
         'fg-muted': 'var(--fg-muted)',
         'fg-subtle': 'var(--fg-subtle)',
+        // Below the Theme Contract's floor by design — never text that carries meaning.
+        'fg-dim': 'var(--fg-dim)',
+        'fg-faint': 'var(--fg-faint)',
         bg: 'var(--bg)',
         'bg-surface': 'var(--bg-surface)',
         'bg-elevated': 'var(--bg-elevated)',
@@ -35,6 +39,11 @@ export default {
         info: 'var(--color-info)',
         danger: 'var(--color-danger)',
         warning: 'var(--color-warning)',
+        // Roles the deck drew before it had names for them (ADR 0024)
+        phosphor: 'var(--color-phosphor)',
+        link: 'var(--color-link)',
+        hit: 'var(--color-hit)',
+        miss: 'var(--color-miss)',
         // Transparent state surfaces
         'accent-ghost': 'var(--bg-accent-ghost)',
         'accent-dim': 'var(--bg-accent-dim)',
