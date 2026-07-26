@@ -23,6 +23,7 @@ import {
   CAUSE_WATCHDOG,
   CAUSE_ZERO_DIVISION,
   CR,
+  decode,
   EQ,
   ER,
   FPU_CONTROL,
@@ -46,7 +47,6 @@ import {
   REGISTER_COUNT,
   SOFTWARE_VECTOR,
   TERMINAL_ADDRESS,
-  unpackU,
   WATCHDOG_ADDRESS,
   WATCHDOG_COUNTER,
   WATCHDOG_ENABLE,
@@ -471,17 +471,9 @@ function classifyData(cycle: Cycle, op: 'READ' | 'WRITE', end: number): void {
 }
 
 function execute(cycle: Cycle, instruction: number): void {
-  const opcode = instruction >>> 26
   const r = cycle.registers
-
-  // Type U reads six-bit register fields; type F reads five, plus an im16.
-  const z = unpackU('z', instruction)
-  const ux = unpackU('x', instruction)
-  const uy = unpackU('y', instruction)
-  const fx = (instruction >>> 5) & 0x1f
-  const fy = instruction & 0x1f
-  const im16 = (instruction >>> 10) & 0xffff
-  const im26 = instruction & 0x3ffffff
+  // Type U reads six-bit register fields, type F five plus an im16 — `decode` unpacks all of them.
+  const { opcode, z, ux, uy, fx, fy, im16, im26 } = decode(instruction)
 
   switch (opcode) {
     case 0x00:
