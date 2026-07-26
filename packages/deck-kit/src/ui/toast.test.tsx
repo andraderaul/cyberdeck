@@ -13,10 +13,10 @@ import {
 // ── Toast component ──────────────────────────────────────────────────────────
 
 describe('Toast component', () => {
-  it('variant="error" has border-hot-pink class', () => {
+  it('variant="error" has border-danger class', () => {
     render(<Toast message="oops" variant="error" onDismiss={vi.fn()} />)
     const el = screen.getByRole('alert')
-    expect(el.className).toContain('border-hot-pink')
+    expect(el.className).toContain('border-danger')
   })
 
   it('variant="error" icon is ✕ (distinct from warn ⚠)', () => {
@@ -24,10 +24,10 @@ describe('Toast component', () => {
     expect(screen.getByText('✕')).toBeInTheDocument()
   })
 
-  it('variant="info" has border-cyan class', () => {
+  it('variant="info" has border-info class', () => {
     render(<Toast message="info msg" variant="info" onDismiss={vi.fn()} />)
     const el = screen.getByRole('alert')
-    expect(el.className).toContain('border-cyan')
+    expect(el.className).toContain('border-info')
   })
 
   it('variant="info" icon has text-info class', () => {
@@ -36,10 +36,10 @@ describe('Toast component', () => {
     expect(icon.className).toContain('text-info')
   })
 
-  it('variant="warn" has border-electric class', () => {
+  it('variant="warn" has border-warning class', () => {
     render(<Toast message="warn msg" variant="warn" onDismiss={vi.fn()} />)
     const el = screen.getByRole('alert')
-    expect(el.className).toContain('border-electric')
+    expect(el.className).toContain('border-warning')
   })
 
   it('variant="warn" icon has text-warning class', () => {

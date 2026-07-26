@@ -29,7 +29,7 @@ export default function ToggleGroup<T extends string>({
             'min-h-[44px] text-xs font-mono tracking-wide rounded-xs border cursor-pointer transition-all duration-fast',
             fullWidth ? 'flex-1 py-2xs' : 'py-xs px-sm',
             value === opt
-              ? 'border-violet bg-accent-soft text-violet'
+              ? 'border-accent bg-accent-soft text-accent'
               : 'border-base bg-transparent text-fg-muted',
           )}
         >

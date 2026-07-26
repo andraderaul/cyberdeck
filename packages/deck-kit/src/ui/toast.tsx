@@ -12,20 +12,20 @@ const variantStyles: Record<
   { border: string; shadow: string; iconClass: string; icon: string }
 > = {
   error: {
-    border: 'border-hot-pink',
-    shadow: '0 0 12px rgba(255, 45, 120, 0.15)',
+    border: 'border-danger',
+    shadow: '0 0 12px color-mix(in srgb, var(--color-danger) 15%, transparent)',
     iconClass: 'text-danger',
     icon: '✕',
   },
   info: {
-    border: 'border-cyan',
-    shadow: '0 0 12px rgba(0, 229, 255, 0.15)',
+    border: 'border-info',
+    shadow: '0 0 12px color-mix(in srgb, var(--color-info) 15%, transparent)',
     iconClass: 'text-info',
     icon: 'ℹ',
   },
   warn: {
-    border: 'border-electric',
-    shadow: '0 0 12px rgba(255, 230, 0, 0.15)',
+    border: 'border-warning',
+    shadow: '0 0 12px color-mix(in srgb, var(--color-warning) 15%, transparent)',
     iconClass: 'text-warning',
     icon: '⚠',
   },
@@ -37,7 +37,7 @@ export default function Toast({ message, variant, onDismiss }: Props) {
   return (
     <div
       role="alert"
-      className={cn('flex items-start gap-sm p-sm bg-shadow border rounded-xs', border)}
+      className={cn('flex items-start gap-sm p-sm bg-bg-elevated border rounded-xs', border)}
       style={{
         minWidth: '260px',
         maxWidth: '360px',

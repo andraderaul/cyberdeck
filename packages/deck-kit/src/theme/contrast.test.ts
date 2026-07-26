@@ -6,14 +6,11 @@
 // It asserts what a Theme *guarantees*, never what a token is spelled — pinning a value is the
 // hand-mirror failure being removed, and it would pin exactly what Themes need to be free to change.
 
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { contrastRatio, declaredThemes, resolveTokens } from './audit'
+import { readTokensCss } from './sources'
 
-// Vitest runs each workspace from its own package root, so this is the kit's `src/tokens.css`.
-// `import.meta.url` is not a file URL under happy-dom, which is why it is not used here.
-const css = readFileSync(resolve(process.cwd(), 'src/tokens.css'), 'utf8')
+const css = readTokensCss()
 
 // The root block *is* `ice`, so it has no selector to be discovered by. Every other Theme comes
 // from the stylesheet rather than from a list here: a Theme added without touching this file is

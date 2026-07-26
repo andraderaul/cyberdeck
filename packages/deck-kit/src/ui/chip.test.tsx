@@ -20,11 +20,11 @@ describe('Chip', () => {
     expect(screen.getByRole('button', { name: 'off' })).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('applies border-violet and text-violet when selected', () => {
+  it('applies border-accent and text-accent when selected', () => {
     render(<Chip selected>active</Chip>)
     const btn = screen.getByRole('button', { name: 'active' })
-    expect(btn.className).toContain('border-violet')
-    expect(btn.className).toContain('text-violet')
+    expect(btn.className).toContain('border-accent')
+    expect(btn.className).toContain('text-accent')
   })
 
   it('applies border-base and text-fg-muted when not selected', () => {

@@ -71,14 +71,14 @@ describe('SourceImageDropZone', () => {
   it('shows drag-active styles on dragover and removes them on dragleave', () => {
     render(<SourceImageDropZone {...baseProps} />)
     const label = document.querySelector('label') as HTMLElement
-    expect(label.className).not.toContain('border-violet')
+    expect(label.className).not.toContain('border-accent')
 
     fireEvent.dragOver(label, { preventDefault: () => {} })
-    expect(label.className).toContain('border-violet')
+    expect(label.className).toContain('border-accent')
     expect(label.className).toContain('bg-accent-ghost')
 
     fireEvent.dragLeave(label)
-    expect(label.className).not.toContain('border-violet')
+    expect(label.className).not.toContain('border-accent')
     expect(label.className).not.toContain('bg-accent-ghost')
   })
 

@@ -32,7 +32,7 @@ export default function EmptyStateHero({ onImage, onUseWebcam, tagline }: Props)
         <button
           type="button"
           onClick={onUseWebcam}
-          className="flex-1 min-h-[160px] border border-base rounded-xs flex flex-col items-center justify-center gap-sm cursor-pointer transition-colors duration-fast hover:border-violet"
+          className="flex-1 min-h-[160px] border border-base rounded-xs flex flex-col items-center justify-center gap-sm cursor-pointer transition-colors duration-fast hover:border-accent"
         >
           <span className="text-3xl text-fg-muted">◉</span>
           <span className="text-fg font-mono text-sm">use webcam</span>

@@ -43,16 +43,16 @@ describe('Slider', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 
-  it('applies violet style to marker when value equals defaultValue', () => {
+  it('marks the default with the accent when the value is sitting on it', () => {
     render(<Slider {...baseProps} value={1.0} defaultValue={1.0} />)
     const marker = screen.getByTestId('default-marker')
-    expect(marker.className).toMatch(/violet/)
+    expect(marker.className).toContain('bg-accent')
   })
 
-  it('applies slate style to marker when value differs from defaultValue', () => {
+  it('drops the marker back to the overlay surface once the value moves off it', () => {
     render(<Slider {...baseProps} value={1.5} defaultValue={1.0} />)
     const marker = screen.getByTestId('default-marker')
-    expect(marker.className).toMatch(/slate/)
+    expect(marker.className).toContain('bg-bg-overlay')
   })
 
   it('sets title attribute for discoverability when defaultValue is provided', () => {
