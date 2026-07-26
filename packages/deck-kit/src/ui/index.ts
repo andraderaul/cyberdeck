@@ -7,6 +7,7 @@ export { default as Label } from './label'
 export { default as Slider } from './slider'
 export { default as SourceImageDropZone } from './source-image-drop-zone'
 export { default as TabStrip, type Tab } from './tab-strip'
+export { default as ThemeControl } from './theme-control'
 export { default as Toast } from './toast'
 export {
   ToastContext,

@@ -1,4 +1,4 @@
-import { ErrorBoundary } from '@cyberdeck/deck-kit/ui'
+import { ErrorBoundary, ThemeControl } from '@cyberdeck/deck-kit/ui'
 import { useEffect } from 'react'
 import Cache from './components/cache'
 import Console from './components/console'
@@ -75,6 +75,11 @@ export default function App() {
               {console.rate === 'max' ? 'max' : `${console.rate}/s`}
             </span>
           </p>
+          {/* Deck chrome, not program chrome — which is why it sits in the header rather than
+              anywhere near the Console. It is also the one control in this program that is not a
+              typed command: it changes how the deck looks, not what the machine does, so ADR 0018's
+              rule about the Console being the only control grammar is untouched (ADR 0024). */}
+          <ThemeControl />
         </header>
 
         {/* One column on a phone, scrolling; two side by side once there is room. The state panels

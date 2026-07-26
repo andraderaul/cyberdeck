@@ -236,3 +236,102 @@
   /* Sections */
   --section-gap: var(--gap-2xl);
 }
+
+/* ============================================================
+   THEMES (ADR 0024)
+
+   The root block above is `ice` — the deck's original look, named for the first time. A Theme is
+   this and nothing more: a redefinition of the semantic layer. Everything else follows, because
+   the tints derive and the component tokens point at roles.
+
+   Every Theme is dark. This is not a light mode: the neon-on-near-black relationship *is* the
+   deck's register, and the accent palette does not survive a light surface — `ice`'s cyan measures
+   roughly 1.5:1 on white. A light Theme is a different palette and a separate audit.
+
+   Adding one is this list of values and nothing else. It has to clear the Theme Contract, which
+   the guard beside this file proves against these values rather than against a hand-copy — a
+   Theme that fails it is not a Theme, it is a proposal that was turned down.
+
+   The names come from the fictions' interior vocabulary, never from their titles: the deck names
+   things in single evocative words and has never cited a work. It also avoids a collision —
+   `matrix` and `neon` are already ASCII//Convert Color Modes, in a neighbouring control.
+   ============================================================ */
+
+/* Green phosphor: the screen of a machine that only ever knew how to display one colour. Its
+   accent and its phosphor are deliberately the same value — that single-hue insistence is the
+   whole point of the look, and the other roles exist only so the deck can still tell you
+   something went wrong. */
+[data-theme="construct"] {
+  --accent: #2bff88;
+  --accent-deep: #0f8f4a;
+  --accent-soft: #a8ffcf;
+
+  --fg-strong: #e8fff2;
+  --fg: #c2f0d4;
+  --fg-muted: #8fd4ab;
+  --fg-subtle: #6fb98d;
+  --fg-dim: #4d8564;
+  --fg-faint: #22392b;
+
+  --bg: #040a06;
+  --bg-surface: #0a140e;
+  --bg-elevated: #132218;
+  --bg-overlay: #22392b;
+
+  --color-info: #5ce1c0;
+  --color-info-deep: #1c8f78;
+  --color-info-soft: #b6f5e6;
+
+  --color-danger: #ff5f6d;
+  --color-danger-deep: #a81d2b;
+  --color-danger-soft: #ffb0b6;
+
+  --color-warning: #ffd166;
+  --color-warning-deep: #b08a1e;
+  --color-warning-soft: #ffe9b3;
+
+  --color-phosphor: #2bff88;
+  --color-link: #5ce1c0;
+  --color-hit: #5ce1c0;
+  --color-miss: #ffd166;
+}
+
+/* Grey and sodium-vapour amber: Gibson's washed-out sky, and the streetlight under it. The
+   surfaces lose their blue cast entirely, which is what stops the amber reading as a warning
+   badge pinned to `ice`. */
+[data-theme="chiba"] {
+  --accent: #ffb340;
+  --accent-deep: #b3701a;
+  --accent-soft: #ffd9a0;
+
+  --fg-strong: #f2f0e9;
+  --fg: #d8d5cb;
+  --fg-muted: #adaa9e;
+  --fg-subtle: #8f8c80;
+  --fg-dim: #6b6960;
+  --fg-faint: #37352e;
+
+  --bg: #0d0d0c;
+  --bg-surface: #151412;
+  --bg-elevated: #22211d;
+  --bg-overlay: #37352e;
+
+  --color-info: #8fbcd4;
+  --color-info-deep: #3f6a80;
+  --color-info-soft: #cde3ef;
+
+  --color-danger: #ff6b5e;
+  --color-danger-deep: #a83428;
+  --color-danger-soft: #ffb4ac;
+
+  --color-warning: #ffe066;
+  --color-warning-deep: #b39a1e;
+  --color-warning-soft: #fff2b8;
+
+  /* An amber CRT rather than a green one — the machine still has one voice, it is just a
+     different tube. */
+  --color-phosphor: #ffb340;
+  --color-link: #8fbcd4;
+  --color-hit: #8fbcd4;
+  --color-miss: #ffe066;
+}
