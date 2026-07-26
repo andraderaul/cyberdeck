@@ -68,7 +68,15 @@ the hole without failing the incumbent — `ice`'s violet clears 4.5:1 on the ba
 everywhere — and matches how the accent is actually used: mostly border, ring and chip.
 
 The roles the tracer named join it on the same terms: phosphor, link, Hit and Miss are read as text
-on a panel, so they answer to AA-small on all three surfaces. Telling a Hit from a Miss is asserted
+on a panel, so they answer to AA-small on all three surfaces.
+
+**`--fg-on-accent` is pinned at AA-small with no second tier.** A selection highlight is the only
+place the deck paints text on an *opaque* accent, and it is the one pair a Theme cannot get right by
+accident — whether the text wants to be lighter or darker depends on how bright the accent is, and
+near-white on a bright accent measures 1.3:1. `ice` drew `--white` here and never cleared the floor
+(3.80:1); it draws black now (4.80:1), which keeps the Theme's colour and fixes a pair that was
+below AA before Themes existed. This is the one pin where sparing the incumbent was not necessary,
+which is why it has no second tier. Telling a Hit from a Miss is asserted
 as an *inequality* rather than a ratio — luminance contrast is the wrong instrument for two
 foregrounds (`ice`'s cyan and electric measure 1.2:1 against each other and are unmistakable), and
 the right one, a perceptual colour difference, is the colour engine the guard must not become. What

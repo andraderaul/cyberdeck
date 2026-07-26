@@ -25,4 +25,8 @@ TypeScript, the Theme blocks and each program's inlined pre-paint script in agre
 
 `--fg-on-accent` is new: a selection highlight is the only place the deck paints text on an opaque
 accent, and it is the one pair a Theme cannot get right by accident — whether the text wants to be
-lighter or darker depends on how bright that accent is. The contract pins it.
+lighter or darker depends on how bright that accent is. The contract pins it at AA-small.
+
+**Selected text changes in `ice`.** It was near-white on violet, which measures 3.80:1 and has never
+met the floor the rest of the palette clears. It is black on the same violet now, at 4.80:1. The
+Theme's colour is untouched; only the text standing on it moves.

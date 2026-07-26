@@ -57,10 +57,15 @@
   --fg-faint: var(--slate);
 
   /* The one foreground that stands on the accent rather than on a surface — a selection highlight
-     is the only place the deck paints text on an opaque accent. It has to be restated per Theme
-     and cannot be derived: whether it wants to be lighter or darker than the accent depends on how
-     bright that accent is, which is the whole question. */
-  --fg-on-accent: var(--fg-strong);
+     is the only place the deck paints text on an opaque accent. It has to be restated per Theme and
+     cannot be derived: whether it wants to be lighter or darker than the accent depends on how
+     bright that accent is, which is the whole question.
+
+     Pure black rather than --void, and this is the only place in the deck that is true. `ice` drew
+     --white here for years and measured 3.80:1, below the floor the rest of the palette clears;
+     going the other way, --void measures 4.51:1 and black 4.80:1. On a pin the whole roster has to
+     meet, the 0.3 of headroom is worth the one literal. */
+  --fg-on-accent: #000000;
 
   --bg: var(--void);
   --bg-surface: var(--abyss);
