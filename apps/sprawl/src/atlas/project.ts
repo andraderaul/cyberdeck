@@ -58,7 +58,14 @@ export function project(
       continue
     }
     const { x, y } = projectLatLng(point.lat, point.lng, viewport)
-    instructions.push({ x, y, brightness, capacity: point.capacity, label: point.label })
+    instructions.push({
+      x,
+      y,
+      brightness,
+      capacity: point.capacity,
+      label: point.label,
+      country: point.country,
+    })
   }
   return instructions
 }

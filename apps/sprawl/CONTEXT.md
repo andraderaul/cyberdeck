@@ -48,7 +48,10 @@ Use these terms precisely.
   + pure `scripts/aggregate.mjs`), a scheduled CI drift job, and the real dated
   `dataset-YYYY-MM.json` (~1,958 facilities, ~6.6 decades of connected capacity) behind the
   generated `snapshot.ts`.
-- **#228 labels + hover**, **#229 earned basemap**, **#230 shareable link (+ PNG)**.
+- **#228 labels + hover** ✅ — city names on the strongest, spatially-thinned nodes (orientation
+  without a basemap) and hover inspection revealing `city, country · N Gbps`. One CSS-space
+  projection now feeds both the canvas paint and the DOM overlays.
+- **#229 earned basemap**, **#230 shareable link (+ PNG)**.
 
 A **time axis** (successive dated snapshots) is deliberately *out of v1* (ADR 0021); the dated
 filename keeps that door open for free.

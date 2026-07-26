@@ -1,8 +1,17 @@
 import { ErrorBoundary } from '@cyberdeck/deck-kit/ui'
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { DATASET } from './atlas/dataset'
+import { topCityLabels } from './atlas/labels'
+import { project } from './atlas/project'
 import AtlasCanvas from './components/atlas-canvas'
+import { useElementSize } from './hooks/use-element-size'
+import { useHover } from './hooks/use-hover'
 import { useScale } from './hooks/use-scale'
+
+/** How many cities carry a name label — enough to orient, few enough not to clutter. */
+const CITY_LABEL_COUNT = 12
+/** Minimum CSS px between two labels, so the dense European core doesn't pile names into a smear. */
+const CITY_LABEL_MIN_DISTANCE = 52
 
 /**
  * SPRAWL//Atlas — a piece, not a tool (ADR 0021). It takes no user material: it ships with a
@@ -13,6 +22,15 @@ export default function App() {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { scale, position, reader, overflow } = useScale(containerRef, DATASET.points)
+
+  // One projection in CSS space, shared by the canvas paint and the DOM overlays (labels, hover).
+  const size = useElementSize(containerRef)
+  const instructions = useMemo(() => project(DATASET.points, scale, size), [scale, size])
+  const labels = useMemo(
+    () => topCityLabels(instructions, CITY_LABEL_COUNT, CITY_LABEL_MIN_DISTANCE),
+    [instructions],
+  )
+  const hover = useHover(containerRef, instructions)
 
   return (
     <div className="flex flex-col h-screen">
@@ -35,10 +53,13 @@ export default function App() {
           <AtlasCanvas
             containerRef={containerRef}
             canvasRef={canvasRef}
-            scale={scale}
+            size={size}
+            instructions={instructions}
             position={position}
             reader={reader}
             overflow={overflow}
+            labels={labels}
+            hover={hover}
           />
         </ErrorBoundary>
 

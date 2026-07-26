@@ -46,7 +46,8 @@ export interface Viewport {
   height: number
 }
 
-/** A point ready to paint: pixel position + brightness 0..1 from the log window. Pure output. */
+/** A point ready to paint: pixel position + brightness 0..1 from the log window. Pure output.
+ *  `label`/`country` ride along for the labels and hover inspection overlays (#228). */
 export interface RenderInstruction {
   x: number
   y: number
@@ -54,4 +55,5 @@ export interface RenderInstruction {
   brightness: number
   capacity: number
   label?: string
+  country?: string
 }
