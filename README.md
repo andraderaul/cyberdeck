@@ -12,7 +12,7 @@ No backend server — everything runs in the browser.
 | **[ASCII//Convert](./apps/ascii)** | `apps/ascii` | Turns an image or your webcam into interactive ASCII art. **[Live demo →](https://ascii-art-converter-tawny.vercel.app/)** |
 | **[GLITCH//Studio](./apps/glitch)** | `apps/glitch` | Runs a fixed pipeline of glitch effects over an image or webcam — real-time preview, curated presets, and PNG / video export. **[Live demo →](https://cyberdeck-glitch-studio.vercel.app/)** |
 | **[GOLEM//Console](./apps/golem)** | `apps/golem` | A 32-bit fantasy computer: write assembly, assemble it, and drive execution from a command line while registers, memory and the machine's Terminal update live. **[Live demo →](https://cyberdeck-golem.vercel.app/)** |
-| **[SPRAWL//Atlas](./apps/sprawl)** | `apps/sprawl` | The deck's first *piece, not tool*: renders the world's connected capacity as light from a vendored PeeringDB snapshot. It opens blown white and you repair it by sliding the scale coarser, until the structure emerges from the overflow. |
+| **[SPRAWL//Atlas](./apps/sprawl)** | `apps/sprawl` | The deck's first *piece, not tool*: renders the world's connected capacity as light from a vendored PeeringDB snapshot. It opens blown white and you repair it by sliding the scale coarser, until the structure emerges from the overflow. **[Live demo →](https://atlas-sprawl.vercel.app/)** |
 
 ## Running locally
 
