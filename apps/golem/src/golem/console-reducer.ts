@@ -93,8 +93,12 @@ function narrate(event: Exclude<StepEvent, { kind: 'cache' }>): string {
   switch (event.kind) {
     case 'software-interrupt':
       return `software interrupt — cause ${hex32(event.cause)}, vector ${hex32(SOFTWARE_VECTOR)}`
+    // Narrated even when IE is clear and no dispatch follows: "there is garbage at this address"
+    // is the more useful half of the news either way.
     case 'invalid-instruction':
       return `invalid instruction at ${hex32(event.pc)}`
+    // Names the device, not just the line number: "who interrupted my program" is the question
+    // the narration exists to answer.
     case 'hardware-interrupt':
       return event.line === 1
         ? `hardware interrupt 1 — the watchdog, vector ${hex32(HARDWARE_1_VECTOR)}`
@@ -129,7 +133,7 @@ export function wrapTrace(lines: string[], terminal: string, cache?: CacheState)
  * Whether replacing this Source would destroy anything. The starter example and a program that was
  * itself loaded are not the operator's work, so `load` overwrites them without ceremony.
  */
-export function isDisposable(current: string, initialSource: string): boolean {
+function isDisposable(current: string, initialSource: string): boolean {
   return (
     current.trim() === '' ||
     current === initialSource ||
@@ -157,6 +161,21 @@ export function stepWithTrace(current: Machine): {
   )
   const lines = dispatches.map((event) => ({ kind: 'info' as const, text: narrate(event) }))
   return { machine: next, trace, lines, spotlight: spotlightOf(events) }
+}
+
+/** The model after a Step lands: the new Machine, the paused PC cleared, the spotlight advanced. */
+function applyStep(
+  model: ConsoleModel,
+  stepped: { machine: Machine; spotlight: CacheAccess | null },
+): ConsoleModel {
+  return {
+    ...model,
+    machine: stepped.machine,
+    // Stepping clears the paused PC, so a later pause on the same line trips fresh.
+    pausedPc: null,
+    // Absent only when the cache is off — leave the last spotlight standing rather than blanking.
+    cacheSpotlight: stepped.spotlight ?? model.cacheSpotlight,
+  }
 }
 
 export type AdvanceResult =
@@ -188,14 +207,7 @@ export function advanceOnce(model: ConsoleModel): AdvanceResult {
   }
 
   const stepped = stepWithTrace(current)
-  const next: ConsoleModel = {
-    ...model,
-    machine: stepped.machine,
-    // Stepping clears the paused PC, so a later pause on the same line trips fresh.
-    pausedPc: null,
-    // Absent only when the cache is off — leave the last spotlight standing rather than blanking.
-    cacheSpotlight: stepped.spotlight ?? model.cacheSpotlight,
-  }
+  const next = applyStep(model, stepped)
   if (stepped.machine.halted) {
     return {
       kind: 'halted',
@@ -284,6 +296,10 @@ export function reduceCommand(
   const effects: Effect[] = []
 
   const done = (): CommandResult => ({ model: m, lines, trace, effects })
+  const noMachine = (): CommandResult => {
+    lines.push({ kind: 'error', text: 'no machine — run asm first' })
+    return done()
+  }
 
   switch (command.kind) {
     case 'asm': {
@@ -374,20 +390,14 @@ export function reduceCommand(
     case 'step': {
       effects.push({ kind: 'stop-clock' })
       if (m.machine === null) {
-        lines.push({ kind: 'error', text: 'no machine — run asm first' })
-        return done()
+        return noMachine()
       }
       if (m.machine.halted) {
         lines.push({ kind: 'info', text: 'machine halted — reset to run again' })
         return done()
       }
       const stepped = stepWithTrace(m.machine)
-      m = {
-        ...m,
-        machine: stepped.machine,
-        pausedPc: null,
-        cacheSpotlight: stepped.spotlight ?? m.cacheSpotlight,
-      }
+      m = applyStep(m, stepped)
       trace.push(stepped.trace)
       lines.push(...stepped.lines)
       if (stepped.machine.halted) {
@@ -411,8 +421,7 @@ export function reduceCommand(
       }
 
       if (m.machine === null) {
-        lines.push({ kind: 'error', text: 'no machine — run asm first' })
-        return done()
+        return noMachine()
       }
       const filename = outputFilename('trace-export')
       effects.push({ kind: 'export-trace', filename })
@@ -479,8 +488,7 @@ export function reduceCommand(
 
     case 'reg': {
       if (m.machine === null) {
-        lines.push({ kind: 'error', text: 'no machine — run asm first' })
-        return done()
+        return noMachine()
       }
       const index = registerIndex(command.name)
       if (index === null) {
@@ -496,8 +504,7 @@ export function reduceCommand(
 
     case 'mem': {
       if (m.machine === null) {
-        lines.push({ kind: 'error', text: 'no machine — run asm first' })
-        return done()
+        return noMachine()
       }
       lines.push(
         ...formatMemoryDump(m.machine.memory, command.start, command.count, command.unit).map(
