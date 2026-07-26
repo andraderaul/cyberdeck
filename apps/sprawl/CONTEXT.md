@@ -44,8 +44,10 @@ Use these terms precisely.
 - **#226 scale instrument** ✅ — OVERFLOW on load, continuous wheel/drag/arrow-key gesture over the
   canvas (the map *is* the control), always-visible live scale reader that flips out of its OVERFLOW
   voice as structure emerges.
-- **#227 vendored snapshot** — the PeeringDB fetch/aggregate script + scheduled CI drift job + real
-  dated dataset.
+- **#227 vendored snapshot** ✅ — the PeeringDB fetch/aggregate script (`scripts/vendor-dataset.mjs`
+  + pure `scripts/aggregate.mjs`), a scheduled CI drift job, and the real dated
+  `dataset-YYYY-MM.json` (~1,958 facilities, ~6.6 decades of connected capacity) behind the
+  generated `snapshot.ts`.
 - **#228 labels + hover**, **#229 earned basemap**, **#230 shareable link (+ PNG)**.
 
 A **time axis** (successive dated snapshots) is deliberately *out of v1* (ADR 0021); the dated

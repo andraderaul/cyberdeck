@@ -1,0 +1,46 @@
+name: Vendor SPRAWL dataset
+
+# The build-time data pipeline of ADR 0022: re-run the PeeringDB aggregation on a schedule and open
+# a PR when the vendored snapshot has drifted. The committed dataset stays a versioned artifact — a
+# human reviews the diff and merges. No runtime fetch, no backend; this is the only place the deck
+# touches an external source, and it does so at build time.
+
+on:
+  schedule:
+    # 06:00 UTC on the 1st of each month — the snapshot is dated YYYY-MM, so monthly is its cadence.
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  vendor:
+    name: Re-vendor and open a PR on drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Re-run the PeeringDB aggregation
+        run: npm run vendor:dataset --workspace @cyberdeck/sprawl
+      - name: Open a PR if the snapshot drifted
+        uses: peter-evans/create-pull-request@v6
+        with:
+          add-paths: apps/sprawl/src/data
+          branch: chore/vendor-sprawl-dataset
+          commit-message: "chore(sprawl): re-vendor PeeringDB snapshot"
+          title: "chore(sprawl): re-vendor PeeringDB connected-capacity snapshot"
+          body: |
+            Scheduled re-vendor of the SPRAWL//Atlas dataset (ADR 0022).
+
+            The PeeringDB aggregation drifted, so this PR commits the new dated
+            `dataset-YYYY-MM.json` and its generated `snapshot.ts` pointer. The measure is
+            **connected capacity**, never traffic. Review the per-point diff and merge to move the
+            world under the map.
+          labels: |
+            needs-triage
