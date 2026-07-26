@@ -57,6 +57,19 @@ describe.each(THEMES)('Theme `%s` meets the contract', (theme) => {
     expect(ratio('--accent', '--bg')).toBeGreaterThanOrEqual(AA_SMALL)
   })
 
+  // A selection highlight is the only place the deck paints text on an *opaque* accent, and it is
+  // the one pair a Theme cannot get right by accident: whether the text wants to be lighter or
+  // darker than the accent depends on how bright that accent is.
+  //
+  // Pinned at the non-text floor rather than AA-small, for the same reason the accent's own pin is
+  // two-tier: `ice` has always drawn white on violet, which measures 4.38:1, and demanding AA-small
+  // here would fail the incumbent and reopen the deck's brand colour. `construct` and `chiba` clear
+  // AA-small with room — the floor is what stops a future Theme shipping at 1.3:1, which is what
+  // near-white on a bright accent actually measures.
+  it('--fg-on-accent reads on the accent it stands on', () => {
+    expect(ratio('--fg-on-accent', '--accent')).toBeGreaterThanOrEqual(NON_TEXT)
+  })
+
   // A Hit and a Miss are a classifier's two answers (ADR 0023), so a Theme that spelled both the
   // same colour would pass every pin above and still lose the lens. This is deliberately an
   // inequality and not a ratio: luminance contrast is the wrong instrument for two foregrounds —

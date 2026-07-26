@@ -12,3 +12,7 @@ must not read as one setting shown twice.
 
 Also fixes the default modal's background, which carried `bg-elevated` — not a class, so the modal
 has been transparent since it was written.
+
+The Neural Scan's threat chips follow the Theme too. They named hues directly as inline styles —
+the one spelling the class-level promotion could not see — so they would have kept `ice`'s pink and
+cyan on a green or grey field. Their washes are now mixed from the role's own colour.

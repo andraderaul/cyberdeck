@@ -18,6 +18,7 @@ export default {
         // Below the Theme Contract's floor by design — never text that carries meaning.
         'fg-dim': 'var(--fg-dim)',
         'fg-faint': 'var(--fg-faint)',
+        'fg-on-accent': 'var(--fg-on-accent)',
         bg: 'var(--bg)',
         'bg-surface': 'var(--bg-surface)',
         'bg-elevated': 'var(--bg-elevated)',
@@ -33,6 +34,8 @@ export default {
         // Transparent state surfaces
         'accent-ghost': 'var(--bg-accent-ghost)',
         'accent-dim': 'var(--bg-accent-dim)',
+        // Not `--accent-soft`, which is a chosen lighter hue with no consumer today — this is the
+        // 12% tint, and the name is the one components already use.
         'accent-soft': 'var(--bg-accent-soft)',
         'danger-ghost': 'var(--bg-danger-ghost)',
         'info-ghost': 'var(--bg-info-ghost)',

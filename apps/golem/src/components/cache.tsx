@@ -40,11 +40,13 @@ export default function Cache({ machine, spotlight }: CacheProps) {
   )
 }
 
-// HIT is cheap and affirmative; a MISS reached all the way to memory, so it carries the cost — its
-// own hue, and a breath (ADR 0023: the cost of a miss lives here, in the presentation, never in
-// step). The two are a result pair rather than info and warning (ADR 0024): a Miss is not the tool
-// warning you about anything, it is the classifier's other answer, and a Theme has to be able to
-// pick both together. The word HIT or MISS carries the distinction where hue cannot.
+/**
+ * HIT is cheap and affirmative; a MISS reached all the way to memory, so it carries the cost — its
+ * own hue, and a breath (ADR 0023: the cost of a miss lives here, in the presentation, never in
+ * step). The two are a result pair rather than info and warning (ADR 0024): a Miss is not the tool
+ * warning you about anything, it is the classifier's other answer, and a Theme has to be able to
+ * pick both together. The word HIT or MISS carries the distinction where hue cannot.
+ */
 const hitColour = (result: CacheResult) => (result === 'HIT' ? 'text-hit' : 'text-miss')
 
 function Lens({ view }: { view: CacheView }) {

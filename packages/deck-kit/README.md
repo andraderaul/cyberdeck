@@ -17,7 +17,6 @@ is fine, nothing else consumes it.
 |--------|------|
 | `@cyberdeck/deck-kit/utils` | `cn`, `isTouchDevice`, `loadImageFile`, `shareOrDownloadBlob`, `shareOrDownloadCanvas` |
 | `@cyberdeck/deck-kit/ui` | `Button`, `TabStrip`, `ThemeControl`, and the rest of the primitives |
-| `@cyberdeck/deck-kit/theme` | the Theme roster and its resolution rule — `THEMES`, `resolveTheme`, `nextTheme`, the storage key and the attribute |
 | `@cyberdeck/deck-kit/tokens.css` | the CSS custom properties (design tokens), including every Theme |
 | `@cyberdeck/deck-kit/tailwind-preset` | the Tailwind `theme` |
 
@@ -43,6 +42,10 @@ The visual language is a set of named Themes (ADR 0024): `ice` (the default and 
 `ice`'s vocabulary and no longer exist in the preset at all, so naming one renders unstyled rather
 than erroring. Adding a Theme is a block of semantic values in `tokens.css` and nothing else: the
 tints derive from their source hue and the component tokens point at roles.
+
+The roster and its resolution rule live in `src/theme/themes.ts`. They are not a subpath export:
+no program needs them — `<ThemeControl />` is the whole interface — and the kit's bar for public
+API is a real caller, not an anticipated one (ADR 0014).
 
 A program that offers a Theme mounts `<ThemeControl />` in its header and inlines the blocking
 pre-paint script in its `index.html` — the one in `apps/golem/index.html` is the copy to take.

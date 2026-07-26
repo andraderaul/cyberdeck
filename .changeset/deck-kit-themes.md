@@ -22,3 +22,7 @@ Three guards ship with it, all in the ordinary test command: a contrast guard th
 real token values and holds every Theme to a stated contract, a vocabulary guard that fails with
 the class, file and line if a retired name comes back, and a roster guard that keeps the
 TypeScript, the Theme blocks and each program's inlined pre-paint script in agreement.
+
+`--fg-on-accent` is new: a selection highlight is the only place the deck paints text on an opaque
+accent, and it is the one pair a Theme cannot get right by accident — whether the text wants to be
+lighter or darker depends on how bright that accent is. The contract pins it.

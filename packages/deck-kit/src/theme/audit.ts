@@ -14,7 +14,7 @@ const THEME_SELECTOR = /\[data-theme=['"]([\w-]+)['"]\]/g
 /** `var(--name)` or `var(--name, fallback)` — the fallback is dropped once the name resolves. */
 const VAR_REFERENCE = /var\(\s*(--[\w-]+)\s*(?:,[^()]*)?\)/g
 
-// A chain deeper than this is a cycle, not a design.
+/** A chain deeper than this is a cycle, not a design. */
 const MAX_VAR_DEPTH = 16
 
 function withoutComments(css: string): string {
@@ -130,9 +130,11 @@ export const RETIRED_HUE_CLASSES = [
   'ghost',
 ] as const
 
-// Every Tailwind utility that takes a colour. Matching the prefix explicitly rather than "anything
-// before the hue" is what keeps `bg-accent-ghost` — the semantic class that *replaces* a literal
-// tint — from reading as an offence.
+/**
+ * Every Tailwind utility that takes a colour. Matching the prefix explicitly rather than "anything
+ * before the hue" is what keeps `bg-accent-ghost` — the semantic class that *replaces* a literal
+ * tint — from reading as an offence.
+ */
 const COLOR_UTILITIES = [
   'accent',
   'bg',
@@ -159,13 +161,21 @@ const COLOR_UTILITIES = [
   'via',
 ] as const
 
-// Wide enough to catch a class wherever it is spelled — a className literal, a `cn()` argument, a
-// lookup table's value — and narrow enough that ordinary prose never reaches the set below.
+/**
+ * Wide enough to catch a class wherever it is spelled — a className literal, a `cn()` argument, a
+ * lookup table's value — and narrow enough that ordinary prose never reaches the set below.
+ */
 const CANDIDATE = /[A-Za-z][A-Za-z0-9:/[\]._-]*/g
 
 /**
- * Every retired hue class in a source file. The finding names the class and the line, because the
- * fix is mechanical once you know both.
+ * Every literal hue a source file names, by class or by token reference, with the line it sits on —
+ * because the fix is mechanical once you know both.
+ *
+ * Two spellings, because a component can reach past the semantic layer two ways and both leave the
+ * same defect. `text-violet` is the obvious one. `var(--violet)` is the one that hides: it is how
+ * runtime-dynamic colour gets written, it lives in `.css` and in inline styles rather than in a
+ * `className`, and it keeps working — in `ice` — after the class of the same name has stopped
+ * existing.
  */
 export function findLiteralHues(
   source: string,
@@ -177,6 +187,7 @@ export function findLiteralHues(
       banned.add(`${utility}-${hue}`)
     }
   }
+  const bannedTokens = new Set(retired.map((hue) => `--${hue}`))
 
   const findings: LiteralHueFinding[] = []
   source.split('\n').forEach((text, index) => {
@@ -185,6 +196,11 @@ export function findLiteralHues(
       const bare = candidate.split(':').pop()?.split('/')[0] ?? ''
       if (banned.has(bare)) {
         findings.push({ className: candidate, line: index + 1 })
+      }
+    }
+    for (const [, token] of text.matchAll(VAR_REFERENCE)) {
+      if (bannedTokens.has(token)) {
+        findings.push({ className: `var(${token})`, line: index + 1 })
       }
     }
   })

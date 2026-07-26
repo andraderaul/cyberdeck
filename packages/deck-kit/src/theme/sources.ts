@@ -43,7 +43,21 @@ export function programs(): string[] {
 /** A source file the vocabulary guard reads, with the path a failure should name. */
 export type Source = { path: string; source: string }
 
-const SOURCE_EXTENSIONS = ['.ts', '.tsx']
+// Stylesheets are in here because a `var()` reference to a primitive names a hue just as surely as
+// a class does, and it is the spelling that hides: it never appears in a `className`, so a scan of
+// components alone walks straight past a program's `index.css`.
+const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.css']
+
+/**
+ * The only files where naming a retired hue is the job rather than the offence: the module that
+ * defines the list, its own tests, and the stylesheet where the primitives are declared. Everything
+ * else in `src/theme/` is scanned like any other source.
+ */
+const EXEMPT = [
+  'packages/deck-kit/src/theme/audit.ts',
+  'packages/deck-kit/src/theme/audit.test.ts',
+  'packages/deck-kit/src/tokens.css',
+]
 
 function walk(dir: string, root: string, out: Source[]): void {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -58,11 +72,8 @@ function walk(dir: string, root: string, out: Source[]): void {
   }
 }
 
-/**
- * Every source file in every program and in the kit — the whole surface a colour class can be
- * written on. This module is skipped, and only this one: the retired names are its subject matter,
- * so it is the one file where naming them is the job rather than the offence.
- */
+/** Every source and stylesheet in every program and in the kit, minus the handful that define the
+ *  vocabulary rather than consume it. */
 export function colourBearingSources(): Source[] {
   const root = repoRoot()
   const out: Source[] = []
@@ -73,7 +84,7 @@ export function colourBearingSources(): Source[] {
     }
   }
   walk(join(root, 'packages/deck-kit/src'), root, out)
-  return out.filter(({ path }) => !path.startsWith(join('packages/deck-kit/src/theme')))
+  return out.filter(({ path }) => !EXEMPT.includes(path))
 }
 
 /**

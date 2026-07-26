@@ -4,19 +4,29 @@ import type { AnalysisState, ThreatLevel } from '../ai/types'
 import Badge from './ui/badge'
 import Modal from './ui/modal'
 
+/** A barely-there tint of a role's own colour, for the band behind a threat level. */
+function wash(token: string, percent: number): string {
+  return `color-mix(in srgb, var(${token}) ${percent}%, transparent)`
+}
+
 interface Props {
   state: AnalysisState
   onClose: () => void
   onRetry?: () => void
 }
 
-/** Threat colors are applied as inline `var(--token)` styles — runtime-dynamic, so no Tailwind class. */
+/**
+ * Threat colors are applied as inline `var(--token)` styles — runtime-dynamic, so no Tailwind class.
+ * They name roles rather than hues, and the wash behind each one is mixed from the same role, so a
+ * Theme cannot leave this modal wearing `ice`'s pink over a green field (ADR 0024).
+ */
 const THREAT_META: Record<ThreatLevel, { icon: string; color: string; bgAlpha: string }> = {
-  CRITICAL: { icon: '‼', color: 'var(--hot-pink)', bgAlpha: 'rgba(255,45,120,0.12)' },
-  HIGH: { icon: '✕', color: 'var(--hot-pink)', bgAlpha: 'rgba(255,45,120,0.07)' },
-  MODERATE: { icon: '◐', color: 'var(--electric)', bgAlpha: 'rgba(255,230,0,0.07)' },
-  LOW: { icon: '○', color: 'var(--cyan)', bgAlpha: 'rgba(0,229,255,0.07)' },
-  UNKNOWN: { icon: '◌', color: 'var(--muted)', bgAlpha: 'rgba(107,107,154,0.07)' },
+  CRITICAL: { icon: '‼', color: 'var(--color-danger)', bgAlpha: wash('--color-danger', 12) },
+  HIGH: { icon: '✕', color: 'var(--color-danger)', bgAlpha: wash('--color-danger', 7) },
+  MODERATE: { icon: '◐', color: 'var(--color-warning)', bgAlpha: wash('--color-warning', 7) },
+  LOW: { icon: '○', color: 'var(--color-info)', bgAlpha: wash('--color-info', 7) },
+  // --fg-dim sits below the contrast floor by design, so it colours the chip and never the copy.
+  UNKNOWN: { icon: '◌', color: 'var(--fg-muted)', bgAlpha: wash('--fg-dim', 7) },
 }
 
 type ErrorStatus = Extract<

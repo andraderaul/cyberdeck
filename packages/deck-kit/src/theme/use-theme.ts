@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { nextTheme, resolveTheme, THEME_ATTRIBUTE, THEME_STORAGE_KEY, type Theme } from './themes'
 
-// Safari private mode / a sandboxed iframe — silently ignore.
+/** Safari private mode / a sandboxed iframe — silently ignore. */
 function readStored(): string | null {
   try {
     return localStorage.getItem(THEME_STORAGE_KEY)
@@ -10,11 +10,12 @@ function readStored(): string | null {
   }
 }
 
+/** A Theme that cannot be remembered is still worth having for this session. */
 function persist(theme: Theme): void {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme)
   } catch {
-    // A Theme that cannot be remembered is still worth having for this session.
+    // Nothing to do — see above.
   }
 }
 

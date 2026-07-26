@@ -56,6 +56,12 @@
   --fg-dim: var(--muted);
   --fg-faint: var(--slate);
 
+  /* The one foreground that stands on the accent rather than on a surface — a selection highlight
+     is the only place the deck paints text on an opaque accent. It has to be restated per Theme
+     and cannot be derived: whether it wants to be lighter or darker than the accent depends on how
+     bright that accent is, which is the whole question. */
+  --fg-on-accent: var(--fg-strong);
+
   --bg: var(--void);
   --bg-surface: var(--abyss);
   --bg-elevated: var(--shadow);
@@ -290,6 +296,8 @@
   --color-warning-deep: #b08a1e;
   --color-warning-soft: #ffe9b3;
 
+  --fg-on-accent: #04120a;
+
   --color-phosphor: #2bff88;
   --color-link: #5ce1c0;
   --color-hit: #5ce1c0;
@@ -327,6 +335,8 @@
   --color-warning: #ffe066;
   --color-warning-deep: #b39a1e;
   --color-warning-soft: #fff2b8;
+
+  --fg-on-accent: #17110a;
 
   /* An amber CRT rather than a green one — the machine still has one voice, it is just a
      different tube. */

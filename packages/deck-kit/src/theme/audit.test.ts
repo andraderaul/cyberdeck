@@ -152,6 +152,27 @@ describe('findLiteralHues', () => {
     const found = findLiteralHues('text-violet border-violet text-cyan', retired)
     expect(found).toHaveLength(3)
   })
+
+  // The spelling that hides: it is how runtime-dynamic colour and stylesheets are written, it never
+  // appears in a `className`, and it goes on working — in `ice` — after the class of the same name
+  // has stopped existing.
+  it('finds a retired hue named as a token reference', () => {
+    expect(findLiteralHues("color: 'var(--violet)',", retired)).toEqual([
+      { className: 'var(--violet)', line: 1 },
+    ])
+  })
+
+  it('finds one in a stylesheet declaration', () => {
+    expect(findLiteralHues('  background: var(--cyan);', retired).map((f) => f.className)).toEqual([
+      'var(--cyan)',
+    ])
+  })
+
+  it('leaves a semantic token reference alone', () => {
+    expect(findLiteralHues('background: var(--accent); color: var(--fg-muted);', retired)).toEqual(
+      [],
+    )
+  })
 })
 
 describe('RETIRED_HUE_CLASSES', () => {
