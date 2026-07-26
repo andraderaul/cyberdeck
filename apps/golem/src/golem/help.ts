@@ -42,6 +42,12 @@ const HELP: Record<(typeof COMMAND_NAMES)[number], Entry> = {
     detail:
       'The default is slow enough to follow by eye. `clock max` runs as fast as the frame budget allows. The rate survives `reset`.',
   },
+  cache: {
+    usage: 'cache [on|off]',
+    summary: 'toggle the cache lens, or report it',
+    detail:
+      "The cache classifies every memory access as a Hit or a Miss (ADR 0023). On by default. `cache on`/`cache off` set the mode and, like `load`, only work while no Machine exists — a run is never half-wrapped. Bare `cache` reports the live Machine's statistics, or the mode the next `run` will use.",
+  },
   reg: {
     usage: 'reg <name>',
     summary: 'print one register, in hex and decimal',

@@ -10,6 +10,7 @@ import fpu from './__fixtures__/2_fpu.s?raw'
 import helloWorld from './__fixtures__/2_hello_world.s?raw'
 import interruption from './__fixtures__/2_interruption.s?raw'
 import watchdog from './__fixtures__/2_watchdog.s?raw'
+import memoryAccess from './__fixtures__/3_memory_access.s?raw'
 
 export interface Program {
   name: string
@@ -42,6 +43,13 @@ export const PROGRAMS: readonly Program[] = [
     name: 'fpu',
     summary: 'floating-point work that costs cycles and interrupts when it lands',
     source: fpu,
+  },
+  // The unit-3 showpiece: its label names what it demonstrates, so the cache demo is discoverable
+  // and not just another program. `load memory_access`, `run` is the whole signature scene.
+  {
+    name: 'memory_access',
+    summary: 'walks a 64-element array to stress the cache — watch it warm, hit, and evict',
+    source: memoryAccess,
   },
 ]
 

@@ -6,6 +6,7 @@
 // The shapes here are the reference emulator's own `fprintf` formats, reproduced so a GOLEM trace
 // and a reference trace can be diffed line for line.
 
+import type { Cache, CacheAccess, CacheState } from './cache'
 import { hex } from './hex'
 import { CR, ER, FR, PC, registerName, unpackU } from './isa'
 import type { Machine, StepEvent } from './machine'
@@ -66,7 +67,55 @@ export function formatEvent(event: StepEvent): string {
       return `[INVALID INSTRUCTION @ 0x${hex(event.pc)}]`
     case 'hardware-interrupt':
       return `[HARDWARE INTERRUPTION ${event.line}]`
+    case 'cache':
+      return formatCacheAccess(event.access)
   }
+}
+
+/**
+ * Renders one cache access as the reference does: the verdict line, then both Sets as they stood
+ * at the access — three lines, printed *before* the instruction they classify.
+ */
+export function formatCacheAccess(access: CacheAccess): string {
+  const set = (index: 0 | 1) => {
+    const { valid, age, data } = access.sets[index]
+    const words = data.map((word) => `0x${hex(word)}`).join(' ')
+    return `[SET ${index}: ${valid ? 'VALID' : 'INVALID'}, AGE ${age}, DATA ${words}]`
+  }
+  return [
+    `[CACHE ${access.cache} LINE ${access.line} ${access.op} ${access.result} @ 0x${hex(access.address)}]`,
+    set(0),
+    set(1),
+  ].join('\n')
+}
+
+// The reference formats percentages with `%.f` — round half to even. Reproduced so the boletim
+// diffs byte-for-byte and not merely close (see the rounding test).
+function percentage(value: number, total: number): number {
+  const scaled = (value / total) * 100
+  const floor = Math.floor(scaled)
+  const fraction = scaled - floor
+  if (fraction < 0.5) {
+    return floor
+  }
+  if (fraction > 0.5) {
+    return floor + 1
+  }
+  return floor % 2 === 0 ? floor : floor + 1
+}
+
+/** One `[CACHE …STATISTICS]` boletim line for a cache, in the reference's format. */
+export function formatCacheStatistics(kind: 'D' | 'I', cache: Cache): string {
+  const total = cache.hits + cache.misses
+  // A cache with no accesses reports 0% rather than NaN — reachable only by inspecting mid-run a
+  // data cache no load/store has touched yet; every reference program's footer has a real total.
+  const percent = (value: number) => (total === 0 ? 0 : percentage(value, total))
+  return `[CACHE ${kind} STATISTICS] #Hit = ${cache.hits} (${percent(cache.hits)}%), #Miss = ${cache.misses} (${percent(cache.misses)}%)`
+}
+
+/** The two boletim lines for a run, data cache before instruction — the reference's order. */
+export function formatCacheStatisticsPair(cache: CacheState): [string, string] {
+  return [formatCacheStatistics('D', cache.data), formatCacheStatistics('I', cache.instruction)]
 }
 
 /**
@@ -79,19 +128,27 @@ export function formatStep(
   after: Machine,
   events: readonly StepEvent[] = [],
 ): string {
+  // Cache accesses render *before* the instruction (fetch, then load/store), interrupt markers
+  // after — one event stream, two positions. Partition by kind.
+  const cacheEvents = events.filter((event) => event.kind === 'cache')
+  const markers = events.filter((event) => event.kind !== 'cache')
+  const preludeLines = cacheEvents.map(formatEvent)
+
   // An invalid instruction has no disassembly to print — there is no instruction. The reference
   // emits only the marker lines, so the entry is dropped rather than rendered as `?? 0x…`.
-  if (events.some((event) => event.kind === 'invalid-instruction')) {
-    return events.map(formatEvent).join('\n')
+  if (markers.some((event) => event.kind === 'invalid-instruction')) {
+    return [...preludeLines, ...markers.map(formatEvent)].join('\n')
   }
 
   // A hardware interrupt lands *after* the instruction finished, so the PC in `after` is the
   // vector, not what the instruction produced. The effects line must report the instruction's
   // own result — the branch target it reached, not where the device then sent it.
-  const hardware = events.find((event) => event.kind === 'hardware-interrupt')
+  const hardware = markers.find((event) => event.kind === 'hardware-interrupt')
   const settled = hardware === undefined ? after : withPc(after, hardware.resume)
 
-  return [formatInstruction(before, settled), ...events.map(formatEvent)].join('\n')
+  return [...preludeLines, formatInstruction(before, settled), ...markers.map(formatEvent)].join(
+    '\n',
+  )
 }
 
 function withPc(machine: Machine, pc: number): Machine {
@@ -240,18 +297,22 @@ function formatInstruction(before: Machine, after: Machine): string {
  * The heading appears **only when the program printed something** — the reference omits it
  * entirely otherwise, which is why every unit-1 fixture ends without one.
  */
-export function frameTrace(lines: readonly string[], terminal = ''): string {
+export function frameTrace(lines: readonly string[], terminal = '', cache?: CacheState): string {
   const output = terminal === '' ? [] : [TRACE_TERMINAL, terminal]
-  return [TRACE_START, ...lines, ...output, TRACE_END].join('\n')
+  // The boletim closes the run: one line per cache, data before instruction, after the end marker.
+  const statistics = cache ? formatCacheStatisticsPair(cache) : []
+  return [TRACE_START, ...lines, ...output, TRACE_END, ...statistics].join('\n')
 }
 
 /** The whole log for collected steps, framed so it can be diffed directly against the reference. */
 export function formatTrace(
   steps: { before: Machine; after: Machine; events?: readonly StepEvent[] }[],
 ): string {
+  const last = steps.length === 0 ? undefined : steps[steps.length - 1]
   return frameTrace(
     steps.map(({ before, after, events }) => formatStep(before, after, events)),
-    steps.length === 0 ? '' : steps[steps.length - 1].after.terminal,
+    last?.after.terminal ?? '',
+    last?.after.cache,
   )
 }
 

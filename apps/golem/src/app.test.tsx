@@ -75,7 +75,15 @@ describe('App', () => {
   it('renders a region for each surface the program needs', () => {
     render(<App />)
 
-    for (const region of ['Console', 'Registers', 'Flags', 'Devices', 'Memory', 'Terminal']) {
+    for (const region of [
+      'Console',
+      'Registers',
+      'Flags',
+      'Devices',
+      'Cache',
+      'Memory',
+      'Terminal',
+    ]) {
       expect(screen.getByRole('region', { name: region })).toBeInTheDocument()
     }
     expect(screen.getByRole('region', { name: /^Source/ })).toBeInTheDocument()
@@ -185,6 +193,109 @@ describe('stepping', () => {
     await type('stepp')
 
     expect(screen.getByText(/did you mean "step"/)).toBeInTheDocument()
+  })
+})
+
+describe('the CACHE panel', () => {
+  const cachePanel = () => screen.getByRole('region', { name: 'Cache' })
+
+  it('spotlights the fetch the moment a Step makes one', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('step')
+
+    // The first Step is a fetch: the instruction cache, line 0, a READ MISS (cold).
+    expect(within(cachePanel()).getByLabelText(/READ MISS at 0x00000000/)).toBeInTheDocument()
+    // Both Sets of the spotlit Line are shown in full.
+    expect(within(cachePanel()).getByText('set 0')).toBeInTheDocument()
+    expect(within(cachePanel()).getByText('set 1')).toBeInTheDocument()
+  })
+
+  it('says nothing until a machine exists, then nothing again once the cache is off', async () => {
+    render(<App />)
+    expect(within(cachePanel()).getByText(/No machine/)).toBeInTheDocument()
+
+    write(TINY)
+    await type('cache off')
+    await type('asm')
+    expect(within(cachePanel()).getByText(/Cache off for this machine/)).toBeInTheDocument()
+  })
+
+  it('narrates the boletim, one line per cache, when a run halts', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await stepTimes(4) // addi, addi, add, int 0 — the fourth Step halts
+
+    expect(screen.getByText(/\[CACHE D STATISTICS\]/)).toBeInTheDocument()
+    expect(screen.getByText(/\[CACHE I STATISTICS\]/)).toBeInTheDocument()
+  })
+
+  it('offers memory_access as a loadable program — the signature scene, one command away', async () => {
+    render(<App />)
+
+    await type('load memory_access')
+
+    expect(screen.getByText(/loaded memory_access/)).toBeInTheDocument()
+    // The showpiece is now in the editor, ready for `run`.
+    expect(sourceText()).toMatch(/memory_access|array|ldw/i)
+  })
+})
+
+describe('the cache command', () => {
+  it('reports the mode on by default when no machine exists', async () => {
+    render(<App />)
+
+    await type('cache')
+
+    expect(screen.getByText(/cache is on/)).toBeInTheDocument()
+  })
+
+  it('toggles the mode while no machine exists, and the next run obeys it', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('cache off')
+    expect(screen.getByText('cache off — the next run runs without the lens')).toBeInTheDocument()
+
+    await type('asm')
+    await type('cache')
+
+    // A machine created with the mode off carries no cache to report.
+    expect(screen.getByText('cache is off for this machine')).toBeInTheDocument()
+  })
+
+  it('reports the live machine statistics for a cache-on run', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('step')
+    await type('cache')
+
+    // The instruction cache always has at least the fetches, so its boletim is present.
+    expect(screen.getByText(/\[CACHE I STATISTICS\]/)).toBeInTheDocument()
+  })
+
+  it('refuses to toggle while a machine exists — a trace is never half-wrapped', async () => {
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('cache off')
+
+    expect(screen.getByText(/a machine exists — reset first/)).toBeInTheDocument()
+  })
+
+  it('suggests cache on a near miss', async () => {
+    render(<App />)
+
+    await type('cach')
+
+    expect(screen.getByText(/did you mean "cache"/)).toBeInTheDocument()
   })
 })
 
@@ -906,11 +1017,14 @@ describe('exporting', () => {
     )
   })
 
-  it('exports the trace of the run so far', async () => {
+  // With the cache off the trace is the v2 log, unchanged — the toggle is additive, never
+  // retroactive (spec story 20). The cache-on export is exercised just below.
+  it('exports the trace of the run so far, byte-identical to v2 with the cache off', async () => {
     const written = captureDownloads()
     render(<App />)
     write(TINY)
 
+    await type('cache off')
     await type('asm')
     await type('step')
     await type('step')
@@ -922,6 +1036,23 @@ describe('exporting', () => {
     expect(lines[lines.length - 1]).toBe('[END OF SIMULATION]')
     expect(lines[1]).toBe('addi r1, r0, 20')
     expect(lines[2]).toMatch(/^\[F\] FR = 0x00000000, R1 = R0 \+ 0x0014 = 0x00000014$/)
+  })
+
+  // Default on: the exported trace carries the cache event lines before each instruction (story 19).
+  it('exports the cache event lines when the mode is on', async () => {
+    const written = captureDownloads()
+    render(<App />)
+    write(TINY)
+
+    await type('asm')
+    await type('step')
+    await type('export trace')
+
+    const lines = written[0].contents.trimEnd().split('\n')
+    expect(lines[1]).toBe('[CACHE I LINE 0 READ MISS @ 0x00000000]')
+    expect(lines).toContain('addi r1, r0, 20')
+    expect(lines[lines.length - 2]).toMatch(/^\[CACHE D STATISTICS\]/)
+    expect(lines[lines.length - 1]).toMatch(/^\[CACHE I STATISTICS\]/)
   })
 
   it.each([
