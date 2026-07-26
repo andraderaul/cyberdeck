@@ -94,6 +94,13 @@ render, and did-you-mean on unknown commands.
 by the running program, memory-mapped at `0x0000888B`. The Console is outside it, where the
 operator types. They never share a surface.
 
+**Name the role, not the hue** — `text-accent`, not `text-violet`. The visual language lives in
+`@cyberdeck/deck-kit` and is a set of named Themes (ADR 0024); only the semantic layer varies
+between them, so a literal hue pins a component to one Theme and breaks the rest in that one
+corner. This program is the tracer for Themes, which means it is also where the roles that do not
+exist yet get named — the Terminal's phosphor is not "info", and the Cache lens's HIT/MISS is a
+result pair, not info/warning.
+
 **A green diff against the oracle does not mean correct.** The fixtures exercise 7 of 11
 branches; `blt`, `ble`, `bnz` and `bni` are executed by no reference program. The reference's
 broken `ble` survived for exactly that reason. Those need hand-written tests — see the coverage

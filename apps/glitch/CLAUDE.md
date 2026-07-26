@@ -194,10 +194,14 @@ it.
 ### Design system
 
 The visual language lives in `@cyberdeck/deck-kit` (ADR 0014): `src/index.css` imports the kit's
-`tokens.css`, and `tailwind.config.js` extends the kit's Tailwind preset, so `text-violet` and
-`var(--violet)` resolve to one value shared with ASCII//Convert. The deck-kit glob in the Tailwind
+`tokens.css`, and `tailwind.config.js` extends the kit's Tailwind preset, so `text-accent` and
+`var(--accent)` resolve to one value shared with ASCII//Convert. The deck-kit glob in the Tailwind
 `content` is load-bearing — without it the kit primitives' classes are purged at build (root
 `CLAUDE.md`).
+
+**Name the role, not the hue** — `text-accent`, not `text-violet`. The visual language is a set of
+named Themes (ADR 0024), and only the semantic layer varies between them; a literal hue pins a
+component to one Theme and breaks the rest in that one corner.
 
 **Anything sitting on the canvas must bring its own background** — ADR 0013, and a standing
 constraint on any overlay added later, not just the ones there now (`CANVAS_OVERLAY_CHROME` in

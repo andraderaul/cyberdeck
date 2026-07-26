@@ -70,7 +70,16 @@ Use these terms precisely — avoid the listed alternatives:
 
 ### Design system
 
-All visual tokens live as CSS custom properties in `src/index.css`. Tailwind is configured in `tailwind.config.js` to reference those same variables — so `text-violet` and `var(--violet)` resolve to the same value. Components use Tailwind classes for static tokens and inline `var(--token)` references for runtime-dynamic values (e.g. threat level colors).
+The visual language lives in `@cyberdeck/deck-kit` (ADR 0014): `src/index.css` imports the kit's
+`tokens.css`, and `tailwind.config.js` extends the kit's Tailwind preset, so `text-accent` and
+`var(--accent)` resolve to one value shared with every other program. The deck-kit glob in the
+Tailwind `content` is load-bearing — without it the kit primitives' classes are purged at build
+(root `CLAUDE.md`). Components use Tailwind classes for static tokens and inline `var(--token)`
+references for runtime-dynamic values (e.g. threat level colors).
+
+**Name the role, not the hue** — `text-accent`, not `text-violet`. The visual language is a set of
+named Themes (ADR 0024), and only the semantic layer varies between them; a literal hue pins a
+component to one Theme and breaks the rest in that one corner.
 
 ### Comment convention
 
