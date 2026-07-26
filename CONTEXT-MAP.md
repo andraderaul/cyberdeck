@@ -32,12 +32,14 @@ inglês.
 
 ## Shared package
 
-- **Deck Kit** (`@cyberdeck/deck-kit`) — a casca compartilhada sobre a qual todo programa do
-  deck é montado: a linguagem visual (design tokens + Tailwind preset), os primitivos de `ui/`,
-  os hooks e utils neutros de framework, e a plumbing genérica de browser (mecanismo de erro
-  operacional, core de Recording). **Não** é um core de domínio — o pipeline de cada app (conversão
-  ASCII, Effects de glitch) fica no app. Escopo e fronteiras em ADR 0014; `EmptyStateHero` e
-  `Tooltip` cruzaram numa segunda leva (ADR 0015).
+- [Deck Kit](./packages/deck-kit/CONTEXT.md) (`@cyberdeck/deck-kit`) — a casca compartilhada sobre a
+  qual todo programa do deck é montado: a linguagem visual (design tokens + Tailwind preset), os
+  primitivos de `ui/`, os hooks e utils neutros de framework, e a plumbing genérica de browser
+  (mecanismo de erro operacional, core de Recording). **Não** é um core de domínio — o pipeline de
+  cada app (conversão ASCII, Effects de glitch) fica no app. Escopo e fronteiras em ADR 0014;
+  `EmptyStateHero` e `Tooltip` cruzaram numa segunda leva (ADR 0015). A linguagem visual deixou de
+  ser uma paleta só e virou um conjunto nomeado de **Themes** — `ice`, `construct`, `chiba` —
+  com um contrato de contraste que todo Theme precisa cumprir (ADR 0024).
 
 ## Relationships
 
@@ -81,6 +83,17 @@ inglês.
   peça é o deck perdendo identidade; o default para "mais uma peça" é não. O dado real chega por
   um pipeline novo pro deck — snapshot vendorizado do PeeringDB, commitado e datado (ADR 0022) —
   que fica no app, não no Deck Kit, até um segundo consumidor provar a junção.
+- **O Theme para onde começam os pixels do usuário** — a linguagem visual virou um conjunto nomeado
+  de Themes (`ice`, `construct`, `chiba`), e a fronteira do que eles alcançam não é nova: é a mesma
+  linha que a ADR 0013 traçou pros overlays de canvas, reusada pra outro fim. **O deck pode
+  recolorir o que ele desenhou; não pode recolorir o que você trouxe.** Casca, painéis, o fósforo do
+  Terminal e os badges seguem o Theme; a Source, a saída da Chain do GLITCH e os Color Modes do
+  ASCII não. SPRAWL//Atlas fica **fora por decisão registrada** — os pixels dele não são casca nem
+  do usuário, são a peça, e a ADR 0021 diz que a peça *é* luz ciano contra o escuro (ADR 0024).
+- **Color Mode (ASCII) ≠ Theme (deck)** — os dois são "o esquema de cores", e o ASCII é o único
+  programa onde os dois controles ficam à vista. Color Mode pinta a arte do usuário; Theme pinta a
+  casca. Os Themes se chamam `ice`, `construct` e `chiba` porque `matrix` e `neon` já são Color
+  Modes — nomes vêm do vocabulário interno das ficções, nunca do título delas.
 - **"Shell" e "Console" não são sinônimos aqui** — *shell* continua significando a camada
   impura do código (imperative shell / functional core) em todo o deck; **Console** é o painel
   de linha de comando do GOLEM. E, dentro do GOLEM, **Terminal** é o dispositivo de saída da

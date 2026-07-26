@@ -79,6 +79,11 @@ and `--soft-cyan` (`#80f4ff`) as the light — the one place in the app a color 
 reference, because a canvas context can't resolve a CSS token. Everywhere else (DOM, overlays) reads
 the tokens: even the label glow's dark backing is `var(--void)`, not a repeated literal.
 
+**SPRAWL//Atlas is the one program excluded from Themes, deliberately** (ADR 0024). Its pixels are
+neither chrome nor the user's — they are the piece, and the piece *is* cyan light against the dark
+(ADR 0021). It never sets the theme attribute and falls through to the kit's root block. This is a
+recorded decision, not an oversight: do not "fix" it in a future consistency pass.
+
 ## Key files
 
 - `src/atlas/types.ts` — `DataPoint`, `Scale`, `Viewport`, `RenderInstruction` (the DOM-free core)

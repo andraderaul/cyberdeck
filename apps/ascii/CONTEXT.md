@@ -33,7 +33,7 @@ _Avoid_: ProcessedPixel, pixel processado
 
 **Color Mode**:
 O esquema de colorização aplicado ao canvas. Paletas temáticas (`matrix`, `bw`, `retro`, `sepia`, `neon`) pintam todos os caracteres com uma cor fixa. O modo `original` usa o RGB de cada pixel da imagem original.
-_Avoid_: colorMode (como termo de domínio), color (como valor — ambíguo)
+_Avoid_: colorMode (como termo de domínio), color (como valor — ambíguo), Theme (é a arte do usuário, não a casca do deck — ver Flagged ambiguities)
 
 **Resolution**:
 Quantos caracteres cabem no canvas — controlado pelo tamanho do caractere. Resolução alta = caracteres pequenos = mais detalhe. Resolução baixa = caracteres grandes = resultado mais grosseiro.
@@ -133,4 +133,5 @@ Cada Charset é uma string de caracteres ordenados do mais escuro (menor luminos
 - `fontSize` no código representava resolução do output, não tamanho tipográfico. Resolvido: renomear para `resolution`.
 - `density` / `charset` coexistiam para o mesmo conceito. Resolvido: `Charset` é o termo canônico.
 - `download` era usado para descrever a saída. Resolvido: `Export` descreve a intenção; "download" é apenas o mecanismo do browser.
+- **Color Mode × Theme** colidem em português e em inglês — os dois são "o esquema de cores". São coisas distintas e este é o único programa onde os dois controles ficam à vista: **Color Mode pinta a arte do usuário; Theme pinta a casca do deck** (ADR 0024, que reusa a fronteira da ADR 0013). Resolvido também no nome: os Themes se chamam `ice`, `construct` e `chiba` justamente porque `matrix` e `neon` já são Color Modes daqui.
 
