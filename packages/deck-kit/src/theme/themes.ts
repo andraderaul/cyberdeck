@@ -4,16 +4,18 @@
 // the roster guard holds the two together.
 
 /**
- * Every Theme the deck ships, in the order the control cycles them. `ice` is first because it is
- * the default and the fallback.
+ * Every Theme the deck ships, in the order the picker lists them. `ice` is first because it is the
+ * default and the fallback.
  *
- * **The roster stops at four.** The control cycles rather than presenting the options, which trades
- * discoverability for width — the header's right edge is already contested at mobile widths. With
- * three Themes any Theme is at most two activations away; past about four, the control has to
- * become a popover and this array is the wrong shape for the feature (ADR 0024). The test beside
- * this file is what makes that a decision rather than a note nobody reads.
+ * **The roster is no longer width-capped.** The control used to cycle, which traded discoverability
+ * for width and only held while any Theme was two activations away — so the roster stopped at four
+ * and a test enforced it (ADR 0024). The picker is a popover now: it lists the whole roster rather
+ * than cycling it, so growth is a design-and-contrast question, not a control-shape one, and the
+ * ceiling is retired. What still holds — `ice` first and default, every Theme named once — lives in
+ * the tests beside this file. Each name also has to appear in the Theme blocks in `tokens.css` and
+ * in the three hand-inlined pre-paint scripts; the roster guard keeps the copies in step.
  */
-export const THEMES = ['ice', 'construct', 'chiba'] as const
+export const THEMES = ['ice', 'construct', 'chiba', 'kuang', 'ougou', 'solitude', 'onyx'] as const
 
 export type Theme = (typeof THEMES)[number]
 
@@ -35,10 +37,4 @@ export const THEME_ATTRIBUTE = 'data-theme'
  */
 export function resolveTheme(stored: string | null | undefined): Theme {
   return THEMES.includes(stored as Theme) ? (stored as Theme) : DEFAULT_THEME
-}
-
-/** The next Theme in the roster, wrapping. */
-export function nextTheme(current: Theme): Theme {
-  const index = THEMES.indexOf(current)
-  return THEMES[(index + 1) % THEMES.length]
 }

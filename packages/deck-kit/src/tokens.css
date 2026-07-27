@@ -357,3 +357,172 @@
   --color-hit: #8fbcd4;
   --color-miss: #ffe066;
 }
+
+/* Neuromancer's Kuang Grade Mark Eleven, the icebreaker: arterial red on near-black, the deck as an
+   intrusion tool cutting ice. The accent owns red, which is the one palette where a role had to move
+   to make room for it — danger vacates to hot magenta so a critical badge never blends into the
+   chrome the accent is painting. It is the tightest palette against the contract for exactly that
+   reason. */
+[data-theme="kuang"] {
+  --accent: #ff2e42;
+  --accent-deep: #a01824;
+  --accent-soft: #ff8a95;
+
+  --fg-strong: #fdeaec;
+  --fg: #ecccd0;
+  --fg-muted: #c99aa2;
+  --fg-subtle: #b17f89;
+  --fg-dim: #7a545c;
+  --fg-faint: #3a2229;
+
+  --bg: #0c0507;
+  --bg-surface: #160a0d;
+  --bg-elevated: #221016;
+  --bg-overlay: #331a22;
+
+  --color-info: #35d0ff;
+  --color-info-deep: #1a7ea0;
+  --color-info-soft: #9fe8ff;
+
+  /* Magenta, not red: the accent is arterial red, so danger has to be a colour the accent is not or
+     a critical badge disappears into the chrome. */
+  --color-danger: #ff43a8;
+  --color-danger-deep: #a8236a;
+  --color-danger-soft: #ff9fd0;
+
+  --color-warning: #ffb52e;
+  --color-warning-deep: #a8741a;
+  --color-warning-soft: #ffdb9f;
+
+  --fg-on-accent: #12080a;
+
+  --color-phosphor: #ff5563;
+  --color-link: #35d0ff;
+  --color-hit: #35d0ff;
+  --color-miss: #ffb52e;
+}
+
+/* Count Zero's Ougou Feray, the loa of iron and technology: a cool blued-steel field under a warm
+   ember accent. The surfaces carry a deliberate blue cast so the Theme reads distinctly from `ice`
+   at a glance — a different metal under a different light — rather than as a hue reshuffle. */
+[data-theme="ougou"] {
+  --accent: #ff8a3d;
+  --accent-deep: #b3541a;
+  --accent-soft: #ffc196;
+
+  --fg-strong: #eaf1fb;
+  --fg: #cdd8e8;
+  --fg-muted: #a3b3cc;
+  --fg-subtle: #8698b3;
+  --fg-dim: #5a687d;
+  --fg-faint: #2a3444;
+
+  --bg: #070a0f;
+  --bg-surface: #0d131c;
+  --bg-elevated: #16212e;
+  --bg-overlay: #24303f;
+
+  --color-info: #5db4ff;
+  --color-info-deep: #2a6ba8;
+  --color-info-soft: #b0d8ff;
+
+  --color-danger: #ff4d6d;
+  --color-danger-deep: #a82238;
+  --color-danger-soft: #ffb0bd;
+
+  --color-warning: #ffd23d;
+  --color-warning-deep: #a8871a;
+  --color-warning-soft: #ffe89f;
+
+  --fg-on-accent: #140a04;
+
+  --color-phosphor: #7ec8ff;
+  --color-link: #5db4ff;
+  --color-hit: #5db4ff;
+  --color-miss: #ffd23d;
+}
+
+/* Mona Lisa Overdrive's Dog Solitude, the toxic junkyard: rust corrosion under a sickly chem-yellow
+   warning. The warm field is corroded rather than clean, and the warning is the green-tinged yellow
+   of something leaking — which is what keeps it reading as the junkyard rather than as a warmer,
+   cleaner Theme like `chiba`. */
+[data-theme="solitude"] {
+  --accent: #e3733a;
+  --accent-deep: #99461f;
+  --accent-soft: #f2ab86;
+
+  --fg-strong: #f3ede1;
+  --fg: #d9cfbc;
+  --fg-muted: #b3a588;
+  --fg-subtle: #97896d;
+  --fg-dim: #665e4a;
+  --fg-faint: #322d22;
+
+  --bg: #0b0805;
+  --bg-surface: #14100a;
+  --bg-elevated: #1f1810;
+  --bg-overlay: #2e2617;
+
+  --color-info: #6fb8ac;
+  --color-info-deep: #35766c;
+  --color-info-soft: #b3ddd6;
+
+  --color-danger: #e8503c;
+  --color-danger-deep: #9e2c1e;
+  --color-danger-soft: #f2a89c;
+
+  /* Chem-yellow: a green-tinged, sickly warning rather than a clean amber — the colour of a leak,
+     not a lamp. */
+  --color-warning: #cdd23a;
+  --color-warning-deep: #85891f;
+  --color-warning-soft: #e8ec9f;
+
+  --fg-on-accent: #180a04;
+
+  --color-phosphor: #e0864a;
+  --color-link: #6fb8ac;
+  --color-hit: #6fb8ac;
+  --color-miss: #cdd23a;
+}
+
+/* The deck with the neon off: silver on true black, colour spent only on genuine status. There is no
+   accent hue — the accent is the brightest chrome the deck has — so a warning actually stops you,
+   because it is the only colour on the screen. */
+[data-theme="onyx"] {
+  --accent: #f2f2f6;
+  --accent-deep: #a0a0a8;
+  --accent-soft: #ffffff;
+
+  --fg-strong: #ffffff;
+  --fg: #d4d4da;
+  --fg-muted: #a8a8b0;
+  --fg-subtle: #8b8b93;
+  --fg-dim: #5a5a62;
+  --fg-faint: #2a2a30;
+
+  --bg: #050506;
+  --bg-surface: #0e0e10;
+  --bg-elevated: #18181c;
+  --bg-overlay: #26262c;
+
+  --color-info: #35d0ff;
+  --color-info-deep: #1a7ea0;
+  --color-info-soft: #9fe8ff;
+
+  --color-danger: #ff4d5b;
+  --color-danger-deep: #a82230;
+  --color-danger-soft: #ffb0b6;
+
+  --color-warning: #ffc23d;
+  --color-warning-deep: #a87e1a;
+  --color-warning-soft: #ffe09f;
+
+  --fg-on-accent: #050506;
+
+  /* The machine's voice is silver here, not a colour — the neon is off, and even the phosphor is
+     just the brightest grey. */
+  --color-phosphor: #e6e6ea;
+  --color-link: #35d0ff;
+  --color-hit: #35d0ff;
+  --color-miss: #ffc23d;
+}

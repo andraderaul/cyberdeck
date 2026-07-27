@@ -755,14 +755,15 @@ describe('the Theme control', () => {
     document.documentElement.removeAttribute('data-theme')
   })
 
-  // One assertion, because the roster, the cycling order, the persistence and the accessible name
-  // are all covered in the deck kit where the control lives (ADR 0024). What is only true here is
-  // that the program mounts it and that it reaches the document.
+  // One assertion, because the roster, the popover behaviour, the persistence and the accessible
+  // name are all covered in the deck kit where the control lives (ADR 0024). What is only true here
+  // is that the program mounts it and that a pick reaches the document.
   it('changes the Theme the whole document is drawn in', async () => {
     const user = userEvent.setup()
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: /^theme:/ }))
+    await user.click(screen.getByRole('menuitemradio', { name: 'construct' }))
 
     expect(document.documentElement.getAttribute('data-theme')).toBe('construct')
   })
