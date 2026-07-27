@@ -76,7 +76,7 @@ export default function ThemeControl({ className }: Props) {
 
   const onMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const count = themes.length
-    const current = optionRefs.current.findIndex((el) => el === document.activeElement)
+    const current = optionRefs.current.indexOf(document.activeElement as HTMLButtonElement | null)
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault()
