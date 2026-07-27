@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_THEME, nextTheme, resolveTheme, THEMES } from './themes'
+import { DEFAULT_THEME, resolveTheme, THEMES } from './themes'
 
 describe('the roster', () => {
   it('opens on the look the deck shipped with, so nothing changes for anyone who never asks', () => {
@@ -7,13 +7,10 @@ describe('the roster', () => {
     expect(DEFAULT_THEME).toBe('ice')
   })
 
-  // ADR 0024 put a number on it: a control that cycles trades discoverability for width, and the
-  // trade stops paying at about four Themes. This failing is the signal to reach for a popover,
-  // not to raise the number.
-  it('stops at four — past that the control has to stop cycling', () => {
-    expect(THEMES.length).toBeLessThanOrEqual(4)
-  })
-
+  // The four-Theme ceiling is gone with the cycling control it existed to force (ADR 0024): the
+  // popover lists the roster rather than stepping through it, so there is no width-based cap to
+  // assert. What survives is the invariant the picker still relies on — a Theme names itself once,
+  // so the popover never lists a duplicate.
   it('names each Theme once', () => {
     expect(new Set(THEMES).size).toBe(THEMES.length)
   })
@@ -33,24 +30,5 @@ describe('resolveTheme', () => {
   it('falls back on a value it does not recognise', () => {
     expect(resolveTheme('neon')).toBe(DEFAULT_THEME)
     expect(resolveTheme('')).toBe(DEFAULT_THEME)
-  })
-})
-
-describe('nextTheme', () => {
-  it('walks the roster in order', () => {
-    expect(nextTheme('ice')).toBe('construct')
-    expect(nextTheme('construct')).toBe('chiba')
-  })
-
-  it('wraps, so every Theme is reachable from every other', () => {
-    expect(nextTheme(THEMES[THEMES.length - 1])).toBe(THEMES[0])
-  })
-
-  it('returns to where it started after a full lap', () => {
-    let theme = DEFAULT_THEME
-    for (let lap = 0; lap < THEMES.length; lap++) {
-      theme = nextTheme(theme)
-    }
-    expect(theme).toBe(DEFAULT_THEME)
   })
 })
