@@ -9,8 +9,10 @@ beforeEach(() => {
   document.documentElement.removeAttribute(THEME_ATTRIBUTE)
 })
 
-// The one handle a screen reader has on a purely visual feature is the trigger's name, so it has to
-// carry the Theme in force as well as say what the control is (WCAG 2.5.3).
+/**
+ * The one handle a screen reader has on a purely visual feature is the trigger's name, so it has to
+ * carry the Theme in force as well as say what the control is (WCAG 2.5.3).
+ */
 function trigger() {
   return screen.getByRole('button', { name: /^theme:/ })
 }
