@@ -120,7 +120,10 @@ export default function ThemeControl({ className }: Props) {
         onClick={() => setOpen((wasOpen) => !wasOpen)}
         className={cn(
           'flex min-h-[44px] items-center justify-center gap-2xs',
-          'rounded-pill border border-transparent bg-transparent px-xs py-2xs',
+          // `px-md` rather than the deck's tighter default: the pill radius clamps to half the 44px
+          // touch target, so a short name like `ice` needs the horizontal room or the trigger comes
+          // out as wide as it is tall and reads as a circle rather than a pill.
+          'rounded-pill border border-transparent bg-transparent px-md py-2xs',
           'font-mono text-fg-subtle text-xs tracking-wide',
           'cursor-pointer transition-all duration-fast',
           'hover:border-base hover:text-fg',
