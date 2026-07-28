@@ -1,5 +1,15 @@
 ## [1.25.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.24.0...v1.25.0) (2026-07-16)
 
+## 1.30.1
+
+### Patch Changes
+
+- 4886d40: The Theme picker moves to the end of the header row, after `about` and the AI key control. It is the
+  least program-specific thing up there — it changes what ASCII//Convert is drawn in, not what the
+  conversion does — so it reads and tabs last, and the program's own controls come first.
+- Updated dependencies [4886d40]
+  - @cyberdeck/deck-kit@0.3.2
+
 ## 1.30.0
 
 ### Minor Changes
