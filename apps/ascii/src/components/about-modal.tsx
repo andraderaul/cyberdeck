@@ -1,4 +1,4 @@
-import Modal from './ui/modal'
+import { Modal } from '@cyberdeck/deck-kit/ui'
 
 interface Props {
   onClose: () => void
@@ -35,25 +35,6 @@ export default function AboutModal({ onClose }: Props) {
           decisions, documentation, and architecture too. It's an experiment in what a thoughtful
           human + AI workflow looks like in practice.
         </p>
-      </div>
-
-      <div className="flex gap-sm flex-wrap">
-        <a
-          href="https://github.com/andraderaul/ascii-art-converter"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs font-mono tracking-wide transition-all text-link no-underline"
-        >
-          source code →
-        </a>
-        <a
-          href="https://www.linkedin.com/in/andraderaul/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs font-mono tracking-wide transition-all text-link no-underline"
-        >
-          author →
-        </a>
       </div>
     </Modal>
   )

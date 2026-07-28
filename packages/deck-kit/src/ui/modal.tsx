@@ -1,6 +1,6 @@
-import { useDialog } from '@cyberdeck/deck-kit/hooks'
-import { cn } from '@cyberdeck/deck-kit/utils'
 import { type ReactNode, useRef } from 'react'
+import { useDialog } from '../hooks/use-dialog'
+import { cn } from '../utils/cn'
 
 const NOOP = () => {}
 

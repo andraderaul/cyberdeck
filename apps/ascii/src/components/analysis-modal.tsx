@@ -1,8 +1,7 @@
-import { Button } from '@cyberdeck/deck-kit/ui'
+import { Button, Modal } from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import type { AnalysisState, ThreatLevel } from '../ai/types'
 import Badge from './ui/badge'
-import Modal from './ui/modal'
 
 /** A barely-there tint of a role's own colour, for the band behind a threat level. */
 function wash(token: string, percent: number): string {

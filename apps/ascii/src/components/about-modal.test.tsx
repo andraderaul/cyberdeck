@@ -2,8 +2,9 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import AboutModal from './about-modal'
 
-vi.mock('./ui/modal', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+vi.mock('@cyberdeck/deck-kit/ui', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@cyberdeck/deck-kit/ui')>()),
+  Modal: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
 describe('AboutModal section headings', () => {

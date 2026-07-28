@@ -155,11 +155,9 @@ describe('the OUT tab', () => {
 })
 
 describe('App header buttons', () => {
-  it('both buttons have min-h-[44px]', () => {
+  it('the configure ai button has min-h-[44px]', () => {
     render(<App />)
-    const aboutBtn = screen.getByRole('button', { name: /about/i })
     const aiBtn = screen.getByRole('button', { name: /configure ai/i })
-    expect(aboutBtn.className).toContain('min-h-[44px]')
     expect(aiBtn.className).toContain('min-h-[44px]')
   })
 
@@ -190,5 +188,19 @@ describe('App header buttons', () => {
     const tokens = aiBtn.className.split(/\s+/)
     expect(tokens).toContain('border-transparent')
     expect(tokens).not.toContain('border-accent')
+  })
+})
+
+describe('the empty-state footer', () => {
+  it('carries the About trigger before a Source loads', () => {
+    render(<App />)
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'about' })).toBeInTheDocument()
+  })
+
+  it('is gone once a Source loads, so it can never sit under the Control Strip', () => {
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument()
   })
 })

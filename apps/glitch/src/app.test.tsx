@@ -1108,4 +1108,18 @@ describe('App', () => {
       expect(screen.queryByLabelText('live glitched preview')).not.toBeInTheDocument()
     })
   })
+
+  describe('the empty-state footer', () => {
+    it('carries the About trigger before a Source loads', () => {
+      render(<App />)
+      expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'about' })).toBeInTheDocument()
+    })
+
+    it('is gone once a Source loads, so it can never sit under the Control Strip', () => {
+      render(<App />)
+      fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+      expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument()
+    })
+  })
 })
