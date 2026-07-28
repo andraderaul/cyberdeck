@@ -71,15 +71,25 @@ describe('SourceImageDropZone', () => {
   it('shows drag-active styles on dragover and removes them on dragleave', () => {
     render(<SourceImageDropZone {...baseProps} />)
     const label = document.querySelector('label') as HTMLElement
-    expect(label.className).not.toContain('border-accent')
+    const classes = () => new Set(label.className.split(/\s+/))
+    expect(classes()).not.toContain('border-accent')
 
     fireEvent.dragOver(label, { preventDefault: () => {} })
-    expect(label.className).toContain('border-accent')
-    expect(label.className).toContain('bg-accent-ghost')
+    expect(classes()).toContain('border-accent')
+    expect(classes()).toContain('bg-accent-ghost')
 
     fireEvent.dragLeave(label)
-    expect(label.className).not.toContain('border-accent')
-    expect(label.className).not.toContain('bg-accent-ghost')
+    expect(classes()).not.toContain('border-accent')
+    expect(classes()).not.toContain('bg-accent-ghost')
+  })
+
+  it('lights the border on hover while idle, matching the webcam panel beside it', () => {
+    render(<SourceImageDropZone {...baseProps} />)
+    const label = document.querySelector('label') as HTMLElement
+    expect(label.className).toContain('hover:border-accent')
+
+    fireEvent.dragOver(label, { preventDefault: () => {} })
+    expect(label.className).not.toContain('hover:border-accent')
   })
 
   it('calls loadImageFile with dropped file on drop', () => {

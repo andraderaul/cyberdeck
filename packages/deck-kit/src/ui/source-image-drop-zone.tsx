@@ -32,7 +32,9 @@ export default function SourceImageDropZone({ size, onImage, onError }: Props) {
       className={cn(
         'border rounded-xs flex flex-col items-center justify-center gap-sm cursor-pointer select-none transition-colors duration-fast h-full',
         size === 'sm' ? 'p-xl min-h-[120px]' : 'min-h-[160px]',
-        dragging ? 'border-accent bg-accent-ghost' : 'border-base bg-transparent',
+        dragging
+          ? 'border-accent bg-accent-ghost'
+          : 'border-base bg-transparent hover:border-accent',
       )}
     >
       <span className={cn('text-accent', size === 'sm' ? 'text-lg' : 'text-3xl')}>⬆</span>
