@@ -168,8 +168,7 @@ export default function App() {
           </HeaderButton>
           {/* Deck chrome rather than the artefact's: it changes what the program is drawn in, where
               a Color Mode changes what the conversion paints. They are neighbours here, so the
-              Theme names deliberately avoid `matrix` and `neon` (ADR 0024). Last in the row because
-              it is the least program-specific thing in the header. */}
+              Theme names deliberately avoid `matrix` and `neon` (ADR 0024). */}
           <ThemeControl />
         </div>
       </header>
