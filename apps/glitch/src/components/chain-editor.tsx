@@ -373,18 +373,16 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
             </div>
           </div>
         ) : (
-          // min-w-0 defeats the UA fieldset's `min-inline-size: min-content`: without it the
-          // fieldset refuses to shrink below the palette chips' combined width and overflows the
-          // viewport on mobile instead of letting its row scroll (the chain row below wins the same
-          // fight with flex-1 min-w-0).
-          <fieldset className="flex flex-col gap-xs border-none p-0 m-0 min-w-0">
+          <fieldset className="flex flex-col gap-xs border-none p-0 m-0">
             <legend className="w-full mb-2xs">
               <Label>add effect</Label>
             </legend>
             {/* The palette reads EFFECT_ORDER (presets.ts) — the canonical order the Presets share
                 — rather than the registry's incidental key order. That list is hand-kept: a new
-                Effect must be added there to reach the palette, and the compiler won't point at it. */}
-            <div className="flex gap-2xs overflow-x-auto">
+                Effect must be added there to reach the palette, and the compiler won't point at it.
+                It wraps rather than scrolls: it's a set of options, not the ordered Chain, so showing
+                every Effect at once beats hiding half behind a horizontal scroll. */}
+            <div className="flex flex-wrap gap-2xs">
               {EFFECT_ORDER.map((type) => (
                 <Chip
                   key={type}
@@ -486,19 +484,24 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
               {EFFECT_LABELS[link.type]}
             </Chip>
           ))}
+          {/* On mobile it matches the Re-roll icon's 60px footprint so the two read as a pair; from
+              sm up it shrinks back to a chip as Re-roll regains its label. */}
           <Chip
             selected={focus.kind === 'palette'}
             onClick={() => setFocus({ kind: 'palette' })}
             aria-label="add effect"
-            className="shrink-0"
+            className="shrink-0 w-[60px] justify-center sm:w-auto sm:justify-start"
           >
             +
           </Chip>
         </div>
         {/* The Seed sits outside the Chain, so its control sits outside the Link row rather than
             becoming a seventh chip that looks like part of the look. */}
+        {/* Icon-only on mobile so it stops eating the Chain row's width; the label returns from sm up.
+            The aria-label carries the name at both sizes, so the glyph and text are decorative. */}
         <Button variant="ghost" onClick={onReroll} aria-label="re-roll" className="shrink-0">
-          ⟳ re-roll
+          <span aria-hidden="true">⟳</span>
+          <span className="hidden sm:inline"> re-roll</span>
         </Button>
       </div>
 
