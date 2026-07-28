@@ -145,6 +145,15 @@ describe('Modal', () => {
     })
   })
 
+  describe('Mobile overflow', () => {
+    it('caps the panel to the viewport and scrolls internally, so a tall dialog cannot clip its title', () => {
+      renderModal()
+      const tokens = screen.getByRole('dialog').className.split(/\s+/)
+      expect(tokens).toContain('max-h-full')
+      expect(tokens).toContain('overflow-y-auto')
+    })
+  })
+
   describe('Body scroll lock (via useDialog)', () => {
     it('locks body scroll when modal is open', () => {
       renderModal()

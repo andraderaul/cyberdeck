@@ -30,7 +30,7 @@ export default function Modal({
   return (
     <div
       role="presentation"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-modal-overlay backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-md bg-modal-overlay backdrop-blur-sm"
     >
       {closeable && (
         <button
@@ -46,7 +46,7 @@ export default function Modal({
         aria-modal="true"
         aria-label={ariaLabel}
         className={cn(
-          'relative flex flex-col p-xl',
+          'relative flex flex-col p-xl max-h-full overflow-y-auto',
           variant === 'default'
             ? 'gap-lg bg-bg-elevated max-w-[480px] w-[90%] rounded-sm border border-base'
             : 'gap-md bg-bg-surface border border-base border-t-2 border-t-accent w-full max-w-sm',
