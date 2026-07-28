@@ -120,7 +120,7 @@ export default function ThemeControl({ className }: Props) {
         onClick={() => setOpen((wasOpen) => !wasOpen)}
         className={cn(
           'flex min-h-[44px] items-center justify-center gap-2xs',
-          'rounded-pill border border-transparent bg-transparent px-xs py-2xs',
+          'rounded-pill border border-transparent bg-transparent px-md py-2xs',
           'font-mono text-fg-subtle text-xs tracking-wide',
           'cursor-pointer transition-all duration-fast',
           'hover:border-base hover:text-fg',
