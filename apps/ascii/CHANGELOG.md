@@ -1,5 +1,18 @@
 ## [1.25.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.24.0...v1.25.0) (2026-07-16)
 
+## 1.30.2
+
+### Patch Changes
+
+- 57678dc: The `about` trigger leaves the header for a new ultra-thin footer on the empty state. The footer
+  also carries the `source code →` and `author →` links — attribution that used to hide inside the
+  About modal. It shows only before a Source loads: once the Control Strip owns the bottom edge, a
+  footer under it would just invite a mis-tap. The modal keeps the longer narrative (the intro, `ai
+scan`, and `made with ai`), so the header sheds a secondary control and the About content splits by
+  how often you reach for it.
+- Updated dependencies [57678dc]
+  - @cyberdeck/deck-kit@0.4.0
+
 ## 1.30.1
 
 ### Patch Changes
