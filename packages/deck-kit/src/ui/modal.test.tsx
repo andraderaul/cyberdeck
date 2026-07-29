@@ -152,6 +152,13 @@ describe('Modal', () => {
       expect(tokens).toContain('max-h-full')
       expect(tokens).toContain('overflow-y-auto')
     })
+
+    // The cap only reads as a cap with room around it — flush to the edge, a capped panel looks clipped
+    it('pads the overlay, so the capped panel is inset from the viewport edge', () => {
+      renderModal()
+      const overlay = screen.getByRole('presentation')
+      expect(overlay.className.split(/\s+/)).toContain('p-md')
+    })
   })
 
   describe('Body scroll lock (via useDialog)', () => {
