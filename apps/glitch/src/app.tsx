@@ -1,7 +1,9 @@
 import { useRecording } from '@cyberdeck/deck-kit/recording'
 import { EmptyStateHero, ErrorBoundary, ThemeControl, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import AboutModal from './components/about-modal'
 import ControlStrip from './components/control-strip'
+import Footer from './components/footer'
 import GlitchCanvas from './components/glitch-canvas'
 import { Errors } from './errors/app-error'
 import { outputFilename } from './export/output'
@@ -21,6 +23,7 @@ export default function App() {
   // Beside the Chain, never inside it (ADR 0016): mirror is source-tuning, not part of the
   // look, so it rides through Presets, Re-roll and Randomize untouched — like ASCII's isMirrored.
   const [isMirrored, setIsMirrored] = useState(false)
+  const [isAboutOpen, setIsAboutOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const showError = useToastError()
 
@@ -154,6 +157,12 @@ export default function App() {
           onReroll={reroll}
         />
       )}
+
+      {/* Empty state only: with a Source the Control Strip owns the bottom edge, and a footer
+          directly under it invites a mis-tap on the way to a control. */}
+      {!hasSource && <Footer onAbout={() => setIsAboutOpen(true)} />}
+
+      {isAboutOpen && <AboutModal onClose={() => setIsAboutOpen(false)} />}
     </div>
   )
 }

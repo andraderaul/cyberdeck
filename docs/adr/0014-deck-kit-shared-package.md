@@ -111,6 +111,12 @@ Recorded so a future review re-running the diff does not re-suggest these:
   a single caller (ASCII). One caller is a hypothetical seam; they rise into the kit when a second
   caller appears.
 
+  That trigger has since fired twice, recorded here so this list is not read as still-current:
+  `tooltip` rose when GLITCH gained Effect-level tooltips (ADR 0015), and `modal` rose when GLITCH
+  gained its own About modal — a verbatim move over the already-shared `use-dialog`. Both are the
+  predicted trigger firing, not new decisions. `badge`, `header-button` and `error-text` remain
+  single-caller.
+
 ## Supersedes / Superseded by
 
 - **Supersedes (in part)** ADR 0011 — the "no shared `packages/`" point.

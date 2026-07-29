@@ -1,8 +1,7 @@
-import { Button } from '@cyberdeck/deck-kit/ui'
+import { Button, Modal } from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import { useState } from 'react'
 import type { AIConfig, AIProviderName } from '../ai/types'
-import Modal from './ui/modal'
 
 interface Props {
   current: AIConfig | null

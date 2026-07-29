@@ -12,6 +12,7 @@ import AnalysisModal from './components/analysis-modal'
 import ApiKeyModal from './components/api-key-modal'
 import AsciiCanvas from './components/ascii-canvas'
 import ControlStrip from './components/control-strip'
+import Footer from './components/footer'
 import HeaderButton from './components/ui/header-button'
 import { outputFilename } from './export/output'
 import { useWebcamState } from './hooks/use-webcam-state'
@@ -156,9 +157,6 @@ export default function App() {
         <span className="text-fg-faint text-xs hidden sm:block">—</span>
         <span className="text-fg-muted text-xs hidden sm:block">image → ascii art</span>
         <div className="ml-auto flex items-center gap-xs">
-          <HeaderButton variant="neutral" onClick={() => setActiveModal({ kind: 'about' })}>
-            about
-          </HeaderButton>
           <HeaderButton
             variant={aiConfig ? 'accent-text' : 'accent-fill'}
             onClick={() => setActiveModal({ kind: 'apiKey' })}
@@ -234,6 +232,12 @@ export default function App() {
           onPresetSelect={handlePresetSelect}
           onSettingsChange={patchSettings}
         />
+      )}
+
+      {/* Empty state only: with a Source the Control Strip owns the bottom edge, and a footer
+          directly under it invites a mis-tap on the way to a control. */}
+      {!(sourceImage || sourceVideo) && (
+        <Footer onAbout={() => setActiveModal({ kind: 'about' })} />
       )}
 
       {activeModal?.kind === 'apiKey' && (

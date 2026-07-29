@@ -155,11 +155,9 @@ describe('the OUT tab', () => {
 })
 
 describe('App header buttons', () => {
-  it('both buttons have min-h-[44px]', () => {
+  it('the configure ai button has min-h-[44px]', () => {
     render(<App />)
-    const aboutBtn = screen.getByRole('button', { name: /about/i })
     const aiBtn = screen.getByRole('button', { name: /configure ai/i })
-    expect(aboutBtn.className).toContain('min-h-[44px]')
     expect(aiBtn.className).toContain('min-h-[44px]')
   })
 
@@ -168,12 +166,6 @@ describe('App header buttons', () => {
     render(<App />)
     const aiBtn = screen.getByRole('button', { name: /configure ai/i })
     expect(aiBtn.className.split(/\s+/)).toContain('border-accent')
-  })
-
-  it('keeps the about button off --fg-dim, which sits below the contrast floor', () => {
-    render(<App />)
-    const aboutBtn = screen.getByRole('button', { name: /about/i })
-    expect(aboutBtn.className.split(/\s+/)).not.toContain('text-fg-dim')
   })
 
   it('keeps the configure ai button off --fg-dim, which sits below the contrast floor', () => {
@@ -190,5 +182,40 @@ describe('App header buttons', () => {
     const tokens = aiBtn.className.split(/\s+/)
     expect(tokens).toContain('border-transparent')
     expect(tokens).not.toContain('border-accent')
+  })
+})
+
+describe('the empty-state footer', () => {
+  it('carries the About trigger and the attribution links before a Source loads', () => {
+    render(<App />)
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'about' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /source code/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /author/i })).toBeInTheDocument()
+  })
+
+  // The bar is ultra-thin but sits in the thumb zone, so the target floor is per-control
+  it('holds every control to min-h-[44px] despite the thin bar', () => {
+    render(<App />)
+    const controls = [
+      screen.getByRole('button', { name: 'about' }),
+      screen.getByRole('link', { name: /source code/i }),
+      screen.getByRole('link', { name: /author/i }),
+    ]
+    for (const control of controls) {
+      expect(control.className).toContain('min-h-[44px]')
+    }
+  })
+
+  it('keeps the about button off --fg-dim, which sits below the contrast floor', () => {
+    render(<App />)
+    const aboutBtn = screen.getByRole('button', { name: 'about' })
+    expect(aboutBtn.className.split(/\s+/)).not.toContain('text-fg-dim')
+  })
+
+  it('is gone once a Source loads, so it can never sit under the Control Strip', () => {
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument()
   })
 })

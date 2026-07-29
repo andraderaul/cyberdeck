@@ -1108,4 +1108,33 @@ describe('App', () => {
       expect(screen.queryByLabelText('live glitched preview')).not.toBeInTheDocument()
     })
   })
+
+  describe('the empty-state footer', () => {
+    it('carries the About trigger and the attribution links before a Source loads', () => {
+      render(<App />)
+      expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'about' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /source code/i })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /author/i })).toBeInTheDocument()
+    })
+
+    // The bar is ultra-thin but sits in the thumb zone, so the target floor is per-control
+    it('holds every control to min-h-[44px] despite the thin bar', () => {
+      render(<App />)
+      const controls = [
+        screen.getByRole('button', { name: 'about' }),
+        screen.getByRole('link', { name: /source code/i }),
+        screen.getByRole('link', { name: /author/i }),
+      ]
+      for (const control of controls) {
+        expect(control.className).toContain('min-h-[44px]')
+      }
+    })
+
+    it('is gone once a Source loads, so it can never sit under the Control Strip', () => {
+      render(<App />)
+      fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+      expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument()
+    })
+  })
 })
