@@ -85,7 +85,9 @@ export default function TabStrip<Id extends string>({ tabs, ariaLabel, children 
               tabIndex={isActive ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'inline-flex min-h-[44px] items-center px-sm font-mono text-xs tracking-wide border-b-2 transition-colors',
+                // `min-w` as well as `min-h`: a short label like `out` leaves the tab 38px wide, and
+                // the target has to hold in both axes, not just the one the row happens to set.
+                'inline-flex min-h-[44px] min-w-[44px] items-center justify-center px-sm font-mono text-xs tracking-wide border-b-2 transition-colors',
                 isActive
                   ? 'text-accent border-accent'
                   : 'text-fg-muted border-transparent hover:text-fg',
