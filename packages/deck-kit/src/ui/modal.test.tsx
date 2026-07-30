@@ -134,6 +134,39 @@ describe('Modal', () => {
     })
   })
 
+  describe('the dismiss backdrop', () => {
+    // It has no text, so unhidden it reaches a screen reader as a bare "button" covering the whole
+    // viewport. The keyboard path is Escape (useDialog), so hiding it costs nothing.
+    it('is scenery for the pointer, not an unnamed button in the tree', () => {
+      renderModal()
+      const backdrop = screen
+        .getByRole('presentation')
+        .querySelector('button[aria-hidden="true"]') as HTMLElement
+
+      expect(backdrop).not.toBeNull()
+      expect(backdrop).toHaveAttribute('tabindex', '-1')
+    })
+
+    it('still closes on a click', () => {
+      const onClose = vi.fn()
+      renderModal({ onClose })
+      const backdrop = screen
+        .getByRole('presentation')
+        .querySelector('button[aria-hidden="true"]') as HTMLElement
+
+      fireEvent.click(backdrop)
+
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
+
+    // Hidden and untabbable, so it must never be what the focus trap hands the user.
+    it('is not one of the dialog’s tabbables', () => {
+      renderModal()
+      const tabbables = getTabbables(screen.getByRole('dialog'))
+      expect(tabbables.every((el) => el.getAttribute('aria-hidden') !== 'true')).toBe(true)
+    })
+  })
+
   describe('Focus return on close', () => {
     it('returns focus to the previously focused element when modal unmounts', () => {
       const { container, unmount: unmountModal } = render(

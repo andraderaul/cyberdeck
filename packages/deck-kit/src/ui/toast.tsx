@@ -44,7 +44,11 @@ export default function Toast({ message, variant, onDismiss }: Props) {
         boxShadow: shadow,
       }}
     >
-      <span className={cn(iconClass, 'text-xs shrink-0')}>{icon}</span>
+      {/* Decorative — the variant is already carried by the message. Unhidden, it is the first thing
+          the `role="alert"` announces, so every error opened with "multiplication x". */}
+      <span aria-hidden="true" className={cn(iconClass, 'text-xs shrink-0')}>
+        {icon}
+      </span>
       <span className="text-fg text-xs flex-1">{message}</span>
       <button
         type="button"

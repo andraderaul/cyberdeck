@@ -75,6 +75,20 @@ describe('the dismiss target', () => {
   })
 })
 
+// The variant is already carried by the message, so the glyph is decoration — and inside a
+// `role="alert"` an unhidden one is the first thing announced.
+describe('the variant glyph', () => {
+  it('is hidden from the alert it decorates', () => {
+    render(<Toast message="gone wrong" variant="error" onDismiss={() => {}} />)
+    expect(screen.getByText('✕')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('leaves the message itself readable', () => {
+    render(<Toast message="gone wrong" variant="error" onDismiss={() => {}} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('gone wrong')
+  })
+})
+
 describe('ToastProvider context', () => {
   it('provides error, info, and warn functions through context', () => {
     render(
