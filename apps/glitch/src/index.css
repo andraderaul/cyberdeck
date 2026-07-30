@@ -90,3 +90,17 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 0 6px var(--accent);
   box-sizing: border-box;
 }
+
+/* The `outline: none` above kills the focus ring, and a ring around a transparent 44px box would
+   read as a stray rectangle anyway — so the indicator goes on the thumb, where the eye already is.
+   Duplicated in ASCII//Convert's stylesheet: the Slider lives in the kit but its element styles do
+   not, so the two copies have to move together. */
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

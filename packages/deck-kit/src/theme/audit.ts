@@ -129,8 +129,8 @@ function resolveValue(raw: TokenMap, value: string, depth: number): string {
   )
 }
 
-/** A source file naming a hue instead of the role it plays, and where. */
-export type LiteralHueFinding = {
+/** A class one of the vocabulary guards objects to, and where it sits. */
+export type ClassFinding = {
   className: string
   /** 1-indexed, so a failure reads like an editor's gutter. */
   line: number
@@ -223,7 +223,7 @@ const CANDIDATE = /[A-Za-z][A-Za-z0-9:/[\]._-]*/g
 export function findLiteralHues(
   source: string,
   retired: readonly string[] = RETIRED_HUE_CLASSES,
-): LiteralHueFinding[] {
+): ClassFinding[] {
   const banned = new Set<string>()
   for (const utility of COLOR_UTILITIES) {
     for (const hue of retired) {
@@ -232,7 +232,7 @@ export function findLiteralHues(
   }
   const bannedTokens = new Set(retired.map((hue) => `--${hue}`))
 
-  const findings: LiteralHueFinding[] = []
+  const findings: ClassFinding[] = []
   source.split('\n').forEach((text, index) => {
     for (const [candidate] of text.matchAll(CANDIDATE)) {
       // `sm:hover:text-violet/30` — variants in front, an opacity modifier behind.
@@ -244,6 +244,109 @@ export function findLiteralHues(
     for (const [, token] of text.matchAll(VAR_REFERENCE)) {
       if (bannedTokens.has(token)) {
         findings.push({ className: `var(${token})`, line: index + 1 })
+      }
+    }
+  })
+  return findings
+}
+
+/**
+ * Scale steps a contributor reaches for by extrapolating the deck's scale, and which no spacing or
+ * radius key answers. Naming one renders *nothing* — Tailwind never generates the class — so the
+ * failure is silent in exactly the way a literal hue's is, and `gap-3xs` shipped a destructive
+ * control flush against its neighbour on the strength of it.
+ *
+ * A deny list rather than a check against the whole scale, and the asymmetry is the point. Validating
+ * every scale utility would mean deciding `text-` (`fontSize` ∪ `colors` ∪ `text-center`), `border-`
+ * (`borderColor` ∪ `colors` ∪ `borderWidth`) and the sizing utilities, whose scales Tailwind states
+ * as functions rather than objects — undecidable without becoming a Tailwind resolver, and noisy
+ * long before it was useful. These names are decidable, and the guard's own completeness test holds
+ * the list to the preset: define `3xs` for real and this list has to give it up.
+ */
+export const UNDEFINED_SCALE_NAMES = [
+  '3xs',
+  '4xs',
+  '5xs',
+  '4xl',
+  '5xl',
+  '6xl',
+  '7xl',
+  '2sm',
+  '2md',
+  '2lg',
+] as const
+
+/**
+ * The utilities that draw from `spacing` and `borderRadius` alone. Tailwind's own steps for both are
+ * numeric (`px` aside), so an alphabetic suffix here can only have come from the preset — which is
+ * what makes an undefined one decidable.
+ *
+ * The sizing utilities — `w`, `h`, `max-w`, `min-h` — are deliberately absent. Each layers its own
+ * keyword scale over `spacing` (`max-w-4xl` is real), and Tailwind states those scales as functions,
+ * so the guard would be guessing rather than deriving.
+ */
+const SCALE_UTILITIES = [
+  'p',
+  'px',
+  'py',
+  'pt',
+  'pr',
+  'pb',
+  'pl',
+  'm',
+  'mx',
+  'my',
+  'mt',
+  'mr',
+  'mb',
+  'ml',
+  'gap',
+  'gap-x',
+  'gap-y',
+  'space-x',
+  'space-y',
+  'inset',
+  'inset-x',
+  'inset-y',
+  'top',
+  'right',
+  'bottom',
+  'left',
+  'translate-x',
+  'translate-y',
+  'indent',
+  'rounded',
+  'rounded-t',
+  'rounded-r',
+  'rounded-b',
+  'rounded-l',
+] as const
+
+/**
+ * Every scale step a source file names that no key answers, with the line it sits on.
+ *
+ * Same shape as `findLiteralHues` on purpose: an exact match against a materialised set of
+ * `utility-step` pairs, so a longer name that merely ends in an undefined step — `p-sp-4xl` — is a
+ * different class rather than an offence, and an arbitrary value is never a candidate at all.
+ */
+export function findUndefinedScales(
+  source: string,
+  names: readonly string[] = UNDEFINED_SCALE_NAMES,
+): ClassFinding[] {
+  const banned = new Set<string>()
+  for (const utility of SCALE_UTILITIES) {
+    for (const step of names) {
+      banned.add(`${utility}-${step}`)
+    }
+  }
+
+  const findings: ClassFinding[] = []
+  source.split('\n').forEach((text, index) => {
+    for (const [candidate] of text.matchAll(CANDIDATE)) {
+      // `sm:gap-3xs` — variants in front, as in the hue guard.
+      const bare = candidate.split(':').pop()?.split('/')[0] ?? ''
+      if (banned.has(bare)) {
+        findings.push({ className: candidate, line: index + 1 })
       }
     }
   })

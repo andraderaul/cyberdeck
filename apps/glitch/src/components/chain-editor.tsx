@@ -335,7 +335,7 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
               {/* Duplicate and remove act on the focused Link, so they live with its params rather
                   than on every chip — six chips each carrying two icon buttons would bury the
                   Chain the row exists to show. */}
-              <div className="ml-auto flex items-center gap-3xs">
+              <div className="ml-auto flex items-center gap-2xs">
                 <button
                   type="button"
                   onClick={() => onDuplicate(focusedLink.id)}

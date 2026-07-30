@@ -4,6 +4,7 @@ import {
   declaredPrimitives,
   declaredThemes,
   findLiteralHues,
+  findUndefinedScales,
   RETIRED_HUE_CLASSES,
   resolveTokens,
   srgbDistance,
@@ -174,6 +175,67 @@ describe('findLiteralHues', () => {
     expect(findLiteralHues('background: var(--accent); color: var(--fg-muted);', retired)).toEqual(
       [],
     )
+  })
+})
+
+describe('findUndefinedScales', () => {
+  const undefined_ = ['3xs', '4xl'] as const
+
+  it('finds an undefined scale name behind a spacing utility', () => {
+    expect(findUndefinedScales('<div className="gap-3xs" />', undefined_)).toEqual([
+      { className: 'gap-3xs', line: 1 },
+    ])
+  })
+
+  it('reports the line the offending class sits on', () => {
+    const source = ['const a = 1', '', 'cn("py-3xs")'].join('\n')
+    expect(findUndefinedScales(source, undefined_)).toEqual([{ className: 'py-3xs', line: 3 }])
+  })
+
+  it('sees through responsive and state variants', () => {
+    const found = findUndefinedScales('sm:gap-3xs hover:mt-4xl', undefined_)
+    expect(found.map((f) => f.className)).toEqual(['sm:gap-3xs', 'hover:mt-4xl'])
+  })
+
+  // The whole point of the guard: a defined key must never fire, or contributors learn to ignore it.
+  it('leaves every key the preset defines alone', () => {
+    expect(
+      findUndefinedScales('gap-2xs px-sm py-xs mt-md rounded-pill gap-3xl p-sp-lg', undefined_),
+    ).toEqual([])
+  })
+
+  // Tailwind's own numeric scale survives the preset's `extend`, so it is not the guard's business.
+  it("leaves Tailwind's built-in scale alone", () => {
+    expect(findUndefinedScales('gap-4 p-0.5 mt-px -mx-2 inset-1/2', undefined_)).toEqual([])
+  })
+
+  it('leaves an arbitrary value alone', () => {
+    expect(findUndefinedScales('min-h-[44px] after:-inset-[16px] gap-[3px]', undefined_)).toEqual(
+      [],
+    )
+  })
+
+  // The mirror of `bg-accent-ghost` in the hue guard: a longer name that merely ends in an
+  // undefined one is a different class, not an offence.
+  it('leaves a longer name that merely ends in an undefined one alone', () => {
+    expect(findUndefinedScales('p-sp-4xl gap-my-3xs', undefined_)).toEqual([])
+  })
+
+  it('leaves prose alone', () => {
+    expect(findUndefinedScales('// the 3xs step never existed, nor did 4xl', undefined_)).toEqual(
+      [],
+    )
+  })
+
+  it('reports every offender, not just the first', () => {
+    expect(findUndefinedScales('gap-3xs mt-3xs rounded-4xl', undefined_)).toHaveLength(3)
+  })
+
+  // A sizing utility layers its own keyword scale on top of `spacing` (`max-w-4xl` is real), and
+  // Tailwind states those as functions rather than objects, so they cannot be derived — and an
+  // undeciable utility is left out rather than guessed at.
+  it('leaves sizing utilities out, since their scales cannot be derived', () => {
+    expect(findUndefinedScales('max-w-4xl w-4xl h-3xs', undefined_)).toEqual([])
   })
 })
 
