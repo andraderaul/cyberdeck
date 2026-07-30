@@ -19,3 +19,4 @@ export {
 } from './toast-provider'
 export { default as ToggleGroup } from './toggle-group'
 export { default as Tooltip } from './tooltip'
+export { TOUCH_TARGET_HEIGHT, TOUCH_TARGET_OVERLAY } from './touch-target'

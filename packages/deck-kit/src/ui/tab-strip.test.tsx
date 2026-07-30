@@ -58,6 +58,14 @@ describe('TabStrip', () => {
     expect(children).toHaveBeenCalledWith('presets')
   })
 
+  // The Strip is bottom-anchored, which puts every tab squarely in the thumb zone.
+  it('holds every tab to the 44px target', () => {
+    renderStrip()
+    for (const tab of screen.getAllByRole('tab')) {
+      expect(tab.className).toContain('min-h-[44px]')
+    }
+  })
+
   it('wires the panel to its tab for a screen reader', () => {
     renderStrip()
 

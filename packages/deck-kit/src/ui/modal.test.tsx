@@ -114,8 +114,23 @@ describe('Modal', () => {
   describe('close button contrast', () => {
     it('stays off --fg-dim, which sits below the contrast floor', () => {
       renderModal()
-      const closeBtn = screen.getByRole('button', { name: '✕' })
+      const closeBtn = screen.getByRole('button', { name: 'close' })
       expect(closeBtn.className.split(/\s+/)).not.toContain('text-fg-dim')
+    })
+  })
+
+  describe('close button reach', () => {
+    // `✕` is punctuation: a screen reader announcing it says nothing about what the control does.
+    it('is named in words rather than by its glyph', () => {
+      renderModal()
+      expect(screen.getByRole('button', { name: 'close' })).toHaveTextContent('✕')
+    })
+
+    it('holds the 44px target the glyph alone would not fill', () => {
+      renderModal()
+      const classes = new Set(screen.getByRole('button', { name: 'close' }).className.split(/\s+/))
+      expect(classes).toContain('min-h-[44px]')
+      expect(classes).toContain('min-w-[44px]')
     })
   })
 

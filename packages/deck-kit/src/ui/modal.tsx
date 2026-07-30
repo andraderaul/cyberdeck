@@ -59,7 +59,10 @@ export default function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="text-fg-subtle text-sm cursor-pointer bg-transparent border-none"
+              // The glyph is punctuation, not a word — a screen reader reading it out says nothing
+              // useful about what the control does.
+              aria-label="close"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-subtle text-sm cursor-pointer bg-transparent border-none"
             >
               ✕
             </button>

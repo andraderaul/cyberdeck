@@ -44,7 +44,7 @@ export default function TabStrip<Id extends string>({ tabs, ariaLabel, children 
               aria-controls={`strip-panel-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'px-sm py-xs font-mono text-xs tracking-wide border-b-2 transition-colors',
+                'inline-flex min-h-[44px] items-center px-sm font-mono text-xs tracking-wide border-b-2 transition-colors',
                 isActive
                   ? 'text-accent border-accent'
                   : 'text-fg-muted border-transparent hover:text-fg',

@@ -62,6 +62,19 @@ function ContextConsumer() {
   )
 }
 
+// The dismiss glyph is ~7x13px on its own. The negative margins are what let it reach 44 without
+// taking a one-line toast from ~37px to ~60px.
+describe('the dismiss target', () => {
+  it('reaches 44px square and overflows the padding box to do it', () => {
+    render(<Toast message="gone wrong" variant="error" onDismiss={() => {}} />)
+    const classes = new Set(screen.getByRole('button', { name: 'dismiss' }).className.split(/\s+/))
+
+    expect(classes).toContain('min-h-[44px]')
+    expect(classes).toContain('min-w-[44px]')
+    expect(classes).toContain('-my-2xs')
+  })
+})
+
 describe('ToastProvider context', () => {
   it('provides error, info, and warn functions through context', () => {
     render(
