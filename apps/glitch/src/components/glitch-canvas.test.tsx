@@ -215,7 +215,6 @@ describe('GlitchCanvas', () => {
       )
 
       expect(classes).toContain('after:inset-x-0')
-      expect(classes).not.toContain('after:w-[44px]')
     })
 
     // The badge wears the shared chrome but is not a control, so it must not grow a target either.

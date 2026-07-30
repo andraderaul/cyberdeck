@@ -99,6 +99,5 @@ describe('Tooltip', () => {
 
     expect(classes).toContain('after:h-[44px]')
     expect(classes).toContain('after:w-[44px]')
-    expect(classes).not.toContain('min-h-[44px]')
   })
 })

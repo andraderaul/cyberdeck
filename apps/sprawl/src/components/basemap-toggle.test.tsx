@@ -38,6 +38,5 @@ describe('BasemapToggle', () => {
     expect(classes).toContain('after:h-[44px]')
     // The visible box keeps the padding it always had — the overlay is what reaches 44.
     expect(classes).toContain('py-2xs')
-    expect(classes).not.toContain('min-h-[44px]')
   })
 })

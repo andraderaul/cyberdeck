@@ -19,4 +19,6 @@ export {
 } from './toast-provider'
 export { default as ToggleGroup } from './toggle-group'
 export { default as Tooltip } from './tooltip'
-export { TOUCH_TARGET_HEIGHT, TOUCH_TARGET_OVERLAY } from './touch-target'
+// `TOUCH_TARGET_OVERLAY` stays module-local deliberately: its only caller is the kit's own Tooltip,
+// and ADR 0014's bar for crossing into the public surface is two real callers, not one.
+export { TOUCH_TARGET_HEIGHT } from './touch-target'

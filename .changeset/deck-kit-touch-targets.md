@@ -1,5 +1,5 @@
 ---
-'@cyberdeck/deck-kit': patch
+'@cyberdeck/deck-kit': minor
 ---
 
 Every control in the kit now answers a 44x44 pointer target. The modal's close button, the toast's
@@ -13,3 +13,8 @@ it out says nothing about what the control does.
 Where a control cannot pay for the target in layout, it takes it as an invisible overlay instead:
 the tooltip sits in a Slider's label row, where a real 44px box would triple the row's height and
 push the params it labels off a phone.
+
+`TOUCH_TARGET_HEIGHT` is a new export for the programs that need the same bargain over a canvas. It
+buys height without ever growing sideways, so two neighbouring controls in a row cannot end up
+claiming the same pixels — which is the failure a centred overlay would introduce, and the reason
+that variant stays private to the kit.
