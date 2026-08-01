@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/.claude/skills"]
+    "includes": ["**", "!**/.claude/skills", "!apps/sprawl/src/data/dataset-*.json"]
   },
   "formatter": {
     "enabled": true,
