@@ -293,6 +293,10 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   slot with the params, and Re-roll sits outside the row (its own callback — the Seed is not part of
   the look)
 
+- `src/components/icon-label-button.tsx` — the Strip control that drops to its glyph alone below
+  `sm` and takes its label back from `sm` up, naming itself by the label at both sizes. Randomize
+  and Re-roll are its two callers; it stayed in the app rather than crossing into the kit, since
+  the collapse breakpoint is this Strip's width problem
 - `src/components/output-panel.tsx` — the Strip's OUT tab: PNG Export / Capture / Copy and the
   Record *start*. Stopping is deliberately absent — a take runs while the user keeps working in
   PRESETS and EDIT, so its stop is the canvas REC badge (ADR 0020)

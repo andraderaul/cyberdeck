@@ -661,7 +661,7 @@ describe('App', () => {
       for (const preset of PRESETS) {
         expect(chip(preset.name)).toBeInTheDocument()
       }
-      expect(screen.getByRole('button', { name: /randomize/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'randomize' })).toBeInTheDocument()
       expect(screen.getByRole('tab', { name: 'presets' })).toHaveAttribute('aria-selected', 'true')
     })
 
@@ -684,7 +684,7 @@ describe('App', () => {
       render(<App />)
 
       expect(screen.queryByRole('tab')).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: /randomize/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'randomize' })).not.toBeInTheDocument()
     })
 
     it('applies a Preset’s look and highlights it when it is picked', () => {
@@ -760,7 +760,7 @@ describe('App', () => {
         render(<App />)
         fireEvent.click(screen.getByRole('button', { name: 'upload' }))
 
-        fireEvent.click(screen.getByRole('button', { name: /randomize/i }))
+        fireEvent.click(screen.getByRole('button', { name: 'randomize' }))
 
         const settings = renderedChain.mock.lastCall?.[0] as Chain
         expect(chainMatch(settings, DEFAULT_PRESET.chain)).toBe(false)
@@ -771,7 +771,7 @@ describe('App', () => {
         fireEvent.click(screen.getByRole('button', { name: 'upload' }))
         const before = renderedSeed.mock.lastCall?.[0]
 
-        fireEvent.click(screen.getByRole('button', { name: /randomize/i }))
+        fireEvent.click(screen.getByRole('button', { name: 'randomize' }))
 
         expect(renderedSeed.mock.lastCall?.[0]).not.toBe(before)
       })
@@ -783,7 +783,7 @@ describe('App', () => {
         render(<App />)
         fireEvent.click(screen.getByRole('button', { name: 'upload' }))
 
-        fireEvent.click(screen.getByRole('button', { name: /randomize/i }))
+        fireEvent.click(screen.getByRole('button', { name: 'randomize' }))
 
         for (const preset of PRESETS) {
           expect(chip(preset.name)).toHaveAttribute('aria-pressed', 'false')

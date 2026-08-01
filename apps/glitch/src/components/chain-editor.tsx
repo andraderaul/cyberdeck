@@ -1,4 +1,4 @@
-import { Button, Chip, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
+import { Chip, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import { useRef, useState } from 'react'
 import {
@@ -25,6 +25,7 @@ import {
   type SortDirection,
 } from '../glitch/types'
 import { type ChipBounds, dropTargetAt, isDragGesture } from './chain-drag'
+import IconLabelButton from './icon-label-button'
 
 /**
  * The params panel's reserved height. On mobile the params stack (the sm grid flows into columns
@@ -497,12 +498,13 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
         </div>
         {/* The Seed sits outside the Chain, so its control sits outside the Link row rather than
             becoming a seventh chip that looks like part of the look. */}
-        {/* Icon-only on mobile so it stops eating the Chain row's width; the label returns from sm up.
-            The aria-label carries the name at both sizes, so the glyph and text are decorative. */}
-        <Button variant="ghost" onClick={onReroll} aria-label="re-roll" className="shrink-0">
-          <span aria-hidden="true">⟳</span>
-          <span className="hidden sm:inline"> re-roll</span>
-        </Button>
+        <IconLabelButton
+          variant="ghost"
+          onClick={onReroll}
+          glyph="⟳"
+          label="re-roll"
+          className="shrink-0"
+        />
       </div>
 
       {/* Referenced by every chip rather than repeated into each accessible name, which would make
