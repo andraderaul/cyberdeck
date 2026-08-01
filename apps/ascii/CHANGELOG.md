@@ -1,5 +1,24 @@
 ## [1.25.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.24.0...v1.25.0) (2026-07-16)
 
+## 1.30.3
+
+### Patch Changes
+
+- f79c3fe: Sliders show keyboard focus again. The tall invisible hit area that makes them easy to grab also
+  removed the focus ring, with nothing in its place, so tabbing through the EDIT panel gave no sign of
+  where you were. The indicator now sits on the thumb.
+- f79c3fe: The canvas overlay's controls — mirror, switch camera, clear, and the REC badge that stops a take —
+  now answer a 44x44 pointer target. They stood at ~32px tall, and the icon-only ones at ~27px wide on
+  touch.
+
+  They stand on the artwork, so the height comes from an invisible overlay and the chips draw exactly
+  as they did before; only the icon-only ones take real width, which no height overlay could give them.
+
+- Updated dependencies [f79c3fe]
+- Updated dependencies [f79c3fe]
+- Updated dependencies [f79c3fe]
+  - @cyberdeck/deck-kit@0.5.0
+
 ## 1.30.2
 
 ### Patch Changes

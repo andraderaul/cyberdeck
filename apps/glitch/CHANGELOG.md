@@ -1,5 +1,28 @@
 # @cyberdeck/glitch
 
+## 0.9.3
+
+### Patch Changes
+
+- f79c3fe: The duplicate and remove controls on the focused Link no longer sit flush against each other. They
+  were separated by a gap step that does not exist in the deck's scale, so Tailwind generated no class
+  at all and the two controls — one of them destructive — touched.
+- f79c3fe: Sliders show keyboard focus again. The tall invisible hit area that makes them easy to grab also
+  removed the focus ring, with nothing in its place, so tabbing through a Link's params gave no sign
+  of where you were. The indicator now sits on the thumb.
+- f79c3fe: The canvas overlay's controls — mirror, switch camera, clear, and the REC badge that stops a take —
+  now answer a 44x44 pointer target, as do duplicate and remove on the focused Link. The overlay chips
+  stood at ~32px tall and the Link actions at roughly 21x24px.
+
+  The overlay chips stand on the artwork, so their height comes from an invisible overlay and they draw
+  exactly as before. The LIVE badge wears the same shared chrome but is not a control, so it
+  deliberately gains no target.
+
+- Updated dependencies [f79c3fe]
+- Updated dependencies [f79c3fe]
+- Updated dependencies [f79c3fe]
+  - @cyberdeck/deck-kit@0.5.0
+
 ## 0.9.2
 
 ### Patch Changes
