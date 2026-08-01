@@ -1,5 +1,12 @@
 # @cyberdeck/glitch
 
+## 0.9.4
+
+### Patch Changes
+
+- 499e5e5: Randomize goes icon-only on mobile, matching Re-roll — the ⚄ glyph alone below `sm`, the label back
+  from `sm` up. The accessible name stays "randomize" at both sizes.
+
 ## 0.9.3
 
 ### Patch Changes
