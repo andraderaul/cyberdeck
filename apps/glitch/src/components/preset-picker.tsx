@@ -1,6 +1,7 @@
-import { Button, Chip } from '@cyberdeck/deck-kit/ui'
+import { Chip } from '@cyberdeck/deck-kit/ui'
 import type { Preset } from '../glitch/presets'
 import { PRESETS } from '../glitch/presets'
+import IconLabelButton from './icon-label-button'
 
 interface Props {
   // Tracked by the Editor rather than derived from the Chain: a slider edit has to leave the user
@@ -48,9 +49,13 @@ export default function PresetPicker({ activePresetId, isModified, onSelect, onR
           )
         })}
       </div>
-      <Button variant="secondary" onClick={onRandomize} className="shrink-0">
-        ⚄ randomize
-      </Button>
+      <IconLabelButton
+        variant="secondary"
+        onClick={onRandomize}
+        glyph="⚄"
+        label="randomize"
+        className="shrink-0"
+      />
     </fieldset>
   )
 }
