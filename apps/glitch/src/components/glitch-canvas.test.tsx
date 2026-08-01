@@ -1,3 +1,4 @@
+import { TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { createRef, type RefObject } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -195,26 +196,16 @@ describe('GlitchCanvas', () => {
   // height overlay while the chips keep the size they always drew at. Width is real, because the
   // icon-only ones are ~27px across on touch and no height overlay fixes that.
   describe('the overlay touch targets', () => {
+    // Asserted against the constant rather than the classes it happens to expand to, so rewriting
+    // how the kit spells a target cannot red this without an actual regression behind it.
     it('gives clear a 44px target without growing the chip', () => {
       renderCanvas({ sourceImage: { naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement })
-      const classes = new Set(
-        screen.getByRole('button', { name: 'clear source' }).className.split(/\s+/),
+      const button = screen.getByRole('button', { name: 'clear source' })
+
+      expect(button.className.split(/\s+/)).toEqual(
+        expect.arrayContaining(TOUCH_TARGET_ICON.split(' ')),
       )
-
-      expect(classes).toContain('after:h-[44px]')
-      expect(classes).toContain('min-w-[44px]')
-      expect(classes).toContain('py-2xs')
-    })
-
-    // A height overlay never grows sideways, which is what keeps two neighbours in this row from
-    // claiming the same pixels across the gap between them.
-    it('never widens a target past the chip it sits on', () => {
-      renderCanvas({ sourceImage: { naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement })
-      const classes = new Set(
-        screen.getByRole('button', { name: 'clear source' }).className.split(/\s+/),
-      )
-
-      expect(classes).toContain('after:inset-x-0')
+      expect(button.className).toContain('py-2xs')
     })
 
     // The badge wears the shared chrome but is not a control, so it must not grow a target either.

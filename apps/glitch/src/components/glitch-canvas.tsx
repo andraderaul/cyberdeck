@@ -1,5 +1,5 @@
 import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
-import { TOUCH_TARGET_HEIGHT } from '@cyberdeck/deck-kit/ui'
+import { TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
 import { type RefObject, useEffect, useRef } from 'react'
 import type { Chain } from '../glitch/chain'
@@ -19,23 +19,14 @@ export const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
 const CANVAS_OVERLAY_CHROME = 'font-mono text-xs px-sm py-2xs rounded-xs bg-bg select-none'
 
 /**
- * The 44px target for the overlay's buttons — height as an overlay, width for real. It rides here
- * rather than on `CANVAS_OVERLAY_CHROME` for the same reason `cursor` and `transition` do: the LIVE
- * badge wears that one and is not a control, so it must not grow a target either.
- *
- * These sit on the artwork (ADR 0013), so taking the row from 32px to 44px would charge the picture
- * for its own controls. The icon-only ones are ~27px wide on touch, which no height-only overlay can
- * fix, and `TOUCH_TARGET_HEIGHT` never grows sideways — so neighbours cannot overlap across `gap-xs`.
- */
-const CANVAS_OVERLAY_TARGET = cn(
-  'min-w-[44px] inline-flex items-center justify-center',
-  TOUCH_TARGET_HEIGHT,
-)
-
-/**
  * Rest state shared by the source-tuning buttons — mirror (off), switch-camera, clear. The border,
  * cursor and transition ride here rather than on `CANVAS_OVERLAY_CHROME`, which the LIVE / REC
  * badges also wear and must not read as clickable. Mirrors ASCII//Convert's `OVERLAY_BUTTON_REST`.
+ *
+ * `TOUCH_TARGET_ICON` is spelled at each control for the same reason, and never on the chrome: the
+ * LIVE badge wears that one and is not a control, so it must not grow a target either. These sit on
+ * the artwork (ADR 0013), so taking the row from 32px to 44px would charge the picture for its own
+ * controls — but the icon-only ones are ~27px wide on touch, which no height-only overlay can fix.
  */
 const CANVAS_OVERLAY_BUTTON_REST =
   'border border-base text-fg-muted cursor-pointer transition-colors duration-fast hover:text-fg hover:border-strong'
@@ -160,7 +151,7 @@ export default function GlitchCanvas({
             aria-label={`stop recording — ${formatElapsedTime(elapsedSeconds)} elapsed`}
             className={cn(
               CANVAS_OVERLAY_CHROME,
-              CANVAS_OVERLAY_TARGET,
+              TOUCH_TARGET_ICON,
               'flex items-center gap-2xs text-danger border border-danger',
               // `bg-bg-elevated`, not the translucent `bg-danger-ghost` a hover state would normally
               // take: this chip sits on the user's artwork, so ADR 0013's opaque-background rule
@@ -187,7 +178,7 @@ export default function GlitchCanvas({
             aria-label={isMirrored ? 'disable mirror' : 'enable mirror'}
             className={cn(
               CANVAS_OVERLAY_CHROME,
-              CANVAS_OVERLAY_TARGET,
+              TOUCH_TARGET_ICON,
               isMirrored
                 ? 'border border-accent text-accent cursor-pointer transition-colors duration-fast'
                 : CANVAS_OVERLAY_BUTTON_REST,
@@ -202,7 +193,7 @@ export default function GlitchCanvas({
             type="button"
             onClick={() => void onSwitchCamera()}
             aria-label="switch camera"
-            className={cn(CANVAS_OVERLAY_CHROME, CANVAS_OVERLAY_TARGET, CANVAS_OVERLAY_BUTTON_REST)}
+            className={cn(CANVAS_OVERLAY_CHROME, TOUCH_TARGET_ICON, CANVAS_OVERLAY_BUTTON_REST)}
           >
             ⇄
           </button>
@@ -212,7 +203,7 @@ export default function GlitchCanvas({
           onClick={onClearSource}
           title="clear source"
           aria-label="clear source"
-          className={cn(CANVAS_OVERLAY_CHROME, CANVAS_OVERLAY_TARGET, CANVAS_OVERLAY_BUTTON_REST)}
+          className={cn(CANVAS_OVERLAY_CHROME, TOUCH_TARGET_ICON, CANVAS_OVERLAY_BUTTON_REST)}
         >
           ✕ clear
         </button>

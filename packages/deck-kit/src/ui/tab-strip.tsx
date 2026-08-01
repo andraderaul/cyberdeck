@@ -30,15 +30,13 @@ export default function TabStrip<Id extends string>({ tabs, ariaLabel, children 
   const [activeTab, setActiveTab] = useState<Id>(tabs[0].id)
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
 
-  /**
-   * Roving focus, the same shape as ThemeControl's menu: refs and imperative focus rather than a
-   * second piece of state, so an arrow press never re-renders — which is what keeps the Strip from
-   * constructing a panel the user has not asked for.
-   *
-   * Manual activation (the arrows move, Enter or Space selects) rather than automatic: a tablist
-   * that selects on arrival would swap the panel under someone who is only passing through, and
-   * mount its controls to do it.
-   */
+  // Roving focus, the same shape as ThemeControl's menu: refs and imperative focus rather than a
+  // second piece of state, so an arrow press never re-renders — which is what keeps the Strip from
+  // constructing a panel the user has not asked for.
+  //
+  // Manual activation (the arrows move, Enter or Space selects) rather than automatic: a tablist
+  // that selects on arrival would swap the panel under someone who is only passing through, and
+  // mount its controls to do it.
   const onTabsKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const count = tabs.length
     const current = tabRefs.current.indexOf(document.activeElement as HTMLButtonElement | null)

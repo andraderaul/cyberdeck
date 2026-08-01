@@ -1,5 +1,5 @@
 import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
-import { TOUCH_TARGET_HEIGHT } from '@cyberdeck/deck-kit/ui'
+import { TOUCH_TARGET_HEIGHT, TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
 import { type RefObject, useEffect, useRef } from 'react'
 import { resizeImage } from '../ascii/image-utils'
@@ -15,12 +15,10 @@ const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
  */
 const OVERLAY_BUTTON = cn(
   'font-mono text-xs border px-sm py-2xs rounded-xs cursor-pointer transition-colors duration-fast',
-  // Height as an overlay, width for real. These sit on the artwork, so growing the row 32px → 44px
-  // would charge the picture for its own controls — but the icon-only ones are ~27px wide on touch,
-  // which no height-only overlay can fix, and widening one chip costs far less than a taller row.
-  // `TOUCH_TARGET_HEIGHT` never grows sideways, so neighbours cannot overlap across the `gap-xs`.
-  'min-w-[44px] inline-flex items-center justify-center',
-  TOUCH_TARGET_HEIGHT,
+  // These sit on the artwork (ADR 0013), so growing the row 32px → 44px would charge the picture for
+  // its own controls — but the icon-only ones are ~27px wide on touch, which no height-only overlay
+  // can fix. Hence the icon variant: height overlaid, width real.
+  TOUCH_TARGET_ICON,
 )
 const OVERLAY_BUTTON_REST = 'text-fg-muted border-base hover:text-fg hover:border-strong'
 

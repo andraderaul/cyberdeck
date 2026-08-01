@@ -97,10 +97,13 @@ Biome. Each scale is its own set and none of them extrapolates:
 
 | Scale | Steps |
 |-------|-------|
-| `spacing` (`p-`, `m-`, `gap-`, `inset-`, …) | `2xs · xs · sm · md · lg · xl · 2xl · 3xl`, plus `sp-*` for section macro spacing |
+| `spacing` (`p-`, `m-`, `gap-`, `inset-`, …) | `2xs · xs · sm · md · lg · xl · 2xl · 3xl` |
+| `sp-*`, section macro spacing, under those same utilities | `sp-xs · sp-sm · sp-md · sp-lg · sp-xl · sp-2xl` |
 | `borderRadius` (`rounded-`) | `none · xs · sm · md · pill` |
 
-So there is no `3xs`, no `4xl`, and no `rounded-lg` from this vocabulary. Tailwind's own numeric
+So there is no `3xs`, no `4xl`, and no `rounded-lg` from this vocabulary. Note the two spacing rows
+do **not** share ends: `gap-3xl` is real and `p-sp-3xl` is not, and sharing the utilities is exactly
+what makes that one easy to reach for. Tailwind's own numeric
 steps (`gap-4`, `p-0.5`) and arbitrary values (`min-h-[44px]`) stay valid — the preset extends rather
 than replaces. The kit's scale guard fails the build the same way the hue guard does, with the class,
 the file and the line.

@@ -93,8 +93,12 @@ input[type="range"]::-moz-range-thumb {
 
 /* The `outline: none` above kills the focus ring, and a ring around a transparent 44px box would
    read as a stray rectangle anyway — so the indicator goes on the thumb, where the eye already is.
-   Duplicated in ASCII//Convert's stylesheet: the Slider lives in the kit but its element styles do
-   not, so the two copies have to move together. */
+
+   This file and ASCII//Convert's are byte-identical, and were before this rule joined them — the
+   duplication to resolve is the whole stylesheet, not this block. Extracting only the newest rule
+   would leave one control's styles split across two files, which is worse than either end. The kit
+   ships `tokens.css`, but that one is `:root`-only by its own decision, so element rules need a
+   second stylesheet export and every app's import order re-checked: its own change, not this one. */
 input[type="range"]:focus-visible::-webkit-slider-thumb {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

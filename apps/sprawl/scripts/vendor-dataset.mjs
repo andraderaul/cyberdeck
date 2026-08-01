@@ -70,7 +70,11 @@ export const SNAPSHOT: Dataset = dataset as Dataset
 }
 
 /** Compact JSON — the points array is large; pretty-printing would triple the committed size for no
- *  gain (the diff that matters is per-point capacity, and git shows it either way). */
+ *  gain (the diff that matters is per-point capacity, and git shows it either way).
+ *
+ *  `biome.json` excludes `dataset-*.json` from the formatter to let this stand. Without that, the
+ *  two rules disagree and the loser is whoever commits next: the vendor bot opens its PR with a file
+ *  biome rejects, and CI is red on a diff no human wrote. */
 function serialize(dataset) {
   return `${JSON.stringify(dataset)}\n`
 }

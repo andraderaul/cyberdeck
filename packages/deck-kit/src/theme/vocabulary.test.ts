@@ -51,23 +51,28 @@ describe('the literal hue vocabulary is retired', () => {
 // flush against its neighbour. Like the hue guard, this file never spells an offending class — the
 // fixtures that must live in `audit.test.ts`, which is exempt from the scan.
 describe('the scale vocabulary is the preset’s', () => {
+  // Throws rather than falling back to `{}`: a scale whose shape moved has to stop this test, not
+  // turn it into a comparison against nothing — which passes while proving nothing, the exact
+  // failure the guard exists to catch one layer down.
+  function stepsOf(scale: unknown, name: string): string[] {
+    const steps = typeof scale === 'object' && scale !== null ? Object.keys(scale) : []
+    if (steps.length === 0) {
+      throw new Error(
+        `${name} read as nothing — the shape this test derives the ban list from moved`,
+      )
+    }
+    return steps
+  }
+
   // Derived from both halves of what Tailwind actually resolves — the preset's `extend` and the
   // built-in scale it extends — so the ban list cannot drift into naming a step that is real.
   it('bans only steps no key defines', () => {
-    const scales = [
-      preset.theme.extend.spacing,
-      preset.theme.extend.borderRadius,
-      defaultTheme.spacing,
-      defaultTheme.borderRadius,
-    ]
-    // Asserted rather than defaulted to `{}`: a fallback would let an import whose shape moved turn
-    // this into a comparison against nothing, which passes while proving nothing — the exact failure
-    // the guard exists to catch one layer down.
-    for (const scale of scales) {
-      expect(Object.keys(scale ?? {}).length).toBeGreaterThan(0)
-    }
-
-    const defined = new Set(scales.flatMap((scale) => Object.keys(scale)))
+    const defined = new Set([
+      ...stepsOf(preset.theme.extend.spacing, "the preset's spacing"),
+      ...stepsOf(preset.theme.extend.borderRadius, "the preset's borderRadius"),
+      ...stepsOf(defaultTheme.spacing, "Tailwind's spacing"),
+      ...stepsOf(defaultTheme.borderRadius, "Tailwind's borderRadius"),
+    ])
     expect(UNDEFINED_SCALE_NAMES.filter((step) => defined.has(step))).toEqual([])
   })
 
