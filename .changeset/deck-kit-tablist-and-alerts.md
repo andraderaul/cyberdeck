@@ -1,5 +1,5 @@
 ---
-'@cyberdeck/deck-kit': minor
+'@cyberdeck/deck-kit': patch
 ---
 
 The Control Strip's tabs now behave the way `role="tab"` promises: the Strip is a single tab stop,

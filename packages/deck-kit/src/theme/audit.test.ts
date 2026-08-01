@@ -179,7 +179,7 @@ describe('findLiteralHues', () => {
 })
 
 describe('findUndefinedScales', () => {
-  const UNDEFINED_STEPS = ['3xs', '4xl'] as const
+  const UNDEFINED_STEPS = ['3xs', '4xl', 'sp-3xl'] as const
 
   it('finds an undefined scale name behind a spacing utility', () => {
     expect(findUndefinedScales('<div className="gap-3xs" />', UNDEFINED_STEPS)).toEqual([
@@ -218,10 +218,19 @@ describe('findUndefinedScales', () => {
     ).toEqual([])
   })
 
-  // The mirror of `bg-accent-ghost` in the hue guard: a longer name that merely ends in an
-  // undefined one is a different class, not an offence.
-  it('leaves a longer name that merely ends in an undefined one alone', () => {
-    expect(findUndefinedScales('p-sp-4xl gap-my-3xs', UNDEFINED_STEPS)).toEqual([])
+  // The mirror of `bg-accent-ghost` in the hue guard: a name that merely ends in an undefined step
+  // is a different class, not an offence.
+  it('leaves a name that merely ends in an undefined step alone', () => {
+    expect(findUndefinedScales('gap-my-3xs', UNDEFINED_STEPS)).toEqual([])
+  })
+
+  // `sp-*` is a second scale under the same utilities rather than a longer name, so it has to be
+  // denied step by step — the step is the only thing telling the two apart.
+  it('reads the section macro scale as its own set of steps', () => {
+    expect(findUndefinedScales('p-sp-2xl gap-sp-lg my-sp-xs', UNDEFINED_STEPS)).toEqual([])
+    expect(findUndefinedScales('p-sp-3xl', UNDEFINED_STEPS)).toEqual([
+      { className: 'p-sp-3xl', line: 1 },
+    ])
   })
 
   it('leaves prose alone', () => {
@@ -236,7 +245,7 @@ describe('findUndefinedScales', () => {
 
   // A sizing utility layers its own keyword scale on top of `spacing` (`max-w-4xl` is real), and
   // Tailwind states those as functions rather than objects, so they cannot be derived — and an
-  // undeciable utility is left out rather than guessed at.
+  // undecidable utility is left out rather than guessed at.
   it('leaves sizing utilities out, since their scales cannot be derived', () => {
     expect(findUndefinedScales('max-w-4xl w-4xl h-3xs', UNDEFINED_STEPS)).toEqual([])
   })

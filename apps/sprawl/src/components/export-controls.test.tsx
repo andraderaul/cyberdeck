@@ -1,3 +1,4 @@
+import { TOUCH_TARGET_HEIGHT } from '@cyberdeck/deck-kit/ui'
 import { render, screen } from '@testing-library/react'
 import { createRef } from 'react'
 import { describe, expect, it } from 'vitest'
@@ -18,23 +19,27 @@ describe('ExportControls', () => {
 
   // Both sit on the piece, so each reaches a 44px target through an overlay rather than by taking
   // room from the light. The PNG also needs real width: `PNG` is narrower than 44px on its own.
+  // Asserted against the constant rather than the classes it expands to, so respelling a target
+  // cannot red these without an actual regression behind it.
   describe('touch targets', () => {
     it('gives the link 44px of height without growing it', () => {
       renderControls()
-      const classes = new Set(
-        screen.getByRole('button', { name: /share link/i }).className.split(/\s+/),
-      )
+      const button = screen.getByRole('button', { name: /share link/i })
 
-      expect(classes).toContain('after:h-[44px]')
-      expect(classes).toContain('py-2xs')
+      expect(button.className.split(/\s+/)).toEqual(
+        expect.arrayContaining(TOUCH_TARGET_HEIGHT.split(' ')),
+      )
+      expect(button.className).toContain('py-2xs')
     })
 
     it('gives the PNG real width as well, since its label is narrower than the target', () => {
       renderControls()
-      const classes = new Set(screen.getByRole('button', { name: /png/i }).className.split(/\s+/))
+      const button = screen.getByRole('button', { name: /png/i })
 
-      expect(classes).toContain('after:h-[44px]')
-      expect(classes).toContain('min-w-[44px]')
+      expect(button.className.split(/\s+/)).toEqual(
+        expect.arrayContaining(TOUCH_TARGET_HEIGHT.split(' ')),
+      )
+      expect(button.className).toContain('min-w-[44px]')
     })
   })
 })

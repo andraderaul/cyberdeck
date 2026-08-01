@@ -19,11 +19,15 @@ export default function BasemapToggle({ on, onToggle }: Props) {
       onClick={onToggle}
       aria-pressed={on}
       className={cn(
-        'absolute bottom-xs left-xs font-mono text-xs px-sm py-2xs rounded-xs bg-bg select-none',
+        'font-mono text-xs px-sm py-2xs rounded-xs bg-bg select-none',
         'cursor-pointer transition-colors duration-fast',
         // The target grows, the chip does not: the first screen is the piece (ADR 0021), and this
         // only offers the confirmation — it must not start taking room from the light.
         TOUCH_TARGET_HEIGHT,
+        // After the target, never before: the constant opens with `relative` to anchor its overlay,
+        // and `cn` resolves a position conflict in favour of the last one named. Put this first and
+        // the chip silently returns to the flow, off the corner it is pinned to.
+        'absolute bottom-xs left-xs',
         on
           ? 'border border-info text-info'
           : 'border border-base text-fg-muted hover:text-fg hover:border-strong',

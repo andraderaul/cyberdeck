@@ -1,3 +1,4 @@
+import { TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -77,24 +78,17 @@ describe('AsciiCanvas', () => {
   // Same bargain as GLITCH's overlay: the chips stand on the artwork, so height comes from an
   // overlay and only width is paid for in layout.
   describe('the overlay touch targets', () => {
+    // Asserted against the constant rather than the classes it happens to expand to, so rewriting
+    // how the kit spells a target cannot red this without an actual regression behind it.
     it('gives the source-tuning buttons a 44px target without growing them', () => {
       render(<Wrapper isLive onMirrorToggle={vi.fn()} />)
-      const classes = new Set(
-        screen.getByRole('button', { name: /mirror/i }).className.split(/\s+/),
+      const button = screen.getByRole('button', { name: /mirror/i })
+
+      expect(button.className.split(/\s+/)).toEqual(
+        expect.arrayContaining(TOUCH_TARGET_ICON.split(' ')),
       )
-
-      expect(classes).toContain('after:h-[44px]')
-      expect(classes).toContain('min-w-[44px]')
-      expect(classes).toContain('py-2xs')
-    })
-
-    it('never widens a target past the chip it sits on', () => {
-      render(<Wrapper isLive onMirrorToggle={vi.fn()} />)
-      const classes = new Set(
-        screen.getByRole('button', { name: /mirror/i }).className.split(/\s+/),
-      )
-
-      expect(classes).toContain('after:inset-x-0')
+      // The chip keeps the padding it always drew at — the overlay is what reaches 44.
+      expect(button.className).toContain('py-2xs')
     })
   })
 
