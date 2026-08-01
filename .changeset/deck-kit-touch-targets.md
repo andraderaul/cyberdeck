@@ -14,7 +14,12 @@ Where a control cannot pay for the target in layout, it takes it as an invisible
 the tooltip sits in a Slider's label row, where a real 44px box would triple the row's height and
 push the params it labels off a phone.
 
-`TOUCH_TARGET_HEIGHT` is a new export for the programs that need the same bargain over a canvas. It
-buys height without ever growing sideways, so two neighbouring controls in a row cannot end up
-claiming the same pixels — which is the failure a centred overlay would introduce, and the reason
-that variant stays private to the kit.
+`TOUCH_TARGET_HEIGHT` and `TOUCH_TARGET_ICON` are new exports for the programs that need the same
+bargain over a canvas. The first buys height without ever growing sideways, so two neighbouring
+controls in a row cannot end up claiming the same pixels — which is the failure a centred overlay
+would introduce, and the reason that variant stays private to the kit. The second adds the real
+width the first tells you to pair with, for a control that also draws narrower than the target.
+
+Both open with `relative` to anchor the overlay, so a control that positions *itself* has to name
+its own `absolute` after the constant: `cn` resolves a position conflict in favour of the last one
+named, and putting it first drops the control back into the flow.

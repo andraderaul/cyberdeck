@@ -272,10 +272,26 @@ export function findLiteralHues(
 }
 
 /**
- * Scale steps a contributor reaches for by extrapolating the deck's scale, and which no spacing or
- * radius key answers. Naming one renders *nothing* — Tailwind never generates the class — so the
- * failure is silent in exactly the way a literal hue's is, and `gap-3xs` shipped a destructive
- * control flush against its neighbour on the strength of it.
+ * Steps a contributor reaches for by extrapolating past either end of the deck's scale. Naming one
+ * renders *nothing* — Tailwind never generates the class — so the failure is silent in exactly the
+ * way a literal hue's is, and `gap-3xs` shipped a destructive control flush against its neighbour on
+ * the strength of it.
+ *
+ * The `Nxs` / `Nxl` shape only, because that is the only place the scale's multiplier prefix ever
+ * attaches. `2sm` and `2lg` are spellings nobody writes, and a deny list is read less the more of it
+ * is theatre.
+ */
+const EXTRAPOLATED_STEPS = ['3xs', '4xs', '5xs', '4xl', '5xl'] as const
+
+/**
+ * Steps the base spacing scale answers but the section macro scale does not — `sp-*` runs `xs` to
+ * `2xl` where the base runs `2xs` to `3xl`. Sharing a vocabulary is exactly what makes these
+ * reachable: `gap-3xl` is real, so `p-sp-3xl` reads as real too, and it is not.
+ */
+const SECTION_ONLY_GAPS = ['2xs', '3xl'] as const
+
+/**
+ * Every step name the two spacing vocabularies forbid — the bare ones, plus their `sp-` spellings.
  *
  * A deny list rather than a check against the whole scale, and the asymmetry is the point. Validating
  * every scale utility would mean deciding `text-` (`fontSize` ∪ `colors` ∪ `text-center`), `border-`
@@ -283,17 +299,15 @@ export function findLiteralHues(
  * as functions rather than objects — undecidable without becoming a Tailwind resolver, and noisy
  * long before it was useful. These names are decidable, and the guard's own completeness test holds
  * the list to the preset: define `3xs` for real and this list has to give it up.
+ *
+ * `sp-*` is spelled out step by step rather than caught by a prefix rule because it is a *second
+ * scale under the same utilities*, not a longer name: `p-sp-2xl` is real and `p-sp-3xl` renders
+ * nothing, and only the step tells them apart.
  */
-export const UNDEFINED_SCALE_NAMES = [
-  '3xs',
-  '4xs',
-  '5xs',
-  '4xl',
-  '5xl',
-  '2sm',
-  '2md',
-  '2lg',
-] as const
+export const UNDEFINED_SCALE_NAMES: readonly string[] = [
+  ...EXTRAPOLATED_STEPS,
+  ...[...EXTRAPOLATED_STEPS, ...SECTION_ONLY_GAPS].map((step) => `sp-${step}`),
+]
 
 /**
  * The utilities that draw from `spacing` and `borderRadius` alone. Tailwind's own steps for both are
@@ -355,8 +369,8 @@ const SCALE_UTILITIES = [
  * Every scale step a source file names that no key answers, with the line it sits on.
  *
  * Same shape as `findLiteralHues` on purpose: an exact match against a materialised set of
- * `utility-step` pairs, so a longer name that merely ends in an undefined step — `p-sp-4xl` — is a
- * different class rather than an offence, and an arbitrary value is never a candidate at all.
+ * `utility-step` pairs, so an arbitrary value is never a candidate and a name that merely *ends* in
+ * an undefined step — `gap-my-3xs` — is a different class rather than an offence.
  */
 export function findUndefinedScales(
   source: string,

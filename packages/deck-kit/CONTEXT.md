@@ -58,7 +58,9 @@ ser nomeada antes do React existir.
 sem estilo; um degrau de escala que nunca esteve nele não renderiza nada — o Tailwind simplesmente
 não gera a classe, e nem o tsc nem o biome dizem uma palavra. Guarda uma lista de degraus plausíveis
 mas inexistentes (`3xs`, `4xl`, …) contra os utilitários que leem `spacing` e `borderRadius` — os
-únicos decidíveis, porque o degrau alfabético deles só pode vir do preset. Os utilitários de
+únicos decidíveis, porque o degrau alfabético deles só pode vir do preset. O `sp-*` entra degrau a
+degrau, e não por prefixo: é uma *segunda* escala sob os mesmos utilitários, com extremos que não
+batem com a base — `p-sp-2xl` existe, `p-sp-3xl` não, e só o degrau distingue os dois. Os utilitários de
 dimensão (`w`, `max-w`) ficam de fora de propósito: cada um empilha o próprio conjunto de keywords
 sobre o `spacing`, e o Tailwind declara essas escalas como funções, então a guarda estaria adivinhando.
 Um teste de completude prende a lista ao preset e aos defaults do Tailwind: definir `3xs` de verdade

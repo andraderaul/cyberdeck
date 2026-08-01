@@ -1,5 +1,5 @@
 ---
-'@cyberdeck/deck-kit': minor
+'@cyberdeck/deck-kit': patch
 ---
 
 Three accessibility fixes at the level where a control is either operable or it is not.

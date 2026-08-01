@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import Tooltip from './tooltip'
+import { TOUCH_TARGET_OVERLAY } from './touch-target'
 
 const defaultProps = {
   id: 'tooltip-test',
@@ -90,14 +91,14 @@ describe('Tooltip', () => {
   })
 
   // ~7x11px as a glyph. The target is an overlay rather than padding because this sits in a Slider's
-  // label row, where a real 44px box would triple the row's height.
+  // label row, where a real 44px box would triple the row's height. Asserted against the constant
+  // rather than the classes it expands to, so respelling a target cannot red this on its own.
   it('reaches a 44px target without growing the label row', () => {
     render(<Tooltip id="tooltip-test" content="what it does" />)
-    const classes = new Set(
-      screen.getByRole('button', { name: 'more info' }).className.split(/\s+/),
-    )
+    const trigger = screen.getByRole('button', { name: 'more info' })
 
-    expect(classes).toContain('after:h-[44px]')
-    expect(classes).toContain('after:w-[44px]')
+    expect(trigger.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(TOUCH_TARGET_OVERLAY.split(' ')),
+    )
   })
 })
