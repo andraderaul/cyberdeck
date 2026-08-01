@@ -44,13 +44,20 @@ export default function Toast({ message, variant, onDismiss }: Props) {
         boxShadow: shadow,
       }}
     >
-      <span className={cn(iconClass, 'text-xs shrink-0')}>{icon}</span>
+      {/* Decorative — the variant is already carried by the message. Unhidden, it is the first thing
+          the `role="alert"` announces, so every error opened with "multiplication x". */}
+      <span aria-hidden="true" className={cn(iconClass, 'text-xs shrink-0')}>
+        {icon}
+      </span>
       <span className="text-fg text-xs flex-1">{message}</span>
       <button
         type="button"
         onClick={onDismiss}
         aria-label="dismiss"
-        className="text-fg-subtle text-xs cursor-pointer shrink-0 leading-tight bg-transparent border-none p-0"
+        // The negative margins are load-bearing: a 44px button inside `p-sm` would take a one-line
+        // toast from ~37px to ~60px. They let it overflow the padding box instead, so the target is
+        // the full 44 square and the toast grows by a few pixels.
+        className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center -my-2xs -mr-2xs text-fg-subtle text-xs cursor-pointer bg-transparent border-none"
       >
         ×
       </button>

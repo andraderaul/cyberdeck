@@ -74,6 +74,30 @@ describe('AsciiCanvas', () => {
     expect(screen.getByTestId('rec-indicator')).toBeInTheDocument()
   })
 
+  // Same bargain as GLITCH's overlay: the chips stand on the artwork, so height comes from an
+  // overlay and only width is paid for in layout.
+  describe('the overlay touch targets', () => {
+    it('gives the source-tuning buttons a 44px target without growing them', () => {
+      render(<Wrapper isLive onMirrorToggle={vi.fn()} />)
+      const classes = new Set(
+        screen.getByRole('button', { name: /mirror/i }).className.split(/\s+/),
+      )
+
+      expect(classes).toContain('after:h-[44px]')
+      expect(classes).toContain('min-w-[44px]')
+      expect(classes).toContain('py-2xs')
+    })
+
+    it('never widens a target past the chip it sits on', () => {
+      render(<Wrapper isLive onMirrorToggle={vi.fn()} />)
+      const classes = new Set(
+        screen.getByRole('button', { name: /mirror/i }).className.split(/\s+/),
+      )
+
+      expect(classes).toContain('after:inset-x-0')
+    })
+  })
+
   // The badge is the stop control now (ADR 0020): a take runs while the user works in PRESETS and
   // EDIT, and the canvas is the one surface every tab shows.
   describe('the REC badge as the stop control', () => {

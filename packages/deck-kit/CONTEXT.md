@@ -45,8 +45,8 @@ _Avoid_: warning, erro, cache miss como falha
 
 ## As guardas
 
-Três, todas no comando de teste que a CI já roda. A metade pura das três é `src/theme/audit.ts` —
-texto entra, achados saem, sem sistema de arquivos.
+Quatro, todas no comando de teste que a CI já roda. A metade pura das quatro é `src/theme/audit.ts`
+— texto entra, achados saem, sem sistema de arquivos.
 
 **Guarda de contraste**: resolve `tokens.css` e prova o Theme Contract para todo Theme declarado.
 **Guarda de vocabulário**: prova que nenhuma fonte, em nenhum programa, voltou a nomear um matiz
@@ -54,6 +54,15 @@ literal — e falha dizendo a classe, o arquivo e a linha, porque a correção �
 como matiz literal é *derivado* do `tokens.css`, não listado: um primitivo é uma cor do `:root`
 escrita como literal que nenhum Theme redefine. Ela lê os `index.html` também, onde uma cor pode
 ser nomeada antes do React existir.
+**Guarda de escala**: a outra metade da mesma falha silenciosa. Um matiz que saiu do preset renderiza
+sem estilo; um degrau de escala que nunca esteve nele não renderiza nada — o Tailwind simplesmente
+não gera a classe, e nem o tsc nem o biome dizem uma palavra. Guarda uma lista de degraus plausíveis
+mas inexistentes (`3xs`, `4xl`, …) contra os utilitários que leem `spacing` e `borderRadius` — os
+únicos decidíveis, porque o degrau alfabético deles só pode vir do preset. Os utilitários de
+dimensão (`w`, `max-w`) ficam de fora de propósito: cada um empilha o próprio conjunto de keywords
+sobre o `spacing`, e o Tailwind declara essas escalas como funções, então a guarda estaria adivinhando.
+Um teste de completude prende a lista ao preset e aos defaults do Tailwind: definir `3xs` de verdade
+obriga a lista a devolvê-lo.
 **Guarda do roster**: o roster existe em três lugares que não podem se importar — o TypeScript
 daqui, os blocos de Theme do `tokens.css`, e um script inline por programa. Esta as mantém juntas,
 e é também o que mantém a exclusão do SPRAWL//Atlas de pé.

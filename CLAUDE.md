@@ -89,6 +89,27 @@ kit's vocabulary guard fails the build with the class, the file and the line.
 SPRAWL//Atlas is excluded from Themes by explicit decision (ADR 0021, ADR 0024), but not from this
 rule: it promotes like everything else and simply never sets the theme attribute.
 
+## Name a scale step the preset defines
+
+The same silent failure as a literal hue, one layer over: `gap-2xs` is a key, `gap-3xs` is not, and
+Tailwind answers an undefined step by generating no class at all — no error from Tailwind, tsc or
+Biome. Each scale is its own set and none of them extrapolates:
+
+| Scale | Steps |
+|-------|-------|
+| `spacing` (`p-`, `m-`, `gap-`, `inset-`, …) | `2xs · xs · sm · md · lg · xl · 2xl · 3xl`, plus `sp-*` for section macro spacing |
+| `borderRadius` (`rounded-`) | `none · xs · sm · md · pill` |
+
+So there is no `3xs`, no `4xl`, and no `rounded-lg` from this vocabulary. Tailwind's own numeric
+steps (`gap-4`, `p-0.5`) and arbitrary values (`min-h-[44px]`) stay valid — the preset extends rather
+than replaces. The kit's scale guard fails the build the same way the hue guard does, with the class,
+the file and the line.
+
+One wart to know about rather than work around: `--gap-xs` is **4px** and `--gap-2xs` is **6px**, so
+`xs` is the *tighter* of the two — the opposite of how the rest of the scale reads. Nothing today is
+wrong because of it, and renaming would touch every program, so it stands unresolved rather than
+decided; check the token values before reaching for either.
+
 ## Comment convention
 
 Deck-wide — applies to every app.

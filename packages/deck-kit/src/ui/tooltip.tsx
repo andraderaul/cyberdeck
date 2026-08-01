@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '../utils/cn'
+import { TOUCH_TARGET_OVERLAY } from './touch-target'
 
 interface Props {
   id: string
@@ -47,7 +48,13 @@ export default function Tooltip({ id, content }: Props) {
         aria-label="more info"
         aria-expanded={visible}
         aria-describedby={id}
-        className="font-mono text-xs text-fg-subtle hover:text-accent transition-colors cursor-help p-0 bg-transparent border-none leading-none"
+        // The target is an overlay rather than padding because this sits in a Slider's label row: a
+        // 44px box would triple that row's height, and with three sliders on a phone it would push
+        // the params the labels name off the screen. Its neighbours are inert text either side.
+        className={cn(
+          'font-mono text-xs text-fg-subtle hover:text-accent transition-colors cursor-help p-0 bg-transparent border-none leading-none',
+          TOUCH_TARGET_OVERLAY,
+        )}
         onMouseEnter={() => setVisible(true)}
         onMouseLeave={() => setVisible(false)}
         onFocus={() => {

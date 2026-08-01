@@ -62,6 +62,33 @@ function ContextConsumer() {
   )
 }
 
+// The dismiss glyph is ~7x13px on its own. The negative margins are what let it reach 44 without
+// taking a one-line toast from ~37px to ~60px.
+describe('the dismiss target', () => {
+  it('reaches 44px square and overflows the padding box to do it', () => {
+    render(<Toast message="gone wrong" variant="error" onDismiss={() => {}} />)
+    const classes = new Set(screen.getByRole('button', { name: 'dismiss' }).className.split(/\s+/))
+
+    expect(classes).toContain('min-h-[44px]')
+    expect(classes).toContain('min-w-[44px]')
+    expect(classes).toContain('-my-2xs')
+  })
+})
+
+// The variant is already carried by the message, so the glyph is decoration — and inside a
+// `role="alert"` an unhidden one is the first thing announced.
+describe('the variant glyph', () => {
+  it('is hidden from the alert it decorates', () => {
+    render(<Toast message="gone wrong" variant="error" onDismiss={() => {}} />)
+    expect(screen.getByText('✕')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('leaves the message itself readable', () => {
+    render(<Toast message="gone wrong" variant="error" onDismiss={() => {}} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('gone wrong')
+  })
+})
+
 describe('ToastProvider context', () => {
   it('provides error, info, and warn functions through context', () => {
     render(

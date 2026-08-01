@@ -33,8 +33,13 @@ export default function Modal({
       className="fixed inset-0 z-50 flex items-center justify-center p-md bg-modal-overlay backdrop-blur-sm"
     >
       {closeable && (
+        // A full-screen button with no text announces itself as "button" and nothing else. It is
+        // scenery for the pointer only — the keyboard closes with Escape, via useDialog — so it is
+        // hidden from the accessibility tree rather than given a name that would duplicate the real
+        // close control. Safe alongside `aria-hidden` because `tabIndex={-1}` keeps it untabbable.
         <button
           type="button"
+          aria-hidden="true"
           className="absolute inset-0 w-full h-full cursor-default bg-transparent border-none"
           onClick={onClose}
           tabIndex={-1}
@@ -59,7 +64,10 @@ export default function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="text-fg-subtle text-sm cursor-pointer bg-transparent border-none"
+              // The glyph is punctuation, not a word — a screen reader reading it out says nothing
+              // useful about what the control does.
+              aria-label="close"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-subtle text-sm cursor-pointer bg-transparent border-none"
             >
               ✕
             </button>

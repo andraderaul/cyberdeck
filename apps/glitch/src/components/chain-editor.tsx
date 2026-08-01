@@ -335,7 +335,7 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
               {/* Duplicate and remove act on the focused Link, so they live with its params rather
                   than on every chip — six chips each carrying two icon buttons would bury the
                   Chain the row exists to show. */}
-              <div className="ml-auto flex items-center gap-3xs">
+              <div className="ml-auto flex items-center gap-2xs">
                 <button
                   type="button"
                   onClick={() => onDuplicate(focusedLink.id)}
@@ -349,7 +349,7 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
                       ? `duplicate ${EFFECT_LABELS[focusedLink.type]} — unavailable, a second ${EFFECT_LABELS[focusedLink.type]} with the same settings changes nothing`
                       : `duplicate ${EFFECT_LABELS[focusedLink.type]}`
                   }
-                  className="text-fg-muted hover:text-fg disabled:opacity-40 disabled:hover:text-fg-muted px-2xs rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning"
+                  className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-muted hover:text-fg disabled:opacity-40 disabled:hover:text-fg-muted rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning"
                 >
                   <span aria-hidden="true">⧉</span>
                 </button>
@@ -357,7 +357,7 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
                   type="button"
                   onClick={() => onRemove(focusedLink.id)}
                   aria-label={`remove ${EFFECT_LABELS[focusedLink.type]}`}
-                  className="text-fg-muted hover:text-danger px-2xs rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning"
+                  className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-muted hover:text-danger rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning"
                 >
                   <span aria-hidden="true">✕</span>
                 </button>

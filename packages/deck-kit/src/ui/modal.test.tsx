@@ -114,8 +114,56 @@ describe('Modal', () => {
   describe('close button contrast', () => {
     it('stays off --fg-dim, which sits below the contrast floor', () => {
       renderModal()
-      const closeBtn = screen.getByRole('button', { name: '✕' })
+      const closeBtn = screen.getByRole('button', { name: 'close' })
       expect(closeBtn.className.split(/\s+/)).not.toContain('text-fg-dim')
+    })
+  })
+
+  describe('close button reach', () => {
+    // `✕` is punctuation: a screen reader announcing it says nothing about what the control does.
+    it('is named in words rather than by its glyph', () => {
+      renderModal()
+      expect(screen.getByRole('button', { name: 'close' })).toHaveTextContent('✕')
+    })
+
+    it('holds the 44px target the glyph alone would not fill', () => {
+      renderModal()
+      const classes = new Set(screen.getByRole('button', { name: 'close' }).className.split(/\s+/))
+      expect(classes).toContain('min-h-[44px]')
+      expect(classes).toContain('min-w-[44px]')
+    })
+  })
+
+  describe('the dismiss backdrop', () => {
+    // It has no text, so unhidden it reaches a screen reader as a bare "button" covering the whole
+    // viewport. The keyboard path is Escape (useDialog), so hiding it costs nothing.
+    it('is scenery for the pointer, not an unnamed button in the tree', () => {
+      renderModal()
+      const backdrop = screen
+        .getByRole('presentation')
+        .querySelector('button[aria-hidden="true"]') as HTMLElement
+
+      expect(backdrop).not.toBeNull()
+      expect(backdrop).toHaveAttribute('tabindex', '-1')
+    })
+
+    it('still closes on a click', () => {
+      const onClose = vi.fn()
+      renderModal({ onClose })
+      const backdrop = screen
+        .getByRole('presentation')
+        .querySelector('button[aria-hidden="true"]') as HTMLElement
+
+      fireEvent.click(backdrop)
+
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
+
+    // Hidden and untabbable, so it must never be what the focus trap hands the user.
+    it('is not one of the dialog’s tabbables', () => {
+      renderModal()
+      const tabbables = getTabbables(screen.getByRole('dialog'))
+      expect(tabbables.every((el) => el.getAttribute('aria-hidden') !== 'true')).toBe(true)
     })
   })
 

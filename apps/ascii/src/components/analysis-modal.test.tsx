@@ -64,14 +64,14 @@ describe('AnalysisModal', () => {
     const onClose = vi.fn()
     render(<AnalysisModal state={SUCCESS_STATE} onClose={onClose} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /✕/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'close' }))
     expect(onClose).toHaveBeenCalledOnce()
   })
 
   it('does not show a close button while loading', () => {
     render(<AnalysisModal state={{ status: 'loading' }} onClose={vi.fn()} />)
 
-    expect(screen.queryByRole('button', { name: /✕/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'close' })).not.toBeInTheDocument()
   })
 
   it('keeps the loading helper off --fg-dim, which sits below the contrast floor', () => {

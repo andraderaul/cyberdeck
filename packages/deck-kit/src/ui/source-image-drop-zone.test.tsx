@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../utils/load-image-file', () => ({
@@ -23,6 +24,42 @@ const baseProps = {
 beforeEach(() => vi.clearAllMocks())
 
 describe('SourceImageDropZone', () => {
+  // This is the whole Source Image entry point of the deck (ADR 0015). A `display: none` input is
+  // neither focusable nor in the accessibility tree, and the label around it never takes focus
+  // either, so hiding it that way left keyboard users with webcam as the only way in.
+  describe('keyboard reach', () => {
+    it('puts the file input in the tab order, carrying the zone’s words as its name', async () => {
+      const user = userEvent.setup()
+      render(<SourceImageDropZone {...baseProps} />)
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+
+      await user.tab()
+
+      expect(fileInput).toHaveFocus()
+      expect(fileInput).toHaveAccessibleName(/upload/i)
+    })
+
+    // The one that actually guards the regression. happy-dom does not model focusability through
+    // `display: none`, so the tab test above passes against the broken markup too — only the class
+    // says which of the two hiding techniques is in force.
+    it('never hides the input from the accessibility tree', () => {
+      render(<SourceImageDropZone {...baseProps} />)
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+      const classes = new Set(fileInput.className.split(/\s+/))
+
+      // `sr-only` clips it to a pixel and leaves it reachable; `hidden` removes it outright.
+      expect(classes).toContain('sr-only')
+      expect(classes).not.toContain('hidden')
+    })
+
+    // Focus lands on an input clipped to one pixel, so the zone itself has to show it.
+    it('shows focus on the zone rather than the clipped input', () => {
+      render(<SourceImageDropZone {...baseProps} />)
+      const label = document.querySelector('label') as HTMLElement
+      expect(label.className).toContain('has-[:focus-visible]:border-accent')
+    })
+  })
+
   it('links label to file input via matching htmlFor and id', () => {
     render(<SourceImageDropZone {...baseProps} />)
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement

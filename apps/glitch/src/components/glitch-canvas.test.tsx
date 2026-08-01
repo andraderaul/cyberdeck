@@ -191,6 +191,41 @@ describe('GlitchCanvas', () => {
     expect(screen.queryByTestId('rec-indicator')).toBeNull()
   })
 
+  // The overlay stands on the user's artwork (ADR 0013), so the targets reach 44px through a
+  // height overlay while the chips keep the size they always drew at. Width is real, because the
+  // icon-only ones are ~27px across on touch and no height overlay fixes that.
+  describe('the overlay touch targets', () => {
+    it('gives clear a 44px target without growing the chip', () => {
+      renderCanvas({ sourceImage: { naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement })
+      const classes = new Set(
+        screen.getByRole('button', { name: 'clear source' }).className.split(/\s+/),
+      )
+
+      expect(classes).toContain('after:h-[44px]')
+      expect(classes).toContain('min-w-[44px]')
+      expect(classes).toContain('py-2xs')
+    })
+
+    // A height overlay never grows sideways, which is what keeps two neighbours in this row from
+    // claiming the same pixels across the gap between them.
+    it('never widens a target past the chip it sits on', () => {
+      renderCanvas({ sourceImage: { naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement })
+      const classes = new Set(
+        screen.getByRole('button', { name: 'clear source' }).className.split(/\s+/),
+      )
+
+      expect(classes).toContain('after:inset-x-0')
+    })
+
+    // The badge wears the shared chrome but is not a control, so it must not grow a target either.
+    it('leaves the LIVE badge without a target', () => {
+      renderCanvas({ liveSource: liveSource() })
+      const badge = screen.getByText('LIVE')
+
+      expect(badge.className).not.toContain('after:h-[44px]')
+    })
+  })
+
   describe('mirror toggle (ADR 0016)', () => {
     it('offers the mirror toggle only for a Live Source', () => {
       const { unmount } = renderCanvas({ liveSource: liveSource(), onMirrorToggle: vi.fn() })

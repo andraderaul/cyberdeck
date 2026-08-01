@@ -88,4 +88,16 @@ describe('Tooltip', () => {
     const panel = document.getElementById('tooltip-test')
     expect(panel).toHaveAttribute('aria-hidden', 'true')
   })
+
+  // ~7x11px as a glyph. The target is an overlay rather than padding because this sits in a Slider's
+  // label row, where a real 44px box would triple the row's height.
+  it('reaches a 44px target without growing the label row', () => {
+    render(<Tooltip id="tooltip-test" content="what it does" />)
+    const classes = new Set(
+      screen.getByRole('button', { name: 'more info' }).className.split(/\s+/),
+    )
+
+    expect(classes).toContain('after:h-[44px]')
+    expect(classes).toContain('after:w-[44px]')
+  })
 })
