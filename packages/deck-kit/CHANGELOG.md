@@ -1,5 +1,56 @@
 # @cyberdeck/deck-kit
 
+## 0.5.0
+
+### Minor Changes
+
+- f79c3fe: Every control in the kit now answers a 44x44 pointer target. The modal's close button, the toast's
+  dismiss and the tooltip's info trigger were all icon-only with no padding — the tooltip's was about
+  7x11px, roughly a twenty-fifth of the area it should offer — and the Control Strip's tabs sat at
+  ~28px despite being bottom-anchored, squarely in the thumb zone.
+
+  The modal's close button also gains a spoken name: `✕` is punctuation, and a screen reader reading
+  it out says nothing about what the control does.
+
+  Where a control cannot pay for the target in layout, it takes it as an invisible overlay instead:
+  the tooltip sits in a Slider's label row, where a real 44px box would triple the row's height and
+  push the params it labels off a phone.
+
+  `TOUCH_TARGET_HEIGHT` and `TOUCH_TARGET_ICON` are new exports for the programs that need the same
+  bargain over a canvas. The first buys height without ever growing sideways, so two neighbouring
+  controls in a row cannot end up claiming the same pixels — which is the failure a centred overlay
+  would introduce, and the reason that variant stays private to the kit. The second adds the real
+  width the first tells you to pair with, for a control that also draws narrower than the target.
+
+  Both open with `relative` to anchor the overlay, so a control that positions _itself_ has to name
+  its own `absolute` after the constant: `cn` resolves a position conflict in favour of the last one
+  named, and putting it first drops the control back into the flow.
+
+### Patch Changes
+
+- f79c3fe: Three accessibility fixes at the level where a control is either operable or it is not.
+
+  The Source Image drop zone hid its file input with `display: none`, which is neither focusable nor
+  in the accessibility tree — and a label cannot take focus in its place. Since the drop zone is the
+  deck's single Source Image entry point, that left keyboard and screen-reader users with the webcam
+  as the only way in. The input is now visually hidden but reachable, and the zone shows the focus it
+  receives.
+
+  `ToggleGroup` spelled its selected option in colour and border alone, so a screen reader heard three
+  buttons and no answer; each option now reports whether it is the one in force. The group also takes
+  its name from a legend rather than an `aria-label`, which a fieldset is spec'd to do and screen
+  readers honour more consistently.
+
+- f79c3fe: The Control Strip's tabs now behave the way `role="tab"` promises: the Strip is a single tab stop,
+  the arrows move along the row, Home and End jump to either end, and Enter or Space selects. Moving
+  through the tabs deliberately does not swap the panel underneath — a tablist that selected on
+  arrival would change what you are looking at while you were only passing through.
+
+  Two things also stop talking over the interface. A toast's variant glyph is decoration, but it was
+  the first thing its alert announced, so every error opened with "multiplication x". And the modal's
+  click-away backdrop reached a screen reader as a full-viewport button with no name at all; it is
+  pointer scenery now, with Escape still closing from the keyboard.
+
 ## 0.4.0
 
 ### Minor Changes
