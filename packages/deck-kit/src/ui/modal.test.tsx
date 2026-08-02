@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { ICON_GLYPH_SIZE } from './icon-glyph'
 import Modal from './modal'
 
 const TABBABLE =
@@ -131,6 +132,15 @@ describe('Modal', () => {
       const classes = new Set(screen.getByRole('button', { name: 'close' }).className.split(/\s+/))
       expect(classes).toContain('min-h-[44px]')
       expect(classes).toContain('min-w-[44px]')
+    })
+
+    // Icon-only: the target holds the press, and the size is what makes it read as pressable.
+    it('draws its glyph at the deck icon size', () => {
+      renderModal()
+      const closeBtn = screen.getByRole('button', { name: 'close' })
+      expect(closeBtn.className.split(/\s+/)).toEqual(
+        expect.arrayContaining(ICON_GLYPH_SIZE.split(' ')),
+      )
     })
   })
 

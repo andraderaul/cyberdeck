@@ -9,6 +9,7 @@ declare const preset: {
     extend: {
       spacing: Record<string, string>
       borderRadius: Record<string, string>
+      fontSize: Record<string, string>
     }
   }
 }

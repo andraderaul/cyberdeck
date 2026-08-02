@@ -1,5 +1,6 @@
 import type { ToastVariant } from '../hooks/use-toast'
 import { cn } from '../utils/cn'
+import { ICON_GLYPH_SIZE } from './icon-glyph'
 
 interface Props {
   message: string
@@ -57,7 +58,10 @@ export default function Toast({ message, variant, onDismiss }: Props) {
         // The negative margins are load-bearing: a 44px button inside `p-sm` would take a one-line
         // toast from ~37px to ~60px. They let it overflow the padding box instead, so the target is
         // the full 44 square and the toast grows by a few pixels.
-        className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center -my-2xs -mr-2xs text-fg-subtle text-xs cursor-pointer bg-transparent border-none"
+        className={cn(
+          'flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center -my-2xs -mr-2xs text-fg-subtle cursor-pointer bg-transparent border-none',
+          ICON_GLYPH_SIZE,
+        )}
       >
         ×
       </button>

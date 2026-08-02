@@ -1,6 +1,7 @@
 import { type ReactNode, useRef } from 'react'
 import { useDialog } from '../hooks/use-dialog'
 import { cn } from '../utils/cn'
+import { ICON_GLYPH_SIZE } from './icon-glyph'
 
 const NOOP = () => {}
 
@@ -67,7 +68,10 @@ export default function Modal({
               // The glyph is punctuation, not a word — a screen reader reading it out says nothing
               // useful about what the control does.
               aria-label="close"
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-subtle text-sm cursor-pointer bg-transparent border-none"
+              className={cn(
+                'flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-subtle cursor-pointer bg-transparent border-none',
+                ICON_GLYPH_SIZE,
+              )}
             >
               ✕
             </button>

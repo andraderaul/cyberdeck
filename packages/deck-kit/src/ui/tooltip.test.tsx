@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { ICON_GLYPH_SIZE } from './icon-glyph'
 import Tooltip from './tooltip'
 import { TOUCH_TARGET_OVERLAY } from './touch-target'
 
@@ -90,15 +91,26 @@ describe('Tooltip', () => {
     expect(panel).toHaveAttribute('aria-hidden', 'true')
   })
 
-  // ~7x11px as a glyph. The target is an overlay rather than padding because this sits in a Slider's
-  // label row, where a real 44px box would triple the row's height. Asserted against the constant
-  // rather than the classes it expands to, so respelling a target cannot red this on its own.
+  // The target is an overlay rather than padding because this sits in a Slider's label row, where a
+  // real 44px box would triple the row's height. Asserted against the constant rather than the
+  // classes it expands to, so respelling a target cannot red this on its own.
   it('reaches a 44px target without growing the label row', () => {
     render(<Tooltip id="tooltip-test" content="what it does" />)
     const trigger = screen.getByRole('button', { name: 'more info' })
 
     expect(trigger.className.split(/\s+/)).toEqual(
       expect.arrayContaining(TOUCH_TARGET_OVERLAY.split(' ')),
+    )
+  })
+
+  // Icon-only, and the row ICON_GLYPH_SIZE's line-box pinning is costed against — three of these
+  // stack on a phone.
+  it('draws its glyph at the deck icon size, line box pinned', () => {
+    render(<Tooltip id="tooltip-test" content="what it does" />)
+    const trigger = screen.getByRole('button', { name: 'more info' })
+
+    expect(trigger.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(ICON_GLYPH_SIZE.split(' ')),
     )
   })
 })

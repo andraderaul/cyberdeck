@@ -2,6 +2,11 @@
 // min-w-[44px]` and need nothing from this file — these two are for the controls that cannot pay for
 // it in layout.
 //
+// This file sizes the box; `icon-glyph.ts` sizes the mark inside it. A control can satisfy
+// everything here and still draw an 11px glyph adrift in the middle of the target, so an icon-only
+// one wants `ICON_GLYPH_SIZE` as well — except over the canvas, for the reason the next paragraph
+// gives.
+//
 // Two places cannot. Over the canvas the backdrop is the user's artwork (ADR 0013), and in
 // SPRAWL//Atlas it is the piece itself (ADR 0021), so chrome that grew 40% taller to be tappable
 // would be charging the work for its own controls. In a dense label row — a Slider's name plus its
