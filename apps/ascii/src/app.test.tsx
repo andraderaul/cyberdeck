@@ -161,6 +161,16 @@ describe('App header buttons', () => {
     expect(aiBtn.className).toContain('min-h-[44px]')
   })
 
+  // The mark is decoration and the words are the control, so the name has to be the words alone —
+  // unhidden, the glyph joins it and the button opens with a character name nobody asked for.
+  it('names itself in words, with the mark left out of the name', () => {
+    render(<App />)
+    const aiBtn = screen.getByRole('button', { name: 'configure ai' })
+
+    expect(aiBtn).toHaveTextContent('◇')
+    expect(screen.getByText('◇')).toHaveAttribute('aria-hidden', 'true')
+  })
+
   it('configure ai button has border-accent at rest when aiConfig is null', () => {
     mockUseAIConfig.mockReturnValue({ config: null, save: vi.fn(), remove: vi.fn() })
     render(<App />)

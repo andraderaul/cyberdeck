@@ -161,8 +161,15 @@ export default function App() {
             variant={aiConfig ? 'accent-text' : 'accent-fill'}
             onClick={() => setActiveModal({ kind: 'apiKey' })}
             title="Configure AI key"
+            // The mark sits in its own element to be hidden, which makes it a flex item of the
+            // button's own row — and flex drops the leading space of the text item beside it. The
+            // gap is what puts that space back.
+            className="gap-2xs"
           >
-            ⚿ {aiConfig ? 'ai configured' : 'configure ai'}
+            {/* Hollow to AI Analyze's filled ◈ — the deck's two AI surfaces read as one family.
+                Unhidden it would join the accessible name, which is what the old ⚿ did: a screen
+                reader opened this button with "squared key". */}
+            <span aria-hidden="true">◇</span> {aiConfig ? 'ai configured' : 'configure ai'}
           </HeaderButton>
           {/* Deck chrome rather than the artefact's: it changes what the program is drawn in, where
               a Color Mode changes what the conversion paints. They are neighbours here, so the
