@@ -92,4 +92,19 @@ describe('Chip', () => {
     )
     expect(screen.getByRole('button').className).toContain('min-h-[44px]')
   })
+
+  // The half that was missing: a two-character label draws ~31px wide, and only the height was ever
+  // held. `1×`, `VHS` and the add-effect `+` were all short enough to sit under the target.
+  it('holds the target on the axis a short label leaves short', () => {
+    render(
+      <Chip selected={false} onClick={() => {}}>
+        1×
+      </Chip>,
+    )
+    const classes = new Set(screen.getByRole('button').className.split(/\s+/))
+
+    expect(classes).toContain('min-w-[44px]')
+    // Without this the stretched width all falls to one side of a label that no longer fills it.
+    expect(classes).toContain('justify-center')
+  })
 })
