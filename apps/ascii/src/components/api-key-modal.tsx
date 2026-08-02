@@ -41,7 +41,11 @@ export default function ApiKeyModal({ current, onSave, onRemove, onClose }: Prop
   return (
     <Modal
       onClose={onClose}
-      title={<span className="text-accent font-bold tracking-wide text-sm">⚿ AI CONFIG</span>}
+      title={
+        <span className="text-accent font-bold tracking-wide text-sm">
+          <span aria-hidden="true">◇</span> AI CONFIG
+        </span>
+      }
       ariaLabel="AI configuration"
       variant="cyber"
     >
