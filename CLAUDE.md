@@ -113,6 +113,27 @@ One wart to know about rather than work around: `--gap-xs` is **4px** and `--gap
 wrong because of it, and renaming would touch every program, so it stands unresolved rather than
 decided; check the token values before reaching for either.
 
+## Size an icon-only glyph with `ICON_GLYPH`
+
+Deck-wide. A control whose whole visible content is a glyph takes `ICON_GLYPH` from the kit
+(`deck-kit/ui`) — 18px with the line box pinned. A 44x44 target holds the press, but an 11px mark
+adrift in that box still doesn't *read* as pressable, and the two came apart the moment the targets
+landed.
+
+The condition is **icon-only**. A control with a visible label already has the word carrying it, so
+`✕ clear` and `◈ analyze` keep the text size they inherit; growing the punctuation beside a word
+only unbalances the line. Decorative glyphs aren't controls and don't take it either.
+
+**Never on a control over the canvas.** There the backdrop is the user's artwork (ADR 0013) or the
+piece itself (ADR 0021) — that chrome stays at its drawn size and buys its 44px as an overlay
+(`ui/touch-target.ts`) precisely so the picture isn't charged for its own controls. A bigger glyph
+grows the chrome, which is the same charge by another route.
+
+Don't spell a `text-*` step at the callsite instead: the scale guard can't cover `text-` (it's
+`fontSize` ∪ `colors` ∪ `text-center` at once — `theme/audit.ts`), so a mistyped font step renders
+nothing and no guard objects. The constant is the one place that names a step, and a test pins it to
+the preset.
+
 ## Comment convention
 
 Deck-wide — applies to every app.

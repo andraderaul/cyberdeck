@@ -1,6 +1,7 @@
 import { render, renderHook, screen } from '@testing-library/react'
 import { useContext } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { ICON_GLYPH } from './icon-glyph'
 import Toast from './toast'
 import {
   ToastContext,
@@ -72,6 +73,15 @@ describe('the dismiss target', () => {
     expect(classes).toContain('min-h-[44px]')
     expect(classes).toContain('min-w-[44px]')
     expect(classes).toContain('-my-2xs')
+  })
+
+  // Icon-only, so it takes the deck's icon size. The negative margins above are unaffected: the box
+  // was already 44 and an 18px glyph sits inside it.
+  it('draws its glyph at the deck icon size', () => {
+    render(<Toast message="gone wrong" variant="error" onDismiss={() => {}} />)
+    const dismiss = screen.getByRole('button', { name: 'dismiss' })
+
+    expect(dismiss.className.split(/\s+/)).toEqual(expect.arrayContaining(ICON_GLYPH.split(' ')))
   })
 })
 

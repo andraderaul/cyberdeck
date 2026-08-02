@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '../utils/cn'
+import { ICON_GLYPH } from './icon-glyph'
 import { TOUCH_TARGET_OVERLAY } from './touch-target'
 
 interface Props {
@@ -52,7 +53,8 @@ export default function Tooltip({ id, content }: Props) {
         // 44px box would triple that row's height, and with three sliders on a phone it would push
         // the params the labels name off the screen. Its neighbours are inert text either side.
         className={cn(
-          'font-mono text-xs text-fg-subtle hover:text-accent transition-colors cursor-help p-0 bg-transparent border-none leading-none',
+          'font-mono text-fg-subtle hover:text-accent transition-colors cursor-help p-0 bg-transparent border-none',
+          ICON_GLYPH,
           TOUCH_TARGET_OVERLAY,
         )}
         onMouseEnter={() => setVisible(true)}

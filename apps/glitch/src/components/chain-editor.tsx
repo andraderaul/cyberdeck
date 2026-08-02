@@ -1,4 +1,4 @@
-import { Chip, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
+import { Chip, ICON_GLYPH, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import { useRef, useState } from 'react'
 import {
@@ -350,7 +350,10 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
                       ? `duplicate ${EFFECT_LABELS[focusedLink.type]} — unavailable, a second ${EFFECT_LABELS[focusedLink.type]} with the same settings changes nothing`
                       : `duplicate ${EFFECT_LABELS[focusedLink.type]}`
                   }
-                  className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-muted hover:text-fg disabled:opacity-40 disabled:hover:text-fg-muted rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning"
+                  className={cn(
+                    'inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-muted hover:text-fg disabled:opacity-40 disabled:hover:text-fg-muted rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning',
+                    ICON_GLYPH,
+                  )}
                 >
                   <span aria-hidden="true">⧉</span>
                 </button>
@@ -358,7 +361,10 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
                   type="button"
                   onClick={() => onRemove(focusedLink.id)}
                   aria-label={`remove ${EFFECT_LABELS[focusedLink.type]}`}
-                  className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-muted hover:text-danger rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning"
+                  className={cn(
+                    'inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-muted hover:text-danger rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning',
+                    ICON_GLYPH,
+                  )}
                 >
                   <span aria-hidden="true">✕</span>
                 </button>
@@ -491,7 +497,10 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
             selected={focus.kind === 'palette'}
             onClick={() => setFocus({ kind: 'palette' })}
             aria-label="add effect"
-            className="shrink-0 w-[60px] justify-center sm:w-auto sm:justify-start"
+            className={cn(
+              'shrink-0 w-[60px] justify-center sm:w-auto sm:justify-start',
+              ICON_GLYPH,
+            )}
           >
             +
           </Chip>

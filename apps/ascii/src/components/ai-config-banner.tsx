@@ -1,4 +1,5 @@
-import { Button } from '@cyberdeck/deck-kit/ui'
+import { Button, ICON_GLYPH } from '@cyberdeck/deck-kit/ui'
+import { cn } from '@cyberdeck/deck-kit/utils'
 import { useState } from 'react'
 
 const SESSION_KEY = 'ai-config-banner-dismissed'
@@ -53,7 +54,10 @@ export default function AiConfigBanner({ onConfigure }: Props) {
           type="button"
           aria-label="dismiss"
           onClick={handleDismiss}
-          className="text-fg-subtle hover:text-fg-muted font-mono text-sm leading-none px-xs min-h-[44px] min-w-[44px] flex items-center justify-center"
+          className={cn(
+            'text-fg-subtle hover:text-fg-muted font-mono px-xs min-h-[44px] min-w-[44px] flex items-center justify-center',
+            ICON_GLYPH,
+          )}
         >
           ×
         </button>
