@@ -1,4 +1,4 @@
-import { Chip, ICON_GLYPH, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
+import { Chip, ICON_GLYPH_SIZE, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import { useRef, useState } from 'react'
 import {
@@ -352,7 +352,7 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
                   }
                   className={cn(
                     'inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-muted hover:text-fg disabled:opacity-40 disabled:hover:text-fg-muted rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning',
-                    ICON_GLYPH,
+                    ICON_GLYPH_SIZE,
                   )}
                 >
                   <span aria-hidden="true">⧉</span>
@@ -363,7 +363,7 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
                   aria-label={`remove ${EFFECT_LABELS[focusedLink.type]}`}
                   className={cn(
                     'inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-muted hover:text-danger rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning',
-                    ICON_GLYPH,
+                    ICON_GLYPH_SIZE,
                   )}
                 >
                   <span aria-hidden="true">✕</span>
@@ -499,7 +499,7 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
             aria-label="add effect"
             className={cn(
               'shrink-0 w-[60px] justify-center sm:w-auto sm:justify-start',
-              ICON_GLYPH,
+              ICON_GLYPH_SIZE,
             )}
           >
             +

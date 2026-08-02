@@ -1,6 +1,6 @@
 import type { ToastVariant } from '../hooks/use-toast'
 import { cn } from '../utils/cn'
-import { ICON_GLYPH } from './icon-glyph'
+import { ICON_GLYPH_SIZE } from './icon-glyph'
 
 interface Props {
   message: string
@@ -60,7 +60,7 @@ export default function Toast({ message, variant, onDismiss }: Props) {
         // the full 44 square and the toast grows by a few pixels.
         className={cn(
           'flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center -my-2xs -mr-2xs text-fg-subtle cursor-pointer bg-transparent border-none',
-          ICON_GLYPH,
+          ICON_GLYPH_SIZE,
         )}
       >
         ×

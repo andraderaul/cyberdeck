@@ -3,16 +3,16 @@
 // step the one class of typo nothing in the toolchain catches — Tailwind generates nothing, tsc and
 // Biome see a valid string, and the glyph renders at whatever it inherited.
 //
-// ICON_GLYPH is the reason that gap is affordable: it is the only place in the deck that names a
+// ICON_GLYPH_SIZE is the reason that gap is affordable: it is the only place in the deck that names a
 // font step for a glyph, so pinning this one string to the preset closes the hole for every caller.
 
 import { describe, expect, it } from 'vitest'
 import preset from '../tailwind-preset.js'
-import { ICON_GLYPH } from './icon-glyph'
+import { ICON_GLYPH_SIZE } from './icon-glyph'
 
-describe('ICON_GLYPH', () => {
+describe('ICON_GLYPH_SIZE', () => {
   it('names a font step the preset actually defines', () => {
-    const step = ICON_GLYPH.split(/\s+/)
+    const step = ICON_GLYPH_SIZE.split(/\s+/)
       .find((cls) => cls.startsWith('text-'))
       ?.slice('text-'.length)
 
@@ -21,6 +21,6 @@ describe('ICON_GLYPH', () => {
   })
 
   it('pins the line box to the font', () => {
-    expect(ICON_GLYPH.split(/\s+/)).toContain('leading-none')
+    expect(ICON_GLYPH_SIZE.split(/\s+/)).toContain('leading-none')
   })
 })

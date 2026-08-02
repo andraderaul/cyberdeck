@@ -100,6 +100,7 @@ Biome. Each scale is its own set and none of them extrapolates:
 | `spacing` (`p-`, `m-`, `gap-`, `inset-`, …) | `2xs · xs · sm · md · lg · xl · 2xl · 3xl` |
 | `sp-*`, section macro spacing, under those same utilities | `sp-xs · sp-sm · sp-md · sp-lg · sp-xl · sp-2xl` |
 | `borderRadius` (`rounded-`) | `none · xs · sm · md · pill` |
+| `fontSize` (`text-`) — **unguarded**, see below | `xs · sm · base · md · lg · xl · 2xl` |
 
 So there is no `3xs`, no `4xl`, and no `rounded-lg` from this vocabulary. Note the two spacing rows
 do **not** share ends: `gap-3xl` is real and `p-sp-3xl` is not, and sharing the utilities is exactly
@@ -108,14 +109,23 @@ steps (`gap-4`, `p-0.5`) and arbitrary values (`min-h-[44px]`) stay valid — th
 than replaces. The kit's scale guard fails the build the same way the hue guard does, with the class,
 the file and the line.
 
+The `fontSize` row is the exception, and it's the row to be careful in: the guard **cannot** cover
+`text-`, because that one prefix is three namespaces at once — `fontSize` ∪ `colors` ∪
+`text-center`/`text-wrap`/… — so no deny list over it is decidable (`theme/audit.ts`). A mistyped
+font step is therefore the one scale typo nothing objects to. Two traps ride along: `md` is 18px and
+sits *between* `base` and `lg`, which is not where Tailwind puts it; and because the preset extends,
+the steps it doesn't name stay Tailwind's own, so `text-3xl` resolves to 30px and silently leaves the
+deck scale. Where a size repeats, prefer a named constant over a step spelled at each callsite —
+`ICON_GLYPH_SIZE` below is the worked example, and a test pins the step it names to the preset.
+
 One wart to know about rather than work around: `--gap-xs` is **4px** and `--gap-2xs` is **6px**, so
 `xs` is the *tighter* of the two — the opposite of how the rest of the scale reads. Nothing today is
 wrong because of it, and renaming would touch every program, so it stands unresolved rather than
 decided; check the token values before reaching for either.
 
-## Size an icon-only glyph with `ICON_GLYPH`
+## Size an icon-only glyph with `ICON_GLYPH_SIZE`
 
-Deck-wide. A control whose whole visible content is a glyph takes `ICON_GLYPH` from the kit
+Deck-wide. A control whose whole visible content is a glyph takes `ICON_GLYPH_SIZE` from the kit
 (`deck-kit/ui`) — 18px with the line box pinned. A 44x44 target holds the press, but an 11px mark
 adrift in that box still doesn't *read* as pressable, and the two came apart the moment the targets
 landed.
@@ -129,10 +139,8 @@ piece itself (ADR 0021) — that chrome stays at its drawn size and buys its 44p
 (`ui/touch-target.ts`) precisely so the picture isn't charged for its own controls. A bigger glyph
 grows the chrome, which is the same charge by another route.
 
-Don't spell a `text-*` step at the callsite instead: the scale guard can't cover `text-` (it's
-`fontSize` ∪ `colors` ∪ `text-center` at once — `theme/audit.ts`), so a mistyped font step renders
-nothing and no guard objects. The constant is the one place that names a step, and a test pins it to
-the preset.
+Take the constant rather than spelling `text-md` at the callsite — the reason is the unguarded
+`fontSize` row above.
 
 ## Comment convention
 

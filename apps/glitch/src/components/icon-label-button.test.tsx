@@ -1,4 +1,4 @@
-import { ICON_GLYPH } from '@cyberdeck/deck-kit/ui'
+import { ICON_GLYPH_SIZE } from '@cyberdeck/deck-kit/ui'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import IconLabelButton from './icon-label-button'
@@ -32,7 +32,7 @@ describe('IconLabelButton', () => {
     render(<IconLabelButton variant="secondary" glyph="⚄" label="randomize" />)
     const glyph = screen.getByText('⚄')
 
-    expect(glyph.className.split(/\s+/)).toEqual(expect.arrayContaining(ICON_GLYPH.split(' ')))
+    expect(glyph.className.split(/\s+/)).toEqual(expect.arrayContaining(ICON_GLYPH_SIZE.split(' ')))
     expect(glyph).toHaveClass('sm:text-sm')
   })
 })

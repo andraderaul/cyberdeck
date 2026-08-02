@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { ICON_GLYPH } from './icon-glyph'
+import { ICON_GLYPH_SIZE } from './icon-glyph'
 import Modal from './modal'
 
 const TABBABLE =
@@ -138,7 +138,9 @@ describe('Modal', () => {
     it('draws its glyph at the deck icon size', () => {
       renderModal()
       const closeBtn = screen.getByRole('button', { name: 'close' })
-      expect(closeBtn.className.split(/\s+/)).toEqual(expect.arrayContaining(ICON_GLYPH.split(' ')))
+      expect(closeBtn.className.split(/\s+/)).toEqual(
+        expect.arrayContaining(ICON_GLYPH_SIZE.split(' ')),
+      )
     })
   })
 

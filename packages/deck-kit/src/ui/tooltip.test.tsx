@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { ICON_GLYPH } from './icon-glyph'
+import { ICON_GLYPH_SIZE } from './icon-glyph'
 import Tooltip from './tooltip'
 import { TOUCH_TARGET_OVERLAY } from './touch-target'
 
@@ -103,12 +103,14 @@ describe('Tooltip', () => {
     )
   })
 
-  // Icon-only, and the row ICON_GLYPH's line-box pinning is costed against — three of these stack
-  // on a phone.
+  // Icon-only, and the row ICON_GLYPH_SIZE's line-box pinning is costed against — three of these
+  // stack on a phone.
   it('draws its glyph at the deck icon size, line box pinned', () => {
     render(<Tooltip id="tooltip-test" content="what it does" />)
     const trigger = screen.getByRole('button', { name: 'more info' })
 
-    expect(trigger.className.split(/\s+/)).toEqual(expect.arrayContaining(ICON_GLYPH.split(' ')))
+    expect(trigger.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(ICON_GLYPH_SIZE.split(' ')),
+    )
   })
 })

@@ -1,7 +1,7 @@
 import { render, renderHook, screen } from '@testing-library/react'
 import { useContext } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { ICON_GLYPH } from './icon-glyph'
+import { ICON_GLYPH_SIZE } from './icon-glyph'
 import Toast from './toast'
 import {
   ToastContext,
@@ -81,7 +81,9 @@ describe('the dismiss target', () => {
     render(<Toast message="gone wrong" variant="error" onDismiss={() => {}} />)
     const dismiss = screen.getByRole('button', { name: 'dismiss' })
 
-    expect(dismiss.className.split(/\s+/)).toEqual(expect.arrayContaining(ICON_GLYPH.split(' ')))
+    expect(dismiss.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(ICON_GLYPH_SIZE.split(' ')),
+    )
   })
 })
 

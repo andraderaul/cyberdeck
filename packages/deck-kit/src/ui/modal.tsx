@@ -1,7 +1,7 @@
 import { type ReactNode, useRef } from 'react'
 import { useDialog } from '../hooks/use-dialog'
 import { cn } from '../utils/cn'
-import { ICON_GLYPH } from './icon-glyph'
+import { ICON_GLYPH_SIZE } from './icon-glyph'
 
 const NOOP = () => {}
 
@@ -70,7 +70,7 @@ export default function Modal({
               aria-label="close"
               className={cn(
                 'flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-subtle cursor-pointer bg-transparent border-none',
-                ICON_GLYPH,
+                ICON_GLYPH_SIZE,
               )}
             >
               ✕

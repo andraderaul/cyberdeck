@@ -1,4 +1,4 @@
-import { Button, ICON_GLYPH } from '@cyberdeck/deck-kit/ui'
+import { Button, ICON_GLYPH_SIZE } from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import { useState } from 'react'
 
@@ -56,7 +56,7 @@ export default function AiConfigBanner({ onConfigure }: Props) {
           onClick={handleDismiss}
           className={cn(
             'text-fg-subtle hover:text-fg-muted font-mono px-xs min-h-[44px] min-w-[44px] flex items-center justify-center',
-            ICON_GLYPH,
+            ICON_GLYPH_SIZE,
           )}
         >
           ×
