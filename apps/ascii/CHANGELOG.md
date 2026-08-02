@@ -1,5 +1,22 @@
 ## [1.25.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.24.0...v1.25.0) (2026-07-16)
 
+## 1.30.4
+
+### Patch Changes
+
+- 81b8731: Icon-only controls draw their glyph at 18px, from one constant (`ICON_GLYPH_SIZE`). The 44x44 target
+  landed without the mark inside it changing, so a control could be fully operable and still read as
+  unpressable — an 11px glyph adrift in a 44px box. Covers the kit's tooltip trigger, modal close and
+  toast dismiss, GLITCH's duplicate / remove / add and its Randomize and Re-roll below `sm`, and
+  ASCII//Convert's AI-config dismiss.
+
+  Controls over the canvas are deliberately untouched: there the backdrop is the user's artwork
+  (ADR 0013) or the piece itself (ADR 0021), and growing that chrome charges the work for its own
+  controls — the same reason those controls buy their target as an overlay instead of in layout.
+
+- Updated dependencies [81b8731]
+  - @cyberdeck/deck-kit@0.5.1
+
 ## 1.30.3
 
 ### Patch Changes
