@@ -1,5 +1,31 @@
 ## [1.25.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.24.0...v1.25.0) (2026-07-16)
 
+## 1.30.5
+
+### Patch Changes
+
+- 199721a: The AI Config mark is `◇`, hollow to AI Analyze's filled `◈` — the program's two AI surfaces now
+  read as one family. It replaces `⚿` (SQUARED KEY), which was never missing from the font as it
+  looked: it drew correctly, but it is a boxed glyph whose meaning lives in fine interior detail, and
+  at the 11px the header renders it at, the box outline is all that survives — indistinguishable from
+  the empty rectangle a browser draws for a glyph it _doesn't_ have.
+
+  The mark is now `aria-hidden` at both callsites, so the header button and the modal heading name
+  themselves in words. Unhidden, `⚿` had been joining the accessible name, and a screen reader opened
+  the button with "squared key".
+
+- 0dc87b9: `Chip` holds 44px on both axes, not just height. It pays for its target in layout rather than in an
+  overlay, because it stands in a scrolling row of its own kind where a centred overlay would reach
+  into its neighbour's — but only `min-h` was ever spelled, and a Chip is as wide as its label. Three
+  in the deck were short enough to sit under the target: ASCII//Convert's `1×` / `2×` / `4×` PNG scale
+  chips at 31px, GLITCH//Studio's `VHS` Preset at 38px, and its add-effect `+` at 29px above `sm`.
+
+  `justify-center` comes along because a stretched Chip's slack would otherwise fall entirely to one
+  side of a label that no longer fills it.
+
+- Updated dependencies [0dc87b9]
+  - @cyberdeck/deck-kit@0.5.2
+
 ## 1.30.4
 
 ### Patch Changes
