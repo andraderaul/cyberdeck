@@ -96,6 +96,12 @@ const HELP: Record<(typeof COMMAND_NAMES)[number], Entry> = {
     summary: 'destroy the Machine and unlock the editor',
     detail: 'Breakpoints and the clock rate survive; the Machine and its Terminal do not.',
   },
+  clear: {
+    usage: 'clear',
+    summary: 'wipe the Console log',
+    detail:
+      'Only this log — the Machine, its Terminal and the recorded trace all survive. `ctrl+l` (or `cmd+k`) does the same without leaving the prompt.',
+  },
   help: {
     usage: 'help [command]',
     summary: 'this list, or one command in detail',

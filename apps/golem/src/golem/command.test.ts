@@ -10,7 +10,7 @@ function suggestionFor(input: string): string | null {
 }
 
 describe('parseCommand', () => {
-  it.each(['asm', 'step', 'reset', 'run', 'stop'])('parses %s', (name) => {
+  it.each(['asm', 'step', 'reset', 'run', 'stop', 'clear'])('parses %s', (name) => {
     expect(parseCommand(name)).toEqual({ kind: name })
   })
 
@@ -92,6 +92,11 @@ describe('parseCommand', () => {
 
   it('rejects arguments on a command that takes none', () => {
     expect(parseCommand('step 3').kind).toBe('bad-usage')
+    expect(parseCommand('clear all')).toEqual({
+      kind: 'bad-usage',
+      name: 'clear',
+      message: '"clear" takes no arguments',
+    })
   })
 
   // No buttons means discoverability is paid for here (ADR 0018).

@@ -56,6 +56,8 @@ export type Effect =
   | { kind: 'share'; source: string }
   | { kind: 'persist-source'; source: string }
   | { kind: 'reset-trace' }
+  /** The Console log lives in the shell's state, not the model, so wiping it is an act, not a value. */
+  | { kind: 'clear-console' }
 
 /** The read-only snapshot a command needs but the model does not own: the clock, and the trace length. */
 export interface ReduceContext {
@@ -583,6 +585,11 @@ export function reduceCommand(
           ? `unknown command "${command.input}" — did you mean "${command.suggestion}"?`
           : `unknown command "${command.input}"`,
       })
+      return done()
+
+    // Prints nothing: a line saying "cleared" is the one thing that would survive the clearing.
+    case 'clear':
+      effects.push({ kind: 'clear-console' })
       return done()
 
     // Filtered out in the shell before dispatch; handled for exhaustiveness.

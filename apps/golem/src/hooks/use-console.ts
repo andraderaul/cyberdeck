@@ -191,6 +191,11 @@ export function useConsole(initialSource: string): ConsoleState {
           case 'reset-trace':
             traceRef.current = []
             break
+          // Queued after `submit`'s own append, so the echo of the command that asked for it goes
+          // too — the log is empty rather than showing `> clear` at the top.
+          case 'clear-console':
+            setLines([])
+            break
         }
       }
     },

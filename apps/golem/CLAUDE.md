@@ -88,7 +88,9 @@ executing code must be impossible by construction — never fixed by synchronisi
 **The Console is the only control grammar (ADR 0018).** No run/step/reset buttons, no `advanced`
 disclosure. Every surface other than the Source editor is read-only and never accepts a click.
 `src/app.test.tsx` guards this. Discoverability is paid for explicitly instead: `help` on first
-render, and did-you-mean on unknown commands.
+render, and did-you-mean on unknown commands. A keyboard chord is not a second grammar *provided it
+submits a command* — `ctrl+l` / `cmd+k` type `clear` for you and go through the same parser and
+reducer. One that reached past them into the model would be.
 
 **Terminal and Console are not synonyms.** The Terminal is diegetic — inside the machine, written
 by the running program, memory-mapped at `0x0000888B`. The Console is outside it, where the
