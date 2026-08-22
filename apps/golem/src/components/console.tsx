@@ -1,5 +1,5 @@
 import { cn } from '@cyberdeck/deck-kit/utils'
-import { useEffect, useRef, useState } from 'react'
+import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
 import type { ConsoleLine } from '../hooks/use-console'
 import Panel from './panel'
 
@@ -13,6 +13,20 @@ const LINE_STYLES: Record<ConsoleLine['kind'], string> = {
   echo: 'text-fg-muted',
   info: 'text-fg',
   error: 'text-danger',
+}
+
+/**
+ * The two chords that already mean "clear" where the operator picked them up: `ctrl+l` from the
+ * unix shell, `cmd+k` from macOS Terminal. Both are the browser's too — they focus the omnibox —
+ * and both are cancellable, which is why the binding stays scoped to this input rather than the
+ * document: anywhere else on the page they remain the browser's.
+ *
+ * Case-folded because `key` reports the *character*: caps lock on, or a shift that rode along, and
+ * a literal comparison would miss the chord while the browser still took it.
+ */
+function isClearChord(event: KeyboardEvent<HTMLInputElement>): boolean {
+  const key = event.key.toLowerCase()
+  return (event.ctrlKey && key === 'l') || (event.metaKey && key === 'k')
 }
 
 /**
@@ -95,6 +109,17 @@ export default function Console({ lines, history, onSubmit }: ConsoleProps) {
             value={input}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={(event) => {
+              // Submitted as the command rather than clearing directly, so the chord and the typed
+              // word cannot drift apart. The input is left alone: a shell wipes what is above the
+              // prompt, not what is being typed at it.
+              if (isClearChord(event)) {
+                event.preventDefault()
+                onSubmit('clear')
+                // The submission reorders history, so a walk in progress would resume from an index
+                // that now names a different command. What is in the field becomes a draft again.
+                setRecalled(null)
+                return
+              }
               if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
                 return
               }

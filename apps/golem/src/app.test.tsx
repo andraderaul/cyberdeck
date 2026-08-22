@@ -1252,3 +1252,94 @@ describe('the clock', () => {
     expect(locked()).toBe(true)
   })
 })
+
+describe('clear', () => {
+  const consolePanel = () => screen.getByRole('region', { name: 'Console' })
+  const consoleInput = () => screen.getByRole('textbox', { name: 'Console input' })
+
+  it('empties the log, the echo of the command included', async () => {
+    render(<App />)
+    expect(consolePanel()).toHaveTextContent(/GOLEM ready/)
+
+    await type('clear')
+
+    expect(consolePanel()).not.toHaveTextContent(/GOLEM ready/)
+    expect(consolePanel()).not.toHaveTextContent(/clear/)
+  })
+
+  it('goes on printing where the wiped log left off', async () => {
+    render(<App />)
+
+    await type('clear')
+    await type('breaks')
+
+    expect(consolePanel()).toHaveTextContent('no breakpoints')
+  })
+
+  // The Console is the tool talking, the Terminal is the machine's own output device — wiping one
+  // has no business touching the other (see CONTEXT.md on Console vs Terminal).
+  it('wipes the Console without touching the Machine or its Terminal', async () => {
+    render(<App />)
+    write(PRINT_HI)
+
+    await type('asm')
+    await stepTimes(30)
+    await type('clear')
+
+    expect(screen.getByRole('region', { name: 'Terminal' })).toHaveTextContent('Hi')
+    expect(screen.getByRole('region', { name: 'Registers' })).not.toHaveTextContent(/No machine/)
+  })
+
+  it.each([
+    ['ctrl+l', { key: 'l', ctrlKey: true }],
+    ['cmd+k', { key: 'k', metaKey: true }],
+    // `key` carries the character, so caps lock — or a shift that rode along — sends the capital.
+    ['ctrl+l with caps lock on', { key: 'L', ctrlKey: true }],
+    ['cmd+shift+k', { key: 'K', metaKey: true, shiftKey: true }],
+  ])('clears on %s from the Console input', (_name, chord) => {
+    render(<App />)
+
+    const prevented = !fireEvent.keyDown(consoleInput(), chord)
+
+    expect(consolePanel()).not.toHaveTextContent(/GOLEM ready/)
+    // Otherwise Chrome takes the chord for its own — focusing the omnibox, in both cases.
+    expect(prevented).toBe(true)
+  })
+
+  // Like a real shell: the chord wipes what is above the prompt, not what is being typed at it.
+  it('keeps the half-typed command when the chord fires', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.type(consoleInput(), 'reg r1')
+    fireEvent.keyDown(consoleInput(), { key: 'l', ctrlKey: true })
+
+    expect(consoleInput()).toHaveValue('reg r1')
+  })
+
+  // The submission reorders history, so a walk left mid-flight would resume from an index that
+  // now names something else.
+  it('drops a history walk in progress rather than leaving its cursor stale', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await type('breaks')
+    await user.type(consoleInput(), '{ArrowUp}')
+    expect(consoleInput()).toHaveValue('breaks')
+
+    fireEvent.keyDown(consoleInput(), { key: 'l', ctrlKey: true })
+    await user.type(consoleInput(), '{ArrowUp}')
+
+    expect(consoleInput()).toHaveValue('clear')
+  })
+
+  it('leaves an unmodified keystroke to the input', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.type(consoleInput(), 'l')
+
+    expect(consolePanel()).toHaveTextContent(/GOLEM ready/)
+    expect(consoleInput()).toHaveValue('l')
+  })
+})

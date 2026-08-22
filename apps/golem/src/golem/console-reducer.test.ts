@@ -230,3 +230,22 @@ describe('stepWithTrace', () => {
     expect(result.lines.some((line) => line.text.includes('software interrupt'))).toBe(true)
   })
 })
+
+describe('reduceCommand — clear', () => {
+  it('asks the shell to wipe the log and says nothing itself', () => {
+    const result = reduceCommand(modelWith(), { kind: 'clear' }, CTX)
+
+    expect(result.effects).toEqual([{ kind: 'clear-console' }])
+    expect(result.lines).toEqual([])
+  })
+
+  // The log is the tool talking; the Machine and its Terminal are the other side of ADR 0018's
+  // line and a wiped Console must not disturb them.
+  it('leaves the Machine and the trace untouched', () => {
+    const model = loaded('int 0')
+    const result = reduceCommand(model, { kind: 'clear' }, CTX)
+
+    expect(result.model.machine).toBe(model.machine)
+    expect(result.trace).toEqual([])
+  })
+})

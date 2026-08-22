@@ -26,6 +26,7 @@ export type Command =
   | { kind: 'break'; line: number }
   | { kind: 'breaks' }
   | { kind: 'unbreak'; line: number | 'all' }
+  | { kind: 'clear' }
   | { kind: 'empty' }
   | { kind: 'unknown'; input: string; suggestion: string | null }
   | { kind: 'bad-usage'; name: string; message: string }
@@ -47,10 +48,20 @@ export const COMMAND_NAMES = [
   'breaks',
   'unbreak',
   'reset',
+  'clear',
   'help',
 ] as const
 
-const NO_ARGUMENT_COMMANDS = ['asm', 'step', 'reset', 'run', 'stop', 'share', 'breaks'] as const
+const NO_ARGUMENT_COMMANDS = [
+  'asm',
+  'step',
+  'reset',
+  'run',
+  'stop',
+  'share',
+  'breaks',
+  'clear',
+] as const
 
 const DEFAULT_DUMP_COUNT = 8
 const MAX_DUMP_COUNT = 256
