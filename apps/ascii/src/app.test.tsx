@@ -28,10 +28,14 @@ vi.mock('@cyberdeck/deck-kit/recording', () => ({
   })),
 }))
 
+// Hoisted above the mock factory that closes over it — `vi.mock` runs before the module body.
+const { mockShowInfo } = vi.hoisted(() => ({ mockShowInfo: vi.fn() }))
+
 // EmptyStateHero now lives in the kit (ADR 0015); stub it here as the app's Source entry probe.
 vi.mock('@cyberdeck/deck-kit/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@cyberdeck/deck-kit/ui')>()),
   useToastError: vi.fn(() => vi.fn()),
+  useToastInfo: vi.fn(() => mockShowInfo),
   ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   EmptyStateHero: ({
@@ -257,6 +261,7 @@ describe('the Analysis suggestion', () => {
   }
 
   beforeEach(() => {
+    mockShowInfo.mockClear()
     mockUseAIConfig.mockReturnValue({ config: mockAIConfig, save: vi.fn(), remove: vi.fn() })
     mockAnalyzeCanvas.mockResolvedValue({
       description: 'a lone figure',
@@ -324,6 +329,32 @@ describe('the Analysis suggestion', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'presets' }))
     expect(screen.queryByRole('button', { name: 'revert suggestion' })).not.toBeInTheDocument()
+  })
+
+  // The apply closes the modal, so the canvas is the only other feedback — and it can't say where
+  // the undo lives.
+  it('says what happened and where to undo it', async () => {
+    const apply = await analyze()
+    expect(mockShowInfo).not.toHaveBeenCalled()
+
+    fireEvent.click(apply)
+
+    expect(mockShowInfo).toHaveBeenCalledWith(expect.stringContaining('presets'))
+  })
+
+  it('keeps the prose when the suggestion was dropped, and offers no apply', async () => {
+    mockAnalyzeCanvas.mockResolvedValue({
+      description: 'a lone figure',
+      threatLevel: 'HIGH',
+      tags: ['NOMAD'],
+    })
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    openOut()
+    fireEvent.click(screen.getByRole('button', { name: /analyze/i }))
+
+    expect(await screen.findByText('a lone figure')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'apply' })).not.toBeInTheDocument()
   })
 
   it('offers no revert before anything has been applied', () => {

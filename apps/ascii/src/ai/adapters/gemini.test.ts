@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthError, NetworkError, ParseError, QuotaError } from '../errors'
+import { SUGGESTION_SKELETON } from '../suggestion'
 import { GeminiAdapter } from './gemini'
+import { ANALYZE_MAX_TOKENS } from './shared'
 
 const mockGenerateContent = vi.fn()
+const mockGetGenerativeModel = vi.fn(() => ({ generateContent: mockGenerateContent }))
 
 vi.mock('@google/generative-ai', () => ({
   GoogleGenerativeAI: vi.fn().mockImplementation(() => ({
-    getGenerativeModel: vi.fn().mockReturnValue({ generateContent: mockGenerateContent }),
+    getGenerativeModel: mockGetGenerativeModel,
   })),
 }))
 
@@ -33,6 +36,7 @@ function successResponse(text: string) {
 describe('GeminiAdapter', () => {
   beforeEach(() => {
     mockGenerateContent.mockReset()
+    mockGetGenerativeModel.mockClear()
   })
 
   it('returns parsed JSON on successful response', async () => {
@@ -101,16 +105,6 @@ describe('GeminiAdapter', () => {
     await expect(makeAdapter().analyze('base64data')).rejects.toBeInstanceOf(ParseError)
   })
 
-  // The failure the bigger payload makes likelier: a reply cut at the token budget lands mid-object,
-  // and mid-object is still just invalid JSON.
-  it('throws ParseError when the reply is truncated mid-suggestion', async () => {
-    const truncated =
-      '{"description":"t","threatLevel":"LOW","tags":["a"],"suggestion":{"charset":"bra'
-    mockGenerateContent.mockResolvedValueOnce(successResponse(truncated))
-
-    await expect(makeAdapter().analyze('base64data')).rejects.toBeInstanceOf(ParseError)
-  })
-
   // Documents the precedence decision: status code wins over message hints.
   // { status: 429, message: 'API_KEY_INVALID' } → QuotaError (not AuthError),
   // because status is checked before message hints in mapHttpError.
@@ -118,5 +112,18 @@ describe('GeminiAdapter', () => {
     mockGenerateContent.mockRejectedValueOnce({ status: 429, message: 'API_KEY_INVALID' })
 
     await expect(makeAdapter().analyze('base64data')).rejects.toBeInstanceOf(QuotaError)
+  })
+
+  // The request half of the contract: every test above would pass on an adapter that never asked
+  // for a suggestion, and an ask that drifts from the reader is a reply dropped on arrival.
+  it('asks for the suggestion, with the shared token budget to fit it', async () => {
+    mockGenerateContent.mockResolvedValueOnce(successResponse(JSON.stringify({ ok: true })))
+
+    await makeAdapter().analyze('base64data')
+
+    expect(mockGetGenerativeModel).toHaveBeenCalledWith(
+      expect.objectContaining({ generationConfig: { maxOutputTokens: ANALYZE_MAX_TOKENS } }),
+    )
+    expect(mockGenerateContent.mock.calls[0][0][1]).toContain(SUGGESTION_SKELETON)
   })
 })

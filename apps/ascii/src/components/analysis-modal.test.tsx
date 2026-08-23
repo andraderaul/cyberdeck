@@ -164,6 +164,25 @@ describe('AnalysisModal', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
+  // The split in analysis-service: a suggestion the reader refused costs the panel, not the scan.
+  it('reports the scan with no panel when the suggestion was dropped', () => {
+    render(
+      <AnalysisModal
+        state={{
+          status: 'success',
+          analysis: { ...SUCCESS_STATE.analysis, suggestion: undefined },
+        }}
+        onClose={vi.fn()}
+        onApplySuggestion={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(SUCCESS_STATE.analysis.description)).toBeInTheDocument()
+    expect(screen.getByText('HIGH')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /suggested conversion/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'apply' })).not.toBeInTheDocument()
+  })
+
   it('offers no apply on an error state — there is no suggestion to spend', () => {
     render(
       <AnalysisModal

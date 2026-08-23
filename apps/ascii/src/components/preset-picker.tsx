@@ -1,4 +1,4 @@
-import { Chip } from '@cyberdeck/deck-kit/ui'
+import { Button, Chip } from '@cyberdeck/deck-kit/ui'
 import type { Preset } from '../ascii/presets'
 import { PRESETS, settingsMatch } from '../ascii/presets'
 import type { ConversionSettings } from '../ascii/types'
@@ -31,17 +31,23 @@ export default function PresetPicker({
       {/* The Strip's PRESETS tab already names this group on screen (ADR 0020) — the legend stays
           for the accessible name rather than repeating the word underneath it. */}
       <legend className="sr-only">presets</legend>
-      {/* Outside the scrolling row, and ahead of it: the toast that names this chip lands in the
-          bottom-right corner, so the right edge is the one place it can be covered on arrival. */}
+      {/* A Button and not a Chip, alone in a row of them: every Chip announces `aria-pressed`,
+          which offers a screen reader a toggle state this one-shot action does not have. GLITCH
+          reaches for the same escape in the same place (`IconLabelButton` beside its Chain row).
+          Ahead of the scrolling row because the toast that names it lands bottom-right, so the
+          right edge is the one place it can be covered on arrival. */}
       {onRevertSuggestion && (
-        <Chip
-          selected={false}
+        <Button
+          variant="ghost"
           onClick={onRevertSuggestion}
           className="shrink-0"
+          // "revert" alone doesn't say what of; the label spells it and still contains the visible
+          // word, so a voice-control user can say what they read.
           aria-label="revert suggestion"
         >
+          {/* Punctuation the accessible name is better off without — the word carries it. */}
           <span aria-hidden="true">↺</span> revert
-        </Chip>
+        </Button>
       )}
       <div className="flex-1 min-w-0 flex gap-2xs overflow-x-auto">
         {PRESETS.map((preset) => {

@@ -17,9 +17,33 @@ interface Props {
 }
 
 /**
- * The scan's second half: the suggestion laid out to be read before it is spent, every field in the
- * EDIT tab's own order so what the chips will look like afterwards is legible from here. Values
- * only, no controls — this modal reports, and the one thing it can do to the conversion is `apply`.
+ * Every ConversionSetting, in the EDIT tab's own order — key order *is* row order, so one map is
+ * both the totality check and the layout. Keyed on `ConversionSettings` rather than hand-listed: a
+ * seventh axis has to be given a row here before this compiles, so the panel cannot go on
+ * describing six of seven while `apply` moves all of them. `-?` for the reason `SUGGESTION_FIELDS`
+ * needs it (suggestion.ts).
+ */
+const ROWS: {
+  [K in keyof ConversionSettings]-?: {
+    label: string
+    show: (value: ConversionSettings[K]) => string
+  }
+} = {
+  charset: { label: 'charset', show: (v) => v },
+  edgeGlyphs: { label: 'edge glyphs', show: (v) => (v ? 'on' : 'off') },
+  dithering: { label: 'dithering', show: (v) => v },
+  colorMode: { label: 'color mode', show: (v) => v },
+  resolution: { label: 'resolution', show: (v) => `${v}px` },
+  brightness: { label: 'brightness', show: (v) => v.toFixed(2) },
+  contrast: { label: 'contrast', show: (v) => v.toFixed(2) },
+}
+
+const ROW_KEYS = Object.keys(ROWS) as (keyof ConversionSettings)[]
+
+/**
+ * The scan's second half: the suggestion laid out to be read before it is spent, so what the chips
+ * will look like afterwards is legible from here. Values only, no controls — this modal reports,
+ * and the one thing it can do to the conversion is `apply`.
  *
  * Applying closes the modal on purpose: the answer to "was that a good call" is the canvas, and it
  * is behind this panel.
@@ -33,16 +57,6 @@ function SuggestedConversion({
   onApply: (suggestion: ConversionSettings) => void
   onClose: () => void
 }) {
-  const rows: [string, string][] = [
-    ['charset', suggestion.charset],
-    ['edge glyphs', suggestion.edgeGlyphs ? 'on' : 'off'],
-    ['dithering', suggestion.dithering],
-    ['color mode', suggestion.colorMode],
-    ['resolution', `${suggestion.resolution}px`],
-    ['brightness', suggestion.brightness.toFixed(2)],
-    ['contrast', suggestion.contrast.toFixed(2)],
-  ]
-
   return (
     <section
       aria-label="suggested conversion"
@@ -50,10 +64,15 @@ function SuggestedConversion({
     >
       <span className="text-accent text-xs tracking-wider font-bold">◈ SUGGESTED CONVERSION</span>
       <dl className="grid grid-cols-2 gap-x-md gap-y-2xs m-0 sm:grid-cols-3">
-        {rows.map(([label, value]) => (
-          <div key={label} className="flex flex-col">
-            <dt className="text-fg-subtle text-xs tracking-wide">{label}</dt>
-            <dd className="text-fg text-xs m-0 lowercase">{value}</dd>
+        {ROW_KEYS.map((key) => (
+          <div key={key} className="flex flex-col">
+            <dt className="text-fg-subtle text-xs tracking-wide">{ROWS[key].label}</dt>
+            <dd className="text-fg text-xs m-0 lowercase">
+              {/* The row and the value came off one key, but TypeScript pairs them independently. */}
+              {(ROWS[key].show as (value: ConversionSettings[typeof key]) => string)(
+                suggestion[key],
+              )}
+            </dd>
           </div>
         ))}
       </dl>
@@ -201,11 +220,15 @@ export default function AnalysisModal({ state, onClose, onRetry, onApplySuggesti
             ))}
           </div>
 
-          <SuggestedConversion
-            suggestion={state.analysis.suggestion}
-            onApply={onApplySuggestion}
-            onClose={onClose}
-          />
+          {/* Absent when the reader refused what the Provider proposed — the scan still reports,
+              it just has nothing to offer (analysis-service.ts). */}
+          {state.analysis.suggestion && (
+            <SuggestedConversion
+              suggestion={state.analysis.suggestion}
+              onApply={onApplySuggestion}
+              onClose={onClose}
+            />
+          )}
         </>
       )}
 

@@ -55,12 +55,14 @@ export interface ConversionSettings {
   dithering: Dithering
 }
 
-/**
- * The bounds of each numeric ConversionSetting, beside the interface they belong to rather than in
- * the editor that happens to draw them: the sliders and the Analysis suggestion reader are two
- * readers of one range, and a suggestion the sliders couldn't have produced is not a look this
- * program can hold.
- */
+// The bounds of each numeric ConversionSetting, beside the interface they belong to rather than in
+// the editor that happens to draw them: the sliders and the Analysis suggestion reader are two
+// readers of one range, and a suggestion the sliders couldn't have produced is not a look this
+// program can hold.
+//
+// `//` and not a JSDoc block: a `/** */` above a group binds to the first declaration under it and
+// would surface as RESOLUTION_RANGE's hover text alone (root CLAUDE.md).
+
 export const RESOLUTION_RANGE = { min: 6, max: 24, step: 1 }
 export const BRIGHTNESS_RANGE = { min: 0.5, max: 2.0, step: 0.05 }
 export const CONTRAST_RANGE = { min: 0.5, max: 3.0, step: 0.05 }

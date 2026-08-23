@@ -50,11 +50,19 @@ Optional feature — user supplies their own API key. `use-ai-config` stores the
 An `Analysis` carries a **Suggestion** — the `ConversionSettings` the Provider proposes for this
 image — on the same round trip as the prose (issue #308). **`src/ai/suggestion.ts` is the trust
 boundary**: it is the one place a provider's JSON becomes domain values, so an unknown Charset or
-Color Mode, an out-of-range number or a missing field is a `ParseError` for the whole Analysis
-rather than a coerced setting. Not per-adapter (three normalisers drift) and not at the point of
-application (three callers, three opinions of what a Charset is). Nothing applies on arrival: the
-modal shows the suggestion, `App` waits for the click, and what it displaced is one `revert` chip
-away in the PRESETS tab until the user's own next edit.
+Color Mode, an out-of-range number or a missing field is refused rather than coerced. Not
+per-adapter (three normalisers drift) and not at the point of application (three callers, three
+opinions of what a Charset is).
+
+The two halves fail separately, and that asymmetry is deliberate: malformed *prose* is a
+`ParseError` that takes the Analysis, while a suggestion the reader refuses is dropped and the
+description still renders with the panel absent. One call bought both, and a good description is not
+worth discarding over one out-of-range float. The reader never throws — it hands back a reason,
+which `analysis-service` logs, since a silently missing panel is otherwise invisible in a bug report
+and prompt-versus-reader drift is what will cause it.
+
+Nothing applies on arrival: the modal shows the suggestion, `App` waits for the click, and what it
+displaced is one `revert` away in the PRESETS tab until the user's own next edit.
 
 ### Error handling
 
@@ -86,7 +94,7 @@ Use these terms precisely — avoid the listed alternatives:
 | **Capture** | Exporting a single frame from Live Source (doesn't stop the loop) | snapshot, screenshot |
 | **Recording** | Capturing Live Source as a video file via MediaRecorder | video export, screen record |
 | **AI Analysis** | Optional AI-powered description + threat-level of the ASCII canvas, with the Suggestion on the same round trip | AI scan, AI detection |
-| **Suggestion** | The ConversionSettings an Analysis proposes; applied only when the user asks, reversible until they edit | recommendation, AI preset |
+| **Suggestion** | The ConversionSettings an Analysis proposes when one reads cleanly; applied only when the user asks, reversible until they edit | recommendation, AI preset |
 
 ### Design system
 
@@ -133,10 +141,14 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 **AI analysis**
 - `src/ai/types.ts` — `AIConfig`, `AIProviderName`, `AIProvider`, `Analysis`, `ThreatLevel`, `AnalysisState`
 - `src/ai/analysis-service.ts` — `analyzeCanvas()`, lazy-imports correct adapter, validates response
-- `src/ai/suggestion.ts` — `readSuggestion()`, `SUGGESTION_PROMPT`: the untrusted → typed crossing
-  for the Suggestion, keyed on `ConversionSettings` itself so a seventh axis can't fall out of the
-  format, and spelling the prompt's vocabulary from the same constants it enforces. Rejects rather
-  than clamps, for GLITCH's `chain-codec.ts` reason (#312)
+- `src/ai/suggestion.ts` — `readSuggestion()`, `SUGGESTION_PROMPT`, `SUGGESTION_SKELETON`: the
+  untrusted → typed crossing for the Suggestion. `SUGGESTION_FIELDS` is keyed on
+  `ConversionSettings` itself — with the `-?` modifier, or a field turning optional would silently
+  reopen the hole — so a seventh axis can't fall out of the format, and the reader, the prompt's
+  rules and the JSON skeleton the prompt shows all come off that one map. The skeleton is generated
+  for that reason: hand-spelled, it would ask for six fields while the reader wanted seven, and
+  every reply would be dropped. Rejects rather than clamps, for GLITCH's `chain-codec.ts` reason
+  (#312), and returns its reason rather than throwing, for the same reason that file does
 - `src/ai/adapters/` — `AnthropicAdapter`, `OpenAIAdapter`, `GeminiAdapter`
 - `src/ai/errors.ts` — `AuthError`, `QuotaError`, `ParseError`
 - `src/ai/use-ai-config.ts` — `AIConfig` state + `localStorage` persistence
@@ -178,8 +190,10 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   redesigned — whatever lands empty-diff is what crosses into deck-kit
 - `src/components/preset-picker.tsx` — the Strip's PRESETS tab: the Preset chips in a horizontally
   scrollable row, the active one tracked rather than derived — an edit has to leave you standing on
-  the Preset you started from, marked modified. Carries the `revert` chip for an applied Suggestion,
-  ahead of the scrolling row: it restores a look, and looks are chosen here
+  the Preset you started from, marked modified. Carries the `revert` control for an applied Suggestion,
+  ahead of the scrolling row: it restores a look, and looks are chosen here. A Button rather than a
+  Chip, alone in a row of them — a Chip always announces `aria-pressed`, and this is a one-shot
+  action with no toggle state to report
 - `src/components/settings-editor.tsx` — the Strip's EDIT tab: every ConversionSettings control as
   a row of tool chips, the focused tool's control in the panel above. The three sliders are
   siblings, so at `sm` the whole group reads at once while mobile focuses one (adaptive density);

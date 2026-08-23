@@ -9,7 +9,9 @@
 // either: three normalisers are three chances to disagree, and an adapter's job here is transport
 // — map the HTTP failure, parse the JSON, hand the shape on.
 //
-// Pure: no DOM, no React, no provider. The one thing it does to the outside world is throw.
+// Pure, and it never throws: like GLITCH's `chain-codec.ts` (#312) it hands the reason back and
+// leaves the shell to decide what a refusal costs. Here that decision is the Analysis keeping its
+// prose (analysis-service.ts).
 
 import {
   BRIGHTNESS_RANGE,
@@ -20,7 +22,6 @@ import {
   DITHERINGS,
   RESOLUTION_RANGE,
 } from '../ascii/types'
-import { ParseError } from './errors'
 
 interface Range {
   min: number
@@ -28,126 +29,214 @@ interface Range {
 }
 
 /**
- * Reads one field out of the untrusted object, throwing at the first thing that is wrong.
+ * Either the ConversionSettings the reply proposes, or why it proposes none — never a thrown
+ * exception, because a bad suggestion is not a bad Analysis (analysis-service.ts).
+ */
+export type SuggestionRead =
+  | { ok: true; suggestion: ConversionSettings }
+  | { ok: false; reason: string }
+
+/**
+ * Reads one field out of the untrusted object, recording the first thing that is wrong instead of
+ * returning it — GLITCH's `ParamReader` shape (#312), and for its reason: threading a result type
+ * through every field would bury the interface the reader is transcribing.
  *
- * GLITCH's chain-codec records the failing field and hands the reason back instead (#312), because
- * there the input is a file a person can hand-edit and the field name is the only actionable
- * answer. Here the input is a model's reply that no user wrote and none can fix — the only move
- * available is retry, which the modal already offers on `parse-error` — so a reason no one can act
- * on would only be a second vocabulary of failure beside `ParseError` (ADR 0006).
+ * The reason is never shown to a user. Nobody wrote this reply and nobody can fix it, so the modal
+ * says "FEED CORRUPTED" and offers retry either way. It exists for the drift that actually happens
+ * — the prompt's vocabulary sliding away from this reader's — which is otherwise invisible in a bug
+ * report, because a suggestion that fails to read is a suggestion that silently isn't there.
  */
 interface SuggestionReader {
   choice<T extends string>(key: string, options: readonly T[]): T
   whole(key: string, range: Range): number
   scalar(key: string, range: Range): number
   flag(key: string): boolean
+  readonly failure: string | null
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+/**
+ * How a rejected value reads back — quoted for a string, plain for a number.
+ *
+ * Non-finite numbers are spelled out rather than stringified: `JSON.stringify(Infinity)` is
+ * `'null'`, which would name a missing field instead of the number the model wrote. Reachable
+ * despite JSON having no literal for one — `JSON.parse('1e400')` is `Infinity`.
+ */
+function show(raw: unknown): string {
+  if (typeof raw === 'number' && !Number.isFinite(raw)) {
+    return String(raw)
+  }
+  return JSON.stringify(raw) ?? String(raw)
+}
+
 function createReader(raw: Record<string, unknown>): SuggestionReader {
+  let failure: string | null = null
+
+  function reject(key: string, expectation: string, value: unknown): void {
+    failure ??=
+      value === undefined
+        ? `${key} is missing`
+        : `${key} must be ${expectation} (got ${show(value)})`
+  }
+
   return {
     choice(key, options) {
       const value = raw[key]
       // Membership by the tuple, never `in` or a lookup: `'toString'` is a key of every object, and
       // coercing an unknown name onto the nearest legal one would apply a look the model never
-      // proposed — the same refusal-over-repair rule the Chain file reader lands on (#312).
+      // proposed — refusal over repair, as the Chain file reader lands on (#312).
       if (typeof value !== 'string' || !options.includes(value as never)) {
-        throw new ParseError()
+        reject(key, `one of ${options.join(', ')}`, value)
+        return options[0]
       }
       return value as never
     },
     whole(key, range) {
       const value = raw[key]
+      const expectation = `a whole number from ${range.min} to ${range.max}`
       // Resolution is counted in whole pixels of type size, so a fractional one is not a coarser
       // reading of the answer — it is an answer the control cannot stand on.
       if (typeof value !== 'number' || !Number.isInteger(value)) {
-        throw new ParseError()
+        reject(key, expectation, value)
+        return range.min
       }
       if (value < range.min || value > range.max) {
-        throw new ParseError()
+        reject(key, expectation, value)
+        return range.min
       }
       return value
     },
     scalar(key, range) {
       const value = raw[key]
+      const expectation = `a number from ${range.min} to ${range.max}`
       // Out of range is refused rather than clamped: a clamped brightness is a different look from
-      // the one the modal showed the user before they pressed apply, with nothing on screen saying
-      // a number moved. Off-step is accepted, though — brightness and contrast are continuous
+      // the one the modal showed before the user pressed apply, with nothing on screen saying a
+      // number moved. Off-step is accepted, though — brightness and contrast are continuous
       // multipliers the converter reads directly, so 1.07 renders as 1.07 and means it.
       if (typeof value !== 'number' || !Number.isFinite(value)) {
-        throw new ParseError()
+        reject(key, expectation, value)
+        return range.min
       }
       if (value < range.min || value > range.max) {
-        throw new ParseError()
+        reject(key, expectation, value)
+        return range.min
       }
       return value
     },
     flag(key) {
       const value = raw[key]
       if (typeof value !== 'boolean') {
-        throw new ParseError()
+        reject(key, 'true or false', value)
+        return false
       }
       return value
+    },
+    get failure() {
+      return failure
     },
   }
 }
 
 /**
- * How each ConversionSetting is read back out of a provider's JSON — keyed on the interface itself,
- * so a seventh axis added to `ConversionSettings` fails to compile here rather than silently
- * falling out of the suggestion and leaving `apply` handing back a look with one field of whatever
- * happened to be on screen. The vocabularies and the ranges come from the core (`ascii/types.ts`),
- * so the prompt below, the sliders and this reader are three readers of one source.
+ * One ConversionSetting as the format knows it: how it is read back out of a provider's JSON, the
+ * sentence that asks the model for it, and a value of the right shape for the skeleton the prompt
+ * shows. All three in one entry so a field cannot be added to two of them and forgotten in the
+ * third — the skeleton going stale is the expensive one, since the model would keep obeying the old
+ * shape and every reply would arrive short a field.
  */
-const FIELD_READERS: {
-  [K in keyof ConversionSettings]: (read: SuggestionReader) => ConversionSettings[K]
-} = {
-  charset: (read) => read.choice('charset', CHARSETS),
-  colorMode: (read) => read.choice('colorMode', COLOR_MODES),
-  edgeGlyphs: (read) => read.flag('edgeGlyphs'),
-  dithering: (read) => read.choice('dithering', DITHERINGS),
-  resolution: (read) => read.whole('resolution', RESOLUTION_RANGE),
-  brightness: (read) => read.scalar('brightness', BRIGHTNESS_RANGE),
-  contrast: (read) => read.scalar('contrast', CONTRAST_RANGE),
+interface SuggestionField<K extends keyof ConversionSettings> {
+  read: (reader: SuggestionReader) => ConversionSettings[K]
+  rule: string
+  example: ConversionSettings[K]
 }
 
 /**
- * Turns the `suggestion` field of a provider's reply into ConversionSettings, or throws
- * `ParseError`.
+ * The format, keyed on `ConversionSettings` itself: a seventh axis fails to compile here rather
+ * than falling silently out of the suggestion and leaving `apply` handing back a look with one
+ * field of whatever happened to be on screen.
  *
- * All or nothing, and the whole Analysis falls with it: the Analysis is one artefact of one call
- * (one act, one round trip — issue #308), and quietly keeping the prose while dropping the settings
- * would leave the modal advertising a suggestion that isn't there with nothing saying why. A
- * `parse-error` says it, and its retry is the only thing that can help.
+ * `-?` is load-bearing. A homomorphic mapped type inherits optionality from its source, so the day
+ * an axis becomes `edgeGlyphs?: boolean` this map would accept the missing entry and the guarantee
+ * above would quietly stop holding.
+ *
+ * The vocabularies and the ranges come from the core (`ascii/types.ts`), so the prompt, the sliders
+ * and this reader are three readers of one source.
  */
-export function readSuggestion(raw: unknown): ConversionSettings {
+const SUGGESTION_FIELDS: { [K in keyof ConversionSettings]-?: SuggestionField<K> } = {
+  charset: {
+    read: (r) => r.choice('charset', CHARSETS),
+    rule: `one of ${CHARSETS.join(', ')}`,
+    example: 'sharp',
+  },
+  colorMode: {
+    read: (r) => r.choice('colorMode', COLOR_MODES),
+    rule: `one of ${COLOR_MODES.join(', ')}`,
+    example: 'matrix',
+  },
+  edgeGlyphs: {
+    read: (r) => r.flag('edgeGlyphs'),
+    rule: 'true or false — true only where strong contours are worth drawing as strokes',
+    example: false,
+  },
+  dithering: {
+    read: (r) => r.choice('dithering', DITHERINGS),
+    // Worth more words than the other choices get: this axis changes tone as well as texture, so
+    // "pick one" would invite it to be spent on subjects that lose by it. `none` rounds every cell
+    // down, so anything else reads brighter — which is the gain on a short Charset and the cost on
+    // a subject that was already bright.
+    rule: `one of ${DITHERINGS.join(', ')} — none is the plain mapping. Spend one where a short Charset (blocks, circles, binary) or a wide smooth gradient would band into flat steps; a long ramp like detailed already has the levels to avoid it. Anything but none also reads brighter, so keep none where the subject is already bright or the banding is the look. bayer is a fixed 4x4 pattern, floyd diffuses the error and is the stronger of the two.`,
+    example: 'none',
+  },
+  resolution: {
+    read: (r) => r.whole('resolution', RESOLUTION_RANGE),
+    rule: `whole number ${RESOLUTION_RANGE.min}-${RESOLUTION_RANGE.max}, character size in pixels — lower is finer detail`,
+    example: 12,
+  },
+  brightness: {
+    read: (r) => r.scalar('brightness', BRIGHTNESS_RANGE),
+    rule: `number ${BRIGHTNESS_RANGE.min}-${BRIGHTNESS_RANGE.max}`,
+    example: 1,
+  },
+  contrast: {
+    read: (r) => r.scalar('contrast', CONTRAST_RANGE),
+    rule: `number ${CONTRAST_RANGE.min}-${CONTRAST_RANGE.max}`,
+    example: 1.2,
+  },
+}
+
+const FIELD_KEYS = Object.keys(SUGGESTION_FIELDS) as (keyof ConversionSettings)[]
+
+/** Reads the `suggestion` field of a provider's reply, naming the first thing it cannot accept. */
+export function readSuggestion(raw: unknown): SuggestionRead {
   if (!isRecord(raw)) {
-    throw new ParseError()
+    return { ok: false, reason: `suggestion must be an object (got ${show(raw)})` }
   }
-  const read = createReader(raw)
-  const settings: Record<string, unknown> = {}
-  for (const key of Object.keys(FIELD_READERS) as (keyof ConversionSettings)[]) {
+  const reader = createReader(raw)
+  const settings: Partial<ConversionSettings> = {}
+  for (const key of FIELD_KEYS) {
     // The reader and the field came off the same key, but TypeScript checks the pair
-    // independently — `FIELD_READERS` above is what holds them together.
-    settings[key] = FIELD_READERS[key](read)
+    // independently — `SUGGESTION_FIELDS` above is what holds them together.
+    ;(settings as Record<string, unknown>)[key] = SUGGESTION_FIELDS[key].read(reader)
   }
-  return settings as unknown as ConversionSettings
+  if (reader.failure !== null) {
+    return { ok: false, reason: reader.failure }
+  }
+  return { ok: true, suggestion: settings as ConversionSettings }
 }
 
 /**
- * The half of the Analysis prompt that describes the suggestion, spelled from the same constants
- * the reader enforces. Asking for a vocabulary the reader would refuse is how a suggestion becomes
- * a `parse-error` the user pays for, so the two are never written twice.
+ * The exact object the model is asked to fill in. Generated rather than hand-spelled beside the
+ * prose: a skeleton listing six fields while the reader wants seven is a reply that parses, obeys
+ * the prompt, and is refused every single time.
  */
+export const SUGGESTION_SKELETON = JSON.stringify(
+  Object.fromEntries(FIELD_KEYS.map((key) => [key, SUGGESTION_FIELDS[key].example])),
+)
+
+/** The half of the Analysis prompt that asks for the suggestion, spelled from the same entries. */
 export const SUGGESTION_PROMPT = `Then propose how this image should be converted, as "suggestion":
-- charset: one of ${CHARSETS.join(', ')}
-- colorMode: one of ${COLOR_MODES.join(', ')}
-- edgeGlyphs: true or false — true only where strong contours are worth drawing as strokes
-- dithering: one of ${DITHERINGS.join(', ')} — worth spending where a short Charset (few levels) or a smooth gradient would band; a long ramp like detailed already has the levels. It reads brighter than none, since the plain mapping rounds every cell down, so leave it none where the subject is already bright or the banding is the look.
-- resolution: whole number ${RESOLUTION_RANGE.min}-${RESOLUTION_RANGE.max}, character size in pixels — lower is finer detail
-- brightness: number ${BRIGHTNESS_RANGE.min}-${BRIGHTNESS_RANGE.max}
-- contrast: number ${CONTRAST_RANGE.min}-${CONTRAST_RANGE.max}
+${FIELD_KEYS.map((key) => `- ${key}: ${SUGGESTION_FIELDS[key].rule}`).join('\n')}
 Choose for legibility of this specific subject, not for novelty. Every field is required and must sit inside its range.`

@@ -1,5 +1,5 @@
 import { AuthError, NetworkError, ParseError, QuotaError } from '../errors'
-import { SUGGESTION_PROMPT } from '../suggestion'
+import { SUGGESTION_PROMPT, SUGGESTION_SKELETON } from '../suggestion'
 
 export const PROMPT = `You are SENTINEL, a tactical surveillance AI on a cyberpunk grid.
 Incoming feed: ASCII-rendered visual. Analyze. Classify. Report.
@@ -7,7 +7,7 @@ Write 2 to 4 short declarative sentences. Cold and precise. Observe and infer â€
 Assign Threat Level: LOW, MODERATE, HIGH, CRITICAL, or UNKNOWN.
 Extract 3 to 5 tags. Tactical identifiers only. Codename style, not generic descriptions.
 ${SUGGESTION_PROMPT}
-Respond in JSON only: {"description":"...","threatLevel":"...","tags":["..."],"suggestion":{"charset":"...","colorMode":"...","edgeGlyphs":false,"dithering":"none","resolution":12,"brightness":1,"contrast":1.2}}`
+Respond in JSON only: {"description":"...","threatLevel":"...","tags":["..."],"suggestion":${SUGGESTION_SKELETON}}`
 
 export const ANALYZE_TIMEOUT_MS = 30_000
 
@@ -53,6 +53,8 @@ export function parseJsonOrThrow(text: string, opts?: { stripCodeFence?: boolean
   try {
     return JSON.parse(input)
   } catch {
-    throw new ParseError()
+    // The likeliest shape of this now is a reply cut at the token budget: the suggestion rides the
+    // same JSON as the prose, so a truncation takes both.
+    throw new ParseError('reply is not JSON')
   }
 }

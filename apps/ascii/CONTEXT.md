@@ -59,7 +59,7 @@ _Avoid_: fontSize, granularity, granularidade, tamanho de fonte
 - Uma **AsciiCell** cujo gradiente ultrapassa o limiar troca o caractere do **Charset** por um **Edge Glyph** — a troca acontece na grade, não na pintura, então **PNG Export**, **TXT Export** e **HTML Export** carregam a forma junto com o preview. O mesmo vale para o **Dithering**, e é por isso que os dois moram em `convertImage()` e não em `paintFrame()`
 - O **AsciiCanvas** renderiza a grade de **AsciiCell** aplicando o **Color Mode**
 - O resultado pode ser exportado como **PNG Export** (canvas com cores), **TXT Export** (string ASCII pura) ou **HTML Export** (texto selecionável com cores)
-- Uma **Analysis** carrega uma **Suggestion**: **ConversionSettings** propostos que só substituem os ativos quando o usuário aplica, e que voltam atrás por um chip enquanto ele não editar por conta própria
+- Uma **Analysis** carrega uma **Suggestion** quando há uma legível: **ConversionSettings** propostos que só substituem os ativos quando o usuário aplica, e que voltam atrás por um controle enquanto ele não editar por conta própria
 
 ## Example dialogue
 
@@ -93,11 +93,11 @@ O ato de enviar o canvas ASCII renderizado a um AI Provider externo e receber um
 _Avoid_: scan, scan & analyze (UI copy apenas, não termo de domínio)
 
 **Analysis**:
-O resultado de um **Analyze** — uma descrição narrativa, um Threat Level, tags identificadoras e uma **Suggestion**. As quatro partes vêm de uma única ida ao AI Provider: quem paga a chamada é o usuário, com a própria chave, então descrever e sugerir são um ato só e não dois (#308). Produzida pelo AI Provider e validada num ponto só, antes de virar valor de domínio: uma Analysis parcial ou malformada vira `ParseError` e não chega a lugar nenhum (ADR 0003, ADR 0006).
+O resultado de um **Analyze** — uma descrição narrativa, um Threat Level, tags identificadoras e, quando o provider entrega uma que se possa ler, uma **Suggestion**. As partes vêm de uma única ida ao AI Provider: quem paga a chamada é o usuário, com a própria chave, então descrever e sugerir são um ato só e não dois (#308). Validada num ponto só, antes de virar valor de domínio: prosa malformada vira `ParseError` e a Analysis inteira cai (ADR 0003, ADR 0006); uma **Suggestion** que o leitor recusa cai sozinha, porque a descrição pela qual o usuário já pagou não vale ser jogada fora por um número fora de faixa.
 _Avoid_: AnalysisResult (nome de tipo interno), response, resultado
 
 **Suggestion**:
-Os **ConversionSettings** que a **Analysis** propõe para o que ela acabou de descrever — os seis eixos de uma vez, não um conselho em prosa. Chega junto da descrição mas não age: nenhum controle se move sozinho. O usuário lê a proposta no modal e aplica num clique; os ConversionSettings que ela deslocou ficam guardados atrás de um chip `revert` na aba PRESETS, sem precisar recarregar a **Source Image**, e a oferta expira na primeira edição do próprio usuário — depois dela, restaurar o snapshot jogaria fora trabalho que veio *depois* da sugestão. Vocabulário desconhecido é recusado, nunca aproximado: um Charset que não existe invalida a Analysis inteira em vez de virar o Charset mais parecido.
+Os **ConversionSettings** que a **Analysis** propõe para o que ela acabou de descrever — os seis eixos de uma vez, não um conselho em prosa. Chega junto da descrição mas não age: nenhum controle se move sozinho. O usuário lê a proposta no modal e aplica num clique; os ConversionSettings que ela deslocou ficam guardados atrás de um controle `revert` na aba PRESETS, sem precisar recarregar a **Source Image**, e a oferta expira na primeira edição do próprio usuário — depois dela, restaurar o snapshot jogaria fora trabalho que veio *depois* da sugestão. Vocabulário desconhecido é recusado, nunca aproximado: um Charset que não existe derruba a Suggestion inteira em vez de virar o Charset mais parecido — e derruba só ela: o painel some, a descrição fica.
 _Avoid_: recommendation, auto-settings, AI preset (a sugestão não tem nome nem lugar fixo na fileira de presets)
 
 **AI Config**:

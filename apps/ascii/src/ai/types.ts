@@ -18,8 +18,11 @@ export interface Analysis {
    * the result of a second act: the user pays for the round trip with their own key, so describing
    * and suggesting ride one request (issue #308). Never applied on arrival — `App` waits to be
    * asked.
+   *
+   * Optional because the prose does not fall with it: a suggestion the reader cannot take leaves
+   * the description standing and the panel absent (analysis-service.ts).
    */
-  suggestion: ConversionSettings
+  suggestion?: ConversionSettings
 }
 
 /**

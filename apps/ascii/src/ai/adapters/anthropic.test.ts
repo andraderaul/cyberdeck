@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthError, NetworkError, ParseError, QuotaError } from '../errors'
+import { SUGGESTION_SKELETON } from '../suggestion'
 import { AnthropicAdapter } from './anthropic'
+import { ANALYZE_MAX_TOKENS } from './shared'
 
 const mockCreate = vi.fn()
 
@@ -80,13 +82,15 @@ describe('AnthropicAdapter', () => {
     await expect(makeAdapter().analyze('base64data')).rejects.toBeInstanceOf(ParseError)
   })
 
-  // The failure the bigger payload makes likelier: a reply cut at the token budget lands mid-object,
-  // and mid-object is still just invalid JSON.
-  it('throws ParseError when the reply is truncated mid-suggestion', async () => {
-    const truncated =
-      '{"description":"t","threatLevel":"LOW","tags":["a"],"suggestion":{"charset":"bra'
-    mockCreate.mockResolvedValueOnce({ content: [{ type: 'text', text: truncated }] })
+  // The request half of the contract: every test above would pass on an adapter that never asked
+  // for a suggestion, and an ask that drifts from the reader is a reply dropped on arrival.
+  it('asks for the suggestion, with the shared token budget to fit it', async () => {
+    mockCreate.mockResolvedValueOnce(successResponse({ ok: true }))
 
-    await expect(makeAdapter().analyze('base64data')).rejects.toBeInstanceOf(ParseError)
+    await makeAdapter().analyze('base64data')
+
+    const [request] = mockCreate.mock.calls[0]
+    expect(request.max_tokens).toBe(ANALYZE_MAX_TOKENS)
+    expect(request.messages[0].content[1].text).toContain(SUGGESTION_SKELETON)
   })
 })
