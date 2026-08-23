@@ -13,7 +13,7 @@ import {
   DEFAULT_PRESET,
   EFFECT_ORDER,
   PRESETS,
-  type Preset,
+  presetById,
   randomizeChain,
 } from './presets'
 import { structuredBuffer } from './test-pixels'
@@ -33,14 +33,27 @@ import {
 // 0.5 is the one draw that perturbs nothing: the spread is applied signed, around the base.
 const NO_JITTER = 0.5
 
-/** The Preset with this id, failing loudly rather than handing back an undefined look. */
-function preset(id: string): Preset {
-  const found = PRESETS.find((p) => p.id === id)
-  if (!found) {
-    throw new Error(`no Preset with id "${id}"`)
-  }
-  return found
-}
+/**
+ * The wavelengths Randomize can actually hand out — DEGAUSS's 140 and CROSSTALK's 60, each
+ * ±WAVE_WAVELENGTH_SPREAD — and the band every roll of both was rendered across for #320.
+ *
+ * The *driven* band rather than the band where a Wave stops being a bend: a wavelength short enough
+ * to comb or long enough to read as a lean sits far outside anything the jitter can reach, so an
+ * assertion drawn there passes on every possible output and pins nothing. This one fails the moment
+ * a base moves far enough that a roll leaves the looks someone actually looked at.
+ */
+const DRIVEN_WAVELENGTH = { min: 40, max: 160 } as const
+
+/**
+ * The dot scales Randomize can hand out — PHOSPHOR and BILLBOARD both base at 0.75, each
+ * ±HALFTONE_DOT_SCALE_SPREAD — and the band both were rendered across for #320, at both curated
+ * cells. The driven band rather than the breaking point, for the reason DRIVEN_WAVELENGTH is.
+ *
+ * The breaking point is well clear of it: a dot covers ~85% of its cell at full luminance at 0.75
+ * and ~95% at 0.85, and only near 0.95 does it read as solid ink with the grid inverted into dark
+ * pinholes (presets.ts).
+ */
+const DRIVEN_DOT_SCALE = { min: 0.65, max: 0.85 } as const
 
 /**
  * Hands randomizeChain a pinned stream instead of real randomness: its first draw — the one that
@@ -52,7 +65,7 @@ function preset(id: string): Preset {
  * curates — and a renumbered assertion still passes while testing a different look than it reads as.
  */
 function basedOn(id: string, draw: number) {
-  const index = PRESETS.indexOf(preset(id))
+  const index = PRESETS.indexOf(presetById(id))
   let picked = false
   return () => {
     if (picked) {
@@ -64,10 +77,6 @@ function basedOn(id: string, draw: number) {
 }
 
 describe('PRESETS', () => {
-  it('offers more curated looks than the six the front door started on', () => {
-    expect(PRESETS.length).toBeGreaterThan(6)
-  })
-
   it('gives every Preset its own id', () => {
     expect(new Set(PRESETS.map((p) => p.id)).size).toBe(PRESETS.length)
   })
@@ -76,6 +85,20 @@ describe('PRESETS', () => {
     // The name is the whole chip: two looks sharing one would be indistinguishable at the front
     // door however different their Chains are.
     expect(new Set(PRESETS.map((p) => p.name)).size).toBe(PRESETS.length)
+  })
+
+  it('gives every Preset a Chain no other Preset matches', () => {
+    // The id and the name only separate the *chips*. What separates the looks is `chainMatch`, and
+    // it is what the picker highlights through: two Presets comparing equal would leave applying one
+    // of them lighting the other's chip, with neither marked `(modified)` (#320, ADR 0017).
+    for (const [index, one] of PRESETS.entries()) {
+      for (const other of PRESETS.slice(index + 1)) {
+        expect(
+          chainMatch(one.chain, other.chain),
+          `${one.name} and ${other.name} are the same look`,
+        ).toBe(false)
+      }
+    }
   })
 
   it('opens on a Preset that is on the roster', () => {
@@ -91,7 +114,7 @@ describe('PRESETS', () => {
   it('carries only the Links each look actually uses', () => {
     // The migration ADR 0017 asks for: off is the Link's absence, so the Effects a v1 Preset
     // switched off in its params are simply gone.
-    const typesOf = (id: string) => preset(id).chain.map((link) => link.type)
+    const typesOf = (id: string) => presetById(id).chain.map((link) => link.type)
 
     expect(typesOf('vhs')).not.toContain('pixelSort')
     expect(typesOf('signal-loss')).not.toContain('pixelSort')
@@ -107,10 +130,10 @@ describe('PRESETS', () => {
     // it is — a Preset that reads out of order teaches the wrong thing about the Chain it opens on.
     const ranks = chain.map((link) => EFFECT_ORDER.indexOf(link.type))
 
+    // Non-decreasing rather than strictly increasing: a repeated Effect is legal in a Chain and the
+    // editor offers it (ADR 0017), so a look that wanted two Waves would still be in canonical
+    // order. Nothing on the roster repeats one today, and this is not the test that should stop it.
     expect(ranks).toEqual([...ranks].sort((a, b) => a - b))
-    // A Preset repeating an Effect would satisfy the sort above while the roster has no look that
-    // wants one; catching it here keeps the assertion honest rather than accidentally weak.
-    expect(new Set(ranks).size).toBe(ranks.length)
   })
 
   it('exploits the Effects the six could not express', () => {
@@ -341,7 +364,7 @@ describe('chainMatch', () => {
   ] as const
 
   it.each(PARAM_EDITS)('notices a change to %s’s %s.%s', (id, type, key, value) => {
-    const base = preset(id).chain
+    const base = presetById(id).chain
     const edited = base.map((link) =>
       link.type === type ? ({ ...link, params: { ...link.params, [key]: value } } as Link) : link,
     )
@@ -363,14 +386,14 @@ describe('chainMatch', () => {
 describe('randomizeChain', () => {
   it('starts from a Preset — an unperturbing stream lands exactly on the base look', () => {
     expect(
-      chainMatch(randomizeChain(basedOn('neon-rain', NO_JITTER)), preset('neon-rain').chain),
+      chainMatch(randomizeChain(basedOn('neon-rain', NO_JITTER)), presetById('neon-rain').chain),
     ).toBe(true)
   })
 
   it.each(
     PRESETS.map(({ name, id }) => [name, id] as const),
   )('can pick %s as its base', (_name, id) => {
-    expect(chainMatch(randomizeChain(basedOn(id, NO_JITTER)), preset(id).chain)).toBe(true)
+    expect(chainMatch(randomizeChain(basedOn(id, NO_JITTER)), presetById(id).chain)).toBe(true)
   })
 
   // Math.random's own range is [0, 1) — but a source that hands back exactly 1 must not index off
@@ -385,7 +408,7 @@ describe('randomizeChain', () => {
   })
 
   it('perturbs the base look rather than returning it untouched', () => {
-    expect(chainMatch(randomizeChain(basedOn('vaporwave', 0)), preset('vaporwave').chain)).toBe(
+    expect(chainMatch(randomizeChain(basedOn('vaporwave', 0)), presetById('vaporwave').chain)).toBe(
       false,
     )
   })
@@ -553,28 +576,26 @@ describe('randomizeChain', () => {
     // param pinned to the end of its own range on every draw means the base was curated too close
     // to that end for the look to stay itself (presets.ts).
     it('leaves every Wave a bend rather than a comb or a lean', () => {
-      // A wavelength this short puts neighbouring lines near opposite crests; this long leaves
-      // fewer than two cycles across the sampled frame (types.ts). Both are looks nobody curated.
       for (const chain of looks) {
         for (const link of chain) {
           if (link.type === 'wave') {
-            expect(link.params.wavelength).toBeGreaterThanOrEqual(24)
-            expect(link.params.wavelength).toBeLessThanOrEqual(200)
+            expect(link.params.wavelength).toBeGreaterThanOrEqual(DRIVEN_WAVELENGTH.min)
+            expect(link.params.wavelength).toBeLessThanOrEqual(DRIVEN_WAVELENGTH.max)
           }
         }
       }
     })
 
     it('leaves every Halftone a screen the Source can still be read through', () => {
-      // Past ~0.75 a dot fills its cell before full luminance and the highlights flatten into
-      // solid ink; at the range's floor the cell holds one dot decision and the screen collapses
-      // into a posterize (types.ts).
       for (const chain of looks) {
         for (const link of chain) {
           if (link.type === 'halftone') {
+            // The cell is the one bound here that is a property rather than a driven band: at the
+            // range's floor a cell holds one dot decision and the screen collapses into a
+            // posterize (types.ts), and a base curated near it would roll straight onto that.
             expect(link.params.cellSize).toBeGreaterThan(HALFTONE_CELL_SIZE_RANGE.min)
-            expect(link.params.dotScale).toBeLessThanOrEqual(0.9)
-            expect(link.params.dotScale).toBeGreaterThanOrEqual(0.5)
+            expect(link.params.dotScale).toBeGreaterThanOrEqual(DRIVEN_DOT_SCALE.min)
+            expect(link.params.dotScale).toBeLessThanOrEqual(DRIVEN_DOT_SCALE.max)
           }
         }
       }

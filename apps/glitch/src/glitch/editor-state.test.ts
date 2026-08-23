@@ -6,23 +6,10 @@ import {
   initialEditorState,
   isPresetModified,
 } from './editor-state'
-import { DEFAULT_PRESET, PRESETS, type Preset } from './presets'
+import { DEFAULT_PRESET, presetById } from './presets'
 
 const SEED = 42
 const FRESH_SEED = 7
-
-/**
- * The Preset with this id. Named rather than indexed: the roster is ordered gentlest first and a
- * newly curated look is inserted at the loudness it lands on, so a positional fixture silently
- * becomes a different look the next time someone curates (presets.ts).
- */
-function preset(id: string): Preset {
-  const found = PRESETS.find((p) => p.id === id)
-  if (!found) {
-    throw new Error(`no Preset with id "${id}"`)
-  }
-  return found
-}
 
 function openedEditor(): EditorState {
   return initialEditorState(SEED)
@@ -40,7 +27,7 @@ describe('initialEditorState', () => {
 
 describe('SELECT_PRESET', () => {
   it('moves all three: look, provenance and the freshly drawn arrangement', () => {
-    const chosen = preset('neon-rain')
+    const chosen = presetById('neon-rain')
     const state = editorReducer(openedEditor(), {
       type: 'SELECT_PRESET',
       preset: chosen,
@@ -55,7 +42,7 @@ describe('SELECT_PRESET', () => {
 
 describe('RANDOMIZE', () => {
   it('takes the discovered look and clears provenance', () => {
-    const discovered = preset('vhs').chain
+    const discovered = presetById('vhs').chain
     const state = editorReducer(openedEditor(), {
       type: 'RANDOMIZE',
       chain: discovered,
@@ -70,7 +57,7 @@ describe('RANDOMIZE', () => {
 
 describe('IMPORT_CHAIN', () => {
   it('takes the brought look, clears provenance and draws a fresh arrangement', () => {
-    const brought = preset('degauss').chain
+    const brought = presetById('degauss').chain
     const state = editorReducer(openedEditor(), {
       type: 'IMPORT_CHAIN',
       chain: brought,
@@ -178,7 +165,7 @@ describe('isPresetModified', () => {
   it('is false right after a Preset is applied — Link ids are not part of the look', () => {
     const state = editorReducer(openedEditor(), {
       type: 'SELECT_PRESET',
-      preset: preset('vhs'),
+      preset: presetById('vhs'),
       seed: FRESH_SEED,
     })
 

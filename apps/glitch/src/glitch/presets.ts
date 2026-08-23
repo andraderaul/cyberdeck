@@ -205,10 +205,28 @@ export const PRESETS: Preset[] = [
 ]
 
 /**
- * The look the app opens on. A casual creator has to see the point on the first screen, not a raw
- * image — and this is the gentlest look on the dial, which is where the roster starts.
+ * The Preset a caller names, or a hard failure. An id that is not on the roster is a bug in the
+ * caller rather than a look to fall back from, and a silent `undefined` would surface as a blank
+ * opening screen or as a test quietly asserting nothing.
  */
-export const DEFAULT_PRESET: Preset = PRESETS[0]
+export function presetById(id: string): Preset {
+  const found = PRESETS.find((preset) => preset.id === id)
+  if (!found) {
+    throw new Error(`no Preset with id "${id}"`)
+  }
+  return found
+}
+
+/**
+ * The look the app opens on. A casual creator has to see the point on the first screen, not a raw
+ * image — and VAPORWAVE is the widest Chain here that still leaves the Source plainly readable
+ * underneath.
+ *
+ * Named rather than taken off the head of the roster. The list is ordered gentlest first, so
+ * curating one gentler look would otherwise move the app's opening screen without anyone choosing
+ * it — the same trap as any other positional read of `PRESETS`.
+ */
+export const DEFAULT_PRESET: Preset = presetById('vaporwave')
 
 /** Whether two Links carry the same Effect with the same params — their ids are not part of it. */
 function linkMatch(a: Link, b: Link): boolean {
@@ -237,8 +255,8 @@ function linkMatch(a: Link, b: Link): boolean {
  *
  * Params are compared by walking their keys rather than field by field. The flat version listed
  * every field explicitly so an omission couldn't hide, but that does not survive a Chain whose Links
- * are a union — the key walk is what keeps the comparison total across all six param shapes at once,
- * and a new Effect is covered the day it is registered.
+ * are a union — the key walk is what keeps the comparison total across every Effect's param shape at
+ * once, and a new Effect is covered the day it is registered.
  */
 export function chainMatch(a: Chain, b: Chain): boolean {
   return a.length === b.length && a.every((link, index) => linkMatch(link, b[index]))
@@ -343,11 +361,16 @@ const LINK_JITTERS: {
   // The cell moves by a few pixels at most: it sets how much of the Source survives the screen, so
   // a wide jitter would swing a look between "the photo, dotted" and an unreadable grid. The tint
   // rides through, being a choice rather than a number — and the load-bearing one here, since
-  // `mono` spends the Source's colour outright (BLACK ICE) where `color` keeps it (PHOSPHOR).
+  // `mono` spends the Source's colour outright where `color` keeps it. Both curated Halftones are
+  // `color` (PHOSPHOR, BILLBOARD) and no `mono` carrier ships, so a roll that flipped the tint would
+  // be handing out a palette no curator ever vouched for. Mono stays one toggle away in EDIT.
   //
-  // The dot's spread is what keeps a roll off the top of its own scale: past ~0.75 a dot fills its
-  // cell before full luminance and the highlights flatten into solid ink (types.ts), so the curated
-  // bases sit at or under that and the spread reaches the flattening end rather than living in it.
+  // The dot's spread was re-driven for #320, on a photograph at both curated cells. Flattening is a
+  // property of the very top of the dot's own scale, not of 0.75: a dot covers ~85% of its cell at
+  // full luminance at 0.75, ~95% at 0.85 and ~99% at 0.95, and only that last one reads as solid
+  // ink — the screen inverts and the grid survives as dark pinholes. 0.85, the top of every
+  // reachable roll, still renders plainly as a screen, so the bases stay at 0.75 and the whole
+  // spread renders as the look it started from.
   halftone: (source, params) => ({
     ...params,
     cellSize: clamp(

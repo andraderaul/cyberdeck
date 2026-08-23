@@ -15,7 +15,7 @@ Chain (ADR 0017, #125–#128), plus Halftone (#309), Wave (#310) and the Chain a
 eight Effects are live — Source Image *or* Live Source → the Chain → PNG Export / Capture / Copy /
 Recording — the pure-core / imperative-shell seam is established, and the render is deterministic in
 Chain + Seed. The front
-door is the ten curated Presets plus Randomize; behind the EDIT tab the Chain is fully editable —
+door is the curated Presets plus Randomize; behind the EDIT tab the Chain is fully editable —
 reorder, add, remove, duplicate, the same Effect more than once. A Chain built by hand exports as JSON and
 comes back (**Chain JSON**, `CONTEXT.md`), which is the only way structural variety reaches the app
 from outside the roster. The v1 scope in `CONTEXT.md` is complete.
@@ -70,7 +70,7 @@ Single-page React/TS/Vite app. Fully client-side — no backend, no network.
 
 ### Presets and Randomize
 
-The ten Presets in `src/glitch/presets.ts` are the app's primary surface — `PresetPicker` fills the
+The curated Presets in `src/glitch/presets.ts` are the app's primary surface — `PresetPicker` fills the
 Control Strip's PRESETS tab (ADR 0020), and `DEFAULT_PRESET` is applied on open. A Preset is a whole
 Chain rather than a diff from a default: a curator can read one entire look in one place, and
 re-curate it without moving the others. Each carries **only the Links its look uses** — off is a
@@ -79,7 +79,8 @@ structural at all.
 
 The list is ordered **gentlest first** and reads as a dial from "still clearly the photo" to "barely
 survived", so a newly curated look is *inserted* at the loudness it lands on rather than appended.
-Nothing may index `PRESETS` by position for that reason — the tests select by id (#320).
+Nothing may index `PRESETS` by position for that reason: `DEFAULT_PRESET` and every test name an id
+through `presetById()`, which throws on a miss rather than handing back an undefined look (#320).
 
 **Curating is the app's only structural lever.** Randomize rides a base's structure through
 untouched, so a Preset is the one thing that can put a new Effect in a casual creator's hands:
@@ -265,7 +266,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   a list written the other way round type-checks for validity but never for completeness, so a value
   added to a union would compile everywhere while going missing from the toggle that offers it and
   from the Chain JSON that has to read it back
-- `src/glitch/presets.ts` — `PRESETS` (the curated Chains), `DEFAULT_PRESET` (applied on open),
+- `src/glitch/presets.ts` — `PRESETS` (the curated Chains), `presetById()` (the only way to reach
+  one — throws on a miss), `DEFAULT_PRESET` (applied on open),
   `Preset`, `chainMatch()` (total and order-sensitive), `randomizeChain()` (preset + jitter,
   injected randomness, structure rides through), `EFFECT_ORDER` (the palette's order)
 - `src/glitch/pipeline.ts` — the eight Effects: `blockDisplacement()`, `pixelSort()`, `wave()`,
