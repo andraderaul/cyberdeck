@@ -662,16 +662,21 @@ describe('convertImage Dithering', () => {
   // like chain-link. The gradient reads the undithered luminance, so the contours it finds are the
   // same ones either way.
   describe('beside the Edge Glyph pass', () => {
-    const contourAndGradient = (col: number, row: number) => (col < 4 ? 40 + row * 12 : 210)
+    // `binary` on purpose: two characters make one bucket half the whole ramp, so a Dithering
+    // swings neighbouring cells by 127 levels — twice what Sobel calls a contour. The left half of
+    // this Source is a gentle gradient with no contour anywhere in it, and the step at column 5 is
+    // the only real one. Run the passes the other way round and the gradient comes back stroked
+    // across its whole width.
+    const contourAndGradient = (col: number, row: number) =>
+      col < 5 ? 60 + col * 4 + row * 3 : 240
+    const withAxis = { ...options, charset: 'binary', edgeGlyphs: true } as const
 
     it.each([
       'bayer',
       'floyd',
     ] as const)('finds exactly the same contours under %s as without one', (dithering) => {
-      const withAxis = { ...options, edgeGlyphs: true } as const
-
-      const plain = convertImage(greyCtx(9, 9, contourAndGradient), img, 9, 9, withAxis)
-      const dithered = convertImage(greyCtx(9, 9, contourAndGradient), img, 9, 9, {
+      const plain = convertImage(greyCtx(12, 12, contourAndGradient), img, 12, 12, withAxis)
+      const dithered = convertImage(greyCtx(12, 12, contourAndGradient), img, 12, 12, {
         ...withAxis,
         dithering,
       })
@@ -681,13 +686,13 @@ describe('convertImage Dithering', () => {
     })
 
     it('lets a contour keep its stroke over whatever the pattern chose for the cell', () => {
-      const cells = convertImage(greyCtx(9, 9, contourAndGradient), img, 9, 9, {
-        ...options,
-        edgeGlyphs: true,
+      const cells = convertImage(greyCtx(12, 12, contourAndGradient), img, 12, 12, {
+        ...withAxis,
         dithering: 'bayer',
       })
 
-      expect(cells[4][3].char).toBe('|')
+      expect(cells[6][4].char).toBe('|')
+      expect(cells[6][5].char).toBe('|')
     })
   })
 })
