@@ -28,8 +28,9 @@ function notchedDensity(notches: number): number {
 }
 
 /**
- * The six curated looks — the app's front door, and the base Randomize perturbs from. Ordered
- * gentlest first: the list reads as a dial from "still clearly the photo" to "barely survived".
+ * The curated looks — the app's front door, and the base Randomize perturbs from. Ordered
+ * gentlest first: the list reads as a dial from "still clearly the photo" to "barely survived", so
+ * a new look is inserted at the loudness it lands on rather than appended to the end.
  *
  * These numbers are taste, not derivation — they came from playing the sliders (#84) until each
  * look landed, and each one is a whole Chain rather than a diff from a default, so a reader can see
@@ -38,15 +39,31 @@ function notchedDensity(notches: number): number {
  * Each Chain lists **only the Links its look actually uses** — an Effect is on because it is here
  * (ADR 0017). Where v1 carried every Effect and switched the unwanted ones off in their params, the
  * migration dropped those Links outright: VHS and SIGNAL LOSS have no Pixel Sort, NEON RAIN and
- * CORRUPTED no Scanlines, and only VAPORWAVE carries Chromatic Aberration. The looks are unchanged —
- * `presets.test.ts` pins each one against the flat Preset it was migrated from, byte for byte.
+ * CORRUPTED no Scanlines. The migrated looks are unchanged — `presets.test.ts` pins each of the six
+ * against the flat Preset it came from, byte for byte.
+ *
+ * **This list is the only place structural variety comes from.** Randomize rides a base's structure
+ * through untouched (ADR 0017), so which Links a look holds, how many and in what order is decided
+ * here or nowhere — which is why PHOSPHOR, DEGAUSS, BILLBOARD and CROSSTALK were curated once
+ * Halftone and Wave landed rather than left to be discovered: neither Effect was reachable from the
+ * front door at all until a Chain here carried one.
+ *
+ * Every Chain is assembled in the canonical order (EFFECT_ORDER below). A curated look may legally
+ * depart from it — the order stopped being a law with ADR 0017 — but the front door is where a user
+ * learns what the order *is*, so a Preset that reorders has to be earning something the canonical
+ * reading cannot give it, and none of these do.
  */
 export const PRESETS: Preset[] = [
   {
     id: 'vaporwave',
     name: 'VAPORWAVE',
-    // The one Chain that still holds every Effect, and the reason it opens the app: a casual creator
-    // has to see what every Effect does at once while their image stays plainly readable underneath.
+    // The widest Chain here and the reason it opens the app: a casual creator has to see several
+    // Effects at once while their image stays plainly readable underneath. It held *every* Effect
+    // until Halftone and Wave landed, and it is deliberately not chasing them — both re-draw the
+    // whole frame, and the opening look has to leave the Source recognisable.
+    //
+    // The only Chain carrying Chromatic Aberration: the lens is what separates it from VHS, whose
+    // artefacts are the tape's.
     chain: [
       createLink('blockDisplacement', { density: 0.1, amount: 0.2 }),
       createLink('pixelSort', { direction: 'horizontal', threshold: 0.65, runLength: 70 }),
@@ -66,6 +83,38 @@ export const PRESETS: Preset[] = [
       createLink('channelShift', { channel: 'r', amount: 6 }),
       createLink('scanlines', { density: notchedDensity(9), intensity: 0.4 }),
       createLink('noise', { amount: 0.18, tint: 'mono' }),
+    ],
+  },
+  {
+    id: 'degauss',
+    name: 'DEGAUSS',
+    // The wipe across a tube coming back to itself: the picture rolls through a long, slow bend
+    // while the raster underneath stays perfectly straight. The order is what buys that — Wave
+    // moves the image, Scanlines lands after and belongs to the screen rather than to the signal.
+    //
+    // A long wavelength on purpose: this is the one Wave look that is meant to read as the whole
+    // frame breathing, so only a few cycles cross it.
+    chain: [
+      createLink('wave', { axis: 'horizontal', amplitude: 0.3, wavelength: 140 }),
+      createLink('channelShift', { channel: 'b', amount: -6 }),
+      createLink('scanlines', { density: notchedDensity(8), intensity: 0.4 }),
+      createLink('noise', { amount: 0.14, tint: 'mono' }),
+    ],
+  },
+  {
+    id: 'phosphor',
+    name: 'PHOSPHOR',
+    // The tube's own dot triads: the picture re-quantized onto the shadow mask, then the raster
+    // laid over it. Nothing structural at all — the first look here that moves no pixel out of
+    // place, and the proof that Halftone can carry a Chain on its own.
+    //
+    // The Channel Shift is convergence error, not an RGB split: a few pixels, small enough that the
+    // cells pick it up as fringing on the dots rather than as three offset pictures.
+    chain: [
+      createLink('channelShift', { channel: 'g', amount: 4 }),
+      createLink('halftone', { cellSize: 6, dotScale: 0.75, tint: 'color' }),
+      createLink('scanlines', { density: notchedDensity(10), intensity: 0.35 }),
+      createLink('noise', { amount: 0.1, tint: 'mono' }),
     ],
   },
   {
@@ -93,6 +142,42 @@ export const PRESETS: Preset[] = [
     ],
   },
   {
+    id: 'billboard',
+    name: 'BILLBOARD',
+    // The whole scene playing on something the size of a building: everything the tears and the
+    // melt leave behind, re-quantized onto a grid coarse enough that a cell reads as a lamp rather
+    // than as a pixel. The same Effect PHOSPHOR uses, at the other end of its cell — twice the
+    // cell is the difference between a screen you look *through* and one you look *at*.
+    //
+    // `color` rather than `mono`, and the choice was made at the canvas: mono spends the cell's
+    // colour and leaves the dot's area alone to carry tone, which is beautiful on a high-contrast
+    // Source and a flat grey field on the evenly-lit photograph most people bring. Colour is what
+    // keeps a shape readable through a cell this coarse. Mono stays one toggle away in EDIT.
+    chain: [
+      createLink('blockDisplacement', { density: 0.4, amount: 0.6 }),
+      createLink('pixelSort', { direction: 'vertical', threshold: 0.55, runLength: 140 }),
+      createLink('halftone', { cellSize: 12, dotScale: 0.75, tint: 'color' }),
+      createLink('noise', { amount: 0.08, tint: 'mono' }),
+    ],
+  },
+  {
+    id: 'crosstalk',
+    name: 'CROSSTALK',
+    // Bending and breaking at once: the tears carve the frame up, then a tight vertical Wave rolls
+    // the whole thing sideways so the torn edges ride the ripple instead of sitting flat. The
+    // canonical order is doing the work — the bend lands after the discrete tears and carries them
+    // along the curve, and the split rides on the already-bent picture.
+    //
+    // No raster: a screen would claim this is a display problem, and it is meant to read as two
+    // signals in one wire.
+    chain: [
+      createLink('blockDisplacement', { density: 0.35, amount: 0.5 }),
+      createLink('wave', { axis: 'vertical', amplitude: 0.45, wavelength: 60 }),
+      createLink('channelShift', { channel: 'r', amount: 18 }),
+      createLink('noise', { amount: 0.16, tint: 'color' }),
+    ],
+  },
+  {
     id: 'signal-loss',
     name: 'SIGNAL LOSS',
     // Heavy mono grain over a tight raster, and the tears travel their farthest — the picture is
@@ -107,8 +192,8 @@ export const PRESETS: Preset[] = [
   {
     id: 'kernel-panic',
     name: 'KERNEL PANIC',
-    // The loud end of the dial: every Effect pushed, and the one Preset that is allowed to cost the
-    // image its legibility.
+    // The loud end of the dial: every Link it carries pushed, and the one Preset that is allowed to
+    // cost the image its legibility.
     chain: [
       createLink('blockDisplacement', { density: 0.85, amount: 0.75 }),
       createLink('pixelSort', { direction: 'vertical', threshold: 0.35, runLength: 120 }),
@@ -120,11 +205,28 @@ export const PRESETS: Preset[] = [
 ]
 
 /**
- * The look the app opens on. A casual creator has to see the point on the first screen, not a raw
- * image — and this is the Preset carrying every Effect, so that first screen also shows the full
- * Effect set at once.
+ * The Preset a caller names, or a hard failure. An id that is not on the roster is a bug in the
+ * caller rather than a look to fall back from, and a silent `undefined` would surface as a blank
+ * opening screen or as a test quietly asserting nothing.
  */
-export const DEFAULT_PRESET: Preset = PRESETS[0]
+export function presetById(id: string): Preset {
+  const found = PRESETS.find((preset) => preset.id === id)
+  if (!found) {
+    throw new Error(`no Preset with id "${id}"`)
+  }
+  return found
+}
+
+/**
+ * The look the app opens on. A casual creator has to see the point on the first screen, not a raw
+ * image — and VAPORWAVE is the widest Chain here that still leaves the Source plainly readable
+ * underneath.
+ *
+ * Named rather than taken off the head of the roster. The list is ordered gentlest first, so
+ * curating one gentler look would otherwise move the app's opening screen without anyone choosing
+ * it — the same trap as any other positional read of `PRESETS`.
+ */
+export const DEFAULT_PRESET: Preset = presetById('vaporwave')
 
 /** Whether two Links carry the same Effect with the same params — their ids are not part of it. */
 function linkMatch(a: Link, b: Link): boolean {
@@ -153,8 +255,8 @@ function linkMatch(a: Link, b: Link): boolean {
  *
  * Params are compared by walking their keys rather than field by field. The flat version listed
  * every field explicitly so an omission couldn't hide, but that does not survive a Chain whose Links
- * are a union — the key walk is what keeps the comparison total across all six param shapes at once,
- * and a new Effect is covered the day it is registered.
+ * are a union — the key walk is what keeps the comparison total across every Effect's param shape at
+ * once, and a new Effect is covered the day it is registered.
  */
 export function chainMatch(a: Chain, b: Chain): boolean {
   return a.length === b.length && a.every((link, index) => linkMatch(link, b[index]))
@@ -223,13 +325,14 @@ const LINK_JITTERS: {
       PIXEL_SORT_RUN_LENGTH_RANGE.max,
     ),
   }),
-  // Unreachable until a Preset carries Wave (#320), the same as Halftone's entry — Randomize only
-  // jitters the Links of the base it picked, and no curated look holds one yet. The entry is
-  // required all the same: the map is total over EffectType.
-  //
   // Both numbers move; the axis rides through, being a choice rather than a number. The wavelength
   // moves over a narrow slice of its range: it is what decides whether a look reads as a slow bend
   // or a tight ripple, so a wide jitter would swing it between two looks rather than around one.
+  //
+  // The spread is absolute where the param's effect is proportional, so it bites hardest at the
+  // short end — a base curated much below CROSSTALK's 60 would halve its cycle count on one draw.
+  // That constrains the curator rather than the spread: a base is picked far enough off
+  // WAVE_WAVELENGTH_RANGE.min that every roll still reads as the look it started from.
   wave: (source, params) => ({
     ...params,
     amplitude: jitterUnit(source, params.amplitude, WAVE_AMPLITUDE_SPREAD),
@@ -255,12 +358,19 @@ const LINK_JITTERS: {
   chromaticAberration: (source, params) => ({
     strength: jitterUnit(source, params.strength, CHROMATIC_STRENGTH_SPREAD),
   }),
-  // Unreachable until a Preset carries Halftone (#320) — Randomize only ever jitters the Links of
-  // the base it picked, and no curated look holds one yet. The entry is required all the same: the
-  // map is total over EffectType.
-  //
   // The cell moves by a few pixels at most: it sets how much of the Source survives the screen, so
-  // a wide jitter would swing a look between "the photo, dotted" and an unreadable grid.
+  // a wide jitter would swing a look between "the photo, dotted" and an unreadable grid. The tint
+  // rides through, being a choice rather than a number — and the load-bearing one here, since
+  // `mono` spends the Source's colour outright where `color` keeps it. Both curated Halftones are
+  // `color` (PHOSPHOR, BILLBOARD) and no `mono` carrier ships, so a roll that flipped the tint would
+  // be handing out a palette no curator ever vouched for. Mono stays one toggle away in EDIT.
+  //
+  // The dot's spread was re-driven for #320, on a photograph at both curated cells. Flattening is a
+  // property of the very top of the dot's own scale, not of 0.75: a dot covers ~85% of its cell at
+  // full luminance at 0.75, ~95% at 0.85 and ~99% at 0.95, and only that last one reads as solid
+  // ink — the screen inverts and the grid survives as dark pinholes. 0.85, the top of every
+  // reachable roll, still renders plainly as a screen, so the bases stay at 0.75 and the whole
+  // spread renders as the look it started from.
   halftone: (source, params) => ({
     ...params,
     cellSize: clamp(

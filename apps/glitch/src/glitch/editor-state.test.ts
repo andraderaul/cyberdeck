@@ -6,7 +6,7 @@ import {
   initialEditorState,
   isPresetModified,
 } from './editor-state'
-import { DEFAULT_PRESET, PRESETS } from './presets'
+import { DEFAULT_PRESET, presetById } from './presets'
 
 const SEED = 42
 const FRESH_SEED = 7
@@ -27,22 +27,22 @@ describe('initialEditorState', () => {
 
 describe('SELECT_PRESET', () => {
   it('moves all three: look, provenance and the freshly drawn arrangement', () => {
-    const preset = PRESETS[2]
+    const chosen = presetById('neon-rain')
     const state = editorReducer(openedEditor(), {
       type: 'SELECT_PRESET',
-      preset,
+      preset: chosen,
       seed: FRESH_SEED,
     })
 
-    expect(state.chain).toBe(preset.chain)
-    expect(state.activePresetId).toBe(preset.id)
+    expect(state.chain).toBe(chosen.chain)
+    expect(state.activePresetId).toBe(chosen.id)
     expect(state.seed).toBe(FRESH_SEED)
   })
 })
 
 describe('RANDOMIZE', () => {
   it('takes the discovered look and clears provenance', () => {
-    const discovered = PRESETS[1].chain
+    const discovered = presetById('vhs').chain
     const state = editorReducer(openedEditor(), {
       type: 'RANDOMIZE',
       chain: discovered,
@@ -57,7 +57,7 @@ describe('RANDOMIZE', () => {
 
 describe('IMPORT_CHAIN', () => {
   it('takes the brought look, clears provenance and draws a fresh arrangement', () => {
-    const brought = PRESETS[3].chain
+    const brought = presetById('degauss').chain
     const state = editorReducer(openedEditor(), {
       type: 'IMPORT_CHAIN',
       chain: brought,
@@ -65,12 +65,12 @@ describe('IMPORT_CHAIN', () => {
     })
 
     expect(state.chain).toBe(brought)
-    // A look the user brought is nobody's edit of one of the six — the same call RANDOMIZE makes.
+    // A look the user brought is nobody's edit of a Preset — the same call RANDOMIZE makes.
     expect(state.activePresetId).toBeNull()
     expect(state.seed).toBe(FRESH_SEED)
   })
 
-  // Even where the imported look happens to *be* one of the six: the file said nothing about
+  // Even where the imported look happens to *be* one of the curated ones: the file said nothing about
   // provenance, and inferring it would claim the user is standing somewhere they never went.
   it('clears provenance even when the brought look matches a Preset', () => {
     const state = editorReducer(openedEditor(), {
@@ -165,7 +165,7 @@ describe('isPresetModified', () => {
   it('is false right after a Preset is applied — Link ids are not part of the look', () => {
     const state = editorReducer(openedEditor(), {
       type: 'SELECT_PRESET',
-      preset: PRESETS[1],
+      preset: presetById('vhs'),
       seed: FRESH_SEED,
     })
 

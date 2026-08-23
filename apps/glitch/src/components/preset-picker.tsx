@@ -16,7 +16,7 @@ interface Props {
   onSelect: (preset: Preset) => void
   onRandomize: () => void
   // A Chain brought from a file — the user's own Preset, and the only way structural variety
-  // reaches the app from outside the six (ADR 0017: Randomize never invents structure).
+  // reaches the app from outside the roster (ADR 0017: Randomize never invents structure).
   onImport: (chain: Chain) => void
 }
 
@@ -60,7 +60,7 @@ export default function PresetPicker({
         })}
       </div>
       {/* Both sit outside the scroller for the same reason: they must stay reachable without
-          scrolling past six Presets. */}
+          scrolling past the whole roster, which grows as looks are curated. */}
       <IconLabelButton
         variant="secondary"
         onClick={onRandomize}

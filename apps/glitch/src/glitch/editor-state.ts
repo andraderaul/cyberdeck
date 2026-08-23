@@ -100,7 +100,7 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       return { chain: action.chain, activePresetId: null, seed: action.seed }
     case 'IMPORT_CHAIN':
       // The same shape as RANDOMIZE, and for the same reason: an imported look is one the user
-      // brought, not one of the six edited away from, so there is no provenance to keep. The fresh
+      // brought, not a Preset edited away from, so there is no provenance to keep. The fresh
       // Seed is the Preset rule too — a file carries the look, never the arrangement (ADR 0017).
       return { chain: action.chain, activePresetId: null, seed: action.seed }
     case 'REROLL':
