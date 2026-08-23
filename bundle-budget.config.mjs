@@ -12,8 +12,9 @@
 // everything Vite modulepreloads. `lazy` is the total of everything else Vite emits under
 // `assets/` — a chunk reached through a dynamic `import()`, or a worker entry, which is fetched
 // when its `new Worker` runs and never before. Either way it is not on the first-load path, and it
-// is never folded into `entry`: ASCII//Convert's three AI adapters are code-split on purpose, and a
-// summed ceiling would charge the visitor who never opens AI Analysis for all three SDKs, which
+// is never folded into `entry`: ASCII//Convert's whole AI surface is code-split on purpose — the
+// three adapters, the service that picks one, and the two modals that only exist beside them — and
+// a summed ceiling would charge the visitor who never opens AI Analysis for all three SDKs, which
 // reads as pressure to undo the split. Every lazy chunk is still reported by name, because which
 // one moved is what says whether a split still holds.
 //
@@ -46,7 +47,7 @@
 
 /** Gzipped kB (1 kB = 1000 B), matching what Vite prints at the end of a build. */
 export const BUNDLE_BUDGET = {
-  ascii: { entry: 76, lazy: 63 },
+  ascii: { entry: 76, lazy: 68 },
   deck: { entry: 60, lazy: 0 },
   glitch: { entry: 75, lazy: 2.6 },
   golem: { entry: 79, lazy: 0 },

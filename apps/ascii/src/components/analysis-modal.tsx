@@ -2,6 +2,7 @@ import { Button, Modal } from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import type { AnalysisState, ThreatLevel } from '../ai/types'
 import type { ConversionSettings } from '../ascii/types'
+import ScanPendingModal, { SCAN_MODAL } from './scan-pending-modal'
 import Badge from './ui/badge'
 
 /** A barely-there tint of a role's own colour, for the band behind a threat level. */
@@ -161,26 +162,14 @@ function ScanErrorState({ status, onRetry }: { status: ErrorStatus; onRetry?: ()
 }
 
 export default function AnalysisModal({ state, onClose, onRetry, onApplySuggestion }: Props) {
-  return (
-    <Modal
-      onClose={onClose}
-      title={
-        <span className="text-accent font-bold tracking-wider text-xs">◈ NEURAL SCAN RESULTS</span>
-      }
-      ariaLabel="Neural scan results"
-      variant="cyber"
-      closeable={state.status !== 'loading'}
-      containerClassName="min-h-[220px]"
-    >
-      {state.status === 'loading' && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-md py-xl">
-          <span className="animate-pulse text-accent text-xs tracking-wider">
-            ▸ SCANNING VISUAL FEED...
-          </span>
-          <span className="text-fg-subtle text-xs">interfacing with AI Provider</span>
-        </div>
-      )}
+  // Handed back rather than drawn here: the same frame is this module's own Suspense fallback, and
+  // it is drawn from the entry chunk so the scan can start before this one lands (#357).
+  if (state.status === 'loading') {
+    return <ScanPendingModal />
+  }
 
+  return (
+    <Modal onClose={onClose} {...SCAN_MODAL}>
       {state.status === 'success' && (
         <>
           {/* border and background are dynamic — inline style required */}
