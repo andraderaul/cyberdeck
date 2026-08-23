@@ -233,21 +233,31 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 ## Key files
 
 **Glitch core**
-- `src/glitch/types.ts` — `PixelBuffer`, `Seed`, `ChannelName`,
-  `ChannelShiftParams`, `SortDirection`, `PixelSortParams`, `DEFAULT_PIXEL_SORT`, `ScanlinesParams`,
+- `src/glitch/types.ts` — `PixelBuffer`, `Seed`, `CHANNEL_NAMES` / `ChannelName`,
+  `ChannelShiftParams`, `SORT_DIRECTIONS` / `SortDirection`, `PixelSortParams`, `DEFAULT_PIXEL_SORT`, `ScanlinesParams`,
   `DEFAULT_SCANLINES`, `SPARSEST_SCANLINE_PERIOD`, `TIGHTEST_SCANLINE_PERIOD`,
-  `SCANLINES_DENSITY_STEP`, `NoiseParams`, `NoiseTint`, `DEFAULT_NOISE`, `MAX_NOISE_DELTA`,
+  `SCANLINES_DENSITY_STEP`, `NoiseParams`, `NOISE_TINTS` / `NoiseTint`, `DEFAULT_NOISE`,
+  `MAX_NOISE_DELTA`,
   `BlockDisplacementParams`, `DEFAULT_BLOCK_DISPLACEMENT`, `MAX_DISPLACEMENT_BLOCKS`,
   `MAX_BLOCK_SHIFT_RATIO`, `MAX_BLOCK_HEIGHT_RATIO`, `MIN_BLOCK_WIDTH_RATIO`,
   `ChromaticAberrationParams`, `DEFAULT_CHROMATIC_ABERRATION`,
   `MAX_CHROMATIC_ABERRATION_MAGNIFICATION`,
+<<<<<<< HEAD
   `HalftoneParams`, `HalftoneTint`, `DEFAULT_HALFTONE`, `HALFTONE_MAX_DOT_RADIUS_RATIO`,
-  `WaveParams`, `WaveAxis`, `DEFAULT_WAVE`, `MAX_WAVE_AMPLITUDE_RATIO`,
+  `WaveParams`, `WAVE_AXES` / `WaveAxis`, `DEFAULT_WAVE`, `MAX_WAVE_AMPLITUDE_RATIO`,
+=======
+  `HalftoneParams`, `HALFTONE_TINTS` / `HalftoneTint`, `DEFAULT_HALFTONE`,
+  `HALFTONE_MAX_DOT_RADIUS_RATIO`,
+>>>>>>> 18cdbd1 (refactor(glitch): derive each choice union from the tuple that lists it)
   `DEFAULT_CHANNEL_SHIFT`,
   `CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE`, `HALFTONE_CELL_SIZE_RANGE`,
   `WAVE_WAVELENGTH_RANGE` (the
   params with no natural 0..1 bound — in the core so the sliders and Randomize's clamp share one
-  source of truth)
+  source of truth). **Every choice param declares its tuple first and derives the union from it**
+  (`export const NOISE_TINTS = [...] as const; export type NoiseTint = (typeof NOISE_TINTS)[number]`):
+  a list written the other way round type-checks for validity but never for completeness, so a value
+  added to a union would compile everywhere while going missing from the toggle that offers it and
+  from the Chain JSON that has to read it back
 - `src/glitch/presets.ts` — `PRESETS` (the six curated Chains), `DEFAULT_PRESET` (applied on open),
   `Preset`, `chainMatch()` (total and order-sensitive), `randomizeChain()` (preset + jitter,
   injected randomness, structure rides through), `EFFECT_ORDER` (the palette's order)
@@ -267,7 +277,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   `decodeChain()`, `CHAIN_FILE_FORMAT`, `CHAIN_FILE_VERSION`, `ChainDecodeResult`. Pure both ways and
   never throws — a bad file comes back as a reason the shell words for a toast. `PARAM_DECODERS` is a
   map over `EffectType`, the same shape as `EFFECT_REGISTRY`, so a newly registered Effect fails to
-  compile here rather than falling silently out of the format. Out-of-range params are **rejected,
+  compile here rather than falling silently out of the format. The choice params are covered one
+  layer down by the tuples in `types.ts` — the codec enumerates the same tuple the toggle does, so
+  a value added to a choice can't be offered by the control and refused by the format. Out-of-range params are **rejected,
   never clamped**
 - `src/glitch/rng.ts` — `createRng()` (pure, Seed → draw stream), `deriveSeed()` (the per-Link occurrence
   sub-seed — ADR 0017), `createSeed()` (impure — the app's only real randomness), `Rng`

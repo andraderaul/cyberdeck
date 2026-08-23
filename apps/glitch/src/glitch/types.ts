@@ -14,8 +14,17 @@ export interface PixelBuffer {
  */
 export type Seed = number
 
-/** The colour channels Channel Shift can displace. Alpha is never shifted. */
-export type ChannelName = 'r' | 'g' | 'b'
+/**
+ * The colour channels Channel Shift can displace. Alpha is never shifted.
+ *
+ * With every choice param below, the tuple is the source of truth and the union is derived from it.
+ * Declaring the union first and listing its members again wherever they have to be *enumerated* —
+ * the toggle that offers them, the codec that reads them back out of a file — type-checks each list
+ * for validity but never for completeness, so a member added to the union would compile everywhere
+ * while silently going missing from a control and from the format.
+ */
+export const CHANNEL_NAMES = ['r', 'g', 'b'] as const
+export type ChannelName = (typeof CHANNEL_NAMES)[number]
 
 /** Byte offset of each channel within an RGBA pixel. */
 export const CHANNEL_OFFSET: Record<ChannelName, number> = { r: 0, g: 1, b: 2 }
@@ -47,7 +56,8 @@ export const DEFAULT_CHANNEL_SHIFT: ChannelShiftParams = Object.freeze({
 })
 
 /** The axis Pixel Sort walks: rows left-to-right, or columns top-to-bottom. */
-export type SortDirection = 'horizontal' | 'vertical'
+export const SORT_DIRECTIONS = ['horizontal', 'vertical'] as const
+export type SortDirection = (typeof SORT_DIRECTIONS)[number]
 
 export interface PixelSortParams {
   direction: SortDirection
@@ -127,7 +137,8 @@ export const DEFAULT_SCANLINES: ScanlinesParams = Object.freeze({
  * How Noise tints its grain: `mono` draws one delta per pixel and moves every channel by it,
  * leaving hue alone; `color` draws per channel, pulling them apart into chroma static.
  */
-export type NoiseTint = 'mono' | 'color'
+export const NOISE_TINTS = ['mono', 'color'] as const
+export type NoiseTint = (typeof NOISE_TINTS)[number]
 
 export interface NoiseParams {
   /** How heavy the grain is, on the normalised 0..1 scale. */
@@ -226,7 +237,10 @@ export const DEFAULT_CHROMATIC_ABERRATION: ChromaticAberrationParams = Object.fr
  * matrix; `mono` inks every dot white, so a cell's tone survives *only* as the dot's area, which is
  * what a printed screen actually does.
  */
-export type HalftoneTint = 'mono' | 'color'
+// Its own tuple, though it reads the same as NOISE_TINTS: the two tints are different choices about
+// different Effects, and collapsing them would tie Halftone's options to Noise's.
+export const HALFTONE_TINTS = ['mono', 'color'] as const
+export type HalftoneTint = (typeof HALFTONE_TINTS)[number]
 
 export interface HalftoneParams {
   /** The side of one cell of the dot grid, in pixels — how coarsely the image is re-quantized. */
@@ -276,7 +290,8 @@ export const DEFAULT_HALFTONE: HalftoneParams = Object.freeze({
  * columns up and down. Named for where the pixels travel, the same way Block Displacement and
  * Channel Shift are — the sine runs *across* that axis, so a horizontal Wave varies down the frame.
  */
-export type WaveAxis = 'horizontal' | 'vertical'
+export const WAVE_AXES = ['horizontal', 'vertical'] as const
+export type WaveAxis = (typeof WAVE_AXES)[number]
 
 export interface WaveParams {
   axis: WaveAxis

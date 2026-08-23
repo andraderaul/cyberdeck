@@ -132,6 +132,18 @@ describe('decodeChain rejections', () => {
     expect(rejection(decodeChain(doc))).toContain(String(CHAIN_FILE_VERSION + 1))
   })
 
+  // The whole point of the stamp: a later version is free to move `chain`, and such a file has to
+  // read as "from a newer format" rather than as "not a Chain".
+  it('reports the version even when the newer file has moved the Chain', () => {
+    const doc = JSON.stringify({
+      format: CHAIN_FILE_FORMAT,
+      version: CHAIN_FILE_VERSION + 1,
+      links: [],
+    })
+
+    expect(rejection(decodeChain(doc))).toContain(String(CHAIN_FILE_VERSION + 1))
+  })
+
   it('refuses an unknown Effect, naming it', () => {
     // The registry is asserted rather than assumed. This test named `wave` until #310 registered
     // one, at which point it was quietly asserting that a *real* Effect is refused.
@@ -215,10 +227,35 @@ describe('decodeChain rejections', () => {
     expect(decoded(decodeChain(encodeChain(full)))).toHaveLength(MAX_CHAIN_LENGTH)
   })
 
-  // Nothing in the file is trusted: a param the app can't represent must never reach an Effect.
-  it('never returns a Chain carrying an out-of-range value', () => {
-    const result = decodeChain(docWith('scanlines', { density: 1.5, intensity: 0.3 }))
+  // The invariant the format rests on, walked over the registry rather than asserted on one doc:
+  // no numeric param of any Effect can be pushed out of its range and still reach a Link. A new
+  // Effect is covered the day it is registered.
+  it('never accepts a numeric param pushed out of range, for any Effect', () => {
+    const FAR_OUT = 1_000_000
 
-    expect(result.ok).toBe(false)
+    for (const type of Object.keys(EFFECT_REGISTRY) as EffectType[]) {
+      const defaults = EFFECT_REGISTRY[type].defaults as unknown as Record<string, unknown>
+      for (const [key, value] of Object.entries(defaults)) {
+        if (typeof value !== 'number') {
+          continue
+        }
+        for (const bad of [FAR_OUT, -FAR_OUT]) {
+          const reason = rejection(decodeChain(docWith(type, { ...defaults, [key]: bad })))
+          expect(reason).toContain(`${type}.${key}`)
+        }
+      }
+    }
+  })
+
+  // An exponent past the double range is the one way a *non-finite* number reaches the codec —
+  // `JSON.parse('1e400')` is `Infinity`. It has to read back as itself: `JSON.stringify(Infinity)`
+  // is `'null'`, which would point the user at a missing field instead of the number they wrote.
+  it('names a number too large to be finite as itself', () => {
+    const doc = `{"format":"${CHAIN_FILE_FORMAT}","version":${CHAIN_FILE_VERSION},"chain":[{"type":"noise","params":{"amount":1e400,"tint":"mono"}}]}`
+
+    const reason = rejection(decodeChain(doc))
+
+    expect(reason).toContain('Infinity')
+    expect(reason).not.toContain('null')
   })
 })

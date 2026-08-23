@@ -107,8 +107,8 @@ const recording = vi.hoisted(() => ({
   stopRecording: vi.fn(),
 }))
 const recordingOnError = vi.hoisted(() => vi.fn())
-// Only the one function the Chain export lands on: the rest of the naipe (cn, isTouchDevice,
-// shareOrDownloadCanvas) has to keep working for every other surface in the app.
+// Only the one function the Chain export lands on: the rest of the kit's `utils` entry point (cn,
+// isTouchDevice, shareOrDownloadCanvas) has to keep working for every other surface in the app.
 const shareOrDownloadBlob = vi.hoisted(() => vi.fn())
 vi.mock('@cyberdeck/deck-kit/utils', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@cyberdeck/deck-kit/utils')>()),

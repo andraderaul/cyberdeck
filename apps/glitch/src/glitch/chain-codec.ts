@@ -15,15 +15,15 @@ import {
   MAX_CHAIN_LENGTH,
 } from './chain'
 import {
+  CHANNEL_NAMES,
   CHANNEL_SHIFT_AMOUNT_RANGE,
-  type ChannelName,
   HALFTONE_CELL_SIZE_RANGE,
-  type HalftoneTint,
-  type NoiseTint,
+  HALFTONE_TINTS,
+  NOISE_TINTS,
   PIXEL_SORT_RUN_LENGTH_RANGE,
-  type SortDirection,
+  SORT_DIRECTIONS,
+  WAVE_AXES,
   WAVE_WAVELENGTH_RANGE,
-  type WaveAxis,
 } from './types'
 
 /**
@@ -50,14 +50,6 @@ export type ChainDecodeResult = { ok: true; chain: Chain } | { ok: false; reason
 const UNIT_MIN = 0
 const UNIT_MAX = 1
 
-// The values each choice param offers, listed the same way `chain-editor.tsx` lists them for its
-// toggles: the compiler refuses a member the union doesn't have.
-const SORT_DIRECTIONS: readonly SortDirection[] = ['horizontal', 'vertical']
-const CHANNELS: readonly ChannelName[] = ['r', 'g', 'b']
-const NOISE_TINTS: readonly NoiseTint[] = ['mono', 'color']
-const HALFTONE_TINTS: readonly HalftoneTint[] = ['mono', 'color']
-const WAVE_AXES: readonly WaveAxis[] = ['horizontal', 'vertical']
-
 /**
  * Reads one Link's params out of untrusted JSON, recording the first thing that is wrong instead
  * of returning it.
@@ -74,8 +66,17 @@ interface ParamReader {
   readonly failure: string | null
 }
 
-/** How a rejected value reads back to the user — quoted for a string, plain for a number. */
+/**
+ * How a rejected value reads back to the user — quoted for a string, plain for a number.
+ *
+ * Non-finite numbers are spelled out rather than stringified: `JSON.stringify(Infinity)` is
+ * `'null'`, which would point the user at a missing field instead of at the number they wrote.
+ * Reachable despite JSON having no literal for one — `JSON.parse('1e400')` is `Infinity`.
+ */
 function show(raw: unknown): string {
+  if (typeof raw === 'number' && !Number.isFinite(raw)) {
+    return String(raw)
+  }
   return JSON.stringify(raw) ?? String(raw)
 }
 
@@ -107,8 +108,11 @@ function createParamReader(type: EffectType, raw: Record<string, unknown>): Para
     whole(key, range) {
       const value = raw[key]
       const expectation = `a whole number from ${range.min} to ${range.max}`
-      // Whole because these params are counted in pixels — a run 30.5 pixels long is not a value
-      // any control can produce or any Effect can honour.
+      // Whole because every param read this way is counted in *pixels* — a run 30.5 pixels long, a
+      // 5.5px cell, a 3.5px channel offset. The rule is that narrow on purpose, and is not "every
+      // value a control can't produce": Scanlines' density is equally unproducible off-notch and is
+      // accepted, because it is a normalised 0..1 dial the Effect curates onto a whole period
+      // itself, so an off-notch value renders as the nearer period rather than as nonsense.
       if (typeof value !== 'number' || !Number.isInteger(value)) {
         reject(key, expectation, value)
         return range.min
@@ -140,8 +144,11 @@ function createParamReader(type: EffectType, raw: Record<string, unknown>): Para
  * format, which is the failure that would leave an exported Chain unimportable in the build that
  * exported it.
  *
- * The ranges come from the core beside the params they bound (types.ts), so the file, the sliders
- * and Randomize's clamp all read one source of truth.
+ * The ranges and the choice tuples both come from the core beside the params they belong to
+ * (types.ts), so the file, the sliders and Randomize's clamp all read one source of truth. The
+ * tuples matter as much as the map does: each union is *derived* from its tuple, so a value added
+ * to a choice is offered by the control and accepted by the format together, where two hand-kept
+ * lists would have let the format quietly refuse a legally exported file.
  */
 const PARAM_DECODERS: { [K in EffectType]: (read: ParamReader) => EffectParams[K] } = {
   blockDisplacement: (read) => ({
@@ -159,7 +166,7 @@ const PARAM_DECODERS: { [K in EffectType]: (read: ParamReader) => EffectParams[K
     wavelength: read.whole('wavelength', WAVE_WAVELENGTH_RANGE),
   }),
   channelShift: (read) => ({
-    channel: read.choice('channel', CHANNELS),
+    channel: read.choice('channel', CHANNEL_NAMES),
     amount: read.whole('amount', CHANNEL_SHIFT_AMOUNT_RANGE),
   }),
   chromaticAberration: (read) => ({
@@ -260,13 +267,19 @@ export function decodeChain(text: string): ChainDecodeResult {
     return refuse("that file isn't valid JSON")
   }
 
-  if (!isRecord(parsed) || parsed.format !== CHAIN_FILE_FORMAT || !Array.isArray(parsed.chain)) {
+  if (!isRecord(parsed) || parsed.format !== CHAIN_FILE_FORMAT) {
     return refuse("that file isn't a GLITCH Chain")
   }
+  // Ahead of anything about the file's shape: a later version is free to move `chain`, and the
+  // stamp exists precisely so such a file is refused as "from a newer format" rather than as "not a
+  // Chain" — which is the one refusal here a user can actually do something about.
   if (parsed.version !== CHAIN_FILE_VERSION) {
     return refuse(
       `that Chain is format version ${show(parsed.version)} — this build reads version ${CHAIN_FILE_VERSION}`,
     )
+  }
+  if (!Array.isArray(parsed.chain)) {
+    return refuse("that file isn't a GLITCH Chain")
   }
   // Checked before the Links are read: the cap is a property of the whole file, and reporting a
   // param problem in Link 14 would bury the reason the file can never be imported anyway.
