@@ -145,5 +145,5 @@ um Preset (ADR 0020).
   Effects — 8 tipos, ordem, presença e repetição nas mãos do usuário (ADR 0017); presets-first
   (6 Presets, um já aplicado na abertura) + Randomize; Seed fixo com Re-roll; PNG Export +
   Capture + Copy + Recording; export/import da Chain como JSON (**Chain JSON**).
-- **Fora (v2+):** datamosh real; glitch animado
-  (Seed avançando por frame na webcam).
+- **Fora (v2+):** datamosh real — **caminho de saída próprio**, só para Live Source, fora da Chain
+  e fora do Recording (ADR 0026); glitch animado (Seed avançando por frame na webcam).
