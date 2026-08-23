@@ -28,7 +28,14 @@ describe('SettingsEditor', () => {
   it('offers every ConversionSettings control as a tool chip', () => {
     renderEditor()
 
-    for (const tool of ['charset', 'edges', 'color mode', 'resolution', 'brightness', 'contrast']) {
+    for (const tool of [
+      'charset',
+      'edge glyphs',
+      'color mode',
+      'resolution',
+      'brightness',
+      'contrast',
+    ]) {
       expect(screen.getByRole('button', { name: tool })).toBeInTheDocument()
     }
   })
@@ -166,7 +173,7 @@ describe('SettingsEditor', () => {
     it('calls onChange with an edgeGlyphs patch when the axis is switched on', async () => {
       const user = userEvent.setup()
       const { onChange } = renderEditor()
-      focusTool('edges')
+      focusTool('edge glyphs')
 
       await user.click(screen.getByRole('button', { name: 'on' }))
 
@@ -179,7 +186,7 @@ describe('SettingsEditor', () => {
       render(
         <SettingsEditor settings={{ ...DEFAULT_SETTINGS, edgeGlyphs: true }} onChange={onChange} />,
       )
-      focusTool('edges')
+      focusTool('edge glyphs')
 
       await user.click(screen.getByRole('button', { name: 'off' }))
 
@@ -189,7 +196,7 @@ describe('SettingsEditor', () => {
     // Colour and border alone are no state at all to a screen reader (WCAG 4.1.2).
     it('presses the state the ConversionSettings are actually on', () => {
       renderEditor()
-      focusTool('edges')
+      focusTool('edge glyphs')
 
       expect(screen.getByRole('button', { name: 'off' })).toHaveAttribute('aria-pressed', 'true')
       expect(screen.getByRole('button', { name: 'on' })).toHaveAttribute('aria-pressed', 'false')

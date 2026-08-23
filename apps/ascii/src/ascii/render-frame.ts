@@ -1,7 +1,7 @@
 import { convertImage } from './converter'
 import { computeContainFit, sliceToRegion } from './fit'
-import { computeFrame, MONOSPACE_CHAR_WIDTH_RATIO, paintFrame } from './renderer'
-import type { ConversionSettings } from './types'
+import { computeFrame, paintFrame } from './renderer'
+import { type ConversionSettings, MONOSPACE_CHAR_WIDTH_RATIO } from './types'
 
 /**
  * Intrinsic pixel dimensions of the Source, by type. Used to preserve its

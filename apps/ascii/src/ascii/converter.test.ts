@@ -74,6 +74,7 @@ describe('convertImage void mask', () => {
       brightness: 1,
       contrast: 1,
       charset: 'classic',
+      edgeGlyphs: false,
     })
     for (const row of cells) {
       for (const cell of row) {
@@ -90,7 +91,7 @@ describe('convertImage void mask', () => {
       img,
       4,
       4,
-      { brightness: 1, contrast: 0.5, charset: 'classic' },
+      { brightness: 1, contrast: 0.5, charset: 'classic', edgeGlyphs: false },
       region,
     )
 
@@ -110,7 +111,7 @@ describe('convertImage void mask', () => {
 
 describe('convertImage mirror', () => {
   const img = {} as CanvasImageSource
-  const options = { brightness: 1, contrast: 1, charset: 'classic' } as const
+  const options = { brightness: 1, contrast: 1, charset: 'classic', edgeGlyphs: false } as const
 
   // Records the ordered transform calls so a test can assert the flip wraps the sampling draw.
   function recordingCtx(cols: number, rows: number) {
@@ -154,7 +155,7 @@ describe('convertImage mirror', () => {
 
 describe('convertImage Edge Glyphs', () => {
   const img = {} as CanvasImageSource
-  const options = { brightness: 1, contrast: 1, charset: 'classic' } as const
+  const options = { brightness: 1, contrast: 1, charset: 'classic', edgeGlyphs: false } as const
 
   it('marks a hard vertical contour with the vertical stroke', () => {
     const ctx = greyCtx(7, 7, (col) => (col < 3 ? 0 : 255))
@@ -198,6 +199,41 @@ describe('convertImage Edge Glyphs', () => {
     expect(charRows(cells)).toEqual(charRows(convertImage(greyCtx(8, 8, ramp), img, 8, 8, options)))
   })
 
+  // A monospace cell is 0.6 as wide as it is tall, so a gradient's horizontal component covers
+  // less screen than its vertical one and the angle is asked about the rendered picture, not the
+  // grid. This ramp's gradient sits at 30° in cell space — which rounds to `/` — and at 19° on
+  // screen, which is the `|` the eye actually sees. The bin boundary is what the test holds: drop
+  // the correction and the whole diagonal band shifts steep.
+  it('reads the angle in the rendered picture, not in the sampled grid', () => {
+    const ctx = greyCtx(5, 5, (col, row) => 40 * col + 23 * row)
+
+    const cells = convertImage(ctx, img, 5, 5, { ...options, edgeGlyphs: true })
+
+    expect(cells[2][2].char).toBe('|')
+  })
+
+  // The threshold is 0.25 of a one-axis full-scale step, and a step of N levels between
+  // neighbouring cells reads as N/255 — so the axis turns on between 63 and 65 levels. Pinned from
+  // both sides: raising or lowering the constant has to break one of these, not silently restyle
+  // every conversion.
+  describe('the magnitude threshold', () => {
+    const stepOf = (levels: number) => greyCtx(7, 7, (col) => (col < 3 ? 0 : levels))
+
+    it('leaves a step just under the threshold on the luminosity mapping', () => {
+      const cells = convertImage(stepOf(63), img, 7, 7, { ...options, edgeGlyphs: true })
+
+      expect(cells[3][2].char).toBe(getAsciiChar(0, 'classic'))
+      expect(cells[3][3].char).toBe(getAsciiChar(63, 'classic'))
+    })
+
+    it('takes a stroke on a step just over it', () => {
+      const cells = convertImage(stepOf(65), img, 7, 7, { ...options, edgeGlyphs: true })
+
+      expect(cells[3][2].char).toBe('|')
+      expect(cells[3][3].char).toBe('|')
+    })
+  })
+
   it('keeps flat interiors on the luminosity mapping while contours take a stroke', () => {
     const ctx = greyCtx(9, 9, (col, row) =>
       col >= 3 && col <= 5 && row >= 3 && row <= 5 ? 255 : 0,
@@ -224,7 +260,7 @@ describe('convertImage Edge Glyphs', () => {
 
 describe('convertImage default output', () => {
   const img = {} as CanvasImageSource
-  const options = { brightness: 1, contrast: 1, charset: 'classic' } as const
+  const options = { brightness: 1, contrast: 1, charset: 'classic', edgeGlyphs: false } as const
   const noise = (col: number, row: number) => (col * 37 + row * 91) % 256
 
   // Pinned from the conversion as it stood before Edge Glyphs existed: the second axis is opt-in,
@@ -233,11 +269,5 @@ describe('convertImage default output', () => {
     const cells = convertImage(greyCtx(8, 5, noise), img, 8, 5, options)
 
     expect(charRows(cells)).toEqual([' .:-+*# ', '-=+#% :-', '*# .:-+*', ' .-=+#% ', '-+*# .:-'])
-  })
-
-  it('reads an explicit off the same as the default', () => {
-    const off = convertImage(greyCtx(8, 5, noise), img, 8, 5, { ...options, edgeGlyphs: false })
-
-    expect(charRows(off)).toEqual(charRows(convertImage(greyCtx(8, 5, noise), img, 8, 5, options)))
   })
 })

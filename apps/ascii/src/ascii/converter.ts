@@ -1,4 +1,10 @@
-import { type AsciiCell, CHARSET_MAPS, type Charset, type FitRegion } from './types'
+import {
+  type AsciiCell,
+  CHARSET_MAPS,
+  type Charset,
+  type FitRegion,
+  MONOSPACE_CHAR_WIDTH_RATIO,
+} from './types'
 
 /**
  * Shared across every masked cell — frozen so an accidental downstream mutation
@@ -46,13 +52,18 @@ function applyBrightnessContrast(value: number, brightness: number, contrast: nu
  */
 const EDGE_GLYPHS = ['|', '/', '-', '\\'] as const
 
-/** Full-scale Sobel response: a 0→255 step read through the kernel's 1 + 2 + 1 flank. */
-const SOBEL_FULL_SCALE = 4 * 255
+/**
+ * The response one axis of the kernel gives a 0→255 step, read through its 1 + 2 + 1 flank. A
+ * reference step, deliberately not a ceiling: a diagonal contour drives both axes at once, so the
+ * ratio below reaches √2 at a corner. Naming it a maximum would be a lie the threshold then reads.
+ */
+const SOBEL_AXIS_STEP = 4 * 255
 
 /**
- * Fraction of full scale a cell's gradient must reach to take an Edge Glyph. Set well above what
- * a photographic ramp produces — a Source's shading stays on the luminosity mapping, and only a
- * contour the eye would also call a line crosses it.
+ * How much of that reference step a cell's gradient must reach to take an Edge Glyph — the
+ * equivalent of a ~64-level jump between neighbouring cells. Set well above what a photographic
+ * ramp produces, so a Source's shading stays on the luminosity mapping and only a contour the eye
+ * would also call a line crosses it.
  */
 const EDGE_MAGNITUDE_THRESHOLD = 0.25
 
@@ -94,20 +105,28 @@ function edgeGlyphAt(
   const gx = topRight + 2 * right + bottomRight - (topLeft + 2 * left + bottomLeft)
   const gy = bottomLeft + 2 * bottom + bottomRight - (topLeft + 2 * top + topRight)
 
-  if (Math.hypot(gx, gy) / SOBEL_FULL_SCALE < EDGE_MAGNITUDE_THRESHOLD) {
+  // Magnitude stays in the sampled grid, where the kernel is isotropic: a step of N levels is the
+  // same contour whichever way it runs, so the threshold can't prefer one orientation.
+  if (Math.hypot(gx, gy) / SOBEL_AXIS_STEP < EDGE_MAGNITUDE_THRESHOLD) {
     return null
   }
 
+  // The angle, unlike the magnitude, is asked about the *rendered* picture: a cell is
+  // MONOSPACE_CHAR_WIDTH_RATIO as wide as it is tall, so one step across is 0.6 of a step down on
+  // screen and the horizontal component has to be divided back out. Left in grid space the bins
+  // land near 55° and 125° instead of 45° and 135°, and every diagonal a user draws reads steep.
+  const gxOnScreen = gx / MONOSPACE_CHAR_WIDTH_RATIO
+
   // A gradient and its opposite describe the same line, so the angle folds into a half-turn
   // before it picks a glyph — a light-on-dark contour and its dark-on-light twin draw alike.
-  const degrees = ((((Math.atan2(gy, gx) * 180) / Math.PI) % 180) + 180) % 180
+  const degrees = ((((Math.atan2(gy, gxOnScreen) * 180) / Math.PI) % 180) + 180) % 180
   return EDGE_GLYPHS[Math.round(degrees / DEGREES_PER_GLYPH) % EDGE_GLYPHS.length]
 }
 
 /**
  * @param options.edgeGlyphs Opt-in second axis: where the local gradient is strong, the cell takes
  *   a directional glyph instead of its luminosity one. Off is the shape of every conversion that
- *   predates it, so an omitted flag must leave the grid character-for-character unchanged.
+ *   predates it, and `ConversionSettings` is the one place that default is written down.
  * @param region Contain-fit sub-region the Source is drawn into; cells outside it are void.
  *   Defaults to a full-grid fill. See ADR 0010.
  * @param isMirrored Flips the Source on this sampling draw, *before* any pixel is read into a
@@ -119,11 +138,11 @@ export function convertImage(
   img: CanvasImageSource,
   cols: number,
   rows: number,
-  options: { brightness: number; contrast: number; charset: Charset; edgeGlyphs?: boolean },
+  options: { brightness: number; contrast: number; charset: Charset; edgeGlyphs: boolean },
   region: FitRegion = { offsetX: 0, offsetY: 0, dCols: cols, dRows: rows },
   isMirrored = false,
 ): AsciiCell[][] {
-  const { brightness, contrast, charset, edgeGlyphs = false } = options
+  const { brightness, contrast, charset, edgeGlyphs } = options
   const { offsetX, offsetY, dCols, dRows } = region
 
   if (isMirrored) {
@@ -140,8 +159,9 @@ export function convertImage(
   const result: AsciiCell[][] = []
   // The gradient pass reads a whole neighbourhood, so the adjusted luminance is kept as its own
   // grid: brightness and contrast are already folded in, which is what makes the two sliders move
-  // the contours the same way they move the ramp.
-  const luma: number[] = new Array(cols * rows).fill(0)
+  // the contours the same way they move the ramp. Allocated only for a conversion that asked for
+  // the axis — the Live Source loop runs this ~15 times a second with it off (ADR 0002).
+  const luma: number[] | null = edgeGlyphs ? new Array(cols * rows).fill(0) : null
 
   for (let row = 0; row < rows; row++) {
     const rowData: AsciiCell[] = []
@@ -159,13 +179,15 @@ export function convertImage(
       const b = data[i + 2]
       const lum = computeLuminosity(r, g, b) * 255
       const adjusted = applyBrightnessContrast(lum, brightness, contrast)
-      luma[row * cols + col] = adjusted
+      if (luma) {
+        luma[row * cols + col] = adjusted
+      }
       rowData.push({ char: getAsciiChar(adjusted, charset), r, g, b })
     }
     result.push(rowData)
   }
 
-  if (!edgeGlyphs) {
+  if (!luma) {
     return result
   }
 

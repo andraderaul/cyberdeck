@@ -1,5 +1,4 @@
-import { MONOSPACE_CHAR_WIDTH_RATIO } from './renderer'
-import type { FitRegion } from './types'
+import { type FitRegion, MONOSPACE_CHAR_WIDTH_RATIO } from './types'
 
 /**
  * Computes the centered "contain" sub-region of a cols × rows char grid that
