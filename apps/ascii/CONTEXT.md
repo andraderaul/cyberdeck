@@ -97,8 +97,8 @@ O resultado de um **Analyze** — uma descrição narrativa, um Threat Level, ta
 _Avoid_: AnalysisResult (nome de tipo interno), response, resultado
 
 **Suggestion**:
-Os **ConversionSettings** que a **Analysis** propõe para o que ela acabou de descrever — os seis eixos de uma vez, não um conselho em prosa. Chega junto da descrição mas não age: nenhum controle se move sozinho. O usuário lê a proposta no modal e aplica num clique; o look deslocado fica guardado atrás de um chip `revert` na aba PRESETS, sem precisar recarregar a **Source Image**, e a oferta expira na primeira edição do próprio usuário — depois dela, restaurar o snapshot jogaria fora trabalho que veio *depois* da sugestão. Vocabulário desconhecido é recusado, nunca aproximado: um Charset que não existe invalida a Analysis inteira em vez de virar o Charset mais parecido.
-_Avoid_: recommendation, auto-settings, AI Preset (não é um **Preset** — não tem nome nem lugar na lista)
+Os **ConversionSettings** que a **Analysis** propõe para o que ela acabou de descrever — os seis eixos de uma vez, não um conselho em prosa. Chega junto da descrição mas não age: nenhum controle se move sozinho. O usuário lê a proposta no modal e aplica num clique; os ConversionSettings que ela deslocou ficam guardados atrás de um chip `revert` na aba PRESETS, sem precisar recarregar a **Source Image**, e a oferta expira na primeira edição do próprio usuário — depois dela, restaurar o snapshot jogaria fora trabalho que veio *depois* da sugestão. Vocabulário desconhecido é recusado, nunca aproximado: um Charset que não existe invalida a Analysis inteira em vez de virar o Charset mais parecido.
+_Avoid_: recommendation, auto-settings, AI preset (a sugestão não tem nome nem lugar fixo na fileira de presets)
 
 **AI Config**:
 A configuração que habilita o **Analyze** — inclui o AI Provider escolhido e a API key fornecida pelo usuário. Persiste em `localStorage`. Ausência de AI Config torna o **Analyze** invisível na UI.
