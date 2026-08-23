@@ -9,4 +9,8 @@ describe('Errors', () => {
   it('exportFailed txt message mentions text file', () => {
     expect(Errors.exportFailed('txt').message).toContain('text file')
   })
+
+  it('exportFailed html message mentions HTML', () => {
+    expect(Errors.exportFailed('html').message).toContain('HTML')
+  })
 })

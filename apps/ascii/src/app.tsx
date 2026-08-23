@@ -6,6 +6,7 @@ import { analyzeCanvas, toAnalysisState } from './ai/analysis-service'
 import type { AnalysisState } from './ai/types'
 import { useAIConfig } from './ai/use-ai-config'
 import type { Preset } from './ascii/presets'
+import type { RenderInstruction } from './ascii/renderer'
 import type { ConversionSettings } from './ascii/types'
 import AboutModal from './components/about-modal'
 import AnalysisModal from './components/analysis-modal'
@@ -38,6 +39,7 @@ export default function App() {
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
   const [sourceVideo, setSourceVideo] = useState<HTMLVideoElement | null>(null)
   const [asciiRows, setAsciiRows] = useState<string[]>([])
+  const [renderInstructions, setRenderInstructions] = useState<RenderInstruction[]>([])
   const [isMirrored, setIsMirrored] = useState(false)
   const [canvasDimensions, setCanvasDimensions] = useState<{ w: number; h: number } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -89,6 +91,14 @@ export default function App() {
   }, [])
 
   const handleMirrorToggle = useCallback(() => setIsMirrored((prev) => !prev), [])
+
+  // One conversion feeds both text Exports: TXT Export reads the rows, HTML Export the same grid
+  // with its colours still attached.
+  const handleConverted = useCallback((rows: string[], instructions: RenderInstruction[]) => {
+    setAsciiRows(rows)
+    setRenderInstructions(instructions)
+  }, [])
+
   const handleDimensionsChange = useCallback((w: number, h: number) => {
     setCanvasDimensions({ w, h })
   }, [])
@@ -196,7 +206,7 @@ export default function App() {
                   sourceImage={sourceImage}
                   sourceVideo={sourceVideo}
                   settings={settings}
-                  onConverted={setAsciiRows}
+                  onConverted={handleConverted}
                   canvasRef={canvasRef}
                   isMirrored={isMirrored}
                   isRecording={isRecording}
@@ -227,6 +237,7 @@ export default function App() {
         <ControlStrip
           canvasRef={canvasRef}
           asciiRows={asciiRows}
+          renderInstructions={renderInstructions}
           isLive={!!sourceVideo}
           canvasDimensions={canvasDimensions}
           hasAiConfig={!!aiConfig}

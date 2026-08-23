@@ -1,6 +1,6 @@
 import { convertImage } from './converter'
 import { computeContainFit, sliceToRegion } from './fit'
-import { computeFrame, paintFrame } from './renderer'
+import { computeFrame, paintFrame, type RenderInstruction } from './renderer'
 import { type ConversionSettings, MONOSPACE_CHAR_WIDTH_RATIO } from './types'
 
 /**
@@ -22,8 +22,10 @@ function sourceDimensions(source: CanvasImageSource): { w: number; h: number } {
 /**
  * Mirror flips the Source on the sampling draw, *before* the pixels become cells (ADR 0016) —
  * not with a CSS transform on the visible canvas, which mirrored the preview alone and left both
- * Exports disagreeing with it. The character grid is genuinely mirrored, so PNG and TXT follow.
+ * Exports disagreeing with it. The character grid is genuinely mirrored, so every Export follows.
  *
+ * @param onConverted receives the region-cropped result both text Exports read: the plain rows for
+ *   TXT Export, and the same grid as RenderInstructions — character *and* colour — for HTML Export.
  * @returns `false` when the render was skipped — no 2D context, or the canvas is too
  *   small to fit a single character. `true` when a frame was painted.
  */
@@ -33,7 +35,7 @@ export function renderFrame(
   hiddenEl: HTMLCanvasElement,
   settings: ConversionSettings,
   fontFamily: string,
-  onConverted?: (rows: string[]) => void,
+  onConverted?: (rows: string[], instructions: RenderInstruction[]) => void,
   isMirrored = false,
 ): boolean {
   const ctx = canvasEl.getContext('2d')
@@ -67,10 +69,16 @@ export function renderFrame(
     region,
     isMirrored,
   )
-  const { instructions, asciiRows } = computeFrame(cells, settings)
+  const { instructions } = computeFrame(cells, settings)
   paintFrame(ctx, instructions, resolution, fontFamily)
-  // PNG keeps the framed canvas (painted above); TXT Export gets the region
-  // cropped tight, with no letterbox padding. See ADR 0010.
-  onConverted?.(sliceToRegion(asciiRows, region))
+
+  if (onConverted) {
+    // PNG keeps the framed canvas (painted above); the text Exports get the region cropped tight,
+    // with no letterbox padding (ADR 0010). Recomputing over the cropped cells rather than slicing
+    // the instructions is what rebases each x/y onto the cropped grid's own origin — a sliced
+    // instruction would carry a coordinate the exported document no longer has a cell for.
+    const cropped = computeFrame(sliceToRegion(cells, region), settings)
+    onConverted(cropped.asciiRows, cropped.instructions)
+  }
   return true
 }

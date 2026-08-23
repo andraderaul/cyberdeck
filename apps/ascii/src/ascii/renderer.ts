@@ -21,6 +21,13 @@ export const COLOR_MODE_COLORS: Partial<Record<ColorMode, string>> = {
   neon: '#ff2d78',
 }
 
+/**
+ * The ground every glyph sits on. Shared with the HTML Export so a document opened offline stands on
+ * the same void the preview does — the canvas is the user's art, so this is a literal, not a Theme
+ * token (ADR 0013, ADR 0024).
+ */
+export const CANVAS_BACKGROUND = '#0a0a0f'
+
 const DUAL_COLOR_LUM_THRESHOLD = 0.5
 
 export type DualColorPair = readonly [bright: string, dark: string]
@@ -88,7 +95,7 @@ export function paintFrame(
   fontFamily: string,
 ): void {
   const { width: W, height: H } = ctx.canvas
-  ctx.fillStyle = '#0a0a0f'
+  ctx.fillStyle = CANVAS_BACKGROUND
   ctx.fillRect(0, 0, W, H)
   ctx.font = `${resolution}px ${fontFamily}`
   ctx.textBaseline = 'top'

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderFrame } from './render-frame'
+import type { RenderInstruction } from './renderer'
 import type { ConversionSettings } from './types'
 
 const SETTINGS: ConversionSettings = {
@@ -83,6 +84,26 @@ describe('renderFrame', () => {
     for (const line of emitted) {
       expect(line).toHaveLength(8)
     }
+  })
+
+  it('crops the onConverted instructions to the same region, rebased on its own origin', () => {
+    // Same 200x200 canvas and pillarboxed 100x400 source as above: 8 cols x 20 rows kept.
+    canvasEl.width = 200
+    canvasEl.height = 200
+    hiddenCtxMock.getImageData = vi.fn(() => ({
+      data: new Uint8ClampedArray(33 * 20 * 4),
+    })) as unknown as typeof hiddenCtxMock.getImageData
+
+    const onConverted = vi.fn()
+
+    renderFrame(makeCanvas(100, 400), canvasEl, hiddenEl, SETTINGS, 'monospace', onConverted)
+
+    const instructions = onConverted.mock.calls[0][1] as RenderInstruction[]
+    expect(instructions).toHaveLength(8 * 20)
+    // The kept region starts at column 12 of the full grid; the HTML Export's first cell is its own.
+    expect(instructions[0]).toMatchObject({ x: 0, y: 0 })
+    expect(instructions[7]).toMatchObject({ x: 7 * 6, y: 0 })
+    expect(instructions[8]).toMatchObject({ x: 0, y: 10 })
   })
 
   it('returns true without onConverted when callback is omitted', () => {

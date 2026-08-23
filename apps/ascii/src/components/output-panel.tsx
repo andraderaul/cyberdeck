@@ -1,13 +1,28 @@
 import { Button, Chip, useToastError } from '@cyberdeck/deck-kit/ui'
 import { isTouchDevice, shareOrDownloadCanvas } from '@cyberdeck/deck-kit/utils'
 import { type RefObject, useState } from 'react'
+import { CANVAS_BACKGROUND, type RenderInstruction } from '../ascii/renderer'
+import { MONOSPACE_CHAR_WIDTH_RATIO } from '../ascii/types'
 import { Errors } from '../errors/app-error'
+import { buildHtmlDocument } from '../export/html-document'
 import { outputFilename, type PngScale, planPngExport } from '../export/output'
 import AiConfigBanner from './ai-config-banner'
+
+/** Same download path for both text Exports — only the bytes, the type and the name differ. */
+function downloadText(text: string, mimeType: string, filename: string): void {
+  const blob = new Blob([text], { type: mimeType })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
 
 interface Props {
   canvasRef: RefObject<HTMLCanvasElement | null>
   asciiRows: string[]
+  renderInstructions: RenderInstruction[]
+  resolution: number
   isLive: boolean
   canvasDimensions?: { w: number; h: number } | null
   hasAiConfig: boolean
@@ -21,8 +36,8 @@ interface Props {
 /**
  * The Control Strip's OUT tab: one surface for every way the result leaves, gated by Source.
  *
- * A Source Image offers PNG and TXT Export; a Live Source offers Capture and Recording. That gating
- * is what the two sibling bars used to encode by existing separately — the availability is
+ * A Source Image offers PNG, TXT and HTML Export; a Live Source offers Capture and Recording. That
+ * gating is what the two sibling bars used to encode by existing separately — the availability is
  * unchanged, only its home is. AI Analysis rides here because it is where it already lived: a
  * terminal action on the current canvas, beside the outputs rather than in the editing tabs.
  *
@@ -32,6 +47,8 @@ interface Props {
 export default function OutputPanel({
   canvasRef,
   asciiRows,
+  renderInstructions,
+  resolution,
   isLive,
   canvasDimensions,
   hasAiConfig,
@@ -74,14 +91,28 @@ export default function OutputPanel({
       return
     }
     try {
-      const blob = new Blob([asciiRows.join('\n')], { type: 'text/plain' })
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = outputFilename('txt-export')
-      a.click()
-      URL.revokeObjectURL(a.href)
+      downloadText(asciiRows.join('\n'), 'text/plain', outputFilename('txt-export'))
     } catch {
       toastError(Errors.exportFailed('txt').message)
+    }
+  }
+
+  function exportHtml() {
+    if (!renderInstructions.length) {
+      return
+    }
+    try {
+      // The preview's own cell metrics: Resolution is the type size it paints at, and the pitch it
+      // positions on is that times MONOSPACE_CHAR_WIDTH_RATIO. Handing the document the same two is
+      // what puts its grid on the preview's proportions.
+      const html = buildHtmlDocument(renderInstructions, {
+        charWidth: resolution * MONOSPACE_CHAR_WIDTH_RATIO,
+        charHeight: resolution,
+        background: CANVAS_BACKGROUND,
+      })
+      downloadText(html, 'text/html', outputFilename('html-export'))
+    } catch {
+      toastError(Errors.exportFailed('html').message)
     }
   }
 
@@ -123,7 +154,7 @@ export default function OutputPanel({
         </div>
       )}
 
-      <div className="flex gap-xs sm:gap-sm sm:justify-end">
+      <div className="flex flex-wrap gap-xs sm:gap-sm sm:justify-end">
         {/* Hidden mid-take, as it was in LiveSourceBar: a modal over a running Recording would put
             the user somewhere they can't see the take they're still shooting. */}
         {hasAiConfig && !isRecording && (
@@ -151,6 +182,9 @@ export default function OutputPanel({
             </Button>
             <Button variant="secondary" onClick={exportTxt} className="flex-1 sm:flex-none">
               export txt
+            </Button>
+            <Button variant="secondary" onClick={exportHtml} className="flex-1 sm:flex-none">
+              export html
             </Button>
           </>
         )}
