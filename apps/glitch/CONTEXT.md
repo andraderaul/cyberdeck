@@ -118,6 +118,23 @@ rápido que número ruim. Parte de um ponto conhecidamente bom, em vez de amostr
 independentemente — é assim que o "sempre bonito" é garantido.
 _Avoid_: shuffle, aleatorizar (mecanismo, não intenção)
 
+**ChainRunner**:
+Quem roda a Chain, e em qual thread. A casca pede um frame e pinta o que voltar; se veio de um
+**Worker** ou do mesmo `applyChain` rodando aqui é assunto só dele (ADR 0002). Existe em duas
+formas: a de Worker, que é a normal, e a **síncrona**, que é a de sempre — usada onde não há
+`Worker`, onde construir um levanta erro, e do instante em que um Worker vivo morre. Não é o núcleo
+puro nem faz parte do look: é casca, e por isso nenhum teste de Effect passa por ele.
+_Avoid_: thread, job queue, fila (não há fila — ver **frame descartado**)
+
+**frame descartado**:
+Um frame que não vai virar pixel nenhum, e não é um erro. Acontece por dois motivos e só dois: um
+frame mais novo chegou enquanto este ainda esperava a vez — há **uma** vaga de espera e o mais novo
+sempre ganha, que é o que impede uma Chain lenta de acumular atraso atrás da câmera — ou um Worker
+morreu segurando os pixels dele, que foram transferidos e foram embora junto. Numa **Live Source** o
+próximo tique corrige; numa **Source Image**, que não tem próximo tique, a casca pede de novo uma
+única vez, e só o segundo caso chega lá.
+_Avoid_: frame perdido, erro, falha, enfileirado
+
 **Editor**:
 O estado que uma sessão de edição segura: o **look** (a Chain), o **arranjo** (o Seed) e a
 **procedência** — de qual Preset o look partiu, se algum, e se já foi editado desde então

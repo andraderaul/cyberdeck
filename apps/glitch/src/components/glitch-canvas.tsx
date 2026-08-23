@@ -1,12 +1,17 @@
 import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
 import { TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
-import { type RefObject, useEffect, useRef } from 'react'
+import { type MutableRefObject, type RefObject, useEffect, useRef } from 'react'
 import type { Chain } from '../glitch/chain'
-import { renderGlitchFrame } from '../glitch/render-frame'
+import { type ChainRunner, createChainRunner } from '../glitch/chain-runner'
+import { type GlitchFrame, renderGlitchFrame } from '../glitch/render-frame'
 import type { Seed } from '../glitch/types'
 
-/** ~15fps — enough for a glitched feed, and cheap enough to stay on the main thread (ADR 0002). */
+/**
+ * ~15fps — the rate a glitched feed reads at, and the rate `useRecording` captures at. The Chain
+ * itself runs on a Worker now (ADR 0002), so what this throttles is how often the main thread
+ * samples a frame and hands it over, not how much work it does with it.
+ */
 export const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
 
 /**
@@ -37,6 +42,18 @@ const CANVAS_OVERLAY_BUTTON_REST =
  * `readyState >=` comparison would silently be false.
  */
 export const HAVE_ENOUGH_DATA = 4
+
+/**
+ * The canvas' own ChainRunner, built the first time a render asks for one.
+ *
+ * Lazy rather than eager, and a plain function over the ref rather than a hook: a runner built
+ * during render would leave a Worker behind on the pass StrictMode throws away, and one built in an
+ * effect would not exist yet for the render that effect is running for.
+ */
+function chainRunner(ref: MutableRefObject<ChainRunner | null>): ChainRunner {
+  ref.current ??= createChainRunner()
+  return ref.current
+}
 
 interface Props {
   sourceImage: HTMLImageElement | null
@@ -86,19 +103,57 @@ export default function GlitchCanvas({
   // Not 0: the first frame must paint on its own merits, not because rAF's timestamp happens to
   // already be past one interval.
   const lastFrameTime = useRef(Number.NEGATIVE_INFINITY)
+  // One runner per canvas, built on first use rather than in an effect: both render paths below
+  // reach for it, and under StrictMode a runner built during render would leave a Worker behind on
+  // the discarded pass. Torn down on unmount, where the Worker's thread actually goes away.
+  const runnerRef = useRef<ChainRunner | null>(null)
+  useEffect(
+    () => () => {
+      runnerRef.current?.dispose()
+      runnerRef.current = null
+    },
+    [],
+  )
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !sourceImage) {
       return
     }
-    renderGlitchFrame(sourceImage, canvas, hiddenRef.current, chain, seed, isMirrored)
+    let superseded = false
+    const frame: GlitchFrame = {
+      source: sourceImage,
+      canvas,
+      hidden: hiddenRef.current,
+      runner: chainRunner(runnerRef),
+      chain,
+      seed,
+      isMirrored,
+    }
+    const paint = async () => {
+      // The re-ask is for **a Worker that died holding this frame's pixels**, and for nothing else.
+      // Backpressure cannot reach it: the only thing that drops the newest Source Image render is a
+      // newer one, and React runs this effect's cleanup before that newer render is ever submitted,
+      // so `superseded` is already true by the time the drop lands. What is left is `fallBack()`
+      // nulling the frame in flight — the pixels were transferred and left with the Worker, and a
+      // still image has no next frame to correct that with. Asking once more is enough, because by
+      // then the runner *is* the synchronous core and cannot drop.
+      if ((await renderGlitchFrame(frame)) === 'dropped' && !superseded) {
+        await renderGlitchFrame(frame)
+      }
+    }
+    void paint()
+    return () => {
+      superseded = true
+    }
   }, [sourceImage, chain, seed, isMirrored, canvasRef])
 
-  // rAF loop throttled to ~15fps — see ADR 0002 for the Web Worker upgrade path. The Seed is held
-  // across frames by default: that's what keeps the corruption pattern from boiling. `onAdvanceSeed`
-  // is what makes the boiling a choice — the loop asks for the next arrangement once a frame has
-  // actually been painted, so the Seed advances per *painted* frame rather than per rAF tick.
+  // rAF loop throttled to ~15fps — the Chain runs on a Worker (ADR 0002), so what happens on this
+  // thread is the sampling and the paint. The Seed is held across frames by default: that's what
+  // keeps the corruption pattern from boiling. `onAdvanceSeed` is what makes the boiling a choice —
+  // the loop asks for the next arrangement once a frame has actually been painted, so the Seed
+  // advances per *painted* frame rather than per rAF tick, and a frame the runner dropped moves
+  // nothing.
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !liveSource) {
@@ -107,6 +162,7 @@ export default function GlitchCanvas({
 
     const video = liveSource
     let rafId: number
+    let stopped = false
 
     const loop = (now: number) => {
       rafId = requestAnimationFrame(loop)
@@ -115,13 +171,30 @@ export default function GlitchCanvas({
       }
       lastFrameTime.current = now
       if (video.readyState >= HAVE_ENOUGH_DATA) {
-        renderGlitchFrame(video, canvas, hiddenRef.current, chain, seed, isMirrored)
-        onAdvanceSeed?.()
+        void renderGlitchFrame({
+          source: video,
+          canvas,
+          hidden: hiddenRef.current,
+          runner: chainRunner(runnerRef),
+          chain,
+          seed,
+          isMirrored,
+        }).then((outcome) => {
+          // Same reason editor-state.ts refuses ADVANCE_SEED while the animation is off: the loop
+          // and React's render are on different clocks, and a frame still in flight when the loop
+          // is torn down must not move the arrangement afterwards.
+          if (outcome === 'painted' && !stopped) {
+            onAdvanceSeed?.()
+          }
+        })
       }
     }
 
     rafId = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(rafId)
+    return () => {
+      stopped = true
+      cancelAnimationFrame(rafId)
+    }
   }, [liveSource, chain, seed, isMirrored, canvasRef, onAdvanceSeed])
 
   const isLive = liveSource !== null
