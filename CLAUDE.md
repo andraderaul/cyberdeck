@@ -18,6 +18,18 @@ versioned and deployed independently.
 Each app owns its `CLAUDE.md` and `CONTEXT.md` — read the one for the app you're working in.
 `CONTEXT-MAP.md` maps the deck; `docs/adr/` holds all architectural decisions, deck-wide.
 
+**Not every workspace under `apps/` is a program.** The deck has three categories. The first three
+apps are **tools** — each consumes your material and is worth `f(your_input)`. SPRAWL//Atlas is the
+one **piece**, admitted as a recorded exception, and ADR 0021 fenced it there: a second piece is the
+deck losing its identity, so the default answer to another one is no. The third category is
+**chrome** — the deck's *casca* — and it is defined by two absences: it consumes no user material
+and it produces no artifact. That is why the hub (`apps/deck`, decided in ADR 0025, built in #323)
+sits *outside* ADR 0021's fence instead of spending its one exception. The test for anything new is
+flat: **does it take user material, or hand back an artifact?** If either, it is a program and
+ADR 0021 applies at full strength. Chrome fences itself too — the hub may never gain an upload, an
+export, a domain core, an embedded program, retention machinery, or content that is not the deck
+describing itself.
+
 ## Structure
 
 Light npm workspaces — **no Nx/Turborepo** by design. Repo-wide tooling (Biome, lefthook,
@@ -94,7 +106,9 @@ it is a question of design and contrast, not of control shape: the picker lists 
 rather than cycling it, so there is no width cap left to hit.
 
 SPRAWL//Atlas is excluded from Themes by explicit decision (ADR 0021, ADR 0024), but not from this
-rule: it promotes like everything else and simply never sets the theme attribute.
+rule: it promotes like everything else and simply never sets the theme attribute. The hub is the
+opposite case and the easiest one on the deck — it is *entirely* what the deck drew, so it sets the
+attribute like the three tools (ADR 0025).
 
 ## Name a scale step the preset defines
 
