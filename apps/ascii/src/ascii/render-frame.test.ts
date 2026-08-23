@@ -25,6 +25,7 @@ function makeCtxMock(canvas: HTMLCanvasElement) {
     restore: vi.fn(),
     translate: vi.fn(),
     scale: vi.fn(),
+    clearRect: vi.fn(),
     drawImage: vi.fn(),
     getImageData: vi.fn(() => ({ data: new Uint8ClampedArray(4) })),
     fillRect: vi.fn(),

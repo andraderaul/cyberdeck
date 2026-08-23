@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted (amended in #335 — the sampling canvas must be cleared before every draw; see Consequences)
 
 ## Context
 
@@ -40,6 +40,16 @@ at grid resolution and rendering text at full size never interfere with each oth
 
 **Negative:**
 - A second, hidden `<canvas>` must be maintained alongside the visible rendering canvas.
+- That canvas outlives a single render, and `drawImage` composites source-over: it has to be
+  cleared before every sampling draw, or a Source with an alpha channel blends onto the frame
+  before it and the sampled pixels start depending on how many renders came first. An opaque
+  Source never shows this, so the clear is not optional and is not self-evidently needed (#335).
+  The clear is a `clearRect`. `globalCompositeOperation = 'copy'` was rejected: it leaves a mode
+  behind on a context the shells do not own, and under the mirror flip (ADR 0016) it would apply
+  to the transformed rect rather than to the bitmap. Dropping the contents by resizing the canvas
+  was rejected too — it buys a fresh bitmap on every frame of the Live Source loop (ADR 0002),
+  and it is not even reliable: assigning the width a value it already has is a no-op, which is
+  exactly what a Live Source does every frame.
 
 ## Related ADRs
 

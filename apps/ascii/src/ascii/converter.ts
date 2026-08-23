@@ -145,6 +145,17 @@ export function convertImage(
   const { brightness, contrast, charset, edgeGlyphs } = options
   const { offsetX, offsetY, dCols, dRows } = region
 
+  // The sampling canvas (ADR 0001) outlives a single conversion and drawImage composites
+  // source-over, so a Source with an alpha channel would blend onto whatever the previous render
+  // left there — cells that depend on how many renders came before. The caller's resize is not
+  // the clear: assigning the width a value it already has is a no-op, which is every frame of a
+  // Live Source. It has to stay ahead of the flip, which is taken about the *fit region* — moved
+  // inside the save it would clear the wrong span for a letterboxed Source. The whole grid rather
+  // than the region because the region moves between renders: a smaller one next time would leave
+  // this render's pixels sitting outside it. See ADR 0001 for why clearRect and not a 'copy'
+  // composite or a resize.
+  ctx.clearRect(0, 0, cols, rows)
+
   if (isMirrored) {
     ctx.save()
     ctx.translate(2 * offsetX + dCols, 0)

@@ -7,6 +7,7 @@ import { CHARSET_MAPS } from './types'
 // touching the luminance pipeline resolves to a non-space glyph.
 function whiteCtx(cols: number, rows: number) {
   return {
+    clearRect: vi.fn(),
     drawImage: vi.fn(),
     getImageData: vi.fn(() => ({ data: new Uint8ClampedArray(cols * rows * 4).fill(255) })),
   } as unknown as CanvasRenderingContext2D
@@ -27,6 +28,7 @@ function greyCtx(cols: number, rows: number, grey: (col: number, row: number) =>
     }
   }
   return {
+    clearRect: vi.fn(),
     drawImage: vi.fn(),
     getImageData: vi.fn(() => ({ data })),
   } as unknown as CanvasRenderingContext2D
@@ -121,6 +123,9 @@ describe('convertImage mirror', () => {
       restore: vi.fn(() => calls.push('restore')),
       translate: vi.fn((x: number) => calls.push(`translate:${x}`)),
       scale: vi.fn((x: number) => calls.push(`scale:${x}`)),
+      clearRect: vi.fn((x: number, y: number, w: number, h: number) =>
+        calls.push(`clearRect:${x},${y},${w},${h}`),
+      ),
       drawImage: vi.fn(() => calls.push('drawImage')),
       getImageData: vi.fn(() => ({ data: new Uint8ClampedArray(cols * rows * 4).fill(255) })),
     }
@@ -131,7 +136,7 @@ describe('convertImage mirror', () => {
     const { ctx, raw, calls } = recordingCtx(4, 4)
     convertImage(ctx, img, 4, 4, options)
 
-    expect(calls).toEqual(['drawImage'])
+    expect(calls).toEqual(['clearRect:0,0,4,4', 'drawImage'])
     expect(raw.scale).not.toHaveBeenCalled()
   })
 
@@ -139,7 +144,15 @@ describe('convertImage mirror', () => {
     const { ctx, calls } = recordingCtx(4, 4)
     convertImage(ctx, img, 4, 4, options, undefined, true)
 
-    expect(calls).toEqual(['save', 'translate:4', 'scale:-1', 'drawImage', 'restore'])
+    // The clear stays outside the flip: it is about the whole grid, not about the fit region.
+    expect(calls).toEqual([
+      'clearRect:0,0,4,4',
+      'save',
+      'translate:4',
+      'scale:-1',
+      'drawImage',
+      'restore',
+    ])
   })
 
   it('flips about the fit region, not the grid, so a pillarboxed Source stays in its bands', () => {
@@ -149,7 +162,140 @@ describe('convertImage mirror', () => {
     const { ctx, calls } = recordingCtx(6, 4)
     convertImage(ctx, img, 6, 4, options, region, true)
 
-    expect(calls).toEqual(['save', 'translate:4', 'scale:-1', 'drawImage', 'restore'])
+    expect(calls).toEqual([
+      'clearRect:0,0,6,4',
+      'save',
+      'translate:4',
+      'scale:-1',
+      'drawImage',
+      'restore',
+    ])
+  })
+})
+
+// The sampling canvas (ADR 0001) outlives a single conversion, and `drawImage` composites
+// source-over: a Source with an alpha channel used to blend onto whatever the previous render
+// left in it, so the cells depended on how many renders came before (#335).
+describe('convertImage sampling canvas', () => {
+  const img = {} as CanvasImageSource
+  const options = { brightness: 1, contrast: 1, charset: 'classic', edgeGlyphs: false } as const
+
+  /** A Source pixel, as the compositing double hands it to `drawImage`. */
+  type Rgba = [number, number, number, number]
+
+  /**
+   * Half-opaque and asymmetric across x. An opaque Source cannot drift this way at all — which is
+   * why the bug survived — and since a cell only ever reads RGB, the asymmetry is what turns the
+   * accumulated alpha into a different glyph.
+   */
+  function translucentRamp(col: number): Rgba {
+    const level = col * 60
+    return [level, level, level, 128]
+  }
+
+  /**
+   * A sampling-canvas double that really composites: its bitmap survives between conversions and
+   * `drawImage` blends source-over onto it, the way Canvas 2D does by default.
+   *
+   * Reassigning the hidden canvas's width is deliberately *not* modelled as a reset — the browser
+   * repro in #335 accumulated even though `renderFrame` reassigns it on every render — so what
+   * these tests see is the explicit clear, or nothing.
+   *
+   * @param source the Source's pixel at a column of the drawn rect. A Live Source hands over a
+   *   different one each call, which is what lets a test show one frame ghosting into the next.
+   */
+  function compositingCtx(cols: number, rows: number, source: (col: number) => Rgba) {
+    const bitmap = new Uint8ClampedArray(cols * rows * 4)
+    const transforms: Array<{ flipped: boolean; axis: number }> = []
+    let flipped = false
+    let axis = 0
+
+    const blend = (index: number, [r, g, b, a]: Rgba) => {
+      const srcAlpha = a / 255
+      const dstAlpha = bitmap[index + 3] / 255
+      const outAlpha = srcAlpha + dstAlpha * (1 - srcAlpha)
+      if (outAlpha === 0) {
+        bitmap.fill(0, index, index + 4)
+        return
+      }
+      const mix = (src: number, dst: number) =>
+        Math.round((src * srcAlpha + dst * dstAlpha * (1 - srcAlpha)) / outAlpha)
+      bitmap[index] = mix(r, bitmap[index])
+      bitmap[index + 1] = mix(g, bitmap[index + 1])
+      bitmap[index + 2] = mix(b, bitmap[index + 2])
+      bitmap[index + 3] = Math.round(outAlpha * 255)
+    }
+
+    return {
+      save: vi.fn(() => transforms.push({ flipped, axis })),
+      restore: vi.fn(() => {
+        const previous = transforms.pop() ?? { flipped: false, axis: 0 }
+        flipped = previous.flipped
+        axis = previous.axis
+      }),
+      translate: vi.fn((x: number) => {
+        axis = x
+      }),
+      scale: vi.fn((x: number) => {
+        flipped = x < 0
+      }),
+      clearRect: vi.fn((x: number, y: number, w: number, h: number) => {
+        for (let row = y; row < y + h; row++) {
+          bitmap.fill(0, (row * cols + x) * 4, (row * cols + x + w) * 4)
+        }
+      }),
+      drawImage: vi.fn((_img: unknown, dx: number, dy: number, dw: number, dh: number) => {
+        for (let row = 0; row < dh; row++) {
+          for (let col = 0; col < dw; col++) {
+            // scale(-1, 1) after translate(axis, 0) sends the column spanning [x, x+1) onto
+            // [axis - x - 1, axis - x), so the fit region lands on itself reversed.
+            const destX = flipped ? axis - (dx + col) - 1 : dx + col
+            blend(((dy + row) * cols + destX) * 4, source(col))
+          }
+        }
+      }),
+      getImageData: vi.fn(() => ({ data: new Uint8ClampedArray(bitmap) })),
+    } as unknown as CanvasRenderingContext2D
+  }
+
+  it('reads the same cells across a Mirror round trip, with an RGBA Source', () => {
+    const ctx = compositingCtx(4, 2, translucentRamp)
+
+    const first = charRows(convertImage(ctx, img, 4, 2, options))
+    convertImage(ctx, img, 4, 2, options, undefined, true)
+    const third = charRows(convertImage(ctx, img, 4, 2, options))
+
+    expect(third).toEqual(first)
+  })
+
+  it('reads the same cells however many conversions of a letterboxed Source came before', () => {
+    const region = { offsetX: 1, offsetY: 0, dCols: 2, dRows: 4 }
+    const ctx = compositingCtx(6, 4, translucentRamp)
+
+    const first = charRows(convertImage(ctx, img, 6, 4, options, region))
+    convertImage(ctx, img, 6, 4, options, region, true)
+    const third = charRows(convertImage(ctx, img, 6, 4, options, region))
+
+    expect(third).toEqual(first)
+  })
+
+  // The Live Source re-draws into this one canvas ~15 times a second (ADR 0002), and its frames
+  // differ: an uncleared canvas ghosts the frames before it into the one being read.
+  it('reads a Live Source frame as itself, not as everything drawn before it', () => {
+    // One lit column that walks across the grid — the frame is the only thing that changed.
+    let frame = 0
+    const walkingColumn = (col: number): Rgba =>
+      col === frame ? [255, 255, 255, 128] : [0, 0, 0, 128]
+
+    const ctx = compositingCtx(4, 2, walkingColumn)
+    let live: string[] = []
+    for (frame = 0; frame < 3; frame++) {
+      live = charRows(convertImage(ctx, img, 4, 2, options))
+    }
+
+    frame = 2
+    const alone = charRows(convertImage(compositingCtx(4, 2, walkingColumn), img, 4, 2, options))
+    expect(live).toEqual(alone)
   })
 })
 

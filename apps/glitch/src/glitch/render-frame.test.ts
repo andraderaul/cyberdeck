@@ -18,6 +18,7 @@ const SEED: Seed = 1234
 function fakeContext(imageData?: ImageData) {
   return {
     canvas: { width: 0, height: 0 },
+    clearRect: vi.fn(),
     drawImage: vi.fn(),
     putImageData: vi.fn(),
     getImageData: vi.fn(() => imageData ?? new ImageData(1, 1)),
@@ -38,9 +39,95 @@ function fakeMirrorContext(imageData?: ImageData) {
     translate: vi.fn((x: number, y: number) => calls.push(`translate(${x},${y})`)),
     scale: vi.fn((x: number, y: number) => calls.push(`scale(${x},${y})`)),
     restore: vi.fn(() => calls.push('restore')),
+    clearRect: vi.fn((x: number, y: number, w: number, h: number) =>
+      calls.push(`clearRect(${x},${y},${w},${h})`),
+    ),
     drawImage: vi.fn(() => calls.push('drawImage')),
     putImageData: vi.fn(),
     getImageData: vi.fn(() => imageData ?? new ImageData(1, 1)),
+  }
+}
+
+/** A Source pixel, as the compositing double hands it to `drawImage`. */
+type Rgba = [number, number, number, number]
+
+/**
+ * Half-opaque and asymmetric across x: the alpha is what accumulates when the sampling canvas is
+ * not cleared, and the asymmetry is what makes a Mirror round trip show up in RGB too. An opaque
+ * Source cannot drift this way at all, which is why the bug in #335 survived so long.
+ */
+function translucentRamp(col: number): Rgba {
+  const level = col * 60
+  return [level, level, level, 128]
+}
+
+/**
+ * A hidden-canvas double that really composites: its bitmap survives between renders and
+ * `drawImage` blends source-over onto it, the way Canvas 2D does by default.
+ *
+ * Reassigning the canvas width is deliberately *not* modelled as a reset — the browser repro in
+ * #335 accumulated even though the shell reassigns it on every render — so what these tests see
+ * is the explicit clear, or nothing.
+ */
+function compositingContext(w: number, h: number) {
+  const bitmap = new Uint8ClampedArray(w * h * 4)
+  const sampled: number[][] = []
+  const transforms: Array<{ flipped: boolean; axis: number }> = []
+  let flipped = false
+  let axis = 0
+
+  const blend = (index: number, [r, g, b, a]: Rgba) => {
+    const srcAlpha = a / 255
+    const dstAlpha = bitmap[index + 3] / 255
+    const outAlpha = srcAlpha + dstAlpha * (1 - srcAlpha)
+    if (outAlpha === 0) {
+      bitmap.fill(0, index, index + 4)
+      return
+    }
+    const mix = (src: number, dst: number) =>
+      Math.round((src * srcAlpha + dst * dstAlpha * (1 - srcAlpha)) / outAlpha)
+    bitmap[index] = mix(r, bitmap[index])
+    bitmap[index + 1] = mix(g, bitmap[index + 1])
+    bitmap[index + 2] = mix(b, bitmap[index + 2])
+    bitmap[index + 3] = Math.round(outAlpha * 255)
+  }
+
+  return {
+    sampled,
+    canvas: { width: w, height: h },
+    save: vi.fn(() => transforms.push({ flipped, axis })),
+    restore: vi.fn(() => {
+      const previous = transforms.pop() ?? { flipped: false, axis: 0 }
+      flipped = previous.flipped
+      axis = previous.axis
+    }),
+    translate: vi.fn((x: number) => {
+      axis = x
+    }),
+    scale: vi.fn((x: number) => {
+      flipped = x < 0
+    }),
+    clearRect: vi.fn((x: number, y: number, rectW: number, rectH: number) => {
+      for (let row = y; row < y + rectH; row++) {
+        bitmap.fill(0, (row * w + x) * 4, (row * w + x + rectW) * 4)
+      }
+    }),
+    drawImage: vi.fn((_source: unknown, dx: number, dy: number, dw: number, dh: number) => {
+      for (let row = 0; row < dh; row++) {
+        for (let col = 0; col < dw; col++) {
+          // scale(-1, 1) after translate(axis, 0) sends the column spanning [x, x+1) onto
+          // [axis - x - 1, axis - x), so the region lands on itself reversed.
+          const destX = flipped ? axis - (dx + col) - 1 : dx + col
+          blend(((dy + row) * w + destX) * 4, translucentRamp(col))
+        }
+      }
+    }),
+    putImageData: vi.fn(),
+    getImageData: vi.fn(() => {
+      const data = new Uint8ClampedArray(bitmap)
+      sampled.push(Array.from(data))
+      return new ImageData(data, w, h)
+    }),
   }
 }
 
@@ -169,7 +256,15 @@ describe('renderGlitchFrame', () => {
     renderGlitchFrame(fakeSource(100, 50), fakeCanvas(fakeContext()), hidden, CHAIN, SEED, true)
 
     expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 100, 50)
-    expect(ctx.calls).toEqual(['save', 'translate(100,0)', 'scale(-1,1)', 'drawImage', 'restore'])
+    // The clear stays outside the flip: it is about the whole bitmap, not about the drawn rect.
+    expect(ctx.calls).toEqual([
+      'clearRect(0,0,100,50)',
+      'save',
+      'translate(100,0)',
+      'scale(-1,1)',
+      'drawImage',
+      'restore',
+    ])
   })
 
   it('draws the Source un-flipped when not mirrored', () => {
@@ -179,7 +274,7 @@ describe('renderGlitchFrame', () => {
 
     expect(ctx.translate).not.toHaveBeenCalled()
     expect(ctx.scale).not.toHaveBeenCalled()
-    expect(ctx.calls).toEqual(['drawImage'])
+    expect(ctx.calls).toEqual(['clearRect(0,0,100,50)', 'drawImage'])
   })
 
   // The Seed is what keeps a Live Source's corruption from boiling frame to frame (#82).
@@ -204,5 +299,70 @@ describe('renderGlitchFrame', () => {
     }
 
     expect(paintOnce()).toEqual(paintOnce())
+  })
+})
+
+// `applyChain` is pure in Chain + Seed, but the shell can still leak history: `drawImage`
+// composites source-over, so a Source with an alpha channel used to blend onto whatever the
+// hidden canvas still held from the render before it (#335, ADR 0001).
+describe('renderGlitchFrame sampling canvas', () => {
+  function renderInto(hidden: HTMLCanvasElement, isMirrored = false) {
+    renderGlitchFrame(fakeSource(4, 2), fakeCanvas(fakeContext()), hidden, CHAIN, SEED, isMirrored)
+  }
+
+  it('samples the same pixels however many renders came before, with an RGBA Source', () => {
+    const hiddenCtx = compositingContext(4, 2)
+    const hidden = fakeCanvas(hiddenCtx)
+
+    renderInto(hidden)
+    renderInto(hidden)
+    renderInto(hidden)
+
+    expect(hiddenCtx.sampled[2]).toEqual(hiddenCtx.sampled[0])
+  })
+
+  it('samples the same pixels across a Mirror round trip', () => {
+    const hiddenCtx = compositingContext(4, 2)
+    const hidden = fakeCanvas(hiddenCtx)
+
+    renderInto(hidden)
+    renderInto(hidden, true)
+    renderInto(hidden)
+
+    expect(hiddenCtx.sampled[2]).toEqual(hiddenCtx.sampled[0])
+  })
+
+  // #335 was found on two round trips through the Editor: a slider nudged and put back, and a
+  // Link added then removed. Both are the same shape at this seam — the drift is upstream of
+  // applyChain, so what the Chain did in between cannot matter — and this states the claim the
+  // way a user meets it: the painted frame comes back to the bytes it started on.
+  it('paints the same frame again after an add-then-remove Link round trip', () => {
+    const hiddenCtx = compositingContext(4, 2)
+    const hidden = fakeCanvas(hiddenCtx)
+
+    function paintWith(chain: Chain) {
+      const visibleCtx = fakeContext()
+      renderGlitchFrame(fakeSource(4, 2), fakeCanvas(visibleCtx), hidden, chain, SEED)
+      return Array.from((visibleCtx.putImageData.mock.calls[0][0] as ImageData).data)
+    }
+
+    const before = paintWith(CHAIN)
+    paintWith([...CHAIN, createLink('scanlines')])
+    const after = paintWith(CHAIN)
+
+    expect(after).toEqual(before)
+  })
+
+  // The rAF loop re-enters the shell ~15 times a second (ADR 0002) against one hidden canvas,
+  // so the clear has to hold there without buying a fresh bitmap per frame.
+  it('holds for a Live Source re-drawing into the same hidden canvas every frame', () => {
+    const hiddenCtx = compositingContext(4, 2)
+    const hidden = fakeCanvas(hiddenCtx)
+
+    for (let frame = 0; frame < 5; frame++) {
+      renderGlitchFrame(fakeLiveSource(4, 2), fakeCanvas(fakeContext()), hidden, CHAIN, SEED)
+    }
+
+    expect(hiddenCtx.sampled[4]).toEqual(hiddenCtx.sampled[0])
   })
 })
