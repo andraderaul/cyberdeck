@@ -72,6 +72,9 @@ npm run dev:golem    # start GOLEM//Console's dev server
 npm run build        # build every app
 npm run test         # ASCII//Convert's tests, in watch mode
 npm run test:run     # run every workspace's tests once, deck-kit included (what CI runs)
+npm run test:e2e     # Playwright over the BUILT output, one project per workspace
+npm run test:e2e:smoke  # everything except the `@a11y` tag — the Smoke E2E check
+npm run test:e2e:a11y   # only `@a11y` — axe, 44x44 targets, canvas overlay ground (Accessibility check)
 npm run typecheck    # tsc -b across workspaces
 
 npm run check        # biome check . (lint + format) — whole repo

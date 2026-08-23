@@ -121,10 +121,52 @@ jobs:
         run: npx tsc
 
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      # Everything except the `@a11y` tag, which the job below owns. Two checks rather than one for
+      # the same reason this job is not part of Test: a program that boots wrong and a control that
+      # is 7px too small are unrelated failures, and one check name could not say which.
+      - run: npm run test:e2e:smoke
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
         with:
           name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # Holds the accessibility work of #288 and #297, which nothing else does: every control at 44x44
+  # counting the ones that buy it as an overlay, every canvas overlay on the opaque ground ADR 0013
+  # requires, and axe over each program's surfaces at WCAG A and AA (#329). Every finding names the
+  # element, the rule and the program, so the log reads without a browser.
+  #
+  # Self-contained by design, and for the same reason `Smoke E2E` above is — no `needs:`, no steps
+  # shared with another job. It pays for its own five builds and five preview servers, which is the
+  # cost of measuring the thing that ships rather than the thing the unit suite mounts.
+  #
+  # Its own job rather than more assertions inside `Smoke E2E`, because "the program is broken" and
+  # "the program is unusable by half its users" are different reports, and a reviewer should be able
+  # to tell them apart from the check name.
+  a11y:
+    name: Accessibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      # The specs' own typecheck, ahead of the browser — the same step `Smoke E2E` opens with, and
+      # duplicated rather than shared on purpose (this job takes nothing from that one). It costs a
+      # couple of seconds and it costs them first: a spec that no longer compiles against an app it
+      # imports should not be found five builds and a browser later.
+      - name: Typecheck the specs
+        run: npx tsc
+
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:a11y
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: playwright-report-a11y
           path: playwright-report/
           retention-days: 7
