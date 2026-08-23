@@ -10,6 +10,7 @@ import {
   noise,
   pixelSort,
   scanlines,
+  wave,
 } from './pipeline'
 import { deriveSeed } from './rng'
 import {
@@ -23,12 +24,14 @@ import {
   DEFAULT_NOISE,
   DEFAULT_PIXEL_SORT,
   DEFAULT_SCANLINES,
+  DEFAULT_WAVE,
   type HalftoneParams,
   type NoiseParams,
   type PixelBuffer,
   type PixelSortParams,
   type ScanlinesParams,
   type Seed,
+  type WaveParams,
 } from './types'
 
 /**
@@ -39,6 +42,7 @@ import {
 export interface EffectParams {
   blockDisplacement: BlockDisplacementParams
   pixelSort: PixelSortParams
+  wave: WaveParams
   channelShift: ChannelShiftParams
   chromaticAberration: ChromaticAberrationParams
   halftone: HalftoneParams
@@ -104,6 +108,7 @@ export const EFFECT_REGISTRY: { [K in EffectType]: EffectDefinition<K> } = {
   // second sort still composes — crossing a horizontal pass with a vertical one is the "double
   // melt" ADR 0017 wants — which is why only the identical copy is refused, not the repeat itself.
   pixelSort: { apply: pixelSort, defaults: DEFAULT_PIXEL_SORT, idempotent: true },
+  wave: { apply: wave, defaults: DEFAULT_WAVE },
   channelShift: { apply: channelShift, defaults: DEFAULT_CHANNEL_SHIFT },
   chromaticAberration: { apply: chromaticAberration, defaults: DEFAULT_CHROMATIC_ABERRATION },
   halftone: { apply: halftone, defaults: DEFAULT_HALFTONE },
