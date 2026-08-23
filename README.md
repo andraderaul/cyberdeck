@@ -59,16 +59,27 @@ domain core: each app's pipeline stays in the app ([ADR 0014](./docs/adr/0014-de
 
 ## Deploys
 
-Each app is its own Vercel project pointing at this repo. ASCII//Convert builds from the root
-`vercel.json`; the rest set **Root Directory** to their `apps/<name>` and are driven by a nested
-`vercel.json` that `cd`s to the repo root so the `@cyberdeck/deck-kit` workspace dependency resolves.
+Each app is its own Vercel project pointing at this repo. There is no root `vercel.json`: all four
+set **Root Directory** to their `apps/<name>` and are driven by that app's own `vercel.json`, which
+`cd`s to the repo root so the `@cyberdeck/deck-kit` workspace dependency resolves.
 
 Each project's `ignoreCommand` skips its build when the diff touches nothing it ships. It watches
 the app plus `packages/deck-kit` (consumed as source by all,
 [ADR 0014](./docs/adr/0014-deck-kit-shared-package.md)), diffs over
-`$VERCEL_GIT_PREVIOUS_SHA..HEAD` (that project's last deploy on the branch), excludes `**/*.md`, and
-fails toward deploying — production, a branch's first deploy, and any git error all build. CI's
-`paths-ignore` is separate; Vercel does not read it.
+`$VERCEL_GIT_PREVIOUS_SHA..HEAD` (that project's last *successful* deploy on the branch), excludes
+`**/*.md`, and fails toward deploying — production, a branch's first deploy, and any git error all
+build.
+
+That last case is what the trailing `; [ $? -eq 0 ]` buys, and it is the reason not to tidy it
+away. Vercel reads exit 0 as "skip" and exit 1 as "build"; **any other status is a failed
+deployment**, not a build. `git diff` exits 128 when it cannot resolve `$VERCEL_GIT_PREVIOUS_SHA`
+— which is what a force-push does, orphaning the commit that project last deployed from a shallow
+clone — so without the clamp the ignore step errors every deployment on that branch instead of
+building it, and it keeps erroring, because the pinned SHA only advances on a *successful* deploy.
+The clamp maps every non-zero status onto 1, which builds. JSON takes no comments, so this
+paragraph is where that reasoning lives.
+
+CI's `paths-ignore` is separate; Vercel does not read it.
 
 ## Contributing
 
