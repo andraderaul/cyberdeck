@@ -19,7 +19,9 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: BASE_URL,
-    trace: 'on-first-retry',
+    // Not `on-first-retry`, which never fires with retries pinned at zero — the CI artifact would
+    // carry no trace on exactly the run that wanted one.
+    trace: 'retain-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {

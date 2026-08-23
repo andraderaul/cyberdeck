@@ -13,14 +13,15 @@ import { expect, test } from '@playwright/test'
 const HERO_PANEL_MIN_HEIGHT = '160px' // `min-h-[160px]` — EmptyStateHero, SourceImageDropZone
 const HERO_ROW_MAX_WIDTH = '720px' // `max-w-[720px]` — EmptyStateHero's row
 
-test.describe('deck-kit primitives survive the Tailwind purge', () => {
-  test('a kit primitive is given the size its class asks for', async ({ page }) => {
-    await page.goto('/')
+test('deck-kit primitives get the sizes their classes ask for', async ({ page }) => {
+  await page.goto('/')
 
-    const webcamPanel = page.getByRole('button', { name: /use webcam/i })
-    await expect(webcamPanel).toHaveCSS('min-height', HERO_PANEL_MIN_HEIGHT)
+  await expect(page.getByRole('button', { name: /use webcam/i })).toHaveCSS(
+    'min-height',
+    HERO_PANEL_MIN_HEIGHT,
+  )
 
-    // A second utility, so the guard does not rest on one class happening to survive.
-    await expect(webcamPanel.locator('..')).toHaveCSS('max-width', HERO_ROW_MAX_WIDTH)
-  })
+  // Anchored on the class rather than on where the element sits, which is both what the assertion
+  // is actually about and one less thing a hero re-layout can break.
+  await expect(page.locator('[class*="max-w-[720px]"]')).toHaveCSS('max-width', HERO_ROW_MAX_WIDTH)
 })
