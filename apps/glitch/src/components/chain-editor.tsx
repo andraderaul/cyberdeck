@@ -16,9 +16,12 @@ import {
   DEFAULT_BLOCK_DISPLACEMENT,
   DEFAULT_CHANNEL_SHIFT,
   DEFAULT_CHROMATIC_ABERRATION,
+  DEFAULT_HALFTONE,
   DEFAULT_NOISE,
   DEFAULT_PIXEL_SORT,
   DEFAULT_SCANLINES,
+  HALFTONE_CELL_SIZE_RANGE,
+  type HalftoneTint,
   type NoiseTint,
   PIXEL_SORT_RUN_LENGTH_RANGE,
   SCANLINES_DENSITY_STEP,
@@ -30,21 +33,26 @@ import IconLabelButton from './icon-label-button'
 /**
  * The params panel's reserved height. On mobile the params stack (the sm grid flows into columns
  * only at ≥640px), so each Effect's stacked height differs — 1 to 3 controls. Reserve the tallest
- * (pixel sort: a toggle + two sliders) so switching Effects doesn't reflow the strip. At sm every
+ * (pixel sort and halftone: a toggle + two sliders) so switching Effects doesn't reflow. At sm every
  * Effect is one row, so the floor drops back to the single-row height. A full class string, not an
  * interpolated `min-h-[${n}px]` — Tailwind only emits arbitrary values it can see literally.
  */
 const PANEL_MIN_HEIGHT = 'min-h-[240px] sm:min-h-[92px]'
 
 /**
- * Every slider here spans the unit interval; the two params with no natural 0..1 bound
- * (`CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE`) get their ranges from the core.
+ * Every slider here spans the unit interval; the params with no natural 0..1 bound
+ * (`CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE`, `HALFTONE_CELL_SIZE_RANGE`) get
+ * their ranges from the core.
  */
 const UNIT_RANGE = { min: 0, max: 1 } as const
 
 const CHANNELS: readonly ChannelName[] = ['r', 'g', 'b']
 
 const NOISE_TINTS: readonly NoiseTint[] = ['mono', 'color']
+
+// Its own list, though it reads the same as NOISE_TINTS: the two tints are different choices about
+// different Effects, and collapsing them would tie Halftone's options to Noise's.
+const HALFTONE_TINTS: readonly HalftoneTint[] = ['mono', 'color']
 
 const CHANNEL_LABELS: Record<ChannelName, string> = { r: 'red', g: 'green', b: 'blue' }
 
@@ -61,6 +69,7 @@ export const EFFECT_LABELS: Record<EffectType, string> = {
   pixelSort: 'pixel sort',
   channelShift: 'channel shift',
   chromaticAberration: 'chromatic aberration',
+  halftone: 'halftone',
   scanlines: 'scanlines',
   noise: 'noise',
 }
@@ -70,6 +79,7 @@ const EFFECT_TOOLTIPS: Record<EffectType, string> = {
   pixelSort: 'sorts bright runs of pixels — the melted smear',
   channelShift: 'offsets one r/g/b channel by a constant — rgb split',
   chromaticAberration: 'splits r/b outward from the centre — lens fringe',
+  halftone: 'redraws the image as a grid of dots sized by brightness — print screen',
   scanlines: 'dark horizontal lines over the image — crt raster',
   noise: 'grain / static laid over the image',
 }
@@ -92,8 +102,8 @@ interface LinkProps {
 
 /**
  * The params editor for one Link. Switches on the Link's Effect because each one edits a genuinely
- * different param shape — this is the one place that has to know all six, which is why the rest of
- * the editor can stay a loop over the Chain.
+ * different param shape — this is the one place that has to know every Effect, which is why the rest
+ * of the editor can stay a loop over the Chain.
  */
 function LinkControls({ link, onChange }: LinkProps) {
   switch (link.type) {
@@ -197,6 +207,42 @@ function LinkControls({ link, onChange }: LinkProps) {
           format={(v) => `${Math.round(v * 100)}%`}
           onChange={(strength) => onChange({ strength })}
         />
+      )
+    }
+    case 'halftone': {
+      const params = link.params
+      return (
+        <>
+          <ToggleGroup
+            ariaLabel="halftone tint"
+            options={HALFTONE_TINTS}
+            value={params.tint}
+            fullWidth
+            onChange={(tint) => onChange({ ...params, tint })}
+          />
+          {/* "cell" and "dot", not the param names: two sliders reading "size" would reach a
+              screen reader as the same control twice. */}
+          <Slider
+            label="cell"
+            value={params.cellSize}
+            min={HALFTONE_CELL_SIZE_RANGE.min}
+            max={HALFTONE_CELL_SIZE_RANGE.max}
+            step={1}
+            defaultValue={DEFAULT_HALFTONE.cellSize}
+            format={(v) => `${v}px`}
+            onChange={(cellSize) => onChange({ ...params, cellSize })}
+          />
+          <Slider
+            label="dot"
+            value={params.dotScale}
+            min={UNIT_RANGE.min}
+            max={UNIT_RANGE.max}
+            step={0.01}
+            defaultValue={DEFAULT_HALFTONE.dotScale}
+            format={(v) => `${Math.round(v * 100)}%`}
+            onChange={(dotScale) => onChange({ ...params, dotScale })}
+          />
+        </>
       )
     }
     case 'scanlines': {
@@ -385,10 +431,11 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
               <Label>add effect</Label>
             </legend>
             {/* The palette reads EFFECT_ORDER (presets.ts) — the canonical order the Presets share
-                — rather than the registry's incidental key order. That list is hand-kept: a new
-                Effect must be added there to reach the palette, and the compiler won't point at it.
-                It wraps rather than scrolls: it's a set of options, not the ordered Chain, so showing
-                every Effect at once beats hiding half behind a horizontal scroll. */}
+                — rather than the registry's incidental key order. That list derives from a Record
+                over EffectType, so a newly registered Effect can't reach the editor missing: it
+                fails to compile there first. It wraps rather than scrolls: it's a set of options,
+                not the ordered Chain, so showing every Effect at once beats hiding half behind a
+                horizontal scroll. */}
             <div className="flex flex-wrap gap-2xs">
               {EFFECT_ORDER.map((type) => (
                 <Chip

@@ -6,6 +6,7 @@ import {
   blockDisplacement,
   channelShift,
   chromaticAberration,
+  halftone,
   noise,
   pixelSort,
   scanlines,
@@ -18,9 +19,11 @@ import {
   DEFAULT_BLOCK_DISPLACEMENT,
   DEFAULT_CHANNEL_SHIFT,
   DEFAULT_CHROMATIC_ABERRATION,
+  DEFAULT_HALFTONE,
   DEFAULT_NOISE,
   DEFAULT_PIXEL_SORT,
   DEFAULT_SCANLINES,
+  type HalftoneParams,
   type NoiseParams,
   type PixelBuffer,
   type PixelSortParams,
@@ -38,6 +41,7 @@ export interface EffectParams {
   pixelSort: PixelSortParams
   channelShift: ChannelShiftParams
   chromaticAberration: ChromaticAberrationParams
+  halftone: HalftoneParams
   scanlines: ScanlinesParams
   noise: NoiseParams
 }
@@ -102,6 +106,7 @@ export const EFFECT_REGISTRY: { [K in EffectType]: EffectDefinition<K> } = {
   pixelSort: { apply: pixelSort, defaults: DEFAULT_PIXEL_SORT, idempotent: true },
   channelShift: { apply: channelShift, defaults: DEFAULT_CHANNEL_SHIFT },
   chromaticAberration: { apply: chromaticAberration, defaults: DEFAULT_CHROMATIC_ABERRATION },
+  halftone: { apply: halftone, defaults: DEFAULT_HALFTONE },
   scanlines: { apply: scanlines, defaults: DEFAULT_SCANLINES },
   noise: { apply: noise, defaults: DEFAULT_NOISE },
 }

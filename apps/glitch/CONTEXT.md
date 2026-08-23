@@ -11,7 +11,13 @@ Uma lista **ordenada e editável** de Links, cada um uma instância de Effect �
 **PixelBuffer**. A ordem em que os Presets são montados continua sendo a canônica — estruturais
 (reorganizam pixels) antes de superfície (sobrepõem textura):
 
-`Block Displacement → Pixel Sort → Channel Shift → Chromatic Aberration → Scanlines → Noise`
+`Block Displacement → Pixel Sort → Channel Shift → Chromatic Aberration → Halftone → Scanlines →
+Noise`
+
+**Halftone fica na emenda entre os dois grupos**, e não dentro de nenhum deles: ele não reorganiza
+pixels nem sobrepõe textura — ele **re-quantiza**, jogando fora o detalhe de cada célula e
+devolvendo o tom dela como a área de um ponto. Por isso vem depois dos estruturais (peneira o que
+eles rearranjaram) e antes dos de superfície (que depositam sua textura sobre os pontos).
 
 `applyChain` é uma função pura de **Chain** + **Seed** → saída. Não há nenhuma fonte de
 aleatoriedade oculta: toda aleatoriedade deriva do Seed, passado ao lado da Chain. Cada Link
@@ -28,8 +34,8 @@ _Avoid_: ImageData (é o tipo do DOM que a casca embrulha/desembrulha), bitmap, 
 
 **Effect**:
 Uma transformação nomeada e isolada do pipeline; função pura `PixelBuffer → PixelBuffer`
-parametrizada pelos seus próprios params. Os seis Effects são Block Displacement,
-Pixel Sort, Channel Shift, Chromatic Aberration, Scanlines e Noise.
+parametrizada pelos seus próprios params. Os sete Effects são Block Displacement,
+Pixel Sort, Channel Shift, Chromatic Aberration, Halftone, Scanlines e Noise.
 _Avoid_: filter, layer, camada
 
 **Chain**:
@@ -37,7 +43,8 @@ A lista **ordenada** de **Links** aplicada para produzir a saída — **o look**
 é significativa: o PixelBuffer flui de um Link para o próximo. Repetições são permitidas — o mesmo
 Effect pode aparecer mais de uma vez. Não contém o Seed: o look e o arranjo são coisas distintas.
 A ordem canônica (`Block Displacement → Pixel Sort → Channel Shift → Chromatic Aberration →
-Scanlines → Noise`) deixou de ser lei e passou a ser só como as Chains dos Presets são montadas.
+Halftone → Scanlines → Noise`) deixou de ser lei e passou a ser só como as Chains dos Presets são
+montadas.
 _Avoid_: stack (o modelo é uma **Chain**, não uma "stack" — ver ADR 0017); pipeline (a Pipeline
 fixa era o caso particular que a Chain substituiu); options, config, filters
 
@@ -89,6 +96,7 @@ _Avoid_: session, workspace, app state
 | **Pixel Sort** | Ordena faixas contíguas de pixels por luminância dentro de uma banda de threshold — o efeito "derretido" icônico |
 | **Channel Shift** | Desloca os canais R/G/B por um vetor **uniforme** — o "RGB split". O deslocamento **constante** (o mesmo em toda a imagem) é o que o separa do Chromatic Aberration: são dois Effects distintos, não um com modos |
 | **Chromatic Aberration** | Amplia cada canal em torno do centro por uma fração diferente (R para fora, B para dentro), de modo que o deslocamento **cresce com o raio** — centro nítido, franjas coloridas nas bordas: o sabor de **lente óptica**. Amostragem bilinear, bordas em clamp; puramente geométrico (não usa Seed) |
+| **Halftone** | Redesenha a imagem como uma grade de pontos cuja **área** acompanha a luminância de cada célula — a retícula de impressão. Nem estrutural nem de superfície: **re-quantiza**, e por isso ocupa a emenda entre os dois grupos na ordem canônica. `color` dá ao ponto a cor média da célula, `mono` entinta de branco e deixa só a área carregando o tom. Puramente uma função dos pixels (não usa Seed) |
 | **Scanlines** | Linhas escuras horizontais / raster de CRT |
 | **Noise** | Granulado/estática sobreposto |
 
@@ -103,7 +111,7 @@ vídeo via `canvas.captureStream()` + `MediaRecorder`). Recording grava o canvas
 ## Escopo (v1)
 
 - **Dentro:** imagem estática + Live Source (webcam) em tempo real; a Chain editável de
-  Effects — 6 tipos, ordem, presença e repetição nas mãos do usuário (ADR 0017); presets-first
+  Effects — 7 tipos, ordem, presença e repetição nas mãos do usuário (ADR 0017); presets-first
   (6 Presets, um já aplicado na abertura) + Randomize; Seed fixo com Re-roll; PNG Export +
   Capture + Copy + Recording.
 - **Fora (v2+):** datamosh real; glitch animado

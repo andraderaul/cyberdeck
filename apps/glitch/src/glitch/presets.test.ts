@@ -13,6 +13,7 @@ import { structuredBuffer } from './test-pixels'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
   type ChannelName,
+  DEFAULT_HALFTONE,
   type NoiseTint,
   PIXEL_SORT_RUN_LENGTH_RANGE,
   type PixelBuffer,
@@ -259,6 +260,23 @@ describe('chainMatch', () => {
     // the assertion below would pass without comparing anything.
     expect(base.some((link) => link.type === type)).toBe(true)
     expect(chainMatch(edited, base)).toBe(false)
+  })
+
+  it('notices a change to any Halftone param, though no Preset carries one', () => {
+    // The key walk covers a new Effect the day it is registered — pinned separately because the
+    // exhaustive case above reads VAPORWAVE, and no curated look holds a Halftone Link.
+    const base: Chain = [createLink('halftone')]
+
+    expect(chainMatch([createLink('halftone')], base)).toBe(true)
+    expect(chainMatch([createLink('halftone', { ...DEFAULT_HALFTONE, cellSize: 12 })], base)).toBe(
+      false,
+    )
+    expect(
+      chainMatch([createLink('halftone', { ...DEFAULT_HALFTONE, dotScale: 0.42 })], base),
+    ).toBe(false)
+    expect(chainMatch([createLink('halftone', { ...DEFAULT_HALFTONE, tint: 'mono' })], base)).toBe(
+      false,
+    )
   })
 })
 

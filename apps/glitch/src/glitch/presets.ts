@@ -2,6 +2,7 @@ import { type Chain, createLink, type EffectParams, type EffectType, type Link }
 import type { Rng } from './rng'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
+  HALFTONE_CELL_SIZE_RANGE,
   PIXEL_SORT_RUN_LENGTH_RANGE,
   SCANLINES_DENSITY_STEP,
   SPARSEST_SCANLINE_PERIOD,
@@ -169,6 +170,8 @@ const SORT_THRESHOLD_SPREAD = 0.08
 const SORT_RUN_LENGTH_SPREAD = 25
 const CHANNEL_AMOUNT_SPREAD = 6
 const CHROMATIC_STRENGTH_SPREAD = 0.1
+const HALFTONE_CELL_SIZE_SPREAD = 3
+const HALFTONE_DOT_SCALE_SPREAD = 0.1
 const SCANLINE_DENSITY_SPREAD_NOTCHES = 2
 const SCANLINE_INTENSITY_SPREAD = 0.08
 const NOISE_AMOUNT_SPREAD = 0.06
@@ -233,6 +236,21 @@ const LINK_JITTERS: {
   chromaticAberration: (source, params) => ({
     strength: jitterUnit(source, params.strength, CHROMATIC_STRENGTH_SPREAD),
   }),
+  // Unreachable until a Preset carries Halftone (#320) — Randomize only ever jitters the Links of
+  // the base it picked, and no curated look holds one yet. The entry is required all the same: the
+  // map is total over EffectType.
+  //
+  // The cell moves by a few pixels at most: it sets how much of the Source survives the screen, so
+  // a wide jitter would swing a look between "the photo, dotted" and an unreadable grid.
+  halftone: (source, params) => ({
+    ...params,
+    cellSize: clamp(
+      Math.round(jitter(source, params.cellSize, HALFTONE_CELL_SIZE_SPREAD)),
+      HALFTONE_CELL_SIZE_RANGE.min,
+      HALFTONE_CELL_SIZE_RANGE.max,
+    ),
+    dotScale: jitterUnit(source, params.dotScale, HALFTONE_DOT_SCALE_SPREAD),
+  }),
   scanlines: (source, params) => ({
     density: notchedDensity(
       clamp(
@@ -291,12 +309,26 @@ export function randomizeChain(source: Rng): Chain {
   return PRESETS[index].chain.map((link) => jitterLink(source, link))
 }
 
+/**
+ * Where each Effect sits in the canonical order — structural (they move pixels) before surface
+ * (they lay texture over them), with Halftone on the seam between the two, being neither
+ * (CONTEXT.md). Only the ranks' order carries meaning; the numbers themselves carry none.
+ *
+ * A Record over `EffectType` rather than a hand-kept list, so a newly registered Effect fails to
+ * compile here instead of quietly missing from the add palette — the one failure that leaves an
+ * Effect registered, runnable and unreachable.
+ */
+const EFFECT_RANK: Record<EffectType, number> = {
+  blockDisplacement: 0,
+  pixelSort: 1,
+  channelShift: 2,
+  chromaticAberration: 3,
+  halftone: 4,
+  scanlines: 5,
+  noise: 6,
+}
+
 /** Every Effect a Link can be, in the canonical order the Presets and the palette read in. */
-export const EFFECT_ORDER: readonly EffectType[] = [
-  'blockDisplacement',
-  'pixelSort',
-  'channelShift',
-  'chromaticAberration',
-  'scanlines',
-  'noise',
-]
+export const EFFECT_ORDER: readonly EffectType[] = (Object.keys(EFFECT_RANK) as EffectType[]).sort(
+  (a, b) => EFFECT_RANK[a] - EFFECT_RANK[b],
+)
