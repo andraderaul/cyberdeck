@@ -18,10 +18,12 @@ export default function App() {
     seed,
     activePresetId,
     isModified,
+    isSeedAnimated,
     selectPreset,
     randomize,
     importChain,
-    reroll,
+    advanceSeed,
+    seedControls,
     chainActions,
   } = useEditorState()
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
@@ -134,6 +136,9 @@ export default function App() {
                   isMirrored={isMirrored}
                   onMirrorToggle={handleMirrorToggle}
                   onSwitchCamera={switchCamera}
+                  // Handed over only while the animation is on, so the canvas' loop advances the
+                  // arrangement without having to know why it is or isn't advancing it.
+                  onAdvanceSeed={isSeedAnimated ? advanceSeed : undefined}
                 />
               ) : (
                 <EmptyStateHero
@@ -164,7 +169,7 @@ export default function App() {
           onRandomize={randomize}
           onImport={importChain}
           actions={chainActions}
-          onReroll={reroll}
+          seedControls={seedControls}
         />
       )}
 

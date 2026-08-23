@@ -1,6 +1,6 @@
 import { TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { createRef, type RefObject } from 'react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { createRef, type RefObject, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Chain, createLink } from '../glitch/chain'
 import GlitchCanvas, { HAVE_ENOUGH_DATA, LIVE_SOURCE_FRAME_INTERVAL_MS } from './glitch-canvas'
@@ -13,12 +13,15 @@ const CHAIN: Chain = [createLink('channelShift', { channel: 'r', amount: 1 })]
 const SEED = 1234
 
 // The rAF loop is driven by hand so the throttle can be tested as the pure timing rule it is,
-// rather than by waiting on real frames.
-let frameCallbacks: FrameRequestCallback[]
+// rather than by waiting on real frames. Keyed by id and genuinely cancellable, because a no-op
+// cancel is a lie a browser never tells: an animated Seed rebuilds the loop on every painted frame,
+// and callbacks the cleanup cancelled would otherwise pile up and fire from stale closures.
+let frameCallbacks: Map<number, FrameRequestCallback>
+let nextFrameId: number
 
 function flushFrame(now: number) {
-  const pending = frameCallbacks
-  frameCallbacks = []
+  const pending = [...frameCallbacks.values()]
+  frameCallbacks.clear()
   pending.forEach((cb) => {
     cb(now)
   })
@@ -29,12 +32,17 @@ function liveSource(readyState = HAVE_ENOUGH_DATA): HTMLVideoElement {
 }
 
 beforeEach(() => {
-  frameCallbacks = []
+  frameCallbacks = new Map()
+  nextFrameId = 1
   vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
-    frameCallbacks.push(cb)
-    return frameCallbacks.length
+    const id = nextFrameId++
+    frameCallbacks.set(id, cb)
+    return id
   })
-  vi.stubGlobal('cancelAnimationFrame', vi.fn())
+  vi.stubGlobal(
+    'cancelAnimationFrame',
+    vi.fn((id: number) => frameCallbacks.delete(id)),
+  )
 })
 
 afterEach(() => {
@@ -61,7 +69,7 @@ describe('GlitchCanvas', () => {
     renderCanvas({ sourceImage: { naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement })
 
     expect(renderGlitchFrame).toHaveBeenCalledTimes(1)
-    expect(frameCallbacks).toHaveLength(0)
+    expect(frameCallbacks.size).toBe(0)
   })
 
   it('drives a Live Source through the rAF loop', () => {
@@ -107,7 +115,7 @@ describe('GlitchCanvas', () => {
     flushFrame(0)
     flushFrame(1)
 
-    expect(frameCallbacks).toHaveLength(1)
+    expect(frameCallbacks.size).toBe(1)
   })
 
   it('holds the last frame until the Live Source has enough data', () => {
@@ -127,6 +135,80 @@ describe('GlitchCanvas', () => {
 
     const seeds = renderGlitchFrame.mock.calls.map((call) => (call as unknown[])[4])
     expect(seeds).toEqual([SEED, SEED, SEED])
+  })
+
+  // The Seed advancing per frame (CONTEXT.md): the loop asks for the next arrangement once a frame
+  // has actually been painted, so what animates is the picture rather than the rAF tick rate.
+  describe('the animated Seed', () => {
+    // Held at describe scope so its identity is stable across re-renders — a fresh video object per
+    // render would restart the loop for a reason the Seed has nothing to do with.
+    const video = liveSource()
+
+    // The real wiring: advancing the Seed re-renders the canvas with a new one, which is exactly
+    // what would tear the loop down and rebuild it fifteen times a second.
+    function AnimatingCanvas() {
+      const [seed, setSeed] = useState(SEED)
+      return (
+        <GlitchCanvas
+          sourceImage={null}
+          liveSource={video}
+          chain={CHAIN}
+          seed={seed}
+          canvasRef={createRef<HTMLCanvasElement>() as RefObject<HTMLCanvasElement>}
+          onClearSource={vi.fn()}
+          onAdvanceSeed={() => setSeed((current) => current + 1)}
+        />
+      )
+    }
+
+    it('paints each frame on a new arrangement', () => {
+      render(<AnimatingCanvas />)
+
+      act(() => flushFrame(0))
+      act(() => flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS))
+      act(() => flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS * 2))
+
+      const seeds = renderGlitchFrame.mock.calls.map((call) => (call as unknown[])[4])
+      expect(seeds).toEqual([SEED, SEED + 1, SEED + 2])
+    })
+
+    // The throttle's clock outlives the effect for this reason alone: a `lastTime` rebuilt with the
+    // loop would be reset on every painted frame, and the Chain would run on every rAF tick.
+    it('holds the ~15fps throttle even though every frame rebuilds the loop', () => {
+      render(<AnimatingCanvas />)
+
+      act(() => flushFrame(0))
+      act(() => flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS - 1))
+
+      expect(renderGlitchFrame).toHaveBeenCalledTimes(1)
+    })
+
+    it('advances only on a frame that was actually painted', () => {
+      const onAdvanceSeed = vi.fn()
+      renderCanvas({ liveSource: liveSource(0), onAdvanceSeed })
+
+      flushFrame(0)
+
+      expect(onAdvanceSeed).not.toHaveBeenCalled()
+    })
+
+    // Once per *painted* frame, which is the rule an implementation can get wrong in both
+    // directions: advancing ahead of the throttle check boils the arrangement at the display's
+    // rate rather than the Chain's, and advancing outside the readyState guard advances on frames
+    // nobody saw. Pinned by count, since a dropped tick still runs the loop body.
+    it('advances once per painted frame and never on a dropped tick', () => {
+      const onAdvanceSeed = vi.fn()
+      renderCanvas({ liveSource: liveSource(), onAdvanceSeed })
+
+      flushFrame(0)
+      expect(onAdvanceSeed).toHaveBeenCalledTimes(1)
+
+      flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS - 1)
+      expect(onAdvanceSeed).toHaveBeenCalledTimes(1)
+
+      flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS)
+      expect(onAdvanceSeed).toHaveBeenCalledTimes(2)
+    })
   })
 
   it('stops the loop when the Live Source goes away', () => {

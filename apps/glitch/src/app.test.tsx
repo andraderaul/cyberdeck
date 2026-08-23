@@ -62,6 +62,7 @@ vi.mock('./components/glitch-canvas', () => ({
     onStopRecording,
     isMirrored,
     onMirrorToggle,
+    onAdvanceSeed,
   }: {
     chain: Chain
     seed: Seed
@@ -71,6 +72,7 @@ vi.mock('./components/glitch-canvas', () => ({
     onStopRecording?: () => void
     isMirrored?: boolean
     onMirrorToggle?: () => void
+    onAdvanceSeed?: () => void
   }) => {
     renderedChain(chain)
     renderedSeed(seed)
@@ -85,6 +87,13 @@ vi.mock('./components/glitch-canvas', () => ({
           </button>
         )}
         {liveSource && <span>{isMirrored ? 'mirrored' : 'not mirrored'}</span>}
+        {/* The rAF loop is covered at the canvas' own seam; here the callback stands in as the
+            probe for "the loop was handed the advance", which it only is while the Seed animates. */}
+        {onAdvanceSeed && (
+          <button type="button" onClick={onAdvanceSeed}>
+            advance seed
+          </button>
+        )}
         <button type="button" onClick={onMirrorToggle}>
           toggle mirror
         </button>
@@ -1128,6 +1137,159 @@ describe('App', () => {
       const seeds = renderedSeed.mock.calls.map((c) => c[0])
 
       expect(new Set(seeds).size).toBe(1)
+    })
+
+    // The Seed advancing per frame (CONTEXT.md), which the Seed sitting beside the Chain is what
+    // makes cheap: it is Re-roll on every frame, and Re-roll was never an edit of the look.
+    describe('the animated Seed', () => {
+      // A Preset other than the one the app opens on, so a look change is tellable from the
+      // starting one without pinning which Preset is which.
+      const OTHER_PRESET = PRESETS.find(
+        (preset) => preset.id !== DEFAULT_PRESET.id,
+      ) as (typeof PRESETS)[number]
+
+      function chip(name: string) {
+        return screen.getByRole('button', { name })
+      }
+
+      async function goLiveAndEdit() {
+        render(<App />)
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'use webcam' }))
+        })
+        openEdit()
+      }
+
+      it('offers animate beside Re-roll while the Live Source runs', async () => {
+        await goLiveAndEdit()
+
+        expect(screen.getByRole('button', { name: 'animate' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 're-roll' })).toBeInTheDocument()
+      })
+
+      // A Source Image has no elapsing time for the arrangement to advance through, so the control
+      // is absent rather than disabled — the same gate Record uses. Re-roll stays: one arrangement
+      // at a time is still a choice on a still image.
+      it('leaves animate out for a Source Image', () => {
+        renderWithEditOpen()
+
+        expect(screen.queryByRole('button', { name: 'animate' })).not.toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 're-roll' })).toBeInTheDocument()
+      })
+
+      it('starts switched off, and reports its state on the control', async () => {
+        await goLiveAndEdit()
+        expect(screen.getByRole('button', { name: 'animate' })).toHaveAttribute(
+          'aria-pressed',
+          'false',
+        )
+
+        fireEvent.click(screen.getByRole('button', { name: 'animate' }))
+
+        expect(screen.getByRole('button', { name: 'animate' })).toHaveAttribute(
+          'aria-pressed',
+          'true',
+        )
+      })
+
+      // The loop is only handed something to advance while the animation is on: with it off the
+      // canvas paints the held Seed it always did.
+      it('hands the loop an advance only while animating', async () => {
+        await goLiveAndEdit()
+        expect(screen.queryByRole('button', { name: 'advance seed' })).not.toBeInTheDocument()
+
+        fireEvent.click(screen.getByRole('button', { name: 'animate' }))
+        expect(screen.getByRole('button', { name: 'advance seed' })).toBeInTheDocument()
+
+        fireEvent.click(screen.getByRole('button', { name: 'animate' }))
+        expect(screen.queryByRole('button', { name: 'advance seed' })).not.toBeInTheDocument()
+      })
+
+      it('hands the canvas a new Seed on each advanced frame', async () => {
+        await goLiveAndEdit()
+        fireEvent.click(screen.getByRole('button', { name: 'animate' }))
+
+        const seeds = [0, 1, 2].map(() => {
+          fireEvent.click(screen.getByRole('button', { name: 'advance seed' }))
+          return renderedSeed.mock.lastCall?.[0]
+        })
+
+        expect(new Set(seeds).size).toBe(3)
+      })
+
+      // Switching off settles on the arrangement the last frame drew rather than restoring an
+      // earlier one — a stable look, not a frozen half-frame.
+      it('holds the last drawn arrangement once switched off', async () => {
+        await goLiveAndEdit()
+        fireEvent.click(screen.getByRole('button', { name: 'animate' }))
+        fireEvent.click(screen.getByRole('button', { name: 'advance seed' }))
+        const lastAnimated = renderedSeed.mock.lastCall?.[0]
+
+        fireEvent.click(screen.getByRole('button', { name: 'animate' }))
+
+        expect(renderedSeed).toHaveBeenLastCalledWith(lastAnimated)
+      })
+
+      it('leaves the look untouched, however many frames advance', async () => {
+        await goLiveAndEdit()
+        const look = renderedChain.mock.lastCall?.[0]
+        fireEvent.click(screen.getByRole('button', { name: 'animate' }))
+
+        fireEvent.click(screen.getByRole('button', { name: 'advance seed' }))
+        fireEvent.click(screen.getByRole('button', { name: 'advance seed' }))
+
+        expect(renderedChain).toHaveBeenLastCalledWith(look)
+      })
+
+      // The same rule Re-roll lives by: advancing the arrangement is not editing the look, so the
+      // Preset stays highlighted rather than drifting into (modified) because the picture moved.
+      it('keeps the active Preset highlighted and unmodified', async () => {
+        await goLiveAndEdit()
+        fireEvent.click(screen.getByRole('button', { name: 'animate' }))
+        fireEvent.click(screen.getByRole('button', { name: 'advance seed' }))
+        openPresets()
+
+        expect(chip(DEFAULT_PRESET.name)).toHaveAttribute('aria-pressed', 'true')
+        expect(screen.queryByRole('button', { name: /\(modified\)/ })).not.toBeInTheDocument()
+      })
+
+      // Deliberately unlike the mirror, which resets on clear because the camera re-decides it per
+      // facing mode (ADR 0016). This is a preference the user set, and the Editor holds no Source
+      // to clear it on — the Chain, the Seed and the provenance all outlive a Source change too.
+      it('remembers the animation across a Source change', async () => {
+        await goLiveAndEdit()
+        fireEvent.click(screen.getByRole('button', { name: 'animate' }))
+
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'clear' }))
+        })
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'use webcam' }))
+        })
+        openEdit()
+
+        expect(screen.getByRole('button', { name: 'animate' })).toHaveAttribute(
+          'aria-pressed',
+          'true',
+        )
+      })
+
+      // It is how the arrangement is being watched, not part of the look — so a look change rides
+      // over it the way the mirror does, instead of silently stopping the picture.
+      it('keeps animating across a Preset change', async () => {
+        await goLiveAndEdit()
+        fireEvent.click(screen.getByRole('button', { name: 'animate' }))
+        openPresets()
+
+        fireEvent.click(chip(OTHER_PRESET.name))
+        openEdit()
+
+        expect(screen.getByRole('button', { name: 'animate' })).toHaveAttribute(
+          'aria-pressed',
+          'true',
+        )
+        expect(screen.getByRole('button', { name: 'advance seed' })).toBeInTheDocument()
+      })
     })
 
     it('releases the camera and returns to the empty state when the Source is cleared', async () => {
