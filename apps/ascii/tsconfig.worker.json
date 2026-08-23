@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2023"],
+    "target": "ES2020",
+    // The service worker's own scope. `WebWorker` and `DOM` cannot both be in one project — they
+    // declare the same globals with different types — which is the whole reason this file exists.
+    "lib": ["ES2020", "WebWorker"],
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
@@ -14,5 +16,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "scripts"]
+  "include": ["src/pwa/service-worker.ts", "src/pwa/policy.ts"]
 }

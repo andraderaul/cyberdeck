@@ -16,5 +16,8 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // The service worker is compiled against `WebWorker`, which cannot share a project with `DOM`;
+  // `tsconfig.worker.json` is where it is typechecked.
+  "exclude": ["src/pwa/service-worker.ts"]
 }

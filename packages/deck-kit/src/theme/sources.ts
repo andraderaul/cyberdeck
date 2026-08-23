@@ -98,6 +98,29 @@ export function colourBearingSources(): Source[] {
   return out.filter(({ path }) => !EXEMPT.includes(path))
 }
 
+/** A workspace's web app manifest: the parsed JSON, and the `public/` directory its `src` paths are
+ *  resolved against. */
+export type Manifest = { workspace: string; manifest: Record<string, unknown>; publicDir: string }
+
+/**
+ * The web app manifest each installable workspace ships, for the ones that ship one.
+ *
+ * Found by looking rather than by a list, for the same reason `prePaintScripts` is: #325 adds the
+ * rest, and a workspace that gains a manifest should become guarded by that fact alone.
+ */
+export function manifests(): Manifest[] {
+  const root = repoRoot()
+  const found: Manifest[] = []
+  for (const workspace of workspaces()) {
+    const publicDir = join(root, APPS_FROM_ROOT, workspace, 'public')
+    const path = join(publicDir, 'manifest.webmanifest')
+    if (existsSync(path)) {
+      found.push({ workspace, manifest: JSON.parse(readFileSync(path, 'utf8')), publicDir })
+    }
+  }
+  return found
+}
+
 /**
  * The blocking Theme script inlined into each workspace's HTML, for the ones that have it. Found by
  * looking rather than by a list, so a workspace that quietly loses its script — or quietly gains

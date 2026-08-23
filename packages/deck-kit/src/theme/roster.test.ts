@@ -3,9 +3,11 @@
 // (ADR 0024 accepts that duplication — the deck has no shared HTML). This is what holds them
 // together, and what makes the exclusion of SPRAWL//Atlas a decision rather than an omission.
 
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { declaredThemes, resolveTokens } from './audit'
-import { prePaintScripts, readTokensCss } from './sources'
+import { manifests, prePaintScripts, readTokensCss } from './sources'
 import { DEFAULT_THEME, THEME_ATTRIBUTE, THEME_STORAGE_KEY, THEMES } from './themes'
 
 describe('the stylesheet and the roster agree', () => {
@@ -78,6 +80,57 @@ describe('the browser chrome matches the Theme that paints first', () => {
       const declared = THEME_COLOR.exec(source)?.[1]
       expect(declared, 'no theme-color in this workspace’s index.html').toBeDefined()
       expect(declared).toBe(resolveTokens(readTokensCss(), DEFAULT_THEME)['--bg'])
+    })
+  })
+})
+
+// The web app manifest is the fifth hand-written copy of the same colour, and the one an *installed*
+// program is painted with before a byte of the page loads: the OS draws the splash and the window
+// chrome from `theme_color` and `background_color`, and neither can resolve a `var()` (ADR 0027).
+//
+// Only the themed workspaces are pinned. SPRAWL//Atlas is absent for the reason it is absent above —
+// it takes no Theme, so its chrome answers to the piece's own field rather than to a token.
+describe('an installed program is painted the Theme that paints first', () => {
+  const themed = new Set(prePaintScripts().map(({ workspace }) => workspace))
+  const installable = manifests().filter(({ workspace }) => themed.has(workspace))
+
+  it('is a set someone has to opt into, not an empty guard passing by default', () => {
+    expect(installable.length).toBeGreaterThan(0)
+  })
+
+  describe.each(installable)('$workspace', ({ manifest }) => {
+    const background = resolveTokens(readTokensCss(), DEFAULT_THEME)['--bg']
+
+    it('opens on the default Theme’s page background', () => {
+      expect(manifest.background_color).toBe(background)
+    })
+
+    it('hands the OS the same chrome colour the tab gets', () => {
+      expect(manifest.theme_color).toBe(background)
+    })
+  })
+})
+
+// The manifest is the one place the icon set from #314 is named by hand, and a `src` that resolves
+// to nothing costs an install prompt with no error anywhere — the browser simply declines to offer
+// one. Every workspace with a manifest is checked, SPRAWL//Atlas included: an icon is not a Theme.
+describe('every icon a manifest names is a file that exists', () => {
+  describe.each(manifests())('$workspace', ({ manifest, publicDir }) => {
+    const icons = manifest.icons as { src: string; sizes: string; purpose?: string }[]
+
+    it.each(icons)('$src', ({ src }) => {
+      expect(existsSync(join(publicDir, src))).toBe(true)
+    })
+
+    // A launcher crops a maskable icon to whatever shape it likes; without one, Android draws the
+    // `any` icon shrunk inside a white circle, which on this deck is a black mark on a white badge.
+    it('carries a maskable one, which is what a launcher crops', () => {
+      expect(icons.some(({ purpose }) => purpose === 'maskable')).toBe(true)
+    })
+
+    it('carries the 192 and 512 an install prompt asks for', () => {
+      const any = icons.filter(({ purpose }) => purpose === undefined)
+      expect(any.map(({ sizes }) => sizes)).toEqual(expect.arrayContaining(['192x192', '512x512']))
     })
   })
 })

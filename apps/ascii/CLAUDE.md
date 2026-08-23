@@ -64,6 +64,21 @@ and prompt-versus-reader drift is what will cause it.
 Nothing applies on arrival: the modal shows the suggestion, `App` waits for the click, and what it
 displaced is one `revert` away in the PRESETS tab until the user's own next edit.
 
+### Installing and offline
+
+The program precaches its whole built shell and serves only from that cache — no runtime strategies,
+because nothing here fetches at runtime (ADR 0027). The one rule that matters lives in
+`src/pwa/policy.ts`: the worker answers only same-origin requests for files this build emitted, which
+is what keeps the AI Provider call out of the cache by *origin* rather than by an exception anyone
+could forget to renew (ADR 0003). That the call now also carries the Suggestion home changes nothing
+here, and that is the point of deciding on origin: the rule never looks at what the request or its
+reply contains.
+
+A new build never activates mid-session — the worker does not call `skipWaiting`, so a Recording in
+flight or a Live Source is never yanked. It parks, `useAppUpdate` notices, and `UpdateBanner` offers
+the reload. `scripts/precache-shell.ts` is the build half: it walks `dist` and compiles the worker
+with that manifest defined in. It only runs on `build`; a dev server has no worker at all.
+
 ### Error handling
 
 Two coexisting error flows (see ADR 0006):
@@ -176,6 +191,19 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   share-or-download a finished take goes out through); `utils` (`cn`, `loadImageFile`,
   `shareOrDownloadCanvas`, `shareOrDownloadBlob`, `isTouchDevice`); `errors`
 
+**Installing and offline** (ADR 0027)
+- `src/pwa/policy.ts` — pure: `planShellFetch()` (the whole fetch rule, and where the AI Provider is
+  excluded by origin), `shellCacheName()`, `resolveShell()`, `SKIP_WAITING`
+- `src/pwa/service-worker.ts` — the worker. Not part of the app's module graph: it is compiled on its
+  own to `dist/sw.js`, against `tsconfig.worker.json` because `WebWorker` and `DOM` cannot share a
+  project
+- `src/pwa/use-app-update.ts` — `useAppUpdate()`: registration, and whether a build is parked behind
+  the running one
+- `scripts/precache-shell.ts` — the Vite plugin that walks `dist` and compiles the worker with that
+  manifest defined in. Hand-rolled rather than `vite-plugin-pwa`; the reason is at the top of the file
+- `public/manifest.webmanifest` — hand-written. The kit's roster guard pins its `theme_color` to the
+  same token the `theme-color` meta carries, and checks every icon it names exists
+
 **Components**
 - `src/components/ascii-canvas.tsx` — lifecycle coordinator: drives static and rAF render paths.
   Carries the LIVE badge and the REC badge, which is also the Recording's stop control and its
@@ -210,6 +238,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   Suggestion's `apply` — the only control in the app that moves every ConversionSetting at once
 - `src/components/api-key-modal.tsx` — API key configuration
 - `src/components/about-modal.tsx` — About/info modal
+- `src/components/update-banner.tsx` — the one thing a parked new build may do to a running session:
+  say so, under the header, with the control that promotes it (ADR 0027). App-owned until #325 gives
+  it a second caller
 - `src/components/footer.tsx` — empty-state bottom chrome: the attribution links plus the About
   trigger, hidden once a Source loads. The 44px target sits on each control, not on the bar
 - `src/components/ui/` — the three primitives this program still owns: `badge`, `error-text`, and

@@ -21,8 +21,10 @@ import AsciiCanvas from './components/ascii-canvas'
 import ControlStrip from './components/control-strip'
 import Footer from './components/footer'
 import HeaderButton from './components/ui/header-button'
+import UpdateBanner from './components/update-banner'
 import { outputFilename } from './export/output'
 import { useWebcamState } from './hooks/use-webcam-state'
+import { useAppUpdate } from './pwa/use-app-update'
 
 type ActiveModal =
   | { kind: 'apiKey' }
@@ -63,6 +65,7 @@ export default function App() {
 
   const showError = useToastError()
   const showInfo = useToastInfo()
+  const update = useAppUpdate()
   const { config: aiConfig, save: saveAiConfig, remove: removeAiConfig } = useAIConfig()
 
   const handleSaveAiConfig = useCallback(
@@ -235,6 +238,8 @@ export default function App() {
           <ThemeControl />
         </div>
       </header>
+
+      {update.isReady && <UpdateBanner onApply={update.apply} />}
 
       {/* One column at both breakpoints now: the Strip below carries every control, so there is no
           aside to make room for (ADR 0020). */}
