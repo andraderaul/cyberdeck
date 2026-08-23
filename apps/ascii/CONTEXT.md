@@ -24,8 +24,12 @@ A imagem estática trazida pelo usuário como entrada da conversão. Imutável d
 _Avoid_: uploadedImage, imagem carregada, input image
 
 **Export**:
-O ato de levar o resultado para fora do app. Dois formatos: **PNG Export** (snapshot visual do canvas com cores) e **TXT Export** (string ASCII pura, sem cor, assume monospace no destino).
+O ato de levar o resultado para fora do app. Três formatos: **PNG Export** (snapshot visual do canvas com cores), **TXT Export** (string ASCII pura, sem cor, assume monospace no destino) e **HTML Export** (documento com os caracteres *e* as cores, como texto selecionável).
 _Avoid_: download (descreve o mecanismo do browser, não a intenção)
+
+**HTML Export**:
+O documento HTML autocontido que leva o resultado inteiro para fora: cada **AsciiCell** vira texto de verdade, dentro de um `<pre>`, pintado com a cor que o **Color Mode** deu a ela. É o formato que não descarta metade da grade — o **PNG Export** guarda a cor e destrói o texto, o **TXT Export** guarda o texto e larga a cor. O documento embute a própria font stack (terminada em `monospace`) e não busca nenhum asset externo, então quem abrir offline vê o que o preview mostrava; e como é texto, seleciona, copia e escala sem perder nitidez. Recortado à fit region como o **TXT Export**, sem as bandas de letterbox (ADR 0010). HTML e não SVG: só o `<pre>` garante que a arte volte da seleção com as quebras de linha e o alinhamento das colunas intactos.
+_Avoid_: SVG Export, web export, exportar a página, HTML5
 
 **ConversionSettings**:
 O conjunto de parâmetros que governa como a imagem é convertida em ASCII — charset, edge glyphs, color mode, resolution, brightness e contrast.
@@ -47,9 +51,9 @@ _Avoid_: fontSize, granularity, granularidade, tamanho de fonte
 
 - Uma **Source Image** é convertida por `convertImage()` em uma grade de **AsciiCell** usando os **ConversionSettings** ativos
 - Cada **AsciiCell** carrega um caractere (determinado pelo **Charset**) e o RGB original do pixel
-- Uma **AsciiCell** cujo gradiente ultrapassa o limiar troca o caractere do **Charset** por um **Edge Glyph** — a troca acontece na grade, não na pintura, então **PNG Export** e **TXT Export** carregam a forma junto com o preview
+- Uma **AsciiCell** cujo gradiente ultrapassa o limiar troca o caractere do **Charset** por um **Edge Glyph** — a troca acontece na grade, não na pintura, então **PNG Export**, **TXT Export** e **HTML Export** carregam a forma junto com o preview
 - O **AsciiCanvas** renderiza a grade de **AsciiCell** aplicando o **Color Mode**
-- O resultado pode ser exportado como **PNG Export** (canvas com cores) ou **TXT Export** (string ASCII pura)
+- O resultado pode ser exportado como **PNG Export** (canvas com cores), **TXT Export** (string ASCII pura) ou **HTML Export** (texto selecionável com cores)
 
 ## Example dialogue
 
@@ -58,6 +62,9 @@ _Avoid_: fontSize, granularity, granularidade, tamanho de fonte
 
 > **Dev:** "O **PNG Export** e o **TXT Export** usam a mesma fonte?"
 > **Domain expert:** "O **PNG Export** usa a fonte do canvas. O **TXT Export** é texto puro — assume que quem receber vai renderizar em monospace, mas o app não garante isso."
+
+> **Dev:** "E o **HTML Export**, garante?"
+> **Domain expert:** "Garante o que dá para garantir sem baixar nada: o documento carrega a própria font stack e termina em `monospace`, então a grade se mantém mesmo em uma máquina que não tem as fontes do deck. O que ele nunca faz é abrir mão do texto — é por isso que existe."
 
 **Live Source**:
 A webcam stream ativa como entrada da conversão, em oposição à Source Image estática. Quando o Live Source está ativo, o AsciiCanvas roda um loop contínuo de renderização — nenhum frame é armazenado.

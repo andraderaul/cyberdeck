@@ -30,6 +30,10 @@ describe('outputFilename', () => {
     expect(outputFilename('txt-export')).toBe('ascii-art.txt')
   })
 
+  it('names an HTML Export', () => {
+    expect(outputFilename('html-export')).toBe('ascii-art.html')
+  })
+
   it('names a Capture with the injected timestamp', () => {
     expect(outputFilename('capture', { timestamp: 1234 })).toBe('ascii-capture-1234.png')
   })

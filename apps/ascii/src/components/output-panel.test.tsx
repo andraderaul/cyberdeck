@@ -16,6 +16,8 @@ function renderPanel(
       <OutputPanel
         canvasRef={makeCanvasRef()}
         asciiRows={['row1', 'row2']}
+        renderInstructions={[{ char: 'A', x: 0, y: 0, color: '#00ff41' }]}
+        resolution={12}
         isLive={false}
         hasAiConfig={false}
         onAnalyze={vi.fn()}
@@ -30,11 +32,12 @@ describe('OutputPanel', () => {
   // The two sibling bars encoded this gating by existing separately; one panel has to carry it
   // explicitly, and that the availability is unchanged is the whole point of #190.
   describe('source gating', () => {
-    it('offers PNG and TXT Export for a Source Image', () => {
+    it('offers PNG, TXT and HTML Export for a Source Image', () => {
       renderPanel({ isLive: false })
 
       expect(screen.getByRole('button', { name: /export png/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /export txt/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /export html/i })).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /capture/i })).not.toBeInTheDocument()
     })
 
@@ -45,6 +48,7 @@ describe('OutputPanel', () => {
       expect(screen.getByRole('button', { name: /record/i })).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /export png/i })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /export txt/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /export html/i })).not.toBeInTheDocument()
     })
 
     // ADR 0007: where MediaRecorder can't serve, the control is simply absent — no GIF fallback.
@@ -163,6 +167,34 @@ describe('OutputPanel', () => {
       renderPanel({ asciiRows: [] })
 
       fireEvent.click(screen.getByRole('button', { name: /export txt/i }))
+
+      expect(createElement).not.toHaveBeenCalledWith('a')
+      vi.restoreAllMocks()
+    })
+  })
+
+  describe('HTML Export', () => {
+    it('names the download as an HTML document', () => {
+      renderPanel()
+      const anchor = { href: '', download: '', click: vi.fn() }
+      vi.spyOn(document, 'createElement').mockImplementationOnce(
+        () => anchor as unknown as HTMLElement,
+      )
+      vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:mock'), revokeObjectURL: vi.fn() })
+
+      fireEvent.click(screen.getByRole('button', { name: /export html/i }))
+
+      expect(anchor.download).toBe('ascii-art.html')
+      expect(anchor.click).toHaveBeenCalledOnce()
+      vi.restoreAllMocks()
+      vi.unstubAllGlobals()
+    })
+
+    it('does nothing when there is nothing converted yet', () => {
+      const createElement = vi.spyOn(document, 'createElement')
+      renderPanel({ renderInstructions: [] })
+
+      fireEvent.click(screen.getByRole('button', { name: /export html/i }))
 
       expect(createElement).not.toHaveBeenCalledWith('a')
       vi.restoreAllMocks()

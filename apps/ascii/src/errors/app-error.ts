@@ -4,12 +4,17 @@ import { type AppError, createError } from '@cyberdeck/deck-kit/errors'
 // AppError, createError, isAppError, normalizeError — lives in the deck kit (ADR 0014); only the
 // wording stays here. Surfaced via toasts; see ADR 0006 for why this coexists with the AI adapters'
 // typed error classes.
+const EXPORT_FAILURE = {
+  png: "Couldn't save PNG — try again",
+  txt: "Couldn't save text file — try again",
+  html: "Couldn't save HTML file — try again",
+} as const
+
 export const Errors = {
-  exportFailed: (format: 'png' | 'txt'): AppError =>
+  exportFailed: (format: 'png' | 'txt' | 'html'): AppError =>
     createError({
       type: 'export_failed',
-      message:
-        format === 'png' ? "Couldn't save PNG — try again" : "Couldn't save text file — try again",
+      message: EXPORT_FAILURE[format],
     }),
 
   captureFailed: (): AppError =>

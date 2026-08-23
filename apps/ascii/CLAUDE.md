@@ -35,10 +35,13 @@ Single-page React/TS/Vite app. Fully client-side — no backend server. AI analy
 2. `App` holds `ConversionSettings` state and passes both down to `AsciiCanvas`
 3. `AsciiCanvas` keeps a **hidden off-screen canvas** (`hiddenRef`) sized `cols × rows` — this is used only for pixel sampling via `getImageData`. The visible canvas is sized in pixels. These two canvases must stay separate (see ADR 0001)
 4. `AsciiCanvas` decides *when* to render: once per settings change via `useEffect` for Source Image, or in a `requestAnimationFrame` loop throttled to ~15fps for Live Source (see ADR 0002). It calls `renderFrame()` from `src/ascii/render-frame.ts`
-5. `renderFrame()` in `src/ascii/render-frame.ts` orchestrates a single render: computes `cols × rows` from canvas size and resolution, draws source onto the hidden canvas → `convertImage()` → `computeFrame()` → `paintFrame()`. Returns `false` (skips render) if canvas is too small to fit any character; returns `true` on success. Mirror is threaded in here as an `isMirrored` flag and applied to the *sampling* `drawImage`, so preview, PNG Export and TXT Export all carry the flip (ADR 0016) — never a CSS transform on the visible canvas
+5. `renderFrame()` in `src/ascii/render-frame.ts` orchestrates a single render: computes `cols × rows` from canvas size and resolution, draws source onto the hidden canvas → `convertImage()` → `computeFrame()` → `paintFrame()`. Returns `false` (skips render) if canvas is too small to fit any character; returns `true` on success. Mirror is threaded in here as an `isMirrored` flag and applied to the *sampling* `drawImage`, so preview and every Export carry the flip (ADR 0016) — never a CSS transform on the visible canvas
 6. `computeFrame()` is **pure** — given cells and settings, returns `RenderInstruction[]` and `asciiRows` with no DOM access (see ADR 0005)
 7. `paintFrame()` is the only function that writes to `CanvasRenderingContext2D` for rendering
-8. `onConverted` callback sends the plain-text rows up to `App`, where they're held in `asciiRows` state for TXT Export
+8. `onConverted` callback sends the region-cropped result up to `App` — the plain-text rows for TXT
+   Export and the same grid as `RenderInstruction[]`, colour still attached, for HTML Export. It is
+   a second `computeFrame()` over the cropped cells rather than a slice of the instructions, so each
+   x/y is rebased on the cropped grid's own origin
 
 ### AI analysis
 
@@ -68,7 +71,8 @@ Use these terms precisely — avoid the listed alternatives:
 | **AsciiCell** | Atomic unit: one character + its original RGB | ProcessedPixel |
 | **Color Mode** | Colorization scheme applied during render | colorMode as domain term |
 | **Resolution** | Chars-per-canvas (controlled by character size) | fontSize, granularity |
-| **Export** | Taking the result out (PNG or TXT) | download |
+| **Export** | Taking the result out (PNG, TXT or HTML) | download |
+| **HTML Export** | Self-contained document holding the characters *and* their colours as selectable text | SVG Export, web export |
 | **Capture** | Exporting a single frame from Live Source (doesn't stop the loop) | snapshot, screenshot |
 | **Recording** | Capturing Live Source as a video file via MediaRecorder | video export, screen record |
 | **AI Analysis** | Optional AI-powered description + threat-level of the ASCII canvas | AI scan, AI detection |
@@ -97,9 +101,12 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/ascii/converter.ts` — `convertImage()`, `getAsciiChar()`, luminosity math, and the Edge
   Glyph pass (Sobel over the sampled grid — pure, ADR 0005)
 - `src/ascii/image-utils.ts` — `resizeImage()` (caps Source Image at 800px wide before sampling)
-- `src/ascii/renderer.ts` — `computeFrame()` (pure), `paintFrame()` (side effects) — see ADR 0005
+- `src/ascii/renderer.ts` — `computeFrame()` (pure), `paintFrame()` (side effects) — see ADR 0005.
+  `CANVAS_BACKGROUND` is the ground both the canvas and the HTML Export stand on: the user's art,
+  so a literal rather than a Theme token (ADR 0013)
 - `src/ascii/render-frame.ts` — `renderFrame()`: pipeline orchestrator — cols/rows math, convertImage → computeFrame → paintFrame; returns `boolean`
-- `src/ascii/fit.ts` — `computeContainFit()`, `sliceToRegion()`: the centered "contain" sub-region of
+- `src/ascii/fit.ts` — `computeContainFit()`, `sliceToRegion()` (generic over the row, so text rows
+  and AsciiCell rows crop through the same function): the centered "contain" sub-region of
   the char grid that keeps the Source's aspect, compared against the grid's *pixel* aspect because
   the monospace cell is ~0.6 wide × 1 tall (ADR 0010)
 - `src/ascii/presets.ts` — `PRESETS`, `Preset`, `settingsMatch()` (named ConversionSettings snapshots)
@@ -115,6 +122,11 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/errors/app-error.ts` — `Errors`: this app's error factories (Export, Capture, localStorage)
   over the kit's `AppError` / `createError` (`@cyberdeck/deck-kit/errors`) — only the wording stays
   here (ADR 0014)
+- `src/export/html-document.ts` — `buildHtmlDocument()`: the HTML Export's document, pure over
+  `RenderInstruction[]` (ADR 0005). HTML rather than SVG because only `<pre>` guarantees the art
+  copies back with its line breaks and column alignment; the reason is a comment at the top of the
+  file. `e2e/ascii/html-export.spec.ts` proves the selection, the monospace grid and the colours in
+  a real browser, which a string assertion structurally cannot
 - `src/export/output.ts` — `outputFilename()`, `OutputKind`, `planPngExport()`, `MAX_EXPORT_DIM`,
   `PngScale`: the pure naming and sizing decisions for Export & Capture, blob construction left to
   the shells. Deliberately still a hand-copy of GLITCH's (ADR 0014) — the filenames diverge
@@ -149,7 +161,7 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   siblings, so at `sm` the whole group reads at once while mobile focuses one (adaptive density);
   the off-density ones are `hidden`, which keeps them out of the accessibility tree too
 - `src/components/output-panel.tsx` — the Strip's OUT tab: one surface for every way the result
-  leaves, gated by Source — PNG/TXT Export for a Source Image, Capture/Record for a Live Source,
+  leaves, gated by Source — PNG/TXT/HTML Export for a Source Image, Capture/Record for a Live Source,
   AI Analysis for both. It carries the Record *start* only: stopping is the canvas REC badge, so a
   take survives a tab switch (ADR 0020). The AI config banner lives here too, beside the Analysis
   it advertises
