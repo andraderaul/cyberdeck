@@ -15,6 +15,15 @@ inglês.
 
 ## Contexts
 
+- [CYBERDECK — o hub](./apps/deck/CONTEXT.md) (`apps/deck`) — a porta de entrada do deck: nomeia os
+  quatro programas, descreve cada um e te manda pra dentro. É **casca, não programa** (ADR 0025) —
+  não consome material do usuário, não produz artefato e não tem assunto nenhum além do próprio
+  deck, e é essa terceira cláusula que o mantém *fora* da cerca da ADR 0021 em vez de gastar a
+  exceção dela. Seta o atributo de Theme como as três ferramentas, com o mesmo script de pre-paint
+  inline. **v1 completo** (#323): os quatro cards com categoria (`tool` / `piece`), descrição e link
+  pro deploy ao vivo de cada um. `src/roster.ts` é *conteúdo*, não core — domínio seria assunto, e
+  assunto quebra a terceira cláusula. O que ele nunca pode ganhar está cercado na ADR 0025 e
+  repetido no `CONTEXT.md` dele.
 - [ASCII//Convert](./apps/ascii/CONTEXT.md) — converte uma Source Image ou Live Source num
   canvas de arte ASCII interativo, com preview em tempo real e Export.
 - [GLITCH//Studio](./apps/glitch/CONTEXT.md) — aplica um pipeline de efeitos de glitch

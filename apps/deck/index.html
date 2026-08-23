@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CYBERDECK — what the deck runs</title>
+    <meta
+      name="description"
+      content="The deck's front door: ASCII//Convert, GLITCH//Studio, GOLEM//Console and SPRAWL//Atlas, what each one does, and a way in. Four programs, no server, all of it in your browser."
+    />
+
+    <!--
+      The deck's own mark, in the sizes a tab, an iOS home screen and an install prompt each ask
+      for. Cut from `public/favicon.svg` by `scripts/social-assets.mjs`; the 192/512/maskable set is
+      a complete PWA icon set, which is what #324's manifest will point at.
+    -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <!--
+      `ice`'s --bg, which is what the script below paints on a first visit. A stored Theme moves the
+      page but not the browser chrome; every Theme on the deck is a near-black, so the two never
+      disagree by more than a shade (ADR 0024).
+    -->
+    <meta name="theme-color" content="#0a0a0f" />
+
+    <!--
+      The one link on the deck that is meant to be shared *as* the deck — the four programs each
+      have their own artifact to send, and this is the thing you send when you mean all of them.
+      The absolute URLs assume the Vercel project is `cyberdeck-hub`; if it is created under another
+      name, these four are what has to follow it.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CYBERDECK" />
+    <meta property="og:title" content="CYBERDECK — what the deck runs" />
+    <meta
+      property="og:description"
+      content="Four client-side programs: ASCII//Convert, GLITCH//Studio, GOLEM//Console and SPRAWL//Atlas. Nothing you open uploads anything — there is no server behind any of it."
+    />
+    <meta property="og:url" content="https://cyberdeck-hub.vercel.app/" />
+    <meta property="og:image" content="https://cyberdeck-hub.vercel.app/og-card.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="CYBERDECK: the deck's four programs listed by name on a near-black field — ASCII//Convert, GLITCH//Studio and GOLEM//Console marked as tools, SPRAWL//Atlas as a piece."
+    />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="CYBERDECK — what the deck runs" />
+    <meta
+      name="twitter:description"
+      content="Four client-side programs: ASCII//Convert, GLITCH//Studio, GOLEM//Console and SPRAWL//Atlas. Nothing you open uploads anything — there is no server behind any of it."
+    />
+    <meta name="twitter:image" content="https://cyberdeck-hub.vercel.app/og-card.png" />
+    <meta
+      name="twitter:image:alt"
+      content="CYBERDECK: the deck's four programs listed by name on a near-black field — ASCII//Convert, GLITCH//Studio and GOLEM//Console marked as tools, SPRAWL//Atlas as a piece."
+    />
+    <!--
+      The Theme, before first paint (ADR 0024). Applying it from the module entry point is cleaner
+      and wrong: that script is deferred, so the default palette paints for a frame first. It is
+      hand-inlined here because the deck has no shared HTML; the rule it encodes lives as a pure
+      function in the deck kit (`resolveTheme`), and the kit's roster guard holds the two together.
+
+      The hub is the easiest call on ADR 0024's boundary rather than the hardest: it is *entirely*
+      what the deck drew, so there is no user work underneath to recolour (ADR 0025).
+    -->
+    <script>
+      (() => {
+        const THEMES = ['ice', 'construct', 'chiba', 'kuang', 'ougou', 'solitude', 'onyx']
+        let stored = null
+        try {
+          stored = localStorage.getItem('cyberdeck:theme')
+        } catch {
+          // Safari private mode / a sandboxed iframe — the default is a fine answer.
+        }
+        document.documentElement.setAttribute('data-theme', THEMES.includes(stored) ? stored : 'ice')
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

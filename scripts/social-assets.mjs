@@ -2,7 +2,7 @@
 // and a link preview actually ask for. Pure drawing lives in `scripts/social/cards.mjs`; everything
 // impure — the filesystem, the browser, the network the webfont comes over — is here.
 //
-//   node scripts/social-assets.mjs           # every program
+//   node scripts/social-assets.mjs           # every workspace under apps/
 //   node scripts/social-assets.mjs golem     # one
 //
 // Chromium rather than a rasteriser dependency: Playwright is already a root devDependency because
@@ -27,10 +27,13 @@ import {
 } from './social/cards.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const PROGRAMS = ['ascii', 'glitch', 'golem', 'sprawl']
+// Every workspace under `apps/` that ships a face, which since the hub landed is not the same set
+// as "the programs" — `apps/deck` is the deck's chrome (ADR 0025) and needs a card like anything
+// else you can link to.
+const WORKSPACES = ['ascii', 'deck', 'glitch', 'golem', 'sprawl']
 
 /**
- * The raster set every program ships, and why each size is in it. Complete enough to be a PWA icon
+ * The raster set every workspace ships, and why each size is in it. Complete enough to be a PWA icon
  * set on its own, because #324 adds the manifest that points at these and will not re-cut them.
  */
 const ICONS = [
@@ -151,23 +154,23 @@ function sprawlOptions() {
 
 async function main() {
   const requested = process.argv.slice(2)
-  const programs = requested.length > 0 ? requested : PROGRAMS
-  for (const program of programs) {
-    if (!PROGRAMS.includes(program)) {
-      throw new Error(`${program} is not a program on the deck`)
+  const workspaces = requested.length > 0 ? requested : WORKSPACES
+  for (const workspace of workspaces) {
+    if (!WORKSPACES.includes(workspace)) {
+      throw new Error(`${workspace} is not a workspace on the deck`)
     }
   }
 
-  const sprawl = programs.includes('sprawl') ? sprawlOptions() : null
+  const sprawl = workspaces.includes('sprawl') ? sprawlOptions() : null
   const browser = await chromium.launch()
   const written = []
   try {
     // One pass over every file, run together rather than in sequence: each shot owns its own
     // context, and the output is a pure function of the input, so order buys nothing.
-    const jobs = programs.flatMap((program) => {
-      const publicDir = join(ROOT, 'apps', program, 'public')
+    const jobs = workspaces.flatMap((workspace) => {
+      const publicDir = join(ROOT, 'apps', workspace, 'public')
       const mark = readFileSync(join(publicDir, 'favicon.svg'), 'utf8')
-      const card = buildCard(program, program === 'sprawl' ? sprawl : {})
+      const card = buildCard(workspace, workspace === 'sprawl' ? sprawl : {})
       return [
         {
           body: card,
@@ -175,7 +178,7 @@ async function main() {
           height: CARD_HEIGHT,
           out: join(publicDir, 'og-card.png'),
           needsFont: true,
-          needsPaint: program === 'sprawl',
+          needsPaint: workspace === 'sprawl',
         },
         ...ICONS.map((icon) => ({
           body: iconBody(mark, icon),
@@ -191,7 +194,7 @@ async function main() {
   }
 
   const report = [
-    `wrote ${written.length} files across ${programs.length} program(s)`,
+    `wrote ${written.length} files across ${workspaces.length} workspace(s)`,
     sprawl ? `sprawl card: ${sprawl.summary} at ${sprawl.readerText}` : null,
   ]
     .filter(Boolean)

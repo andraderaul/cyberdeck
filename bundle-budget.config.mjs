@@ -36,6 +36,7 @@
 /** Gzipped kB (1 kB = 1000 B), matching what Vite prints at the end of a build. */
 export const BUNDLE_BUDGET = {
   ascii: { entry: 76, lazy: 63 },
+  deck: { entry: 60, lazy: 0 },
   glitch: { entry: 75, lazy: 0 },
   golem: { entry: 79, lazy: 0 },
   sprawl: { entry: 115, lazy: 0 },

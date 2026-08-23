@@ -1,5 +1,5 @@
 // The roster exists in three places that cannot import each other: this package's TypeScript, the
-// Theme blocks in `tokens.css`, and a blocking script hand-inlined into each themed program's HTML
+// Theme blocks in `tokens.css`, and a blocking script hand-inlined into each themed workspace's HTML
 // (ADR 0024 accepts that duplication — the deck has no shared HTML). This is what holds them
 // together, and what makes the exclusion of SPRAWL//Atlas a decision rather than an omission.
 
@@ -22,8 +22,15 @@ describe('the stylesheet and the roster agree', () => {
 describe('the hand-inlined pre-paint scripts agree', () => {
   const scripts = prePaintScripts()
 
-  it('finds one in every program that has a Theme control', () => {
-    expect(scripts.map((script) => script.program).sort()).toEqual(['ascii', 'glitch', 'golem'])
+  // "Workspace", not "program": `apps/` stopped meaning programs when the hub landed there, and the
+  // hub is deliberately not one — it is the deck's chrome (ADR 0025).
+  it('finds one in every workspace that has a Theme control', () => {
+    expect(scripts.map((script) => script.workspace).sort()).toEqual([
+      'ascii',
+      'deck',
+      'glitch',
+      'golem',
+    ])
   })
 
   // SPRAWL//Atlas is excluded by explicit decision (ADR 0021, ADR 0024): its pixels are neither
@@ -31,10 +38,10 @@ describe('the hand-inlined pre-paint scripts agree', () => {
   // Recolouring it by setting is recolouring a work. It never sets the attribute and falls through
   // to the root block, and this is here so a future consistency pass does not "fix" that.
   it('finds none in SPRAWL//Atlas, which is excluded on purpose', () => {
-    expect(scripts.map((script) => script.program)).not.toContain('sprawl')
+    expect(scripts.map((script) => script.workspace)).not.toContain('sprawl')
   })
 
-  describe.each(scripts)('$program', ({ source }) => {
+  describe.each(scripts)('$workspace', ({ source }) => {
     it('names the whole roster, in order', () => {
       const literal = /\[((?:\s*'[\w-]+'\s*,?)+)\]/.exec(source)?.[1] ?? ''
       const named = [...literal.matchAll(/'([\w-]+)'/g)].map(([, name]) => name)
@@ -66,10 +73,10 @@ describe('the hand-inlined pre-paint scripts agree', () => {
 describe('the browser chrome matches the Theme that paints first', () => {
   const THEME_COLOR = /<meta name="theme-color" content="([^"]+)" \/>/
 
-  describe.each(prePaintScripts())('$program', ({ source }) => {
+  describe.each(prePaintScripts())('$workspace', ({ source }) => {
     it('is the default Theme’s page background', () => {
       const declared = THEME_COLOR.exec(source)?.[1]
-      expect(declared, 'no theme-color in this program’s index.html').toBeDefined()
+      expect(declared, 'no theme-color in this workspace’s index.html').toBeDefined()
       expect(declared).toBe(resolveTokens(readTokensCss(), DEFAULT_THEME)['--bg'])
     })
   })

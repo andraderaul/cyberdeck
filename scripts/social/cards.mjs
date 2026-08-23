@@ -512,6 +512,72 @@ export function projectSprawl(points, topCapacity) {
 }
 
 // ============================================================
+// CYBERDECK — the door, which is the roster
+// ============================================================
+
+/**
+ * The four programs as the card draws them, and the fifth voice in the set: the other four are each
+ * program *doing its own job*, and the hub's job is to name what the deck runs. So its card is the
+ * list — the page itself, at preview size — rather than a picture of anything.
+ *
+ * `scripts/social/cards.mjs` cannot import `apps/deck/src/roster.ts`, so this is the same accepted
+ * cross-seam duplication the pre-paint Theme scripts and SPRAWL//Atlas' transcribed paint carry,
+ * held the same way: by a guard rather than by a comment (`apps/deck/scripts/social-card.test.mjs`).
+ * A tagline edited on the door would otherwise leave the card advertising the old one.
+ */
+export const DECK_ROSTER = [
+  { name: 'ASCII//CONVERT', kind: 'tool', tagline: 'image → ascii art' },
+  { name: 'GLITCH//STUDIO', kind: 'tool', tagline: 'break the picture on purpose' },
+  { name: 'GOLEM//CONSOLE', kind: 'tool', tagline: 'a 32-bit fantasy computer' },
+  { name: 'SPRAWL//ATLAS', kind: 'piece', tagline: 'rewrite the map. increase the scale.' },
+]
+
+const DECK_ROWS = { top: 252, step: 84, left: 72, right: CARD_WIDTH - 72 }
+
+// The rows carry no separator rules, and that is a decision the layout made rather than an
+// omission: a name over its tagline already groups, and at the size a timeline renders this card a
+// four-line grid of hairlines reads as noise before it reads as structure.
+function deckRows() {
+  return DECK_ROSTER.flatMap(({ name, kind, tagline }, index) => {
+    const baseline = DECK_ROWS.top + index * DECK_ROWS.step
+    return [
+      wordmark(name, {
+        x: DECK_ROWS.left,
+        y: baseline,
+        size: 34,
+        fill: INK.strong,
+        tracking: 3,
+      }),
+      // The category, in ADR 0021's own vocabulary — three tools and exactly one piece is a fact
+      // about the deck, and the door is where it is legible.
+      text(kind, {
+        x: DECK_ROWS.right,
+        y: baseline,
+        size: 16,
+        fill: INK.dim,
+        tracking: 5,
+        anchor: 'end',
+      }),
+      text(tagline, { x: DECK_ROWS.left, y: baseline + 27, size: 19, fill: INK.muted }),
+    ]
+  }).join('')
+}
+
+function deckCard() {
+  return `${svgOpen()}
+    ${field()}
+    ${wordmark('CYBERDECK', { x: 72, y: 120, size: 78, fill: INK.accent, tracking: 6 })}
+    ${text('what the deck runs', { x: 72, y: 166, size: 24, fill: INK.fg })}
+    <rect x="72" y="200" width="${CARD_WIDTH - 144}" height="1" fill="${INK.overlay}" />
+    ${deckRows()}
+    ${text('four programs · nothing you open leaves your browser', { x: 72, y: CARD_HEIGHT - 44, size: 18, fill: INK.dim })}
+  </svg>`
+}
+
+// The hub spends no slot on `deckTag()`, and not for want of room: this card's wordmark *is*
+// CYBERDECK, so the tag would name the deck twice on the one surface that is nothing but the deck.
+
+// ============================================================
 
 /**
  * The card for one program, as the body of a page 1200x630 in size. HTML rather than a bare SVG
@@ -522,6 +588,8 @@ export function buildCard(program, options = {}) {
   switch (program) {
     case 'ascii':
       return asciiCard()
+    case 'deck':
+      return deckCard()
     case 'glitch':
       return glitchCard()
     case 'golem':

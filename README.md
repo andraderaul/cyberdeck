@@ -1,9 +1,20 @@
 # CYBERDECK
 
-A deck of client-side cyberpunk creative tools. Each app is a "program" that runs on the deck:
-it shares the visual language and code patterns, but ships, versions, and deploys on its own.
+A deck of client-side cyberpunk creative tools. Most apps here are a "program" that runs on the
+deck — it shares the visual language and code patterns, but ships, versions, and deploys on its own.
+One is not: the hub is the deck's *chrome*, a third category that consumes no user material and
+produces no artifact ([ADR 0025](./docs/adr/0025-the-hub-is-chrome-not-a-program.md)).
 
 No backend server — everything runs in the browser.
+
+## The front door
+
+**[CYBERDECK](./apps/deck)** (`apps/deck`) — the hub: it names the four programs, describes them,
+and sends you into them. It is the deck's **chrome, not a program** — it consumes no user material,
+produces no artifact, and is about nothing but the deck itself, which is what keeps it outside the
+tool/piece fence rather than spending its one exception
+([ADR 0025](./docs/adr/0025-the-hub-is-chrome-not-a-program.md)).
+**Live →** _pending its Vercel project._
 
 ## Programs
 
@@ -21,6 +32,7 @@ No backend server — everything runs in the browser.
 ```bash
 npm install                 # installs every app (npm workspaces)
 npm run dev                 # start ASCII//Convert
+npm run dev:deck            # start the hub
 
 npm run build               # build every app
 npm run test:run            # run every app's tests once
@@ -44,6 +56,7 @@ Scope any app script with `--workspace @cyberdeck/ascii`.
 
 ```
 apps/ascii         ASCII//Convert
+apps/deck          the hub — chrome, not a program (ADR 0025)
 apps/glitch        GLITCH//Studio
 apps/golem         GOLEM//Console
 apps/sprawl        SPRAWL//Atlas
@@ -52,6 +65,9 @@ scripts/           repo-wide build-time tooling (the social cards and icon sets)
 docs/adr           architectural decisions, deck-wide
 CONTEXT-MAP.md     how the programs relate
 ```
+
+`apps/` holds the deck's **workspaces**, not only its programs: since the hub landed there, one of
+them is deliberately not a program.
 
 Tooling is deliberately light: npm workspaces, no Nx or Turborepo. Repo-wide tooling (Biome,
 lefthook, commitlint, Changesets) sits at the root; each app owns its own build and test
@@ -67,12 +83,13 @@ domain core: each app's pipeline stays in the app ([ADR 0014](./docs/adr/0014-de
 
 ## Deploys
 
-Each app is its own Vercel project pointing at this repo. There is no root `vercel.json`: all four
-set **Root Directory** to their `apps/<name>` and are driven by that app's own `vercel.json`, which
-`cd`s to the repo root so the `@cyberdeck/deck-kit` workspace dependency resolves.
+Each workspace is its own Vercel project pointing at this repo. There is no root `vercel.json`: all
+five set **Root Directory** to their `apps/<name>` and are driven by that workspace's own
+`vercel.json`, which `cd`s to the repo root so the `@cyberdeck/deck-kit` workspace dependency
+resolves.
 
 Each project's `ignoreCommand` skips its build when the diff touches nothing it ships. It watches
-the app plus `packages/deck-kit` (consumed as source by all,
+the workspace plus `packages/deck-kit` (consumed as source by all,
 [ADR 0014](./docs/adr/0014-deck-kit-shared-package.md)), diffs over
 `$VERCEL_GIT_PREVIOUS_SHA..HEAD` (that project's last *successful* deploy on the branch), excludes
 `**/*.md`, and fails toward deploying — production, a branch's first deploy, and any git error all

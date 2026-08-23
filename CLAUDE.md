@@ -4,13 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-**CYBERDECK** — a monorepo of client-side cyberpunk creative tools (ADR 0011). Each app is a
-"program" that runs on the deck: it shares the visual language and code patterns, but is
-versioned and deployed independently.
+**CYBERDECK** — a monorepo of client-side cyberpunk creative tools (ADR 0011). Most apps here are a
+"program" that runs on the deck: it shares the visual language and code patterns, but is versioned
+and deployed independently. `apps/` holds the deck's *workspaces*, not only its programs — the hub
+is chrome rather than a program (ADR 0025), which is why the table below marks it apart.
 
 | App | Path | What it is |
 |-----|------|------------|
 | **ASCII//Convert** | `apps/ascii` | Image / webcam → interactive ASCII art |
+| **CYBERDECK** (the hub) | `apps/deck` | The front door — it names the four programs, describes them, and sends you into them. *Chrome, not a program* (ADR 0025) |
 | **GLITCH//Studio** | `apps/glitch` | Glitch effect pipeline over image / webcam (tracer bullet — image → Channel Shift → PNG Export) |
 | **GOLEM//Console** | `apps/golem` | A 32-bit fantasy computer — write assembly, assemble it, drive execution from a command line while registers, memory and the Terminal update live (ADRs 0018, 0019) |
 | **SPRAWL//Atlas** | `apps/sprawl` | The deck's first *piece, not tool* (ADR 0021) — the world's connected capacity as light, repaired at a coarser scale until structure emerges from the overflow. Ships a vendored PeeringDB snapshot (ADR 0022) |
@@ -64,6 +66,7 @@ Root scripts fan out across workspaces (`apps/*` and `packages/*`); `--workspace
 
 ```bash
 npm run dev          # start ASCII//Convert's dev server
+npm run dev:deck     # start the hub's dev server
 npm run dev:glitch   # start GLITCH//Studio's dev server
 npm run dev:golem    # start GOLEM//Console's dev server
 npm run build        # build every app
@@ -82,8 +85,8 @@ npm run bundle:budget
 
 npm run changeset    # add a changeset (see Releases)
 
-# the committed social assets — every program's favicon set and its 1200x630 card
-npm run social:assets            # all four programs
+# the committed social assets — each workspace's favicon set and its 1200x630 card
+npm run social:assets            # every workspace under apps/, the hub included
 npm run social:assets -- golem   # one; needs Node 22+ and `npx playwright install chromium`
 
 # scoping to one app

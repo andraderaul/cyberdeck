@@ -1,0 +1,40 @@
+/* Design tokens (the :root custom properties) live in the deck kit (ADR 0014). Imported first so
+   they are defined before the base utilities below reference them. */
+@import "@cyberdeck/deck-kit/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   BASE UTILITIES
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-normal);
+  color: var(--fg);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The deck's only opaque-accent surface, which is why --fg-on-accent exists as a role. */
+::selection {
+  background: var(--accent);
+  color: var(--fg-on-accent);
+}
