@@ -83,6 +83,11 @@ describe('planShellFetch', () => {
 
   // ADR 0003: the key is the user's and the call goes straight to the provider. A cached reply
   // would be wrong twice over — stale, and evidence the deck read a request it promised not to.
+  //
+  // What the call *carries* has already changed once — since #308 the same round trip brings a
+  // Suggestion home as well as the prose — and it made no difference here, which is the point of
+  // deciding on origin. `FetchIntent` is method, url and mode: the rule has no access to a body or
+  // a reply, so no future change to either can reach this decision.
   describe('never touches an AI Provider call', () => {
     it.each([
       'https://api.anthropic.com/v1/messages',
