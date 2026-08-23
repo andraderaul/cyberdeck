@@ -19,9 +19,9 @@ interface Props {
 /**
  * Every ConversionSetting, in the EDIT tab's own order — key order *is* row order, so one map is
  * both the totality check and the layout. Keyed on `ConversionSettings` rather than hand-listed: a
- * seventh axis has to be given a row here before this compiles, so the panel cannot go on
- * describing six of seven while `apply` moves all of them. `-?` for the reason `SUGGESTION_FIELDS`
- * needs it (suggestion.ts).
+ * new axis has to be given a row here before this compiles, so the panel cannot go on describing
+ * all but one of them while `apply` moves every one. `-?` for the reason `SUGGESTION_FIELDS` needs
+ * it (suggestion.ts).
  */
 const ROWS: {
   [K in keyof ConversionSettings]-?: {

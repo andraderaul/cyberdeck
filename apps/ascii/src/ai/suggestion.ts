@@ -146,6 +146,10 @@ function createReader(raw: Record<string, unknown>): SuggestionReader {
  * shows. All three in one entry so a field cannot be added to two of them and forgotten in the
  * third — the skeleton going stale is the expensive one, since the model would keep obeying the old
  * shape and every reply would arrive short a field.
+ *
+ * The `rule` is the model's whole brief on an axis, so it says when the axis is *worth* spending
+ * rather than only what values exist — the Dithering is the one where that matters most, since it
+ * moves tone as well as texture.
  */
 interface SuggestionField<K extends keyof ConversionSettings> {
   read: (reader: SuggestionReader) => ConversionSettings[K]
@@ -154,9 +158,10 @@ interface SuggestionField<K extends keyof ConversionSettings> {
 }
 
 /**
- * The format, keyed on `ConversionSettings` itself: a seventh axis fails to compile here rather
- * than falling silently out of the suggestion and leaving `apply` handing back a look with one
- * field of whatever happened to be on screen.
+ * The format, keyed on `ConversionSettings` itself: a new axis fails to compile here rather than
+ * falling silently out of the suggestion and leaving `apply` handing back a look with one field of
+ * whatever happened to be on screen. Counting the axes in this sentence is the mistake it is here
+ * to prevent — #346 added the Dithering the week this was written.
  *
  * `-?` is load-bearing. A homomorphic mapped type inherits optionality from its source, so the day
  * an axis becomes `edgeGlyphs?: boolean` this map would accept the missing entry and the guarantee
@@ -229,8 +234,8 @@ export function readSuggestion(raw: unknown): SuggestionRead {
 
 /**
  * The exact object the model is asked to fill in. Generated rather than hand-spelled beside the
- * prose: a skeleton listing six fields while the reader wants seven is a reply that parses, obeys
- * the prompt, and is refused every single time.
+ * prose: a skeleton one field short of what the reader wants is a reply that parses, obeys the
+ * prompt, and is refused every single time.
  */
 export const SUGGESTION_SKELETON = JSON.stringify(
   Object.fromEntries(FIELD_KEYS.map((key) => [key, SUGGESTION_FIELDS[key].example])),

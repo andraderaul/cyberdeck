@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CHARSETS, COLOR_MODES, type ConversionSettings } from '../ascii/types'
+import { CHARSETS, COLOR_MODES, type ConversionSettings, DITHERINGS } from '../ascii/types'
 import { readSuggestion, SUGGESTION_PROMPT, SUGGESTION_SKELETON } from './suggestion'
 
 const VALID: ConversionSettings = {
@@ -154,6 +154,28 @@ describe('SUGGESTION_PROMPT', () => {
     for (const key of Object.keys(VALID)) {
       expect(SUGGESTION_PROMPT).toContain(key)
     }
+  })
+})
+
+describe('the maps over ConversionSettings', () => {
+  // Three total maps over one type now: this reader, the modal's rows, and `settingsMatch`'s
+  // exhaustiveness table (presets.test.ts). Each is keyed on the type so none can *lose* an axis —
+  // what this pins is that they are keyed on the same type as the fixture above, i.e. that the
+  // fixture is still a whole ConversionSettings rather than a subset that happens to type-check.
+  it('reads back exactly the keys ConversionSettings has', () => {
+    const settings = accepted({ ...VALID })
+
+    expect(Object.keys(settings).sort()).toEqual(Object.keys(VALID).sort())
+  })
+
+  // The axis #346 added, and the one the rule has to say the most about: it moves tone as well as
+  // texture, so a model told only "pick one of three" would spend it on subjects that lose by it.
+  it('teaches the model when a Dithering is worth spending, not just which exist', () => {
+    for (const dithering of DITHERINGS) {
+      expect(SUGGESTION_PROMPT).toContain(dithering)
+    }
+    expect(SUGGESTION_PROMPT).toMatch(/band/i)
+    expect(SUGGESTION_PROMPT).toMatch(/brighter/i)
   })
 })
 

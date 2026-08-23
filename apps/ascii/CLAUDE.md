@@ -144,10 +144,11 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/ai/suggestion.ts` — `readSuggestion()`, `SUGGESTION_PROMPT`, `SUGGESTION_SKELETON`: the
   untrusted → typed crossing for the Suggestion. `SUGGESTION_FIELDS` is keyed on
   `ConversionSettings` itself — with the `-?` modifier, or a field turning optional would silently
-  reopen the hole — so a seventh axis can't fall out of the format, and the reader, the prompt's
-  rules and the JSON skeleton the prompt shows all come off that one map. The skeleton is generated
-  for that reason: hand-spelled, it would ask for six fields while the reader wanted seven, and
-  every reply would be dropped. Rejects rather than clamps, for GLITCH's `chain-codec.ts` reason
+  reopen the hole — so a new axis can't fall out of the format, and the reader, the prompt's rules
+  and the JSON skeleton the prompt shows all come off that one map. The skeleton is generated for
+  that reason: hand-spelled, it would go on asking for the axes it knew while the reader wanted one
+  more, and every reply would be dropped. #346's Dithering was the first axis to arrive after this
+  landed and it cost two entries, both of which the compiler demanded. Rejects rather than clamps, for GLITCH's `chain-codec.ts` reason
   (#312), and returns its reason rather than throwing, for the same reason that file does
 - `src/ai/adapters/` — `AnthropicAdapter`, `OpenAIAdapter`, `GeminiAdapter`
 - `src/ai/errors.ts` — `AuthError`, `QuotaError`, `ParseError`
