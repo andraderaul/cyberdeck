@@ -94,8 +94,13 @@ jobs:
 
   # Separate from Test on purpose: these two suites fail for unrelated reasons — a unit regression
   # against a component, or a built artifact that renders wrong while every unit test still passes
-  # — and a single job would make the check name say nothing about which. The harness builds the
-  # app and serves `dist` itself (see `playwright.config.ts`).
+  # — and a single job would make the check name say nothing about which. The harness builds every
+  # workspace and serves each `dist` itself, one Playwright project per workspace, so a failure
+  # arrives already labelled with which program broke (see `playwright.config.ts`).
+  #
+  # Self-contained by design — no `needs:`, no steps shared with another job. It runs beside Test,
+  # Build and Bundle budget rather than after them, which is what lets an unrelated PR add a job
+  # here without touching this one.
   e2e:
     name: Smoke E2E
     runs-on: ubuntu-latest
@@ -106,6 +111,15 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+
+      # The specs' own typecheck, ahead of the browser. `npm run typecheck` fans out over
+      # workspaces and the root is not one, so this is the root project (`tsconfig.json`) alone —
+      # the same one that script now ends with. It costs a couple of seconds and it costs them
+      # first: a spec that no longer compiles against an app it imports should not be found five
+      # builds and a browser later.
+      - name: Typecheck the specs
+        run: npx tsc
+
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4

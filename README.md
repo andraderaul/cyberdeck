@@ -36,13 +36,17 @@ npm run dev:deck            # start the hub
 
 npm run build               # build every app
 npm run test:run            # run every app's tests once
-npm run test:e2e            # smoke E2E against ASCII//Convert's built output (Playwright)
+npm run test:e2e            # smoke E2E against every workspace's built output (Playwright)
 npm run check               # Biome lint + format, repo-wide
 npm run bundle:budget       # gzipped size of every app's build, against its ceiling
 ```
 
-`test:e2e` builds the app and serves `dist` itself; the browser is a one-off
+`test:e2e` builds each workspace and serves its `dist` itself, one Playwright project per workspace
+— so a failure names the program before it names the guard. The browser is a one-off
 `npx playwright install chromium`.
+
+`typecheck` ends with the root `tsconfig.json`, which is the e2e suite's project and the only thing
+at the root TypeScript compiles: the specs sit in no workspace, and they import app source.
 
 `bundle:budget` reads the `dist/` a `npm run build` left behind, so run the build first — on the
 Node in `.nvmrc`, since zlib's deflate differs between majors and the ceilings were measured there

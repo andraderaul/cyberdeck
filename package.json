@@ -21,7 +21,7 @@
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "test:e2e": "playwright test",
     "bundle:budget": "node scripts/bundle-budget.mjs",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc",
     "check": "biome check .",
     "check:fix": "biome check . --write",
     "format": "biome format . --write",
@@ -39,6 +39,7 @@
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
     "@playwright/test": "^1.62.1",
-    "lefthook": "^2.1.6"
+    "lefthook": "^2.1.6",
+    "typescript": "^5.5.3"
   }
 }

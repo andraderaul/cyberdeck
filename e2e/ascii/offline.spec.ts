@@ -7,9 +7,9 @@
 
 import { fileURLToPath } from 'node:url'
 import { expect, type Page, test } from '@playwright/test'
+import { THEME_STORAGE_KEY } from '../support/pre-paint'
 
 const SOURCE_IMAGE = fileURLToPath(new URL('../../apps/ascii/gifs/ai-demo.png', import.meta.url))
-const THEME_STORAGE_KEY = 'cyberdeck:theme'
 
 /** A first visit, run to the point where the worker is not merely registered but controlling —
  *  `clients.claim()` is what makes that the same visit rather than the next one. */
