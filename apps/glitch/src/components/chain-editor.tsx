@@ -8,7 +8,7 @@ import {
   type Link,
   MAX_CHAIN_LENGTH,
 } from '../glitch/chain'
-import type { ChainActions } from '../glitch/editor-state'
+import type { ChainActions, SeedControls } from '../glitch/editor-state'
 import { EFFECT_ORDER } from '../glitch/presets'
 import {
   CHANNEL_NAMES,
@@ -359,16 +359,13 @@ type Focus = { kind: 'link'; id: string | null } | { kind: 'palette' }
 interface Props {
   chain: Chain
   actions: ChainActions
-  // Re-roll rides its own callback rather than joining the bundle: the Seed is not part of the
-  // look, and the actions edit the look. Threading it as a Link patch would put the arrangement
-  // inside the Chain by the back door. Animate is the same callback shape for the same reason —
-  // it is Re-roll on every frame.
-  onReroll: () => void
+  // Its own bundle rather than joining `actions`: those five edit the look, these two move the
+  // arrangement (editor-state.ts). Threading Re-roll as a Link patch would put the arrangement
+  // inside the Chain by the back door, and animate is Re-roll once a frame, so it belongs here.
+  seedControls: SeedControls
   // A Source Image has no elapsing time for the arrangement to advance through, so animate is
   // absent rather than disabled there — the same gate Record uses (output-panel.tsx).
   isLive: boolean
-  isSeedAnimated: boolean
-  onToggleSeedAnimation: () => void
 }
 
 /**
@@ -379,15 +376,9 @@ interface Props {
  * ADR 0017 instead of stacking it (ADR 0020). Keyed by Link id, not by Effect: a Chain may hold the
  * same Effect twice, and keying by type would collapse the repeats into one chip.
  */
-export default function ChainEditor({
-  chain,
-  actions,
-  onReroll,
-  isLive,
-  isSeedAnimated,
-  onToggleSeedAnimation,
-}: Props) {
+export default function ChainEditor({ chain, actions, seedControls, isLive }: Props) {
   const { onLinkChange, onReorder, onAdd, onRemove, onDuplicate } = actions
+  const { isAnimated, onReroll, onToggleAnimation } = seedControls
   const isFull = chain.length >= MAX_CHAIN_LENGTH
   const [focus, setFocus] = useState<Focus>({ kind: 'link', id: null })
   // Which Link the pointer is carrying, once the press has cleared the tap threshold.
@@ -623,9 +614,9 @@ export default function ChainEditor({
             it is switched. */}
         {isLive && (
           <IconLabelButton
-            variant={isSeedAnimated ? 'primary' : 'ghost'}
-            aria-pressed={isSeedAnimated}
-            onClick={onToggleSeedAnimation}
+            variant={isAnimated ? 'primary' : 'ghost'}
+            aria-pressed={isAnimated}
+            onClick={onToggleAnimation}
             glyph="≋"
             label="animate"
             className="shrink-0"

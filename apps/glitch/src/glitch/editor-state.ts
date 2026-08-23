@@ -27,6 +27,13 @@ import type { Seed } from './types'
  * `isSeedAnimated` is the same separation taken one step: a Seed drawn per frame is a Re-roll on
  * every frame, so it is a property of the arrangement rather than of the look, and it rides
  * through a Preset, a Randomize and an import untouched.
+ *
+ * It **persists across a Source change** rather than clearing when the Live Source goes: it is
+ * only meaningful for one (the control is absent otherwise, and nothing reads the flag), so while
+ * a Source Image is loaded it is inert, and it becomes visible and switchable again the moment a
+ * Live Source returns — a remembered preference, not stale state. Clearing it would need the
+ * Editor to take a "the Source went away" transition, and the Editor holds no Source at all: the
+ * Chain, the Seed and the provenance all outlive a Source change, and this rides with them.
  */
 export interface EditorState {
   chain: Chain
@@ -69,6 +76,21 @@ export interface ChainActions {
   onAdd: (type: EffectType) => void
   onRemove: (id: string) => void
   onDuplicate: (id: string) => void
+}
+
+/**
+ * The Seed's controls, bundled beside `ChainActions` and deliberately not inside it: those five
+ * edit the look, these two move the arrangement. ADR 0017's separation is what the two bundles
+ * are — a Seed control threaded into the Chain bundle would put the arrangement inside the look
+ * by the back door, which is the same mistake as threading Re-roll as a Link patch.
+ *
+ * `isAnimated` rides along rather than travelling as a fourth parallel prop: a toggle's callback
+ * and the state it reports are meaningless apart, and one control needs both to render.
+ */
+export interface SeedControls {
+  isAnimated: boolean
+  onReroll: () => void
+  onToggleAnimation: () => void
 }
 
 /**

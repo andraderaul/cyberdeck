@@ -1253,6 +1253,27 @@ describe('App', () => {
         expect(screen.queryByRole('button', { name: /\(modified\)/ })).not.toBeInTheDocument()
       })
 
+      // Deliberately unlike the mirror, which resets on clear because the camera re-decides it per
+      // facing mode (ADR 0016). This is a preference the user set, and the Editor holds no Source
+      // to clear it on — the Chain, the Seed and the provenance all outlive a Source change too.
+      it('remembers the animation across a Source change', async () => {
+        await goLiveAndEdit()
+        fireEvent.click(screen.getByRole('button', { name: 'animate' }))
+
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'clear' }))
+        })
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'use webcam' }))
+        })
+        openEdit()
+
+        expect(screen.getByRole('button', { name: 'animate' })).toHaveAttribute(
+          'aria-pressed',
+          'true',
+        )
+      })
+
       // It is how the arrangement is being watched, not part of the look — so a look change rides
       // over it the way the mirror does, instead of silently stopping the picture.
       it('keeps animating across a Preset change', async () => {

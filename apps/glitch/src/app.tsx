@@ -22,9 +22,8 @@ export default function App() {
     selectPreset,
     randomize,
     importChain,
-    reroll,
-    toggleSeedAnimation,
     advanceSeed,
+    seedControls,
     chainActions,
   } = useEditorState()
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
@@ -170,9 +169,7 @@ export default function App() {
           onRandomize={randomize}
           onImport={importChain}
           actions={chainActions}
-          onReroll={reroll}
-          isSeedAnimated={isSeedAnimated}
-          onToggleSeedAnimation={toggleSeedAnimation}
+          seedControls={seedControls}
         />
       )}
 

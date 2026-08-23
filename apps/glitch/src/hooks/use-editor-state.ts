@@ -9,6 +9,7 @@ import {
   editorReducer,
   initialEditorState,
   isPresetModified,
+  type SeedControls,
 } from '../glitch/editor-state'
 import { type Preset, randomizeChain } from '../glitch/presets'
 import { createSeed } from '../glitch/rng'
@@ -53,6 +54,15 @@ export function useEditorState() {
     dispatch({ type: 'ADVANCE_SEED', seed: createSeed() })
   }, [])
 
+  const seedControls: SeedControls = useMemo(
+    () => ({
+      isAnimated: state.isSeedAnimated,
+      onReroll: reroll,
+      onToggleAnimation: toggleSeedAnimation,
+    }),
+    [state.isSeedAnimated, reroll, toggleSeedAnimation],
+  )
+
   const chainActions: ChainActions = useMemo(
     () => ({
       onLinkChange: (id, params) => dispatch({ type: 'PATCH_LINK', id, params }),
@@ -73,9 +83,8 @@ export function useEditorState() {
     selectPreset,
     randomize,
     importChain,
-    reroll,
-    toggleSeedAnimation,
     advanceSeed,
+    seedControls,
     chainActions,
   }
 }

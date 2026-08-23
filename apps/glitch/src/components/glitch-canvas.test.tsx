@@ -192,18 +192,22 @@ describe('GlitchCanvas', () => {
       expect(onAdvanceSeed).not.toHaveBeenCalled()
     })
 
-    // Absence of the callback is the held Seed the app has always had — the component is told to
-    // advance, never why, so switching off is the caller withholding it.
-    it('leaves the arrangement alone with no advance callback', () => {
-      renderCanvas({ liveSource: liveSource() })
+    // Once per *painted* frame, which is the rule an implementation can get wrong in both
+    // directions: advancing ahead of the throttle check boils the arrangement at the display's
+    // rate rather than the Chain's, and advancing outside the readyState guard advances on frames
+    // nobody saw. Pinned by count, since a dropped tick still runs the loop body.
+    it('advances once per painted frame and never on a dropped tick', () => {
+      const onAdvanceSeed = vi.fn()
+      renderCanvas({ liveSource: liveSource(), onAdvanceSeed })
 
       flushFrame(0)
-      flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS)
+      expect(onAdvanceSeed).toHaveBeenCalledTimes(1)
 
-      expect(renderGlitchFrame.mock.calls.map((call) => (call as unknown[])[4])).toEqual([
-        SEED,
-        SEED,
-      ])
+      flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS - 1)
+      expect(onAdvanceSeed).toHaveBeenCalledTimes(1)
+
+      flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS)
+      expect(onAdvanceSeed).toHaveBeenCalledTimes(2)
     })
   })
 

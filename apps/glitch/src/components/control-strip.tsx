@@ -1,7 +1,7 @@
 import { TabStrip } from '@cyberdeck/deck-kit/ui'
 import type { RefObject } from 'react'
 import type { Chain } from '../glitch/chain'
-import type { ChainActions } from '../glitch/editor-state'
+import type { ChainActions, SeedControls } from '../glitch/editor-state'
 import type { Preset } from '../glitch/presets'
 import ChainEditor from './chain-editor'
 import OutputPanel from './output-panel'
@@ -34,9 +34,7 @@ interface Props {
   onRandomize: () => void
   onImport: (chain: Chain) => void
   actions: ChainActions
-  onReroll: () => void
-  isSeedAnimated: boolean
-  onToggleSeedAnimation: () => void
+  seedControls: SeedControls
 }
 
 /**
@@ -60,9 +58,7 @@ export default function ControlStrip({
   onRandomize,
   onImport,
   actions,
-  onReroll,
-  isSeedAnimated,
-  onToggleSeedAnimation,
+  seedControls,
 }: Props) {
   return (
     <TabStrip tabs={TABS} ariaLabel="controls">
@@ -81,10 +77,8 @@ export default function ControlStrip({
             <ChainEditor
               chain={chain}
               actions={actions}
-              onReroll={onReroll}
+              seedControls={seedControls}
               isLive={isLive}
-              isSeedAnimated={isSeedAnimated}
-              onToggleSeedAnimation={onToggleSeedAnimation}
             />
           )}
           {activeTab === 'out' && (

@@ -11,14 +11,15 @@ layout, the deck-wide comment convention, and the release ritual. Paths below ar
 Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80), Block Displacement with
 Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced panel (#84), Recording
 (#85) and Presets + Randomize (#86), plus Chromatic Aberration (#116) and the composable Effect
-Chain (ADR 0017, #125–#128), plus Halftone (#309), Wave (#310), the Chain as a file (#312) and the
-animated Seed (#311). All eight Effects are live — Source Image *or* Live Source → the Chain → PNG
-Export / Capture / Copy / Recording — the pure-core / imperative-shell seam is established, and the
-render is deterministic in Chain + Seed, which is what lets a Live Source animate by advancing the
-Seed alone. The front door is the curated Presets plus Randomize; behind the EDIT tab the Chain is fully editable —
-reorder, add, remove, duplicate, the same Effect more than once. A Chain built by hand exports as JSON and
-comes back (**Chain JSON**, `CONTEXT.md`), which is the only way structural variety reaches the app
-from outside the roster. The v1 scope in `CONTEXT.md` is complete.
+Chain (ADR 0017, #125–#128), plus Halftone (#309), Wave (#310), the Chain as a file (#312)
+and the animated Seed (#311). All eight Effects are live — Source Image *or* Live Source → the
+Chain → PNG Export / Capture / Copy / Recording — the pure-core / imperative-shell seam is
+established, and the render is deterministic in Chain + Seed, which is what lets a Live Source
+animate by advancing the Seed alone. The front door is the curated Presets plus Randomize; behind
+the EDIT tab the Chain is fully editable — reorder, add, remove, duplicate, the same Effect more
+than once. A Chain built by hand exports as JSON and comes back (**Chain JSON**, `CONTEXT.md`),
+which is the only way structural variety reaches the app from outside the roster. The v1 scope in
+`CONTEXT.md` is complete.
 
 The Preset **values** are taste, not derivation: they are the one thing here a human curates, and
 re-curating a number in `presets.ts` is a design change, not a bug fix.
@@ -137,10 +138,13 @@ rAF tick. It is Re-roll at 15fps, and it is cheap for exactly the reason Re-roll
 already sat beside the Chain (ADR 0017), so nothing about the look, the provenance or `chainMatch`
 is involved.
 
-Two details are load-bearing. The **throttle's clock lives in a ref** (`lastFrameTime`), not in the
-effect: an advancing Seed rebuilds the loop on every painted frame, and a `lastTime` scoped to the
-effect would be reset with it — leaving the throttle permanently satisfied and the Chain running on
-every rAF tick. And **ADVANCE_SEED is refused while the animation is off** (editor-state.ts): the
+Two details are load-bearing. The **throttle's clock lives in a ref** (`lastFrameTime`), not in
+the effect: an advancing Seed rebuilds the loop on every painted frame, and a `lastTime` scoped to
+the effect would be reset with it — leaving the throttle permanently satisfied and the Chain
+running on every rAF tick. (The deeper fix is to hold `chain` and `seed` in refs so the loop stops
+listing them as deps and is built once per Source; not taken, because it makes the effect's deps
+lie about what it reads to buy back a teardown that costs nothing beside the Chain itself.) And
+**ADVANCE_SEED is refused while the animation is off** (editor-state.ts): the
 loop and React's render are on different clocks, so a frame in flight when the user switches off
 must not move the arrangement afterwards. Switching off keeps the Seed the last frame drew, which
 is a whole arrangement like any other — the picture settles on what is already on screen rather
@@ -313,10 +317,13 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/glitch/rng.ts` — `createRng()` (pure, Seed → draw stream), `deriveSeed()` (the per-Link occurrence
   sub-seed — ADR 0017), `createSeed()` (impure — the app's only real randomness), `Rng`
 - `src/glitch/editor-state.ts` — the Editor (CONTEXT.md): `EditorState` (Chain + Seed +
-  `activePresetId` + `isSeedAnimated`), `EditorAction`, `editorReducer()` (the whole transition table — pure, all
-  randomness arrives in the payload), `isPresetModified()` (the one place `(modified)` is derived),
-  `initialEditorState()`, `ChainActions` (the five Chain edits as one callback bundle — Editor
-  vocabulary, so the panels import it from here)
+  `activePresetId` + `isSeedAnimated`, which persists across a Source change deliberately — the
+  Editor holds no Source to clear it on), `EditorAction`, `editorReducer()` (the whole transition
+  table — pure, all randomness arrives in the payload), `isPresetModified()` (the one place
+  `(modified)` is derived), `initialEditorState()`, `ChainActions` (the five Chain edits as one
+  callback bundle) and `SeedControls` (Re-roll and animate, the arrangement's own bundle — kept
+  apart from `ChainActions` because that separation *is* ADR 0017). Both are Editor vocabulary, so
+  the panels import them from here
 - `src/glitch/image-utils.ts` — `sampleDimensions()` (800×800 cap), `sourceDimensions()`,
   `GlitchSource` (image | video — the shell's vocabulary, kept out of the DOM-free `types.ts`)
 - `src/glitch/render-frame.ts` — `renderGlitchFrame()`: the imperative shell
@@ -340,7 +347,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 **Components**
 - `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render, and owns the
   ~15fps rAF loop for a Live Source. Takes `onAdvanceSeed` and calls it after each painted frame —
-  told to advance, never why, so the animation's on/off is the caller withholding the callback. Carries the LIVE badge and the REC badge, which is also the
+  told to advance, never why, so the animation's on/off is the caller withholding the callback.
+  Carries the LIVE badge and the REC badge, which is also the
   Recording's stop control and its elapsed timer — the canvas is the one surface every tab shows,
   so that is where a stop reachable from anywhere has to live (ADR 0020)
 - `src/components/control-strip.tsx` — the Control Strip (ADR 0020): the bottom-anchored control
@@ -357,9 +365,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   left/right arrows when focused). The focused Link's params fill the panel above the row —
   stacked on mobile, one grid row of equal columns at `sm` (adaptive density, ADR 0020) — with
   duplicate and remove as actions on that panel. The registry-driven add palette shares the panel
-  slot with the params, and Re-roll sits outside the row (its own callback — the Seed is not part of
-  the look), with **animate** beside it for a Live Source: it is Re-roll once a frame, so it belongs
-  where Re-roll is rather than in OUT
+  slot with the params, and the Seed's controls sit outside the row (`SeedControls`, their own
+  bundle — the Seed is not part of the look): Re-roll, and **animate** beside it for a Live
+  Source, since it is Re-roll once a frame and belongs where Re-roll is rather than in OUT
 
 - `src/components/import-chain-button.tsx` — the PRESETS panel's import control: the impure half of
   importing (reading the file, wording the refusal). What a Chain file *is* stays in `chain-codec.ts`
