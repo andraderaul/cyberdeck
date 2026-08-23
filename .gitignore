@@ -12,4 +12,7 @@ TODO.md
 coverage/
 playwright-report/
 test-results/
+# The base-branch checkout the bundle budget builds to compute a PR's delta — a nested checkout,
+# same reason `worktrees/` above must never be tracked.
+.bundle-base/
 
