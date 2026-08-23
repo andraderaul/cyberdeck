@@ -2,6 +2,7 @@ import { type Chain, createLink, type EffectParams, type EffectType, type Link }
 import type { Rng } from './rng'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
+  HALFTONE_CELL_SIZE_RANGE,
   PIXEL_SORT_RUN_LENGTH_RANGE,
   SCANLINES_DENSITY_STEP,
   SPARSEST_SCANLINE_PERIOD,
@@ -169,6 +170,8 @@ const SORT_THRESHOLD_SPREAD = 0.08
 const SORT_RUN_LENGTH_SPREAD = 25
 const CHANNEL_AMOUNT_SPREAD = 6
 const CHROMATIC_STRENGTH_SPREAD = 0.1
+const HALFTONE_CELL_SIZE_SPREAD = 3
+const HALFTONE_DOT_SCALE_SPREAD = 0.1
 const SCANLINE_DENSITY_SPREAD_NOTCHES = 2
 const SCANLINE_INTENSITY_SPREAD = 0.08
 const NOISE_AMOUNT_SPREAD = 0.06
@@ -232,6 +235,17 @@ const LINK_JITTERS: {
   // what the base promised.
   chromaticAberration: (source, params) => ({
     strength: jitterUnit(source, params.strength, CHROMATIC_STRENGTH_SPREAD),
+  }),
+  // The cell moves by a few pixels at most: it sets how much of the Source survives the screen, so
+  // a wide jitter would swing a look between "the photo, dotted" and an unreadable grid.
+  halftone: (source, params) => ({
+    ...params,
+    cellSize: clamp(
+      Math.round(jitter(source, params.cellSize, HALFTONE_CELL_SIZE_SPREAD)),
+      HALFTONE_CELL_SIZE_RANGE.min,
+      HALFTONE_CELL_SIZE_RANGE.max,
+    ),
+    dotScale: jitterUnit(source, params.dotScale, HALFTONE_DOT_SCALE_SPREAD),
   }),
   scanlines: (source, params) => ({
     density: notchedDensity(
@@ -297,6 +311,9 @@ export const EFFECT_ORDER: readonly EffectType[] = [
   'pixelSort',
   'channelShift',
   'chromaticAberration',
+  // On the seam: Halftone is neither structural nor surface — it re-quantizes what the structural
+  // Effects rearranged, and the surface Effects lay their texture over its dots (CONTEXT.md).
+  'halftone',
   'scanlines',
   'noise',
 ]

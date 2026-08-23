@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { applyChain, type Chain, createLink, type Link } from './chain'
+import {
+  applyChain,
+  type Chain,
+  createLink,
+  EFFECT_REGISTRY,
+  type EffectType,
+  type Link,
+} from './chain'
 import {
   blockDisplacement,
   channelShift,
@@ -8,11 +15,12 @@ import {
   pixelSort,
   scanlines,
 } from './pipeline'
-import { chainMatch, DEFAULT_PRESET, PRESETS, randomizeChain } from './presets'
+import { chainMatch, DEFAULT_PRESET, EFFECT_ORDER, PRESETS, randomizeChain } from './presets'
 import { structuredBuffer } from './test-pixels'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
   type ChannelName,
+  DEFAULT_HALFTONE,
   type NoiseTint,
   PIXEL_SORT_RUN_LENGTH_RANGE,
   type PixelBuffer,
@@ -259,6 +267,31 @@ describe('chainMatch', () => {
     // the assertion below would pass without comparing anything.
     expect(base.some((link) => link.type === type)).toBe(true)
     expect(chainMatch(edited, base)).toBe(false)
+  })
+
+  it('notices a change to any Halftone param, though no Preset carries one', () => {
+    // The key walk covers a new Effect the day it is registered — pinned separately because the
+    // exhaustive case above reads VAPORWAVE, and no curated look holds a Halftone Link.
+    const base: Chain = [createLink('halftone')]
+
+    expect(chainMatch([createLink('halftone')], base)).toBe(true)
+    expect(chainMatch([createLink('halftone', { ...DEFAULT_HALFTONE, cellSize: 12 })], base)).toBe(
+      false,
+    )
+    expect(
+      chainMatch([createLink('halftone', { ...DEFAULT_HALFTONE, dotScale: 0.42 })], base),
+    ).toBe(false)
+    expect(chainMatch([createLink('halftone', { ...DEFAULT_HALFTONE, tint: 'mono' })], base)).toBe(
+      false,
+    )
+  })
+})
+
+describe('EFFECT_ORDER', () => {
+  it('carries every registered Effect through to the palette', () => {
+    // Hand-kept, and the compiler cannot see the gap: an Effect left out here is registered,
+    // runnable and yet unreachable from the editor — the one failure the add palette can have.
+    expect([...EFFECT_ORDER].sort()).toEqual((Object.keys(EFFECT_REGISTRY) as EffectType[]).sort())
   })
 })
 

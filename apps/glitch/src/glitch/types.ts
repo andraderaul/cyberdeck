@@ -220,3 +220,53 @@ export const MAX_CHROMATIC_ABERRATION_MAGNIFICATION = 0.05
 export const DEFAULT_CHROMATIC_ABERRATION: ChromaticAberrationParams = Object.freeze({
   strength: 0.3,
 })
+
+/**
+ * How Halftone inks a dot: `color` gives the dot the cell's own average colour — the phosphor
+ * matrix; `mono` inks every dot white, so a cell's tone survives *only* as the dot's area, which is
+ * what a printed screen actually does.
+ */
+export type HalftoneTint = 'mono' | 'color'
+
+export interface HalftoneParams {
+  /** The side of one cell of the dot grid, in pixels — how coarsely the image is re-quantized. */
+  cellSize: number
+  /** How fat a dot grows at full luminance, on the normalised 0..1 scale. */
+  dotScale: number
+  tint: HalftoneTint
+}
+
+/**
+ * The cells the control offers and Randomize must stay inside — a property of the Effect, held in
+ * the core beside the param it bounds, the same as PIXEL_SORT_RUN_LENGTH_RANGE.
+ *
+ * Floored at 2: a 1px cell holds one pixel and so one dot decision, which stops reading as a screen
+ * and collapses into a two-tone posterize. Capped at 24 because past there the sampling cap leaves
+ * fewer than ~34 cells across the frame and the dots no longer resolve back into an image.
+ */
+export const HALFTONE_CELL_SIZE_RANGE = { min: 2, max: 24 } as const
+
+/**
+ * The dot radius `dotScale` 1 reaches at full luminance, as a fraction of the cell. Derived rather
+ * than curated: it is half the cell's diagonal, exactly the radius at which a dot covers its own
+ * cell entirely — so a white region reads as solid ink instead of as circles with the ground
+ * showing through at the corners.
+ */
+export const HALFTONE_MAX_DOT_RADIUS_RATIO = Math.SQRT1_2
+
+/**
+ * The default Halftone look, and the value the sliders reset to on double-click. Lives in the core
+ * for the same reason as DEFAULT_PIXEL_SORT, and is frozen for the same reason.
+ *
+ * Colour by default: the dots keep the Source recognisable under the screen, where mono hands back
+ * tone alone and is the deliberate step further.
+ *
+ * The dot stops short of the top of its slider. A dot fat enough to fill its cell at full luminance
+ * also fills it well before then, so the highlights flatten into solid ink and the brightest third
+ * of the image loses its gradation; measured, the tone runs to the end of the ramp at 0.75.
+ */
+export const DEFAULT_HALFTONE: HalftoneParams = Object.freeze({
+  cellSize: 6,
+  dotScale: 0.75,
+  tint: 'color',
+})

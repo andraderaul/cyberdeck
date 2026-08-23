@@ -3,13 +3,17 @@ import {
   blockDisplacement,
   channelShift,
   chromaticAberration,
+  halftone,
   noise,
   pixelSort,
   scanlines,
 } from './pipeline'
+import { structuredBuffer } from './test-pixels'
 import {
   type BlockDisplacementParams,
   DEFAULT_SCANLINES,
+  HALFTONE_CELL_SIZE_RANGE,
+  type HalftoneParams,
   MAX_BLOCK_SHIFT_RATIO,
   MAX_NOISE_DELTA,
   type NoiseParams,
@@ -861,5 +865,188 @@ describe('chromaticAberration', () => {
     const strong = pixelAt(chromaticAberration(pixels, { strength: 1 }), 8, 0)[0]
 
     expect(strong).toBeLessThan(subtle)
+  })
+})
+
+describe('halftone', () => {
+  /** A flat field, so every assertion reads the dot rather than the tone underneath it. */
+  function uniform(size: number, value: number): PixelBuffer {
+    return buildPixels(
+      size,
+      size,
+      Array.from({ length: size * size }, () => grey(value)),
+    )
+  }
+
+  /** How much of the frame the screen inked — every pixel it left off the black ground. */
+  function inked(buffer: PixelBuffer): number {
+    let count = 0
+    for (let offset = 0; offset < buffer.data.length; offset += 4) {
+      if (buffer.data[offset] > 0 || buffer.data[offset + 1] > 0 || buffer.data[offset + 2] > 0) {
+        count += 1
+      }
+    }
+    return count
+  }
+
+  /** Mono at the top of the dot slider — the shape of the dot, with hue out of the way. */
+  const SCREEN: HalftoneParams = { cellSize: 8, dotScale: 1, tint: 'mono' }
+
+  it('never mutates the input buffer', () => {
+    const pixels = uniform(8, 64)
+    const before = Array.from(pixels.data)
+
+    halftone(pixels, SCREEN)
+
+    expect(Array.from(pixels.data)).toEqual(before)
+  })
+
+  it('preserves the buffer dimensions', () => {
+    const out = halftone(structuredBuffer(13, 7), SCREEN)
+
+    expect([out.width, out.height]).toEqual([13, 7])
+  })
+
+  it('inks the middle of a cell and leaves its corners on the ground', () => {
+    const out = halftone(uniform(8, 64), SCREEN)
+
+    expect(pixelAt(out, 3, 3)).toEqual([255, 255, 255, 255])
+    expect(pixelAt(out, 0, 0)).toEqual([0, 0, 0, 255])
+  })
+
+  it('grows the dot with the cell’s luminance', () => {
+    // The Effect's whole claim: tone survives as area, not as a value.
+    const dim = inked(halftone(uniform(8, 60), SCREEN))
+    const bright = inked(halftone(uniform(8, 200), SCREEN))
+
+    expect(bright).toBeGreaterThan(dim)
+  })
+
+  it('leaves a black cell entirely on the ground', () => {
+    expect(inked(halftone(uniform(8, 0), SCREEN))).toBe(0)
+  })
+
+  it('fills a white cell solid at the top of the dot scale', () => {
+    // What HALFTONE_MAX_DOT_RADIUS_RATIO buys: a white region reads as ink, not as a grid of
+    // circles with the ground showing through the corners.
+    expect(inked(halftone(uniform(8, 255), SCREEN))).toBe(64)
+  })
+
+  it('screens each cell off its own tone', () => {
+    // A black half beside a white one: the grid is per-cell, not one dot fitted to the frame.
+    const pixels = buildPixels(
+      8,
+      4,
+      Array.from({ length: 32 }, (_, i) => grey(i % 8 < 4 ? 0 : 255)),
+    )
+
+    const out = halftone(pixels, { cellSize: 4, dotScale: 1, tint: 'mono' })
+
+    expect(pixelAt(out, 1, 1)).toEqual([0, 0, 0, 255])
+    expect(pixelAt(out, 5, 1)).toEqual([255, 255, 255, 255])
+  })
+
+  it('sizes the dot from the cell’s average, not from the pixel under its centre', () => {
+    // The four middle pixels are black and the rest white, so a screen reading the centre pixel
+    // would ink nothing here. The cell averages bright, so the dot covers them instead.
+    const pixels = buildPixels(
+      4,
+      4,
+      Array.from({ length: 16 }, (_, i) => {
+        const x = i % 4
+        const y = Math.floor(i / 4)
+        return grey(x > 0 && x < 3 && y > 0 && y < 3 ? 0 : 255)
+      }),
+    )
+
+    const out = halftone(pixels, { cellSize: 4, dotScale: 1, tint: 'mono' })
+
+    expect(pixelAt(out, 1, 1)).toEqual([255, 255, 255, 255])
+  })
+
+  it('throws away detail finer than a cell', () => {
+    // Re-quantization, stated as an equality: a cell of alternating black and white and a flat
+    // cell of their mean are the same image once screened.
+    const checker = buildPixels(
+      4,
+      4,
+      Array.from({ length: 16 }, (_, i) => grey((i % 2) * 254)),
+    )
+    const flat = uniform(4, 127)
+
+    const screened = halftone(checker, { cellSize: 4, dotScale: 1, tint: 'mono' })
+
+    expect(Array.from(screened.data)).toEqual(
+      Array.from(halftone(flat, { cellSize: 4, dotScale: 1, tint: 'mono' }).data),
+    )
+  })
+
+  it('inks a colour dot with its cell’s average colour', () => {
+    const pixels = buildPixels(
+      4,
+      4,
+      Array.from({ length: 16 }, () => [200, 0, 0, 255]),
+    )
+
+    const out = halftone(pixels, { cellSize: 4, dotScale: 1, tint: 'color' })
+
+    expect(pixelAt(out, 1, 1)).toEqual([200, 0, 0, 255])
+  })
+
+  it('inks a mono dot white whatever the cell’s hue', () => {
+    // Mono is the harder re-quantization: hue goes with the detail, and tone survives as area alone.
+    const pixels = buildPixels(
+      4,
+      4,
+      Array.from({ length: 16 }, () => [200, 0, 0, 255]),
+    )
+
+    const out = halftone(pixels, { cellSize: 4, dotScale: 1, tint: 'mono' })
+
+    expect(pixelAt(out, 1, 1)).toEqual([255, 255, 255, 255])
+  })
+
+  it('coarsens the grid as the cell grows', () => {
+    const pixels = structuredBuffer(32, 32)
+
+    const fine = halftone(pixels, { ...SCREEN, cellSize: 2 })
+    const coarse = halftone(pixels, { ...SCREEN, cellSize: 16 })
+
+    expect(Array.from(fine.data)).not.toEqual(Array.from(coarse.data))
+  })
+
+  it('screens a cell below the smallest the control offers as the smallest one', () => {
+    const pixels = structuredBuffer(16, 16)
+
+    const out = halftone(pixels, { ...SCREEN, cellSize: 0 })
+
+    expect(Array.from(out.data)).toEqual(
+      Array.from(halftone(pixels, { ...SCREEN, cellSize: HALFTONE_CELL_SIZE_RANGE.min }).data),
+    )
+  })
+
+  it('leaves alpha untouched', () => {
+    const pixels = buildPixels(2, 2, [
+      [255, 255, 255, 0],
+      [255, 255, 255, 64],
+      [255, 255, 255, 128],
+      [255, 255, 255, 255],
+    ])
+
+    const out = halftone(pixels, { cellSize: 2, dotScale: 1, tint: 'mono' })
+
+    expect([0, 1, 2, 3].map((i) => out.data[i * 4 + 3])).toEqual([0, 64, 128, 255])
+  })
+
+  it('renders the same buffer identically every time', () => {
+    // Halftone draws on nothing — no Seed, no Math.random — so its output is a function of the
+    // pixels and its params alone (ADR 0005). `chain.test.ts` pins the same property through the
+    // Chain, where the Seed it ignores actually travels.
+    const pixels = structuredBuffer(24, 18)
+
+    const first = halftone(pixels, { cellSize: 5, dotScale: 0.7, tint: 'color' })
+    const second = halftone(pixels, { cellSize: 5, dotScale: 0.7, tint: 'color' })
+
+    expect(Array.from(first.data)).toEqual(Array.from(second.data))
   })
 })

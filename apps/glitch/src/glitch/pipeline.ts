@@ -4,6 +4,9 @@ import {
   CHANNEL_OFFSET,
   type ChannelShiftParams,
   type ChromaticAberrationParams,
+  HALFTONE_CELL_SIZE_RANGE,
+  HALFTONE_MAX_DOT_RADIUS_RATIO,
+  type HalftoneParams,
   MAX_BLOCK_HEIGHT_RATIO,
   MAX_BLOCK_SHIFT_RATIO,
   MAX_CHROMATIC_ABERRATION_MAGNIFICATION,
@@ -293,6 +296,95 @@ export function chromaticAberration(
     }
   }
 
+  return { data: out, width, height }
+}
+
+/** The mean colour of one cell — the single value the whole cell is re-stated from. */
+function cellAverage(
+  data: Uint8ClampedArray<ArrayBuffer>,
+  width: number,
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+): { r: number; g: number; b: number } {
+  let r = 0
+  let g = 0
+  let b = 0
+
+  for (let y = top; y < bottom; y++) {
+    for (let x = left; x < right; x++) {
+      const offset = (y * width + x) * 4
+      r += data[offset]
+      g += data[offset + 1]
+      b += data[offset + 2]
+    }
+  }
+
+  const pixels = (right - left) * (bottom - top)
+  return { r: r / pixels, g: g / pixels, b: b / pixels }
+}
+
+/**
+ * Effect: re-states the image as a grid of dots whose area tracks each cell's luminance — the
+ * halftone screen. Pure: builds a new PixelBuffer, never touches the input. See ADR 0005.
+ *
+ * Neither of the two flavours the other Effects come in: it doesn't move pixels the way the
+ * structural ones do, and it doesn't lay texture over them the way the surface ones do. It
+ * **re-quantizes** — a cell's detail is thrown away and its tone comes back as an area. That is why
+ * the canonical order sits it on the seam between the two (`CONTEXT.md`): it screens what the
+ * structural Effects rearranged, and the surface Effects then lay their texture over the dots.
+ *
+ * Draws on nothing — no Seed, like Chromatic Aberration. A screen is a regular grid; jittering it
+ * would be a different Effect, not this one with an arrangement.
+ *
+ * The dot's *area*, not its radius, follows luminance — coverage is what the eye reads back as
+ * tone, and a radius proportional to luminance would crush the midtones. At the bright end a dot
+ * overruns its own cell, which is the dot gain that lets a light region read as solid ink rather
+ * than as circles with the ground showing through at the corners.
+ */
+export function halftone(pixels: PixelBuffer, params: HalftoneParams): PixelBuffer {
+  const { width, height, data } = pixels
+  const out = new Uint8ClampedArray(data)
+  // Floors rather than returns early: there is no value of this param that means "off" — every
+  // cell size is a screen, and the smallest one the control offers is the finest screen there is.
+  const cell = Math.max(HALFTONE_CELL_SIZE_RANGE.min, Math.round(params.cellSize))
+  const widest = clampUnit(params.dotScale) * HALFTONE_MAX_DOT_RADIUS_RATIO * cell
+  const mono = params.tint === 'mono'
+
+  for (let top = 0; top < height; top += cell) {
+    const bottom = Math.min(top + cell, height)
+    for (let left = 0; left < width; left += cell) {
+      const right = Math.min(left + cell, width)
+      const average = cellAverage(data, width, left, top, right, bottom)
+      const radius = widest * Math.sqrt(computeLuminosity(average.r, average.g, average.b))
+      const reach = radius * radius
+      // The centre is the full cell's even where the frame ends mid-cell, so a clipped edge cell
+      // loses part of its dot instead of sliding it inward and bending the grid.
+      const centerX = left + (cell - 1) / 2
+      const centerY = top + (cell - 1) / 2
+      // Mono spends the cell's colour along with its detail: white ink means the dot's area is the
+      // only thing left carrying tone, which is what a printed screen does.
+      const ink = mono ? { r: 255, g: 255, b: 255 } : average
+
+      for (let y = top; y < bottom; y++) {
+        const offsetY = y - centerY
+        for (let x = left; x < right; x++) {
+          const offsetX = x - centerX
+          // Strict, so a black cell (radius 0) inks nothing at all — an odd cell size puts a pixel
+          // exactly on the centre, and `<=` would leave a dot grid glowing over the shadows.
+          const isInk = offsetX * offsetX + offsetY * offsetY < reach
+          const offset = (y * width + x) * 4
+          out[offset] = isInk ? ink.r : 0
+          out[offset + 1] = isInk ? ink.g : 0
+          out[offset + 2] = isInk ? ink.b : 0
+        }
+      }
+    }
+  }
+
+  // Alpha rides through from the copy above: a screen re-quantizes a pixel, it does not punch a
+  // hole in it.
   return { data: out, width, height }
 }
 

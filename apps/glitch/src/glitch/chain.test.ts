@@ -33,6 +33,8 @@ const BLOCKS = createLink('blockDisplacement', { density: 0.8, amount: 0.6 })
 
 const GRAIN = createLink('noise', { amount: 0.4, tint: 'color' })
 
+const SCREEN = createLink('halftone', { cellSize: 4, dotScale: 0.9, tint: 'color' })
+
 describe('EFFECT_REGISTRY', () => {
   // The registry is the single source of the Effect set (ADR 0017) — the Slice 4 palette builds
   // itself from these keys, so a missing entry silently drops an Effect out of the editor.
@@ -41,6 +43,7 @@ describe('EFFECT_REGISTRY', () => {
     'pixelSort',
     'channelShift',
     'chromaticAberration',
+    'halftone',
     'scanlines',
     'noise',
   ] satisfies EffectType[])('carries a definition for %s', (type) => {
@@ -110,6 +113,22 @@ describe('applyChain', () => {
 
     expect(bytesOf(applyChain(pixels, chain, SEED))).toEqual(
       bytesOf(applyChain(pixels, chain, SEED)),
+    )
+  })
+
+  it('renders a Halftone Chain identically under the same Seed, and under any other', () => {
+    // Halftone draws on nothing: it re-quantizes what it is handed, so the Seed travelling beside
+    // the Chain reaches it and changes nothing. Both halves matter — the first is the determinism
+    // every Chain owes, the second is what pins the Effect as seedless rather than quietly rolling
+    // its own randomness.
+    const pixels = structuredBuffer(24, 18)
+    const chain: Chain = [SCREEN]
+
+    expect(bytesOf(applyChain(pixels, chain, SEED))).toEqual(
+      bytesOf(applyChain(pixels, chain, SEED)),
+    )
+    expect(bytesOf(applyChain(pixels, chain, SEED))).toEqual(
+      bytesOf(applyChain(pixels, chain, SEED + 1)),
     )
   })
 
@@ -378,6 +397,7 @@ describe('duplicateLink', () => {
     BLOCKS,
     SHIFT,
     GRAIN,
+    SCREEN,
   ])('renders a duplicated $type visibly, and leaves it unflagged', (link) => {
     // The other side of the flag: every Effect the editor still offers duplicate for has to
     // actually change the image, or the control is lying in the other direction.

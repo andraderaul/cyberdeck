@@ -388,6 +388,22 @@ describe('App', () => {
       expect(lastChain().filter((link) => link.type === 'pixelSort')).toHaveLength(2)
     })
 
+    it('adds Halftone from the palette and edits it in the panel', () => {
+      // No Preset carries Halftone, so the palette is its only way into a Chain — and reaching its
+      // params afterwards is what proves the registry carried the new Effect the whole way through.
+      renderWithEditOpen()
+      openPalette()
+
+      fireEvent.click(screen.getByRole('button', { name: '+ halftone' }))
+      focusLink('halftone')
+      fireEvent.change(screen.getByLabelText('cell'), { target: { value: '12' } })
+
+      expect(lastParamsOf('halftone')).toMatchObject({
+        cellSize: 12,
+        tint: EFFECT_REGISTRY.halftone.defaults.tint,
+      })
+    })
+
     it('removes the focused Link', () => {
       renderWithEditOpen()
       focusLink('scanlines')
