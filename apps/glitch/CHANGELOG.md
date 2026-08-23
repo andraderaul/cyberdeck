@@ -1,5 +1,105 @@
 # @cyberdeck/glitch
 
+## 0.10.0
+
+### Minor Changes
+
+- bdec989: The glitch moves: **animate** draws a new Seed on every painted frame of a Live Source, so the
+  corruption boils instead of standing still. It sits beside Re-roll in EDIT, because that is what it
+  is — Re-roll at fifteen frames a second — and it costs almost nothing precisely because the Seed
+  already lived beside the Chain rather than inside it: advancing the arrangement is not editing the
+  look, so the active Preset stays highlighted and never drifts into `(modified)`.
+
+  Only for a Live Source — a Source Image has no elapsing time for an arrangement to advance
+  through, the same gate Record uses. Switching it off settles on the arrangement the last frame
+  drew, a whole Seed like any other, rather than freezing mid-frame. A Recording captures the
+  animation, since Recording has always been a plain read of the output canvas.
+
+  Block Displacement and Noise are the two Effects the Seed feeds, so those are what move: every
+  curated Preset carries Noise and so at least shimmers, and the eight carrying Block Displacement
+  tear as well. DEGAUSS and PHOSPHOR are the two without it — their geometry holds still under a
+  boiling grain.
+
+- c94c072: Export and import a Chain as JSON — the user's own Preset.
+
+  Randomize deliberately never invents structure: which Links, how many and in what order ride
+  through untouched, because bad structure sinks a look faster than a bad number. So structural
+  variety can only come from curation, and until now only the six shipped Presets could carry it. A
+  Chain built by hand in the EDIT tab now leaves the app as a file from OUT and comes back from
+  PRESETS, which is where a brought look belongs — it is applied exactly as one of the six is.
+
+  The file carries the **Chain only**: no Seed (importing draws a fresh one, as applying a Preset
+  does) and no Link `id` (UI plumbing, which `chainMatch` already ignores). An imported Chain clears
+  the active Preset — it is a look the user brought, not one of the six edited away from. Nothing in
+  the file is trusted: an unknown Effect, a param outside its range, malformed JSON or a Chain past
+  `MAX_CHAIN_LENGTH` are each rejected — never clamped — with a message naming what is wrong,
+  surfaced through a toast.
+
+- 7bac583: The Chain now runs on a Worker thread. ADR 0002 chose the main thread and recorded the Web Worker as
+  the upgrade path; GLITCH takes it first, because its whole per-frame core is one pure function over a
+  currency that was already DOM-free. The look is untouched — the same Chain and the same Seed paint
+  the same pixels — but the eight Effects no longer compete with the interface for the same thread, so
+  a heavy Chain over a Live Source leaves the controls responsive instead of freezing them between
+  frames.
+
+  Frames move by transfer rather than by copy in both directions, and a slow Chain drops frames instead
+  of building a backlog behind the camera. Where a browser has no `Worker`, refuses one, or loses one
+  mid-session, the very same Chain runs where it always did.
+
+- 77af42f: Four more curated Presets, and the first that reach for Halftone and Wave.
+
+  PHOSPHOR is the tube's own dot triads — the picture re-quantized onto the shadow mask with the
+  raster over it, and the first look on the roster that moves no pixel out of place. DEGAUSS is the
+  wipe across a screen coming back to itself: the picture rolls through a long bend while the raster
+  underneath stays straight. BILLBOARD plays the whole scene on something the size of a building, a
+  grid coarse enough that a cell reads as a lamp. CROSSTALK bends and breaks at once — tears carved
+  into the frame, then a tight ripple rolling them sideways.
+
+  The roster reads gentlest first, so each is inserted at the loudness it lands on rather than
+  appended. Halftone and Wave shipped registered, runnable and unreachable from the front door:
+  Randomize rides a base's structure through untouched, so only a curated Chain can put a new Effect
+  in reach of the PRESETS tab.
+
+- 5df832a: GLITCH//Studio installs, and it runs with the network off. It always could — the Chain has only ever
+  been applied on your machine — but the browser was never told to keep the bytes. Now it is: a web app
+  manifest makes the program installable under its own mark, and a service worker precaches the whole
+  shell on the first visit, so the second one opens, takes an image or your webcam, and exports with no
+  network at all. Installed, it opens standalone on the same near-black the page paints.
+
+  A new version never takes over a session in progress. It installs quietly behind the one you are
+  using — a Live Source stays live, a Recording in flight is never yanked — and runs the next time you
+  open the program, or right away if you take the offer that appears under the header.
+
+- afb175f: Halftone joins the Chain as a seventh Effect: the image comes back as a grid of dots whose area
+  tracks each cell's luminance, in the cell's own colour or in white. It is neither structural nor
+  surface — it re-quantizes — so the canonical Preset order sits it on the seam between the two, after
+  Chromatic Aberration and before Scanlines. It draws on nothing: same Chain, same output, whatever
+  the Seed.
+- e6bc35d: Wave joins the Chain as an eighth Effect: whole rows or columns slide along a sine, bending the
+  picture instead of breaking it. It is the geometric axis the others left uncovered — Block
+  Displacement moves discrete, seeded blocks and Chromatic Aberration moves each channel radially,
+  where Wave moves the image as a whole along a continuous function. Bilinear sampling with clamped
+  edges, and it draws on nothing: same Chain, same output, whatever the Seed. The canonical Preset
+  order places it first among the structural Effects that move the whole image — after the discrete
+  ones, so the bend carries what they left behind, and ahead of the per-channel ones, so their split
+  rides on the bent picture.
+
+### Patch Changes
+
+- b39f63d: The hidden sampling canvas (ADR 0001) is cleared before the Source is drawn into it. Canvas 2D's
+  `drawImage` composites source-over, so a Source carrying an alpha channel blended onto whatever the
+  previous render had left there: the Chain stayed pure in Chain + Seed while the pixels it was
+  handed drifted with each re-render, and a PNG Export could differ from a fresh render of the same
+  state. An opaque Source could never drift this way, which is what kept it hidden.
+- bf2b5e9: A tab, an install prompt and a shared link now show GLITCH//Studio rather than the stock Vite mark
+  and a bare URL. The program has its own favicon — the deck's block after the Chain has been through
+  it, displaced and split across channels — in the sizes a browser tab, an iOS home screen and an
+  install prompt each ask for, a description written from the reader's side, and an Open Graph /
+  Twitter card that is the program applied to its own name. `theme-color` matches the Theme the
+  pre-paint script paints, so the browser chrome no longer flashes a different colour.
+- Updated dependencies [5df832a]
+  - @cyberdeck/deck-kit@0.6.0
+
 ## 0.9.6
 
 ### Patch Changes

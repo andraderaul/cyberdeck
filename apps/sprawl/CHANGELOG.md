@@ -1,5 +1,32 @@
 # @cyberdeck/sprawl
 
+## 0.2.0
+
+### Minor Changes
+
+- 5df832a: SPRAWL//Atlas installs, and it opens with the network off. The snapshot has always travelled inside
+  the piece rather than being fetched, so all that was missing was a browser being told to keep it: a
+  web app manifest makes the piece installable under its own mark, and a service worker precaches the
+  whole shell — dataset included — on the first visit. The second visit opens blown white and slides
+  the whole way with nothing connected. Installed, it opens standalone on the dark field the world is
+  lit against, not on a browser's white.
+
+  A new version never takes over while you are in the middle of the slide. It installs quietly behind
+  the one you are looking at and runs the next time you open the piece, or right away if you take the
+  offer — which appears under the header, in flow, never over the map.
+
+### Patch Changes
+
+- bf2b5e9: The whole export here is a URL — the scale rides in the query, so the link opens the recipient at
+  the same point in the vertigo — and until now that link previewed as nothing. SPRAWL//Atlas gets its
+  own favicon (light on a dark field, because the piece has no chrome to put on a tab), the icon sizes
+  a browser tab, an iOS home screen and an install prompt each ask for, a description written from the
+  reader's side, and an Open Graph / Twitter card painted from the vendored snapshot by the piece's
+  own rule. Its `theme-color` is `paint.ts`'s `FIELD`, not a token lookup: this program takes no Theme
+  (ADR 0021, ADR 0024), and no pre-paint script was added.
+- Updated dependencies [5df832a]
+  - @cyberdeck/deck-kit@0.6.0
+
 ## 0.1.3
 
 ### Patch Changes
