@@ -6,6 +6,14 @@ describe('Errors', () => {
     expect(Errors.exportFailed().message).toContain('PNG')
   })
 
+  // The codec knows what is wrong with the file; the toast has to carry that all the way through,
+  // or a hand-edited Chain gives the user nothing to act on.
+  it('chainImportFailed carries the codec’s reason', () => {
+    expect(Errors.chainImportFailed('unknown Effect "wave"').message).toContain(
+      'unknown Effect "wave"',
+    )
+  })
+
   it('recordingFailed invites a retry, since starting again can work', () => {
     expect(Errors.recordingFailed().message).toContain('try again')
   })

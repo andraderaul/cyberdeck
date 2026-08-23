@@ -11,6 +11,10 @@ describe('outputFilename', () => {
     expect(outputFilename('capture')).not.toBe(outputFilename('png-export'))
   })
 
+  it('names an exported Chain as the JSON it is', () => {
+    expect(outputFilename('chain')).toBe('glitch-chain.json')
+  })
+
   it('names a Recording with the container the browser actually gave us', () => {
     expect(outputFilename('recording', { timestamp: 1750000000000, ext: 'webm' })).toBe(
       'glitch-recording-1750000000000.webm',

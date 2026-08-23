@@ -2,7 +2,14 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './app'
 import { Errors } from './errors/app-error'
-import { type Chain, EFFECT_REGISTRY, type EffectType, MAX_CHAIN_LENGTH } from './glitch/chain'
+import {
+  type Chain,
+  createLink,
+  EFFECT_REGISTRY,
+  type EffectType,
+  MAX_CHAIN_LENGTH,
+} from './glitch/chain'
+import { CHAIN_FILE_FORMAT, CHAIN_FILE_VERSION, encodeChain } from './glitch/chain-codec'
 import { chainMatch, DEFAULT_PRESET, PRESETS } from './glitch/presets'
 import type { Seed } from './glitch/types'
 
@@ -100,6 +107,14 @@ const recording = vi.hoisted(() => ({
   stopRecording: vi.fn(),
 }))
 const recordingOnError = vi.hoisted(() => vi.fn())
+// Only the one function the Chain export lands on: the rest of the naipe (cn, isTouchDevice,
+// shareOrDownloadCanvas) has to keep working for every other surface in the app.
+const shareOrDownloadBlob = vi.hoisted(() => vi.fn())
+vi.mock('@cyberdeck/deck-kit/utils', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@cyberdeck/deck-kit/utils')>()),
+  shareOrDownloadBlob,
+}))
+
 vi.mock('@cyberdeck/deck-kit/recording', () => ({
   useRecording: (_ref: unknown, opts?: { onError?: (reason: 'start' | 'export') => void }) => {
     recordingOnError(opts?.onError)
@@ -668,6 +683,59 @@ describe('App', () => {
     expect(renderedChain).toHaveBeenLastCalledWith(before)
   })
 
+  // The other half of the user's own Preset: the look leaves the app as a file, beside the three
+  // outputs that take the picture out.
+  describe('exporting a Chain', () => {
+    it('offers the Chain export in OUT', () => {
+      render(<App />)
+      fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+      openOut()
+
+      expect(screen.getByRole('button', { name: 'export chain' })).toBeInTheDocument()
+    })
+
+    it('writes the look on screen, named as the JSON it is', async () => {
+      shareOrDownloadBlob.mockClear()
+      render(<App />)
+      fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+      openOut()
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'export chain' }))
+      })
+
+      const [blob, filename] = shareOrDownloadBlob.mock.lastCall as [Blob, string]
+      expect(filename).toBe('glitch-chain.json')
+      expect(await blob.text()).toBe(encodeChain(DEFAULT_PRESET.chain))
+    })
+
+    // The round trip a user actually makes: keep a look, bring it back.
+    it('round-trips a hand-edited look through the file', async () => {
+      shareOrDownloadBlob.mockClear()
+      renderWithEditOpen()
+      focusLink('noise')
+      fireEvent.change(screen.getByLabelText('grain'), { target: { value: '0.9' } })
+      const edited = lastChain()
+      openOut()
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'export chain' }))
+      })
+      const [blob] = shareOrDownloadBlob.mock.lastCall as [Blob, string]
+      const file = new File([await blob.text()], 'glitch-chain.json', {
+        type: 'application/json',
+      })
+      openPresets()
+      await act(async () => {
+        fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, {
+          target: { files: [file] },
+        })
+      })
+
+      expect(chainMatch(lastChain(), edited)).toBe(true)
+    })
+  })
+
   describe('Presets', () => {
     // A Preset other than the one the app opens on, so a test can tell an applied look from the
     // starting one without pinning which Preset is which.
@@ -774,6 +842,120 @@ describe('App', () => {
       fireEvent.click(chip(`${DEFAULT_PRESET.name} (modified)`))
 
       expect(chip(DEFAULT_PRESET.name)).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    // The user's own Preset: structural variety can only come from curation (ADR 0017), so a Chain
+    // built by hand has to be keepable and shareable — this is the whole point of the format.
+    describe('importing a Chain', () => {
+      // Two Pixel Sorts and no Block Displacement: a structure no Preset carries and Randomize
+      // could never invent, so a look that arrived by any other route can't pass for this one.
+      const BROUGHT: Chain = [
+        createLink('pixelSort', { direction: 'vertical', threshold: 0.3, runLength: 120 }),
+        createLink('noise', { amount: 0.4, tint: 'color' }),
+        createLink('pixelSort', { direction: 'horizontal', threshold: 0.7, runLength: 20 }),
+      ]
+
+      // The input is hidden behind a real Button, so it is reached by query rather than by role —
+      // a focusable input beside the control would be a second tab stop for one action.
+      function chainFileInput(): HTMLInputElement {
+        const input = document.querySelector<HTMLInputElement>('input[type="file"]')
+        if (!input) {
+          throw new Error('no Chain file input on the PRESETS panel')
+        }
+        return input
+      }
+
+      async function importText(text: string) {
+        const file = new File([text], 'glitch-chain.json', { type: 'application/json' })
+        await act(async () => {
+          fireEvent.change(chainFileInput(), { target: { files: [file] } })
+        })
+      }
+
+      function openWithSource() {
+        render(<App />)
+        fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+        toastError.mockClear()
+      }
+
+      it('offers import without leaving the Strip', () => {
+        openWithSource()
+
+        expect(screen.getByRole('button', { name: 'import chain' })).toBeInTheDocument()
+      })
+
+      it('applies the brought look, structure and all', async () => {
+        openWithSource()
+
+        await importText(encodeChain(BROUGHT))
+
+        expect(lastChain().map((link) => link.type)).toEqual(['pixelSort', 'noise', 'pixelSort'])
+        expect(chainMatch(lastChain(), BROUGHT)).toBe(true)
+      })
+
+      // The file carries the look, never the arrangement — the same rule applying a Preset follows.
+      it('draws a fresh Seed, as applying a Preset does', async () => {
+        openWithSource()
+        const before = renderedSeed.mock.lastCall?.[0]
+
+        await importText(encodeChain(BROUGHT))
+
+        expect(renderedSeed.mock.lastCall?.[0]).not.toBe(before)
+      })
+
+      // A look the user brought is nobody's edit of one of the six.
+      it('leaves no Preset highlighted', async () => {
+        openWithSource()
+
+        await importText(encodeChain(BROUGHT))
+
+        for (const preset of PRESETS) {
+          expect(chip(preset.name)).toHaveAttribute('aria-pressed', 'false')
+        }
+        expect(screen.queryByRole('button', { name: /\(modified\)/ })).not.toBeInTheDocument()
+      })
+
+      // Never a thrown exception, never a silent no-op: an operational failure is a toast (ADR 0006).
+      it('refuses an unknown Effect and says which one', async () => {
+        // Asserted against the registry, not assumed: this named `wave` until #310 registered one.
+        expect(Object.keys(EFFECT_REGISTRY)).not.toContain('kaleidoscope')
+        openWithSource()
+
+        await importText(
+          JSON.stringify({
+            format: CHAIN_FILE_FORMAT,
+            version: CHAIN_FILE_VERSION,
+            chain: [{ type: 'kaleidoscope', params: { amount: 0.5 } }],
+          }),
+        )
+
+        expect(toastError).toHaveBeenCalledWith(expect.stringContaining('kaleidoscope'))
+        expect(renderedChain).toHaveBeenLastCalledWith(DEFAULT_PRESET.chain)
+      })
+
+      it('refuses malformed JSON and leaves the look alone', async () => {
+        openWithSource()
+
+        await importText('{ not json')
+
+        expect(toastError).toHaveBeenCalledWith(expect.stringMatching(/json/i))
+        expect(renderedChain).toHaveBeenLastCalledWith(DEFAULT_PRESET.chain)
+      })
+
+      it('refuses an out-of-range param and names it', async () => {
+        openWithSource()
+
+        await importText(
+          JSON.stringify({
+            format: CHAIN_FILE_FORMAT,
+            version: CHAIN_FILE_VERSION,
+            chain: [{ type: 'noise', params: { amount: 4, tint: 'mono' } }],
+          }),
+        )
+
+        expect(toastError).toHaveBeenCalledWith(expect.stringContaining('noise.amount'))
+        expect(renderedChain).toHaveBeenLastCalledWith(DEFAULT_PRESET.chain)
+      })
     })
 
     describe('Randomize', () => {

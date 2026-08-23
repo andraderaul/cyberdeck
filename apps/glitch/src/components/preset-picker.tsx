@@ -1,7 +1,9 @@
 import { Chip } from '@cyberdeck/deck-kit/ui'
+import type { Chain } from '../glitch/chain'
 import type { Preset } from '../glitch/presets'
 import { PRESETS } from '../glitch/presets'
 import IconLabelButton from './icon-label-button'
+import ImportChainButton from './import-chain-button'
 
 interface Props {
   // Tracked by the Editor rather than derived from the Chain: a slider edit has to leave the user
@@ -13,9 +15,18 @@ interface Props {
   isModified: boolean
   onSelect: (preset: Preset) => void
   onRandomize: () => void
+  // A Chain brought from a file — the user's own Preset, and the only way structural variety
+  // reaches the app from outside the six (ADR 0017: Randomize never invents structure).
+  onImport: (chain: Chain) => void
 }
 
-export default function PresetPicker({ activePresetId, isModified, onSelect, onRandomize }: Props) {
+export default function PresetPicker({
+  activePresetId,
+  isModified,
+  onSelect,
+  onRandomize,
+  onImport,
+}: Props) {
   // `min-w-0` on both the fieldset and the scroller: a fieldset's default min-width is min-content,
   // which would let the chips push Randomize off the Strip's right edge instead of scrolling.
   return (
@@ -23,8 +34,7 @@ export default function PresetPicker({ activePresetId, isModified, onSelect, onR
       {/* The Strip's PRESETS tab already names this group on screen (ADR 0020) — the legend stays
           for the accessible name rather than repeating the word underneath it. */}
       <legend className="sr-only">presets</legend>
-      {/* The chips scroll horizontally so the Strip keeps one row whatever the width; Randomize sits
-          outside that scroller, since it must stay reachable without scrolling past six Presets. */}
+      {/* The chips scroll horizontally so the Strip keeps one row whatever the width. */}
       <div className="flex-1 min-w-0 flex gap-2xs overflow-x-auto">
         {PRESETS.map((preset) => {
           const isActive = preset.id === activePresetId
@@ -49,6 +59,8 @@ export default function PresetPicker({ activePresetId, isModified, onSelect, onR
           )
         })}
       </div>
+      {/* Both sit outside the scroller for the same reason: they must stay reachable without
+          scrolling past six Presets. */}
       <IconLabelButton
         variant="secondary"
         onClick={onRandomize}
@@ -56,6 +68,7 @@ export default function PresetPicker({ activePresetId, isModified, onSelect, onR
         label="randomize"
         className="shrink-0"
       />
+      <ImportChainButton onImport={onImport} />
     </fieldset>
   )
 }

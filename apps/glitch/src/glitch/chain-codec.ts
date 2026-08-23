@@ -1,0 +1,286 @@
+// The Chain as a file — the user's own Preset (CONTEXT.md). Randomize never invents structure
+// (ADR 0017), so structural variety can only come from curation; this is how a Chain built by hand
+// leaves the app and comes back.
+//
+// Pure both ways: no DOM, no file handles, no toast. The shell reads the text and words the
+// failure; everything about what a Chain file *is* lives here.
+
+import {
+  type Chain,
+  createLink,
+  EFFECT_REGISTRY,
+  type EffectParams,
+  type EffectType,
+  type Link,
+  MAX_CHAIN_LENGTH,
+} from './chain'
+import {
+  CHANNEL_SHIFT_AMOUNT_RANGE,
+  type ChannelName,
+  HALFTONE_CELL_SIZE_RANGE,
+  type HalftoneTint,
+  type NoiseTint,
+  PIXEL_SORT_RUN_LENGTH_RANGE,
+  type SortDirection,
+  WAVE_WAVELENGTH_RANGE,
+  type WaveAxis,
+} from './types'
+
+/**
+ * Stamped into every exported file so a JSON that is merely *valid* can still be refused. Without
+ * it the codec would have to guess whether a shapeless object was a Chain written by something
+ * else, and would report "unknown Effect" for a file that was never a Chain at all.
+ */
+export const CHAIN_FILE_FORMAT = 'cyberdeck.glitch.chain'
+
+/**
+ * Bumped only when an older reader could misread a newer file. A file from the future is refused
+ * by name rather than read optimistically: half-understood params are a look the user did not
+ * export.
+ */
+export const CHAIN_FILE_VERSION = 1
+
+/**
+ * Either the Chain the file describes, or the reason it is not one — never a thrown exception, so
+ * the shell's only job is to word the reason for a toast (ADR 0006).
+ */
+export type ChainDecodeResult = { ok: true; chain: Chain } | { ok: false; reason: string }
+
+/** The 0..1 scale every normalised param rides (types.ts). */
+const UNIT_MIN = 0
+const UNIT_MAX = 1
+
+// The values each choice param offers, listed the same way `chain-editor.tsx` lists them for its
+// toggles: the compiler refuses a member the union doesn't have.
+const SORT_DIRECTIONS: readonly SortDirection[] = ['horizontal', 'vertical']
+const CHANNELS: readonly ChannelName[] = ['r', 'g', 'b']
+const NOISE_TINTS: readonly NoiseTint[] = ['mono', 'color']
+const HALFTONE_TINTS: readonly HalftoneTint[] = ['mono', 'color']
+const WAVE_AXES: readonly WaveAxis[] = ['horizontal', 'vertical']
+
+/**
+ * Reads one Link's params out of untrusted JSON, recording the first thing that is wrong instead
+ * of returning it.
+ *
+ * Recording rather than returning is what keeps `PARAM_DECODERS` below a near-transcription of the
+ * params interfaces — a decoder that had to thread a result type through every field would bury
+ * the shape it is describing. Nothing a reader hands back on a failure escapes the module: the
+ * caller checks `failure` before the params reach a Link.
+ */
+interface ParamReader {
+  unit: (key: string) => number
+  whole: (key: string, range: { min: number; max: number }) => number
+  choice: <T extends string>(key: string, options: readonly T[]) => T
+  readonly failure: string | null
+}
+
+/** How a rejected value reads back to the user — quoted for a string, plain for a number. */
+function show(raw: unknown): string {
+  return JSON.stringify(raw) ?? String(raw)
+}
+
+function createParamReader(type: EffectType, raw: Record<string, unknown>): ParamReader {
+  let failure: string | null = null
+
+  // First failure wins: a hand-edited file is fixed one field at a time, and a list of every
+  // complaint at once is a worse first thing to read than the first one.
+  function reject(key: string, expectation: string, value: unknown): void {
+    failure ??=
+      value === undefined
+        ? `${type}.${key} is missing`
+        : `${type}.${key} must be ${expectation} (got ${show(value)})`
+  }
+
+  return {
+    unit(key) {
+      const value = raw[key]
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        reject(key, `a number from ${UNIT_MIN} to ${UNIT_MAX}`, value)
+        return UNIT_MIN
+      }
+      if (value < UNIT_MIN || value > UNIT_MAX) {
+        reject(key, `a number from ${UNIT_MIN} to ${UNIT_MAX}`, value)
+        return UNIT_MIN
+      }
+      return value
+    },
+    whole(key, range) {
+      const value = raw[key]
+      const expectation = `a whole number from ${range.min} to ${range.max}`
+      // Whole because these params are counted in pixels — a run 30.5 pixels long is not a value
+      // any control can produce or any Effect can honour.
+      if (typeof value !== 'number' || !Number.isInteger(value)) {
+        reject(key, expectation, value)
+        return range.min
+      }
+      if (value < range.min || value > range.max) {
+        reject(key, expectation, value)
+        return range.min
+      }
+      return value
+    },
+    choice(key, options) {
+      const value = raw[key]
+      if (typeof value !== 'string' || !options.includes(value as never)) {
+        reject(key, `one of ${options.join(', ')}`, value)
+        return options[0]
+      }
+      return value as never
+    },
+    get failure() {
+      return failure
+    },
+  }
+}
+
+/**
+ * How each Effect's params are read back out of a file — the same map-on-EffectType shape as
+ * `EFFECT_REGISTRY`, so the format is driven by the registry rather than by a hand-listed set of
+ * Effects. A newly registered Effect fails to compile here instead of silently falling out of the
+ * format, which is the failure that would leave an exported Chain unimportable in the build that
+ * exported it.
+ *
+ * The ranges come from the core beside the params they bound (types.ts), so the file, the sliders
+ * and Randomize's clamp all read one source of truth.
+ */
+const PARAM_DECODERS: { [K in EffectType]: (read: ParamReader) => EffectParams[K] } = {
+  blockDisplacement: (read) => ({
+    density: read.unit('density'),
+    amount: read.unit('amount'),
+  }),
+  pixelSort: (read) => ({
+    direction: read.choice('direction', SORT_DIRECTIONS),
+    threshold: read.unit('threshold'),
+    runLength: read.whole('runLength', PIXEL_SORT_RUN_LENGTH_RANGE),
+  }),
+  wave: (read) => ({
+    axis: read.choice('axis', WAVE_AXES),
+    amplitude: read.unit('amplitude'),
+    wavelength: read.whole('wavelength', WAVE_WAVELENGTH_RANGE),
+  }),
+  channelShift: (read) => ({
+    channel: read.choice('channel', CHANNELS),
+    amount: read.whole('amount', CHANNEL_SHIFT_AMOUNT_RANGE),
+  }),
+  chromaticAberration: (read) => ({
+    strength: read.unit('strength'),
+  }),
+  halftone: (read) => ({
+    cellSize: read.whole('cellSize', HALFTONE_CELL_SIZE_RANGE),
+    dotScale: read.unit('dotScale'),
+    tint: read.choice('tint', HALFTONE_TINTS),
+  }),
+  scanlines: (read) => ({
+    density: read.unit('density'),
+    intensity: read.unit('intensity'),
+  }),
+  noise: (read) => ({
+    amount: read.unit('amount'),
+    tint: read.choice('tint', NOISE_TINTS),
+  }),
+}
+
+/**
+ * The Chain as the text of a file: the format tag, the version, and the Links stripped to the two
+ * fields that carry the look.
+ *
+ * A Link's `id` is left out because it is UI plumbing — it exists so two occurrences of one Effect
+ * can be told apart, and `chainMatch` already ignores it for the same reason. The Seed is left out
+ * because the Chain is the look and the Seed is the arrangement (ADR 0017): an exported look
+ * carries no arrangement, exactly as a Preset doesn't.
+ *
+ * Indented rather than compact. The file is meant to be opened, read and hand-edited — it is the
+ * only way a user can write a look down.
+ */
+export function encodeChain(chain: Chain): string {
+  return JSON.stringify(
+    {
+      format: CHAIN_FILE_FORMAT,
+      version: CHAIN_FILE_VERSION,
+      chain: chain.map(({ type, params }) => ({ type, params })),
+    },
+    null,
+    2,
+  )
+}
+
+/** Every Effect the build knows, read off the registry so the format never needs a second list. */
+const REGISTERED_EFFECTS = Object.keys(EFFECT_REGISTRY) as EffectType[]
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function refuse(reason: string): ChainDecodeResult {
+  return { ok: false, reason }
+}
+
+function decodeLink(raw: unknown): { ok: true; link: Link } | { ok: false; reason: string } {
+  if (!isRecord(raw) || typeof raw.type !== 'string') {
+    return { ok: false, reason: 'every Link needs a type and its params' }
+  }
+  // Membership by key list, never `in`: `'toString' in EFFECT_REGISTRY` is true, and a file
+  // naming a prototype method would sail past the guard into a lookup that returns nothing.
+  if (!REGISTERED_EFFECTS.includes(raw.type as EffectType)) {
+    return { ok: false, reason: `unknown Effect "${raw.type}"` }
+  }
+  const type = raw.type as EffectType
+  if (!isRecord(raw.params)) {
+    return { ok: false, reason: `${type} is missing its params` }
+  }
+
+  const read = createParamReader(type, raw.params)
+  // The cast mirrors `applyLink` (chain.ts): the decoder and the type came off the same key, but
+  // TypeScript checks the pair independently.
+  const decode = PARAM_DECODERS[type] as (r: ParamReader) => EffectParams[typeof type]
+  const params = decode(read)
+  if (read.failure !== null) {
+    return { ok: false, reason: read.failure }
+  }
+  return { ok: true, link: createLink(type, params as never) }
+}
+
+/**
+ * Reads a Chain file back, refusing anything it cannot represent exactly.
+ *
+ * **Out-of-range params are rejected, never clamped.** A clamp would hand back a look that is not
+ * the one in the file, with nothing on screen saying which numbers moved — and the whole promise of
+ * the format is that a Chain survives the trip unchanged. Randomize clamps for the opposite reason:
+ * there the input is a curated base it owns, here it is a file the app has never seen. Naming the
+ * offending param is also the only actionable answer for a file someone edited by hand.
+ *
+ * Impure only in the ids it mints, the same way `presets.ts` is: two Links of one Effect have to be
+ * distinguishable as rows even though nothing about the look tells them apart.
+ */
+export function decodeChain(text: string): ChainDecodeResult {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    return refuse("that file isn't valid JSON")
+  }
+
+  if (!isRecord(parsed) || parsed.format !== CHAIN_FILE_FORMAT || !Array.isArray(parsed.chain)) {
+    return refuse("that file isn't a GLITCH Chain")
+  }
+  if (parsed.version !== CHAIN_FILE_VERSION) {
+    return refuse(
+      `that Chain is format version ${show(parsed.version)} — this build reads version ${CHAIN_FILE_VERSION}`,
+    )
+  }
+  // Checked before the Links are read: the cap is a property of the whole file, and reporting a
+  // param problem in Link 14 would bury the reason the file can never be imported anyway.
+  if (parsed.chain.length > MAX_CHAIN_LENGTH) {
+    return refuse(`that Chain has ${parsed.chain.length} Links — the limit is ${MAX_CHAIN_LENGTH}`)
+  }
+
+  const chain: Link[] = []
+  for (const raw of parsed.chain) {
+    const result = decodeLink(raw)
+    if (!result.ok) {
+      return refuse(result.reason)
+    }
+    chain.push(result.link)
+  }
+  return { ok: true, chain }
+}
