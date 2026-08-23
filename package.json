@@ -18,6 +18,7 @@
     "test": "npm run test --workspace @cyberdeck/ascii",
     "test:run": "npm run test:run --workspaces --if-present",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "test:e2e": "playwright test",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "check": "biome check .",
     "check:fix": "biome check . --write",
@@ -34,6 +35,7 @@
     "@changesets/cli": "^2.29.8",
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
+    "@playwright/test": "^1.62.1",
     "lefthook": "^2.1.6"
   }
 }

@@ -7,7 +7,7 @@ on:
     # `feat/**` so a stack of PRs merging into a long-lived feature branch is gated the same way
     # as one merging into main — without it the sub-PRs of a stack land entirely unchecked.
     branches: [main, 'feat/**']
-    # Neither job reads anything a docs change can affect, so the run is pure cost.
+    # No job reads anything a docs change can affect, so the run is pure cost.
     # `**.md` already covers docs/**/*.md; `docs/**` is here for non-markdown assets in that tree.
     #
     # Safe only while `main` has NO required status checks: a filtered-out workflow never reports,
@@ -45,3 +45,26 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+
+  # Separate from Test on purpose: these two suites fail for unrelated reasons — a unit regression
+  # against a component, or a built artifact that renders wrong while every unit test still passes
+  # — and a single job would make the check name say nothing about which. The harness builds the
+  # app and serves `dist` itself (see `playwright.config.ts`).
+  e2e:
+    name: Smoke E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
