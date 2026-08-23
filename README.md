@@ -24,8 +24,12 @@ npm run dev                 # start ASCII//Convert
 
 npm run build               # build every app
 npm run test:run            # run every app's tests once
+npm run test:e2e            # smoke E2E against ASCII//Convert's built output (Playwright)
 npm run check               # Biome lint + format, repo-wide
 ```
+
+`test:e2e` builds the app and serves `dist` itself; the browser is a one-off
+`npx playwright install chromium`.
 
 Scope any app script with `--workspace @cyberdeck/ascii`.
 
@@ -43,7 +47,8 @@ CONTEXT-MAP.md     how the programs relate
 
 Tooling is deliberately light: npm workspaces, no Nx or Turborepo. Repo-wide tooling (Biome,
 lefthook, commitlint, Changesets) sits at the root; each app owns its own build and test
-dependencies.
+dependencies. Playwright joins them there rather than living in an app, because what it checks —
+the Tailwind purge, the pre-paint Theme — only exists once an app has been *built*.
 
 For a long time there was **no shared `packages/`** — duplication was kept as a signal of what
 actually repeats ([ADR 0011](./docs/adr/0011-monorepo-cyberdeck.md)). GLITCH//Studio made the

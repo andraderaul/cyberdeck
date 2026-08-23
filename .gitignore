@@ -10,4 +10,6 @@ dist/
 !**/.claude/skills/
 TODO.md
 coverage/
+playwright-report/
+test-results/
 
