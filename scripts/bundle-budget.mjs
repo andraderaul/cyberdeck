@@ -65,8 +65,9 @@ function gzippedBytes(path) {
 
 /**
  * The chunks the browser fetches before first paint: the module entry plus everything Vite
- * modulepreloads, which is exactly its set of static imports. Anything else under `assets/` got
- * there through a dynamic `import()` and is not on the first-load path.
+ * modulepreloads, which is exactly its set of static imports. Anything else under `assets/` is off
+ * that path — reached through a dynamic `import()`, or emitted as a worker entry and fetched only
+ * when its `new Worker` runs.
  */
 function eagerChunkNames(html) {
   const names = new Set()

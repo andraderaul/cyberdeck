@@ -86,7 +86,9 @@ export default function AsciiCanvas({
     fn()
   }, [sourceImage, settings, onConverted, canvasRef, isMirrored])
 
-  // rAF loop throttled to ~15fps — see ADR 0002 for Web Worker upgrade path
+  // rAF loop throttled to ~15fps — see ADR 0002 for the Web Worker upgrade path, which
+  // GLITCH//Studio has taken and this program has not: `paintFrame` draws a glyph per cell straight
+  // onto the canvas, so only the two pure stages ahead of it could cross without OffscreenCanvas.
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !sourceVideo) {

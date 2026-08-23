@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Chain, createLink } from './chain'
+import { type ChainRunner, createSyncChainRunner } from './chain-runner'
 import { MAX_SAMPLE_DIM } from './image-utils'
-import { renderGlitchFrame } from './render-frame'
+import { type GlitchFrame, renderGlitchFrame } from './render-frame'
 import type { Seed } from './types'
 
 // Channel Shift is the only Effect left on: these tests exercise the shell's canvas glue, and a
@@ -131,6 +132,16 @@ function compositingContext(w: number, h: number) {
   }
 }
 
+/**
+ * The shell under test, holding the one thing these tests do not vary. The Chain computes the same
+ * pixels wherever it runs — `chain-job.test.ts` is where that is pinned — so they give it the
+ * synchronous core and stay about the canvas glue on either side of it: the sampling draw, the
+ * clear, and the paint. `chain-runner.test.ts` is where the Worker's own rules are tested.
+ */
+function renderFrame(frame: Omit<GlitchFrame, 'runner'> & { runner?: ChainRunner }) {
+  return renderGlitchFrame({ runner: createSyncChainRunner(), ...frame })
+}
+
 function fakeSource(naturalWidth: number, naturalHeight: number): HTMLImageElement {
   return { naturalWidth, naturalHeight } as unknown as HTMLImageElement
 }
@@ -144,38 +155,56 @@ beforeEach(() => {
 })
 
 describe('renderGlitchFrame', () => {
-  it('sizes the hidden canvas to the sampled dimensions and draws the Source into it', () => {
+  it('sizes the hidden canvas to the sampled dimensions and draws the Source into it', async () => {
     const hiddenCtx = fakeContext(new ImageData(100, 50))
     const hidden = fakeCanvas(hiddenCtx)
     const canvas = fakeCanvas(fakeContext())
 
-    renderGlitchFrame(fakeSource(100, 50), canvas, hidden, CHAIN, SEED)
+    await renderFrame({
+      source: fakeSource(100, 50),
+      canvas: canvas,
+      hidden: hidden,
+      chain: CHAIN,
+      seed: SEED,
+    })
 
     expect(hidden.width).toBe(100)
     expect(hidden.height).toBe(50)
     expect(hiddenCtx.drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 100, 50)
   })
 
-  it('downscales a large Source to the sampling cap before processing', () => {
+  it('downscales a large Source to the sampling cap before processing', async () => {
     const hiddenCtx = fakeContext(new ImageData(MAX_SAMPLE_DIM, 400))
     const hidden = fakeCanvas(hiddenCtx)
     const canvas = fakeCanvas(fakeContext())
 
-    renderGlitchFrame(fakeSource(4000, 2000), canvas, hidden, CHAIN, SEED)
+    await renderFrame({
+      source: fakeSource(4000, 2000),
+      canvas: canvas,
+      hidden: hidden,
+      chain: CHAIN,
+      seed: SEED,
+    })
 
     expect(hidden.width).toBe(MAX_SAMPLE_DIM)
     expect(hidden.height).toBe(400)
     expect(hiddenCtx.getImageData).toHaveBeenCalledWith(0, 0, MAX_SAMPLE_DIM, 400)
   })
 
-  it('paints the glitched pixels onto the visible canvas at the sampled size', () => {
+  it('paints the glitched pixels onto the visible canvas at the sampled size', async () => {
     const source = new ImageData(2, 1)
     source.data.set([255, 0, 0, 255, 0, 0, 0, 255], 0)
     const hidden = fakeCanvas(fakeContext(source))
     const visibleCtx = fakeContext()
     const canvas = fakeCanvas(visibleCtx)
 
-    renderGlitchFrame(fakeSource(2, 1), canvas, hidden, CHAIN, SEED)
+    await renderFrame({
+      source: fakeSource(2, 1),
+      canvas: canvas,
+      hidden: hidden,
+      chain: CHAIN,
+      seed: SEED,
+    })
 
     expect(canvas.width).toBe(2)
     expect(canvas.height).toBe(1)
@@ -184,76 +213,162 @@ describe('renderGlitchFrame', () => {
     expect(Array.from(painted.data.slice(4, 8))).toEqual([255, 0, 0, 255])
   })
 
-  it('skips the render when the Source has no intrinsic size yet', () => {
+  it('skips the render when the Source has no intrinsic size yet', async () => {
     const hiddenCtx = fakeContext()
     const visibleCtx = fakeContext()
 
-    const painted = renderGlitchFrame(
-      fakeSource(0, 0),
-      fakeCanvas(visibleCtx),
-      fakeCanvas(hiddenCtx),
-      CHAIN,
-      SEED,
-    )
+    const outcome = await renderFrame({
+      source: fakeSource(0, 0),
+      canvas: fakeCanvas(visibleCtx),
+      hidden: fakeCanvas(hiddenCtx),
+      chain: CHAIN,
+      seed: SEED,
+    })
 
-    expect(painted).toBe(false)
+    expect(outcome).toBe('skipped')
     expect(visibleCtx.putImageData).not.toHaveBeenCalled()
   })
 
-  it('skips the render when a 2D context is unavailable', () => {
-    const painted = renderGlitchFrame(
-      fakeSource(10, 10),
-      fakeCanvas(null),
-      fakeCanvas(null),
-      CHAIN,
-      SEED,
-    )
+  it('skips the render when a 2D context is unavailable', async () => {
+    const outcome = await renderFrame({
+      source: fakeSource(10, 10),
+      canvas: fakeCanvas(null),
+      hidden: fakeCanvas(null),
+      chain: CHAIN,
+      seed: SEED,
+    })
 
-    expect(painted).toBe(false)
+    expect(outcome).toBe('skipped')
   })
 
-  it('reports a painted frame', () => {
+  it('reports a painted frame', async () => {
     const hidden = fakeCanvas(fakeContext(new ImageData(4, 4)))
 
     expect(
-      renderGlitchFrame(fakeSource(4, 4), fakeCanvas(fakeContext()), hidden, CHAIN, SEED),
-    ).toBe(true)
+      await renderFrame({
+        source: fakeSource(4, 4),
+        canvas: fakeCanvas(fakeContext()),
+        hidden: hidden,
+        chain: CHAIN,
+        seed: SEED,
+      }),
+    ).toBe('painted')
   })
 
-  it('samples a Live Source at its stream dimensions', () => {
+  // A dropped frame is the runner's backpressure rule, not a failure — the shell leaves the canvas
+  // holding the frame before it rather than painting half of one (`chain-runner.ts`).
+  it('paints nothing when the runner drops the frame', async () => {
+    const visibleCtx = fakeContext()
+    const dropping: ChainRunner = { run: () => Promise.resolve(null), dispose: () => {} }
+
+    const outcome = await renderFrame({
+      source: fakeSource(4, 4),
+      canvas: fakeCanvas(visibleCtx),
+      hidden: fakeCanvas(fakeContext(new ImageData(4, 4))),
+      chain: CHAIN,
+      seed: SEED,
+      isMirrored: false,
+      runner: dropping,
+    })
+
+    expect(outcome).toBe('dropped')
+    expect(visibleCtx.putImageData).not.toHaveBeenCalled()
+  })
+
+  // The whole point of ADR 0002's upgrade path: the sampled frame goes to the runner, and what the
+  // canvas gets back is whatever the runner sends — not something computed on this thread.
+  it('paints the pixels the runner returns, at the sampled size', async () => {
+    const returned = new Uint8ClampedArray(4 * 4 * 4).fill(77)
+    const runner: ChainRunner = {
+      run: (buffer) =>
+        Promise.resolve({ data: returned, width: buffer.width, height: buffer.height }),
+      dispose: () => {},
+    }
+    const visibleCtx = fakeContext()
+
+    await renderFrame({
+      source: fakeSource(4, 4),
+      canvas: fakeCanvas(visibleCtx),
+      hidden: fakeCanvas(fakeContext(new ImageData(4, 4))),
+      chain: CHAIN,
+      seed: SEED,
+      isMirrored: false,
+      runner: runner,
+    })
+
+    const painted = visibleCtx.putImageData.mock.calls[0][0] as ImageData
+    expect(Array.from(painted.data)).toEqual(Array.from(returned))
+  })
+
+  // Transfer, not copy (ADR 0002): the sampled buffer is handed over as it came off getImageData,
+  // so the runner is free to detach it. Copying or re-wrapping it here would put that cost back.
+  it('hands the runner the very buffer it sampled', async () => {
+    const sampled = new ImageData(4, 4)
+    const run = vi.fn((buffer: { data: Uint8ClampedArray<ArrayBuffer> }) => Promise.resolve(buffer))
+    const runner = { run, dispose: () => {} } as unknown as ChainRunner
+
+    await renderFrame({
+      source: fakeSource(4, 4),
+      canvas: fakeCanvas(fakeContext()),
+      hidden: fakeCanvas(fakeContext(sampled)),
+      chain: CHAIN,
+      seed: SEED,
+      isMirrored: false,
+      runner: runner,
+    })
+
+    expect(run.mock.calls[0][0].data).toBe(sampled.data)
+  })
+
+  it('samples a Live Source at its stream dimensions', async () => {
     const hiddenCtx = fakeContext(new ImageData(MAX_SAMPLE_DIM, 450))
     const hidden = fakeCanvas(hiddenCtx)
     const video = fakeLiveSource(1280, 720)
 
-    expect(renderGlitchFrame(video, fakeCanvas(fakeContext()), hidden, CHAIN, SEED)).toBe(true)
+    expect(
+      await renderFrame({
+        source: video,
+        canvas: fakeCanvas(fakeContext()),
+        hidden: hidden,
+        chain: CHAIN,
+        seed: SEED,
+      }),
+    ).toBe('painted')
 
     expect(hidden.width).toBe(MAX_SAMPLE_DIM)
     expect(hidden.height).toBe(450)
     expect(hiddenCtx.drawImage).toHaveBeenCalledWith(video, 0, 0, MAX_SAMPLE_DIM, 450)
   })
 
-  it('skips the render when the Live Source has no frame yet', () => {
+  it('skips the render when the Live Source has no frame yet', async () => {
     const visibleCtx = fakeContext()
 
-    const painted = renderGlitchFrame(
-      fakeLiveSource(0, 0),
-      fakeCanvas(visibleCtx),
-      fakeCanvas(fakeContext()),
-      CHAIN,
-      SEED,
-    )
+    const outcome = await renderFrame({
+      source: fakeLiveSource(0, 0),
+      canvas: fakeCanvas(visibleCtx),
+      hidden: fakeCanvas(fakeContext()),
+      chain: CHAIN,
+      seed: SEED,
+    })
 
-    expect(painted).toBe(false)
+    expect(outcome).toBe('skipped')
     expect(visibleCtx.putImageData).not.toHaveBeenCalled()
   })
 
   // Mirror flips the pixels, not the preview (ADR 0016): the flip happens on the sampling draw,
   // before the Chain, so Effects apply on top and the painted (exported) canvas carries it.
-  it('flips the Source horizontally around the sampling draw when mirrored', () => {
+  it('flips the Source horizontally around the sampling draw when mirrored', async () => {
     const ctx = fakeMirrorContext(new ImageData(100, 50))
     const hidden = fakeCanvas(ctx)
 
-    renderGlitchFrame(fakeSource(100, 50), fakeCanvas(fakeContext()), hidden, CHAIN, SEED, true)
+    await renderFrame({
+      source: fakeSource(100, 50),
+      canvas: fakeCanvas(fakeContext()),
+      hidden: hidden,
+      chain: CHAIN,
+      seed: SEED,
+      isMirrored: true,
+    })
 
     expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 100, 50)
     // The clear stays outside the flip: it is about the whole bitmap, not about the drawn rect.
@@ -267,10 +382,16 @@ describe('renderGlitchFrame', () => {
     ])
   })
 
-  it('draws the Source un-flipped when not mirrored', () => {
+  it('draws the Source un-flipped when not mirrored', async () => {
     const ctx = fakeMirrorContext(new ImageData(100, 50))
 
-    renderGlitchFrame(fakeSource(100, 50), fakeCanvas(fakeContext()), fakeCanvas(ctx), CHAIN, SEED)
+    await renderFrame({
+      source: fakeSource(100, 50),
+      canvas: fakeCanvas(fakeContext()),
+      hidden: fakeCanvas(ctx),
+      chain: CHAIN,
+      seed: SEED,
+    })
 
     expect(ctx.translate).not.toHaveBeenCalled()
     expect(ctx.scale).not.toHaveBeenCalled()
@@ -278,27 +399,27 @@ describe('renderGlitchFrame', () => {
   })
 
   // The Seed is what keeps a Live Source's corruption from boiling frame to frame (#82).
-  it('paints an identical frame for an unchanged Live Source frame and Seed', () => {
-    function paintOnce() {
+  it('paints an identical frame for an unchanged Live Source frame and Seed', async () => {
+    async function paintOnce() {
       const source = new ImageData(4, 2)
       source.data.forEach((_, i) => {
         source.data[i] = (i * 7) % 256
       })
       const visibleCtx = fakeContext()
-      renderGlitchFrame(
-        fakeLiveSource(4, 2),
-        fakeCanvas(visibleCtx),
-        fakeCanvas(fakeContext(source)),
-        [
+      await renderFrame({
+        source: fakeLiveSource(4, 2),
+        canvas: fakeCanvas(visibleCtx),
+        hidden: fakeCanvas(fakeContext(source)),
+        chain: [
           createLink('blockDisplacement', { density: 0.8, amount: 0.5 }),
           createLink('noise', { amount: 0.5, tint: 'mono' }),
         ],
-        SEED,
-      )
+        seed: SEED,
+      })
       return Array.from((visibleCtx.putImageData.mock.calls[0][0] as ImageData).data)
     }
 
-    expect(paintOnce()).toEqual(paintOnce())
+    expect(await paintOnce()).toEqual(await paintOnce())
   })
 })
 
@@ -307,27 +428,34 @@ describe('renderGlitchFrame', () => {
 // hidden canvas still held from the render before it (#335, ADR 0001).
 describe('renderGlitchFrame sampling canvas', () => {
   function renderInto(hidden: HTMLCanvasElement, isMirrored = false) {
-    renderGlitchFrame(fakeSource(4, 2), fakeCanvas(fakeContext()), hidden, CHAIN, SEED, isMirrored)
+    return renderFrame({
+      source: fakeSource(4, 2),
+      canvas: fakeCanvas(fakeContext()),
+      hidden: hidden,
+      chain: CHAIN,
+      seed: SEED,
+      isMirrored: isMirrored,
+    })
   }
 
-  it('samples the same pixels however many renders came before, with an RGBA Source', () => {
+  it('samples the same pixels however many renders came before, with an RGBA Source', async () => {
     const hiddenCtx = compositingContext(4, 2)
     const hidden = fakeCanvas(hiddenCtx)
 
-    renderInto(hidden)
-    renderInto(hidden)
-    renderInto(hidden)
+    await renderInto(hidden)
+    await renderInto(hidden)
+    await renderInto(hidden)
 
     expect(hiddenCtx.sampled[2]).toEqual(hiddenCtx.sampled[0])
   })
 
-  it('samples the same pixels across a Mirror round trip', () => {
+  it('samples the same pixels across a Mirror round trip', async () => {
     const hiddenCtx = compositingContext(4, 2)
     const hidden = fakeCanvas(hiddenCtx)
 
-    renderInto(hidden)
-    renderInto(hidden, true)
-    renderInto(hidden)
+    await renderInto(hidden)
+    await renderInto(hidden, true)
+    await renderInto(hidden)
 
     expect(hiddenCtx.sampled[2]).toEqual(hiddenCtx.sampled[0])
   })
@@ -336,31 +464,44 @@ describe('renderGlitchFrame sampling canvas', () => {
   // Link added then removed. Both are the same shape at this seam — the drift is upstream of
   // applyChain, so what the Chain did in between cannot matter — and this states the claim the
   // way a user meets it: the painted frame comes back to the bytes it started on.
-  it('paints the same frame again after an add-then-remove Link round trip', () => {
+  it('paints the same frame again after an add-then-remove Link round trip', async () => {
     const hiddenCtx = compositingContext(4, 2)
     const hidden = fakeCanvas(hiddenCtx)
 
-    function paintWith(chain: Chain) {
+    async function paintWith(chain: Chain) {
       const visibleCtx = fakeContext()
-      renderGlitchFrame(fakeSource(4, 2), fakeCanvas(visibleCtx), hidden, chain, SEED)
+      await renderFrame({
+        source: fakeSource(4, 2),
+        canvas: fakeCanvas(visibleCtx),
+        hidden: hidden,
+        chain: chain,
+        seed: SEED,
+      })
       return Array.from((visibleCtx.putImageData.mock.calls[0][0] as ImageData).data)
     }
 
-    const before = paintWith(CHAIN)
-    paintWith([...CHAIN, createLink('scanlines')])
-    const after = paintWith(CHAIN)
+    const before = await paintWith(CHAIN)
+    await paintWith([...CHAIN, createLink('scanlines')])
+    const after = await paintWith(CHAIN)
 
     expect(after).toEqual(before)
   })
 
   // The rAF loop re-enters the shell ~15 times a second (ADR 0002) against one hidden canvas,
   // so the clear has to hold there without buying a fresh bitmap per frame.
-  it('holds for a Live Source re-drawing into the same hidden canvas every frame', () => {
+  it('holds for a Live Source re-drawing into the same hidden canvas every frame', async () => {
     const hiddenCtx = compositingContext(4, 2)
     const hidden = fakeCanvas(hiddenCtx)
 
     for (let frame = 0; frame < 5; frame++) {
-      renderGlitchFrame(fakeLiveSource(4, 2), fakeCanvas(fakeContext()), hidden, CHAIN, SEED)
+      // biome-ignore lint/performance/noAwaitInLoops: sequential by design — five frames re-drawing into one hidden canvas is the claim, and Promise.all would interleave their sampling draws
+      await renderFrame({
+        source: fakeLiveSource(4, 2),
+        canvas: fakeCanvas(fakeContext()),
+        hidden: hidden,
+        chain: CHAIN,
+        seed: SEED,
+      })
     }
 
     expect(hiddenCtx.sampled[4]).toEqual(hiddenCtx.sampled[0])

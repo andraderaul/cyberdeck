@@ -21,6 +21,9 @@ than once. A Chain built by hand exports as JSON and comes back (**Chain JSON**,
 which is the only way structural variety reaches the app from outside the roster. The v1 scope in
 `CONTEXT.md` is complete.
 
+Since #316 the Chain runs on a **Worker thread** — ADR 0002's upgrade path, taken here first on the
+deck. Nothing about the look changed; what changed is which thread computes it.
+
 The Preset **values** are taste, not derivation: they are the one thing here a human curates, and
 re-curating a number in `presets.ts` is a design change, not a bug fix.
 
@@ -58,16 +61,70 @@ Single-page React/TS/Vite app. Fully client-side — no backend, no network.
    shell draws into — kept separate from the visible canvas per ADR 0001
 4. `renderGlitchFrame()` in `src/glitch/render-frame.ts` is the imperative shell: draws the
    Source onto the hidden canvas at the sampled size → `getImageData` → unwraps to a
-   `PixelBuffer` → `applyChain()` → wraps back into `ImageData` → `putImageData` onto the
-   visible canvas. Returns `false` (skips) if there's no 2D context or the Source has no
-   intrinsic size yet. A `GlitchSource` is an image *or* a video — one webcam frame is just
-   another Source to sample, so both paths share this one shell
+   `PixelBuffer` → hands it to the **ChainRunner** → wraps what comes back into `ImageData` →
+   `putImageData` onto the visible canvas. It is `async`, because the Chain runs on a Worker
+   (below), and reports `'painted'`, `'dropped'` or `'skipped'` — `skipped` for no 2D context or a
+   Source with no intrinsic size yet, `dropped` for the runner's backpressure rule. A
+   `GlitchSource` is an image *or* a video — one webcam frame is just another Source to sample, so
+   both paths share this one shell
 5. `applyChain()` is **pure** — `PixelBuffer` + `Chain` + `Seed` in, `PixelBuffer` out,
    no DOM (ADR 0005). It is the only place Effects run, and it holds no randomness of its own: every
    draw comes off the Seed's stream (`createRng`) or a Seed-fed positional hash, with a repeated
    Link drawing from an occurrence-keyed sub-seed (`deriveSeed` — ADR 0017)
 6. The visible canvas is sized to the **sampled** dimensions, so the canvas *is* the output —
    PNG Export takes it as-is and CSS `object-contain` handles the on-screen fit
+
+### The Chain runs on a Worker
+
+ADR 0002 chose the main thread and recorded the Web Worker as the upgrade path. **This program took
+it (#316)** — and it went first on the deck for one reason: its whole per-frame core is a single pure
+function over a currency that was already DOM-free, so the hard half of a Worker port was done before
+the port started.
+
+`ChainRunner` (`src/glitch/chain-runner.ts`) is the seam. The shell asks it for a frame and paints
+whatever comes back; which thread that was is the runner's business alone.
+
+- **Only the fold crosses.** The sampling draw and the `putImageData` stay on the main thread.
+  `transferControlToOffscreen()` was rejected and the reason is concrete: it is permanent, and
+  afterwards `getContext('2d')`, `toBlob` and `toDataURL` throw on the placeholder — which is all
+  four of this app's output paths (PNG Export, Capture, Copy, Recording), every one of them a plain
+  read of the visible canvas.
+- **Transfer, not copy, both ways.** The sampled buffer is up to 800×800×4; cloning it on each leg
+  of every frame would hand back much of what moving the Chain off-thread bought. The buffer is
+  detached the moment it is posted — nothing may read it afterwards.
+- **Drop frames, never queue them.** At most one frame in flight and one waiting; a newer frame
+  replaces the waiting one and the frame it replaced resolves `null`. The single waiting slot is
+  what keeps the rule safe for a Source Image, which has no next frame to correct a drop with: the
+  newest edit always survives, so the canvas shows the Chain the Editor holds. The shell keeps
+  sampling on every throttled tick even while the Worker is busy — a fresh sample *replaces* the
+  waiting one, so what runs next is the newest frame rather than the one that arrived first.
+- **The Source Image re-ask is for a dead Worker, not for backpressure.** `GlitchCanvas` asks once
+  more when a Source Image render comes back `dropped`, and the reachable case is exactly one: a
+  Worker that died holding the frame's pixels, which were transferred and left with it. Backpressure
+  never reaches that branch — the only thing that drops the newest Source Image render is a newer
+  one, whose effect has already cancelled it. One re-ask cannot spin, because by then the runner is
+  the synchronous core.
+- **A synchronous fallback, always.** No `Worker` global, a `new Worker` that throws on a
+  Content-Security-Policy, or a Worker that dies mid-session — all three land on the same
+  `applyChain`, on this thread. There is no state in which the program cannot paint.
+
+The Worker entry (`chain-worker.ts`) is three lines on purpose: everything it could get wrong lives
+in `runChainJob` (`chain-job.ts`), which is pure and has its own tests — including **the return
+leg's transfer list**, which travels back with the result precisely so the one file no test reaches
+is not the file that has to get it right. **Tests do not go through the Worker**: the Effects and
+`applyChain` are unit-tested exactly as they were, and `chain-runner.test.ts` drives a Worker double
+so the drop rule and both transfers are assertions rather than claims.
+
+**One behaviour changed that no test covers, deliberately.** The paint is asynchronous now, so PNG
+Export, Capture and Copy — all reads of the visible canvas — can read the frame *before* an edit if
+they are fired inside the Worker's round trip of it. What comes out is a valid render of a Chain the
+user held a moment earlier, never a torn one, and the next Export is correct. Left unhandled on
+purpose; ADR 0002 records the reason and the shape of the fix if it is ever reported.
+
+The cost is a second copy of the pipeline in the build: a Worker is its own module graph, so Vite
+emits a chunk for it (~2.45 kB gzipped) while the entry chunk still carries the pipeline for the
+fallback. That chunk is GLITCH's whole `lazy` bundle-budget row, and it *is* precached (ADR 0027) —
+the running program fetches it.
 
 ### Presets and Randomize
 
@@ -337,7 +394,14 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   the panels import them from here
 - `src/glitch/image-utils.ts` — `sampleDimensions()` (800×800 cap), `sourceDimensions()`,
   `GlitchSource` (image | video — the shell's vocabulary, kept out of the DOM-free `types.ts`)
-- `src/glitch/render-frame.ts` — `renderGlitchFrame()`: the imperative shell
+- `src/glitch/render-frame.ts` — `renderGlitchFrame()`: the imperative shell. Async, and reports
+  `GlitchFrameOutcome`
+- `src/glitch/chain-runner.ts` — `ChainRunner` (the seam), `createChainRunner()` (Worker where the
+  browser has one, synchronous core where it does not), `createWorkerChainRunner()` (the drop rule
+  and the transfers, testable against a double), `createSyncChainRunner()` (the fallback)
+- `src/glitch/chain-job.ts` — what crosses the thread boundary: `ChainJob`, `ChainResult`, and
+  `runChainJob()` — the Worker's whole body as a pure function
+- `src/glitch/chain-worker.ts` — the Worker entry. Four lines of wiring; no test reaches it
 
 **Errors & utilities**
 - `src/errors/app-error.ts` — `Errors`: this app's error factories over the kit's `AppError` /
@@ -362,8 +426,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   same token the `theme-color` meta carries, and checks every icon it names exists
 
 **Components**
-- `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render, and owns the
-  ~15fps rAF loop for a Live Source. Takes `onAdvanceSeed` and calls it after each painted frame —
+- `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render, owns the ~15fps
+  rAF loop for a Live Source, and holds the canvas' one `ChainRunner`. Takes `onAdvanceSeed` and
+  calls it after each painted frame —
   told to advance, never why, so the animation's on/off is the caller withholding the callback.
   Carries the LIVE badge and the REC badge, which is also the
   Recording's stop control and its elapsed timer — the canvas is the one surface every tab shows,

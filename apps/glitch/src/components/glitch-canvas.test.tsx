@@ -3,10 +3,70 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { createRef, type RefObject, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Chain, createLink } from '../glitch/chain'
+import type { ChainJob } from '../glitch/chain-job'
+import { type ChainRunner, createWorkerChainRunner } from '../glitch/chain-runner'
+import type { GlitchFrame } from '../glitch/render-frame'
 import GlitchCanvas, { HAVE_ENOUGH_DATA, LIVE_SOURCE_FRAME_INTERVAL_MS } from './glitch-canvas'
 
-const renderGlitchFrame = vi.hoisted(() => vi.fn((..._args: unknown[]) => true))
+// Async, because the Chain runs on a Worker thread now (ADR 0002) and the shell resolves once the
+// frame has come back. `painted` unless a test says otherwise.
+const renderGlitchFrame = vi.hoisted(() =>
+  vi.fn((..._args: unknown[]) => Promise.resolve('painted' as string)),
+)
 vi.mock('../glitch/render-frame', () => ({ renderGlitchFrame }))
+
+/**
+ * The runner this canvas is given. Stubbed at the factory rather than passed as a prop: one runner
+ * per canvas, built and disposed by the canvas, is the arrangement under test.
+ */
+let runner: ChainRunner | null = null
+vi.mock('../glitch/chain-runner', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../glitch/chain-runner')>()
+  return { ...actual, createChainRunner: () => runner ?? actual.createSyncChainRunner() }
+})
+
+/** Makes the next render report a frame with no pixels coming, whatever the reason. */
+function dropOnce() {
+  renderGlitchFrame.mockImplementationOnce(() => Promise.resolve('dropped'))
+}
+
+/**
+ * A Worker double that answers nothing until the test says so, and can die — the only thing that
+ * can drop a Source Image render the Editor has not already moved past (`glitch-canvas.tsx`).
+ */
+function fakeWorker() {
+  const listeners = new Map<string, Array<(event: unknown) => void>>()
+  return {
+    jobs: [] as ChainJob[],
+    terminate: vi.fn(),
+    postMessage(job: ChainJob) {
+      this.jobs.push(job)
+    },
+    addEventListener(type: string, listener: (event: unknown) => void) {
+      listeners.set(type, [...(listeners.get(type) ?? []), listener])
+    },
+    die() {
+      for (const listener of listeners.get('error') ?? []) {
+        listener(new Event('error'))
+      }
+    },
+  }
+}
+
+/**
+ * Makes the mocked shell do the one thing that matters here — ask the runner it was handed — and
+ * report what the runner said. That is what puts the *real* runner behind these renders while the
+ * DOM half stays faked, since happy-dom has no 2D context for the real shell to paint on.
+ */
+function renderThroughTheRunner() {
+  renderGlitchFrame.mockImplementation(async (...args: unknown[]) => {
+    const frame = args[0] as GlitchFrame
+    const painted = await frame.runner.run({ data: PIXELS, width: 1, height: 1 }, CHAIN, SEED)
+    return painted === null ? 'dropped' : 'painted'
+  })
+}
+
+const PIXELS = new Uint8ClampedArray(4)
 
 const CHAIN: Chain = [createLink('channelShift', { channel: 'r', amount: 1 })]
 
@@ -24,6 +84,16 @@ function flushFrame(now: number) {
   frameCallbacks.clear()
   pending.forEach((cb) => {
     cb(now)
+  })
+}
+
+/**
+ * One rAF tick, plus the microtask the frame's paint resolves on. The Seed advances *after* the
+ * paint now, so anything asserting on the arrangement has to let that settle first.
+ */
+async function flushPaintedFrame(now: number) {
+  await act(async () => {
+    flushFrame(now)
   })
 }
 
@@ -48,6 +118,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.clearAllMocks()
+  renderGlitchFrame.mockImplementation(() => Promise.resolve('painted'))
+  runner = null
 })
 
 function renderCanvas(props: Partial<React.ComponentProps<typeof GlitchCanvas>> = {}) {
@@ -72,6 +144,46 @@ describe('GlitchCanvas', () => {
     expect(frameCallbacks.size).toBe(0)
   })
 
+  // The case the re-ask exists for, driven through the real runner: a Worker that dies while a
+  // Source Image frame is in flight took that frame's pixels with it — they were transferred — and
+  // a still image has no next frame to correct it with. Backpressure cannot produce this: the only
+  // thing that drops the newest Source Image render is a newer one, whose effect has already
+  // cancelled it.
+  it('repaints a Source Image whose frame left with a Worker that died', async () => {
+    const worker = fakeWorker()
+    runner = createWorkerChainRunner(worker as unknown as Worker)
+    renderThroughTheRunner()
+
+    renderCanvas({ sourceImage: { naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement })
+    await act(async () => {
+      worker.die()
+    })
+
+    expect(renderGlitchFrame).toHaveBeenCalledTimes(2)
+    // The re-ask painted, and it painted here — the runner is the synchronous core from the moment
+    // the Worker died, so it has nothing left to drop the second frame with.
+    await expect(renderGlitchFrame.mock.results[1].value).resolves.toBe('painted')
+    expect(worker.jobs).toHaveLength(1)
+  })
+
+  it('does not ask again for a Source Image frame that painted', async () => {
+    renderCanvas({ sourceImage: { naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement })
+    await act(async () => {})
+
+    expect(renderGlitchFrame).toHaveBeenCalledTimes(1)
+  })
+
+  // The re-ask is once, never a loop: a runner that kept saying `dropped` must not spin the canvas.
+  it('asks again only once, however the runner answers', async () => {
+    dropOnce()
+    dropOnce()
+
+    renderCanvas({ sourceImage: { naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement })
+    await act(async () => {})
+
+    expect(renderGlitchFrame).toHaveBeenCalledTimes(2)
+  })
+
   it('drives a Live Source through the rAF loop', () => {
     const video = liveSource()
     renderCanvas({ liveSource: video })
@@ -79,12 +191,7 @@ describe('GlitchCanvas', () => {
     flushFrame(0)
 
     expect(renderGlitchFrame).toHaveBeenCalledWith(
-      video,
-      expect.anything(),
-      expect.anything(),
-      CHAIN,
-      SEED,
-      false,
+      expect.objectContaining({ source: video, chain: CHAIN, seed: SEED, isMirrored: false }),
     )
   })
 
@@ -93,7 +200,7 @@ describe('GlitchCanvas', () => {
 
     flushFrame(0)
 
-    expect(renderGlitchFrame.mock.calls[0][5]).toBe(true)
+    expect((renderGlitchFrame.mock.calls[0][0] as GlitchFrame).isMirrored).toBe(true)
   })
 
   it('throttles the loop to ~15fps, dropping frames that arrive early', () => {
@@ -133,7 +240,7 @@ describe('GlitchCanvas', () => {
     flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS)
     flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS * 2)
 
-    const seeds = renderGlitchFrame.mock.calls.map((call) => (call as unknown[])[4])
+    const seeds = renderGlitchFrame.mock.calls.map((call) => (call[0] as GlitchFrame).seed)
     expect(seeds).toEqual([SEED, SEED, SEED])
   })
 
@@ -161,34 +268,47 @@ describe('GlitchCanvas', () => {
       )
     }
 
-    it('paints each frame on a new arrangement', () => {
+    it('paints each frame on a new arrangement', async () => {
       render(<AnimatingCanvas />)
 
-      act(() => flushFrame(0))
-      act(() => flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS))
-      act(() => flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS * 2))
+      await flushPaintedFrame(0)
+      await flushPaintedFrame(LIVE_SOURCE_FRAME_INTERVAL_MS)
+      await flushPaintedFrame(LIVE_SOURCE_FRAME_INTERVAL_MS * 2)
 
-      const seeds = renderGlitchFrame.mock.calls.map((call) => (call as unknown[])[4])
+      const seeds = renderGlitchFrame.mock.calls.map((call) => (call[0] as GlitchFrame).seed)
       expect(seeds).toEqual([SEED, SEED + 1, SEED + 2])
     })
 
     // The throttle's clock outlives the effect for this reason alone: a `lastTime` rebuilt with the
     // loop would be reset on every painted frame, and the Chain would run on every rAF tick.
-    it('holds the ~15fps throttle even though every frame rebuilds the loop', () => {
+    it('holds the ~15fps throttle even though every frame rebuilds the loop', async () => {
       render(<AnimatingCanvas />)
 
-      act(() => flushFrame(0))
-      act(() => flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS - 1))
+      await flushPaintedFrame(0)
+      await flushPaintedFrame(LIVE_SOURCE_FRAME_INTERVAL_MS - 1)
 
       expect(renderGlitchFrame).toHaveBeenCalledTimes(1)
     })
 
-    it('advances only on a frame that was actually painted', () => {
+    it('advances only on a frame that was actually painted', async () => {
       const onAdvanceSeed = vi.fn()
       renderCanvas({ liveSource: liveSource(0), onAdvanceSeed })
 
-      flushFrame(0)
+      await flushPaintedFrame(0)
 
+      expect(onAdvanceSeed).not.toHaveBeenCalled()
+    })
+
+    // A frame the runner dropped was never painted, so the arrangement must not move under it —
+    // the same rule, now that a frame can be lost to backpressure as well as to readyState.
+    it('does not advance on a frame the runner dropped', async () => {
+      const onAdvanceSeed = vi.fn()
+      dropOnce()
+      renderCanvas({ liveSource: liveSource(), onAdvanceSeed })
+
+      await flushPaintedFrame(0)
+
+      expect(renderGlitchFrame).toHaveBeenCalledTimes(1)
       expect(onAdvanceSeed).not.toHaveBeenCalled()
     })
 
@@ -196,17 +316,17 @@ describe('GlitchCanvas', () => {
     // directions: advancing ahead of the throttle check boils the arrangement at the display's
     // rate rather than the Chain's, and advancing outside the readyState guard advances on frames
     // nobody saw. Pinned by count, since a dropped tick still runs the loop body.
-    it('advances once per painted frame and never on a dropped tick', () => {
+    it('advances once per painted frame and never on a dropped tick', async () => {
       const onAdvanceSeed = vi.fn()
       renderCanvas({ liveSource: liveSource(), onAdvanceSeed })
 
-      flushFrame(0)
+      await flushPaintedFrame(0)
       expect(onAdvanceSeed).toHaveBeenCalledTimes(1)
 
-      flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS - 1)
+      await flushPaintedFrame(LIVE_SOURCE_FRAME_INTERVAL_MS - 1)
       expect(onAdvanceSeed).toHaveBeenCalledTimes(1)
 
-      flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS)
+      await flushPaintedFrame(LIVE_SOURCE_FRAME_INTERVAL_MS)
       expect(onAdvanceSeed).toHaveBeenCalledTimes(2)
     })
   })
