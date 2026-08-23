@@ -75,6 +75,10 @@ Nomes vêm do vocabulário *interno* das ficções, nunca do título delas — o
 obra, não a cita. A regra também evita colisão: `matrix` e `neon` já são Color Modes do
 ASCII//Convert.
 
+São sete, na ordem em que o picker os lista, com o `ice` na frente por ser o padrão. O teto de
+quatro caiu junto com o controle que ciclava: o picker virou popover e lista o roster inteiro, então
+crescer é uma pergunta de desenho e contraste, não de largura de botão.
+
 **ice**:
 O Theme original do deck, nomeado pela primeira vez na ADR 0024 — acento violeta, info ciano, danger
 rosa, warning elétrico. É o padrão e o fallback de qualquer valor ausente ou desconhecido.
@@ -84,3 +88,24 @@ Fósforo verde. A tela de uma máquina que só sabia exibir uma cor.
 
 **chiba**:
 Cinza e âmbar de vapor de sódio. O céu lavado de Gibson, não o título do livro.
+
+**kuang**:
+Vermelho arterial sobre quase-preto: o icebreaker, o deck como ferramenta de intrusão cortando gelo.
+É o único Theme em que um papel teve de sair do lugar — o acento fica com o vermelho, então o danger
+se muda para o magenta quente, senão um badge crítico desapareceria dentro da casca que o acento
+pinta. Também é o mais apertado contra o Theme Contract, e por esse mesmo motivo.
+
+**ougou**:
+Aço azulado sob uma brasa. O loa do ferro e da tecnologia — a superfície é fria e o acento é quente,
+uma divisão de temperatura que nenhum outro Theme tem, e é ela que separa o `ougou` do `ice` num
+relance em vez de deixá-lo parecer um rearranjo de matizes.
+
+**solitude**:
+Corrosão de ferrugem sobre um marrom envenenado, com o amarelo químico de um vazamento no warning.
+O ferro-velho tóxico onde os robôs são montados. Separa-se do `chiba` por textura, não por matiz: um
+é céu lavado limpo, o outro é sucata apodrecendo.
+
+**onyx**:
+O deck com o neon desligado. Prata sobre preto de verdade, cor gasta só em status de verdade. É o
+avesso do `construct` — aquele insiste numa cor só, este não admite nenhuma — e por isso um warning
+realmente para você: é a única cor na tela.

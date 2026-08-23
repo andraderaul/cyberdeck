@@ -35,8 +35,9 @@ Use these terms precisely.
 - **Impure shell**: `paintFrame(ctx, instructions, viewport)` in `src/atlas/paint.ts` — the *only*
   function that touches a canvas context. Points are painted as light with additive compositing so
   dense regions bloom into a smear.
-- **Data**: `src/atlas/dataset.ts` loads the committed snapshot; `#225` reads a hand-picked
-  `dataset-sample.json`, `#227` swaps in the vendored `dataset-YYYY-MM.json` behind the same module.
+- **Data**: `src/atlas/dataset.ts` loads the committed snapshot. #225's hand-picked sample went out
+  in #227, which put the real vendoring behind the same module: the generated `src/data/snapshot.ts`
+  points at `dataset-2026-08.json` today, and the pure core still only ever sees the `Dataset` shape.
 
 ## v1 scope (by issue)
 

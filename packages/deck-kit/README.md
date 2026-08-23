@@ -35,8 +35,9 @@ An app that renders a kit primitive must:
 
 ## Themes
 
-The visual language is a set of named Themes (ADR 0024): `ice` (the default and the fallback),
-`construct` and `chiba`. All three are dark — the deck has no modes, it has Themes.
+The visual language is a set of seven named Themes (ADR 0024): `ice` (the default and the fallback),
+`construct`, `chiba`, `kuang`, `ougou`, `solitude` and `onyx`. All seven are dark — the deck has no
+modes, it has Themes. `CONTEXT.md` carries the roster with each Theme's character.
 
 **Name the role, not the hue.** `text-accent`, never `text-violet`. The primitive hue names are
 `ice`'s vocabulary and no longer exist in the preset at all, so naming one renders unstyled rather

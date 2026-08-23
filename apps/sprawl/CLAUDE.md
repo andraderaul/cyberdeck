@@ -99,7 +99,15 @@ costs nothing and changes nothing — with no theme attribute set, it resolves t
   `clippedFraction()`, `isOverflow()`, `formatScaleUnit()`, `OVERFLOW_TOP_CAPACITY_MBPS`
 - `src/atlas/paint.ts` — `paintFrame()` + `createGlowSprite()`: the only canvas-touching functions
 - `src/atlas/dataset.ts` — `DATASET`, `Dataset`, `maxCapacity()`, `skeletonScale()`
-- `src/data/dataset-sample.json` — the #225 stand-in; #227 adds the vendored `dataset-YYYY-MM.json`
+- `src/data/dataset-2026-07.json`, `src/data/dataset-2026-08.json` — the committed, dated PeeringDB
+  snapshots (ADR 0022), which replaced the #225 hand-picked sample when #227 landed. Only `2026-08`
+  is imported; July stays with no consumer, because a snapshot is a versioned artifact and not a
+  cache — the piece has to stay reproducible at the month it was seen
+- `src/data/snapshot.ts` — the **generated** pointer (`npm run vendor:dataset`) that resolves to the
+  month on air, today `dataset-2026-08.json`. It is the only line re-vendoring changes; never edited
+  by hand
+- `src/data/coastline.json` — the earned basemap's Natural Earth 110m coastline, vendored once
+  (`npm run vendor:coastline`) — coastlines don't drift
 - `src/hooks/use-scale.ts` — `useScale()`: binds wheel / drag / arrow keys on the map to the scale
 - `src/components/atlas-canvas.tsx` — the imperative shell + the scale surface (the map *is* the control)
 - `src/components/scale-reader.tsx` — the always-visible live reader / OVERFLOW voice
