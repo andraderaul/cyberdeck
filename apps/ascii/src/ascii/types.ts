@@ -35,7 +35,23 @@ export const CHARSETS = [
   'binary',
 ] as const
 
-export type Charset = (typeof CHARSETS)[number]
+export type CharsetName = (typeof CHARSETS)[number]
+
+/** The tag an authored ramp wears. No named Charset may start with it, or the two would collide. */
+export const CUSTOM_CHARSET_PREFIX = 'custom:'
+
+/**
+ * A Charset the user authored — the same term CONTEXT.md defines, curated by nobody. Tagged with a
+ * prefix rather than modelled as an object so a Charset stays one comparable, serialisable value:
+ * `settingsMatch`, the Preset snapshots and the Suggestion reader all go on comparing with `===`.
+ * The tag is also what keeps the names *literal* at the callsites — `charset === 'blocks'` still
+ * narrows and `charset: 'blcoks'` is still a type error, which a bare `string` arm would have cost.
+ *
+ * `charset.ts` is the only place one is minted; nothing else may spell the prefix.
+ */
+export type CustomCharset = `${typeof CUSTOM_CHARSET_PREFIX}${string}`
+
+export type Charset = CharsetName | CustomCharset
 
 export const DITHERINGS = ['none', 'bayer', 'floyd'] as const
 
@@ -68,7 +84,7 @@ export const RESOLUTION_RANGE = { min: 6, max: 24, step: 1 }
 export const BRIGHTNESS_RANGE = { min: 0.5, max: 2.0, step: 0.05 }
 export const CONTRAST_RANGE = { min: 0.5, max: 3.0, step: 0.05 }
 
-export const CHARSET_MAPS: Record<Charset, string> = {
+export const CHARSET_MAPS: Record<CharsetName, string> = {
   classic: ' .:-=+*#%@',
   sharp: ' .^!*<&%$#@',
   detailed: ' .\'`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',

@@ -1,6 +1,6 @@
+import { charsetGlyphs } from './charset'
 import {
   type AsciiCell,
-  CHARSET_MAPS,
   type Charset,
   type Dithering,
   type FitRegion,
@@ -34,9 +34,14 @@ function charIndex(brightness: number, mapLength: number): number {
   return Math.floor((clamped / 255) * (mapLength - 1))
 }
 
+// Takes the resolved glyphs, not the Charset: splitting a ramp is per-conversion work and this runs
+// per cell. `getAsciiChar` is the same mapping said in the domain's own words.
+function glyphAt(brightness: number, glyphs: string[]): string {
+  return glyphs[charIndex(brightness, glyphs.length)]
+}
+
 export function getAsciiChar(brightness: number, charset: Charset): string {
-  const map = CHARSET_MAPS[charset]
-  return map[charIndex(brightness, map.length)]
+  return glyphAt(brightness, charsetGlyphs(charset))
 }
 
 /**
@@ -44,8 +49,8 @@ export function getAsciiChar(brightness: number, charset: Charset): string {
  * up to one bucket and no further, which is what keeps the pass a *reordering* of the ramp's own
  * levels rather than added noise.
  */
-function bucketWidth(charset: Charset): number {
-  return 255 / (CHARSET_MAPS[charset].length - 1)
+function bucketWidth(glyphs: string[]): number {
+  return 255 / (glyphs.length - 1)
 }
 
 /**
@@ -96,11 +101,11 @@ function ditherLuma(
   luma: number[],
   cols: number,
   region: FitRegion,
-  charset: Charset,
+  glyphs: string[],
   dithering: Exclude<Dithering, 'none'>,
 ): number[] {
   const { offsetX, offsetY, dCols, dRows } = region
-  const step = bucketWidth(charset)
+  const step = bucketWidth(glyphs)
   const out = luma.slice()
 
   if (dithering === 'bayer') {
@@ -125,7 +130,7 @@ function ditherLuma(
     return out
   }
 
-  const mapLength = CHARSET_MAPS[charset].length
+  const mapLength = glyphs.length
   for (let row = offsetY; row < offsetY + dRows; row++) {
     for (let col = offsetX; col < offsetX + dCols; col++) {
       const index = row * cols + col
@@ -277,6 +282,7 @@ export function convertImage(
 ): AsciiCell[][] {
   const { brightness, contrast, charset, edgeGlyphs, dithering } = options
   const { offsetX, offsetY, dCols, dRows } = region
+  const glyphs = charsetGlyphs(charset)
 
   // The sampling canvas (ADR 0001) outlives a single conversion and drawImage composites
   // source-over, so a Source with an alpha channel would blend onto whatever the previous render
@@ -329,7 +335,7 @@ export function convertImage(
       if (luma) {
         luma[row * cols + col] = adjusted
       }
-      rowData.push({ char: getAsciiChar(adjusted, charset), r, g, b })
+      rowData.push({ char: glyphAt(adjusted, glyphs), r, g, b })
     }
     result.push(rowData)
   }
@@ -355,10 +361,10 @@ export function convertImage(
   // Where the gradient does find a contour, its stroke replaces whatever character the Dithering
   // chose: the shape axis stays the outer one, as it was before this pass existed.
   if (dithering !== 'none') {
-    const dithered = ditherLuma(luma, cols, region, charset, dithering)
+    const dithered = ditherLuma(luma, cols, region, glyphs, dithering)
     for (let row = offsetY; row < offsetY + dRows; row++) {
       for (let col = offsetX; col < offsetX + dCols; col++) {
-        const char = getAsciiChar(dithered[row * cols + col], charset)
+        const char = glyphAt(dithered[row * cols + col], glyphs)
         result[row][col] = { ...result[row][col], char }
       }
     }

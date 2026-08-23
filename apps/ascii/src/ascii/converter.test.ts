@@ -1,7 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
+import { readCustomCharset } from './charset'
 import { convertImage, getAsciiChar } from './converter'
-import type { AsciiCell, Charset } from './types'
+import type { AsciiCell, CharsetName, CustomCharset } from './types'
 import { CHARSET_MAPS } from './types'
+
+/** The reader is the only way in, so every authored fixture below comes through it. */
+function authored(ramp: string): CustomCharset {
+  const read = readCustomCharset(ramp)
+  if (!read.ok) {
+    throw new Error(`fixture refused: ${read.reason}`)
+  }
+  return read.charset
+}
 
 // Minimal 2D-context stub: reports every pixel as opaque white so that any cell
 // touching the luminance pipeline resolves to a non-space glyph.
@@ -65,6 +75,68 @@ describe('getAsciiChar', () => {
     for (const charset of ['classic', 'sharp', 'binary', 'blocks'] as const) {
       expect(() => getAsciiChar(128, charset)).not.toThrow()
     }
+  })
+
+  it('indexes an authored ramp by glyph, so an astral character arrives whole', () => {
+    const charset = authored('🌑🌕')
+    expect(getAsciiChar(0, charset)).toBe('🌑')
+    expect(getAsciiChar(255, charset)).toBe('🌕')
+  })
+})
+
+describe('convertImage with an authored Charset', () => {
+  const img = {} as CanvasImageSource
+  const options = { brightness: 1, contrast: 1, edgeGlyphs: false, dithering: 'none' } as const
+
+  it('spends the authored ramp across the grid, darkest to lightest', () => {
+    // One grey per bucket of a five-glyph ramp, so each column lands on its own character.
+    const cells = convertImage(
+      greyCtx(5, 1, (col) => Math.min(255, col * 64)),
+      img,
+      5,
+      1,
+      {
+        ...options,
+        charset: authored(' .:*@'),
+      },
+    )
+
+    expect(charRows(cells)).toEqual([' .:*@'])
+  })
+
+  it('never cuts an astral glyph in half on its way into the grid', () => {
+    const cells = convertImage(
+      greyCtx(5, 1, (col) => Math.min(255, col * 64)),
+      img,
+      5,
+      1,
+      {
+        ...options,
+        charset: authored('🌑🌒🌓🌔🌕'),
+      },
+    )
+
+    expect(cells[0].map((cell) => cell.char)).toEqual(['🌑', '🌒', '🌓', '🌔', '🌕'])
+  })
+
+  it('dithers an authored ramp on its own bucket width, not on a UTF-16 one', () => {
+    // '🌑🌕' is two glyphs — one bucket, 255 levels wide — so a flat mid-grey makes the tile spend
+    // both ends. Read as four UTF-16 units the ramp has three buckets a third the width, and the
+    // cells come back on the lone surrogates in between.
+    const cells = convertImage(
+      greyCtx(4, 4, () => 128),
+      img,
+      4,
+      4,
+      {
+        ...options,
+        charset: authored('🌑🌕'),
+        dithering: 'bayer',
+      },
+    )
+
+    const drawn = new Set(cells.flatMap((row) => row.map((cell) => cell.char)))
+    expect(drawn).toEqual(new Set(['🌑', '🌕']))
   })
 })
 
@@ -434,11 +506,11 @@ const BETWEEN_BUCKETS = 96
 const BLOCKS_BUCKET_WIDTH = 255 / (CHARSET_MAPS.blocks.length - 1)
 
 /** Where in the Charset each rendered cell landed — the axis every Dithering claim is about. */
-function charIndices(cells: AsciiCell[][], charset: Charset): number[] {
+function charIndices(cells: AsciiCell[][], charset: CharsetName): number[] {
   return cells.flatMap((row) => row.map((cell) => CHARSET_MAPS[charset].indexOf(cell.char)))
 }
 
-function meanCharIndex(cells: AsciiCell[][], charset: Charset): number {
+function meanCharIndex(cells: AsciiCell[][], charset: CharsetName): number {
   const indices = charIndices(cells, charset)
   return indices.reduce((sum, i) => sum + i, 0) / indices.length
 }
@@ -764,7 +836,7 @@ describe('convertImage Dithering', () => {
 // This is also where the Edge Glyph axis's own default is now pinned: its narrower version of this
 // test held one Charset's noise rows and every character of it appears below, so the two were the
 // same assertion written twice. Both axes are opt-in and this table is what "opt-in" means.
-const PRE_DITHERING_OUTPUT: Record<Charset, { noise: string[]; ramp: string[] }> = {
+const PRE_DITHERING_OUTPUT: Record<CharsetName, { noise: string[]; ramp: string[] }> = {
   classic: {
     noise: [' .:-+*# ', '-=+#% :-', '*# .:-+*', ' .-=+#% ', '-+*# .:-'],
     ramp: ['  .:-==+*#%@', '  .:-==+*#%@'],
@@ -820,7 +892,7 @@ describe('convertImage with no Dithering', () => {
   const noise = (col: number, row: number) => (col * 37 + row * 91) % 256
 
   it.each(
-    Object.keys(CHARSET_MAPS) as Charset[],
+    Object.keys(CHARSET_MAPS) as CharsetName[],
   )('renders %s exactly as it did before the pass existed', (charset) => {
     const options = { brightness: 1, contrast: 1, charset, edgeGlyphs: false } as const
 

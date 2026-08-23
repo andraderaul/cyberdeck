@@ -12,7 +12,7 @@ Ferramenta client-side que converte uma imagem estática num canvas de arte ASCI
 ## Language
 
 **Charset**:
-O conjunto de símbolos disponíveis para mapear luminosidade de pixel em caractere ASCII. Cada charset tem uma densidade expressiva diferente.
+O conjunto de símbolos disponíveis para mapear luminosidade de pixel em caractere ASCII. Cada charset tem uma densidade expressiva diferente. Doze deles vêm curados na tabela abaixo, mas **um Charset também pode ser autoral** — a definição nunca disse "curado", e o conversor sempre aceitou qualquer string ordenada do mais escuro ao mais claro. Curado e autoral são o mesmo termo, diferindo só em quem escreveu a rampa.
 _Avoid_: Density, density map, symbol set
 
 **Edge Glyph**:
@@ -119,7 +119,9 @@ _Avoid_: provider (genérico), model, LLM
 
 ## Charsets
 
-Cada Charset é uma string de caracteres ordenados do mais escuro (menor luminosidade → `' '`) ao mais claro. O conversor divide 0–255 em `map.length - 1` buckets e indexa a string. A ordem define o gradiente expressivo; o comprimento define a granularidade.
+Cada Charset é uma string de caracteres ordenados do mais escuro (menor luminosidade → `' '`) ao mais claro. O conversor divide 0–255 em `glyphs.length - 1` buckets e indexa a rampa. A ordem define o gradiente expressivo; o comprimento define a granularidade.
+
+A rampa é indexada por **glifo**, não por unidade UTF-16: um caractere fora do BMP ocupa duas unidades, e `.length` com `[i]` entregaria meia surrogate pair — um glifo quebrado que seguiria para o **PNG Export**, o **TXT Export** e o **HTML Export** junto com o preview. `charset.ts` é onde a rampa vira glifos, e é o único lugar que faz essa divisão.
 
 **Gradiente ASCII** — mesma técnica (luminosidade → char imprimível), diferem no contraste e granularidade:
 
@@ -157,6 +159,15 @@ Cada Charset é uma string de caracteres ordenados do mais escuro (menor luminos
 |---|---|
 | **box** | Arte TUI/terminal desde o DOS. Caracteres box-drawing Unicode (─│┼╬) ordenados por densidade de linhas |
 | **binary** | Minimalista — dois estados (`0` e `1`). Produz saída de código/glitch |
+
+### Charset autoral
+
+O usuário escreve a própria rampa na aba EDIT, ao lado dos doze curados, e a conversão acompanha o que ele digita. Não é um segundo conceito: é o mesmo Charset, com a string vindo do usuário em vez da tabela — por isso ele atravessa a pipeline inteira sem que nada abaixo do `ConversionSettings` saiba a diferença, e chega aos três Exports pelo mesmo caminho que o **Edge Glyph** e o **Dithering** já usam (a troca acontece na grade, não na pintura).
+
+Duas regras dão forma ao eixo:
+
+- **Menos de dois glifos não é rampa.** Um glifo é um bucket só, que pinta a imagem chapada; nenhum é uma grade de `undefined`. As duas entradas degeneradas — vazia e de um caractere — são **recusadas com a mensagem que diz o que um Charset precisa**, e o que estava aplicado continua valendo. Nada que a leitura recusa entra em **ConversionSettings**, que é o que impede uma rampa pela metade de virar uma grade quebrada enquanto o usuário ainda está digitando.
+- **O nome curado nunca colide com a rampa autoral.** Um Charset autoral carrega o prefixo `custom:`, então continua sendo um valor único comparável por `===` — `settingsMatch`, os snapshots de **Preset** e o leitor da **Suggestion** seguem inalterados — e os doze nomes continuam literais no tipo. A **Suggestion** só propõe nomes curados: vocabulário desconhecido é recusado, e uma rampa que o Provider inventasse não é vocabulário que este programa tenha como conferir.
 
 ## Flagged ambiguities
 

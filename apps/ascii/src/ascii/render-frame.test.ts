@@ -1,7 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { buildHtmlDocument } from '../export/html-document'
+import { readCustomCharset } from './charset'
 import { renderFrame } from './render-frame'
 import type { RenderInstruction } from './renderer'
-import type { ConversionSettings } from './types'
+import type { ConversionSettings, CustomCharset } from './types'
+
+/** The reader is the only way in, so the authored fixture comes through it. */
+function authored(ramp: string): CustomCharset {
+  const read = readCustomCharset(ramp)
+  if (!read.ok) {
+    throw new Error(`fixture refused: ${read.reason}`)
+  }
+  return read.charset
+}
 
 const SETTINGS: ConversionSettings = {
   resolution: 10,
@@ -106,6 +117,40 @@ describe('renderFrame', () => {
     expect(instructions[0]).toMatchObject({ x: 0, y: 0 })
     expect(instructions[7]).toMatchObject({ x: 7 * 6, y: 0 })
     expect(instructions[8]).toMatchObject({ x: 0, y: 10 })
+  })
+
+  it('carries an authored Charset into every Export, astral glyphs whole', () => {
+    // The stub reports an all-zero (black) grid, so every cell takes the ramp's darkest glyph —
+    // the one a UTF-16 index would hand back as half a surrogate pair. PNG Export is the painted
+    // canvas, so `fillText` is where it is observable; the two text Exports read `onConverted`.
+    canvasEl.width = 200
+    canvasEl.height = 200
+    hiddenCtxMock.getImageData = vi.fn(() => ({
+      data: new Uint8ClampedArray(33 * 20 * 4),
+    })) as unknown as typeof hiddenCtxMock.getImageData
+    const charset = authored('🌑🌕')
+    const onConverted = vi.fn()
+
+    renderFrame(
+      makeCanvas(100, 400),
+      canvasEl,
+      hiddenEl,
+      { ...SETTINGS, charset },
+      'monospace',
+      onConverted,
+    )
+
+    const [rows, instructions] = onConverted.mock.calls[0] as [string[], RenderInstruction[]]
+    expect(rows[0]).toBe('🌑'.repeat(8))
+    expect(new Set(instructions.map((i) => i.char))).toEqual(new Set(['🌑']))
+    expect(ctxMock.fillText).toHaveBeenCalledWith('🌑', expect.any(Number), expect.any(Number))
+
+    const html = buildHtmlDocument(instructions, {
+      charWidth: 6,
+      charHeight: 10,
+      background: '#000',
+    })
+    expect(html).toContain('🌑'.repeat(8))
   })
 
   it('returns true without onConverted when callback is omitted', () => {
