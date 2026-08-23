@@ -1,4 +1,4 @@
-# ADR 0025 — GLITCH — datamosh is its own output path, not a Link and not a mode of Recording
+# ADR 0026 — GLITCH — datamosh is its own output path, not a Link and not a mode of Recording
 
 ## Status
 
@@ -87,11 +87,20 @@ no-op. Missing WebCodecs is *absence*, not failure: the control is not rendered,
   - *Cons:* Recording's contract is a single sentence written into `CONTEXT.md`, `CLAUDE.md`, the
     kit's `use-recording.ts` and its test. A mode makes that sentence conditional and forces all four
     rewrites.
-  - *Rejected because:* It is also false at the implementation level. `MediaRecorder` is the wrong
-    primitive and cannot be made into the right one, so "a mode" would be a second, independent
-    pipeline wearing the first one's control — and Recording lives in `deck-kit`, shared with
-    ASCII//Convert, which has no use for a codec-mangling stage. Rewriting a true boundary into a
-    false one to save a button is a bad trade.
+  - *Rejected because:* **It is false at the implementation level, not merely the wrong ontology** —
+    and that is the stronger half of the argument, so a future reader should find it here rather than
+    reconstruct it. A "mode" implies the two outputs share a pipeline and differ by a flag. They
+    share nothing. `MediaRecorder` gives **no frame-type visibility at all**: it hands back a
+    finished container and never tells you which frame was a keyframe, let alone lets you drop or
+    repeat one. There is no flag that could be added to it, because the capability datamosh needs is
+    not switched off in `MediaRecorder` — it is absent from the API surface. Datamosh needs
+    WebCodecs, a different encoder, a different decoder and a different muxing story, so the "mode"
+    would in fact be a **second, fully independent pipeline wearing the first one's control** — the
+    worst possible arrangement, since the shared button would advertise a kinship the code does not
+    have and every future change to Recording would have to reason about a stranger. Recording also
+    lives in `deck-kit`, shared with ASCII//Convert, which has no use for a codec-mangling stage.
+    Rewriting a true boundary into a false one to save a button is a bad trade even before the
+    vocabulary cost.
 - **Datamosh on a Source Image (mosh a still against itself, or synthesize frames from it).**
   - *Rejected because:* A still has no frames and no motion vectors; anything produced is invented.
     That is the pixel imitation again, one layer out. Absence is the honest answer.
