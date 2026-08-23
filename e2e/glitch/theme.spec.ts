@@ -1,6 +1,5 @@
-// ASCII//Convert's half of the pre-paint Theme guard. The assertions live in `support/pre-paint.ts`,
-// which explains what they are for — four workspaces ship a hand-inlined copy of the same script and
-// the check is the same shape in all four.
+// GLITCH//Studio's half of the pre-paint Theme guard. The assertions live in
+// `support/pre-paint.ts` — four workspaces ship a hand-inlined copy of the same script.
 
 import { test } from '@playwright/test'
 import {

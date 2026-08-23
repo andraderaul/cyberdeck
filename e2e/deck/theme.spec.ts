@@ -1,6 +1,6 @@
-// ASCII//Convert's half of the pre-paint Theme guard. The assertions live in `support/pre-paint.ts`,
-// which explains what they are for — four workspaces ship a hand-inlined copy of the same script and
-// the check is the same shape in all four.
+// The hub's half of the pre-paint Theme guard. It is not a program (ADR 0025), but it is a themed
+// workspace with a Theme control of its own, so it carries the same hand-inlined script and the same
+// way of getting it wrong. The assertions live in `support/pre-paint.ts`.
 
 import { test } from '@playwright/test'
 import {

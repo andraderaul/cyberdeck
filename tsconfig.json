@@ -1,0 +1,36 @@
+// The e2e suite's project, and the only thing at the repo root TypeScript compiles.
+//
+// `npm run typecheck` fans out over workspaces, and the root is not one — so for as long as the
+// harness was three files, the specs Playwright transpiles were checked by nothing but Biome
+// (#317 left that deliberately and asked for it to be revisited here). At fifteen files across five
+// workspaces, with specs importing app source across the tree — `apps/deck/src/roster.ts`,
+// `apps/ascii/src/export/html-document.ts` — a rename in an app now breaks a spec that nothing
+// reads until CI has built five apps and started a browser. That is the wrong place to find out.
+//
+// The cost is one config and one more command in an existing script: no new dependency, no build
+// step, no project references, nothing an app has to know about. The light-tooling stance (ADR 0011)
+// is about not adding a build system, and this adds none.
+//
+// It is `tsconfig.json` rather than `tsconfig.e2e.json` so that a bare `tsc` and an editor opening
+// `e2e/` both find it without being told.
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    // DOM as well as ES2023: half of a spec runs inside `page.evaluate`, where `document` and
+    // `getComputedStyle` are the browser's, not Node's.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    // The specs reach into app source, and `html-export.spec.ts` renders a document from it.
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["e2e", "playwright.config.ts"]
+}
