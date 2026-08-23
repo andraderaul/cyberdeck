@@ -28,8 +28,9 @@
     <!--
       The one link on the deck that is meant to be shared *as* the deck — the four programs each
       have their own artifact to send, and this is the thing you send when you mean all of them.
-      The absolute URLs assume the Vercel project is `cyberdeck-hub`; if it is created under another
-      name, these four are what has to follow it.
+      The three absolute URLs below are pinned to the hub's Vercel project, `cyberdeck-deck`. They
+      have to be absolute — a card addressed relatively does not render at all — so a project
+      renamed anywhere but here breaks every preview silently, with a card that still builds.
     -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="CYBERDECK" />
@@ -38,8 +39,8 @@
       property="og:description"
       content="Four client-side programs: ASCII//Convert, GLITCH//Studio, GOLEM//Console and SPRAWL//Atlas. Nothing you open uploads anything — there is no server behind any of it."
     />
-    <meta property="og:url" content="https://cyberdeck-hub.vercel.app/" />
-    <meta property="og:image" content="https://cyberdeck-hub.vercel.app/og-card.png" />
+    <meta property="og:url" content="https://cyberdeck-deck.vercel.app/" />
+    <meta property="og:image" content="https://cyberdeck-deck.vercel.app/og-card.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -54,7 +55,7 @@
       name="twitter:description"
       content="Four client-side programs: ASCII//Convert, GLITCH//Studio, GOLEM//Console and SPRAWL//Atlas. Nothing you open uploads anything — there is no server behind any of it."
     />
-    <meta name="twitter:image" content="https://cyberdeck-hub.vercel.app/og-card.png" />
+    <meta name="twitter:image" content="https://cyberdeck-deck.vercel.app/og-card.png" />
     <meta
       name="twitter:image:alt"
       content="CYBERDECK: the deck's four programs listed by name on a near-black field — ASCII//Convert, GLITCH//Studio and GOLEM//Console marked as tools, SPRAWL//Atlas as a piece."

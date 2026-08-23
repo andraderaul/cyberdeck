@@ -72,9 +72,9 @@ this deck's answer to accepted duplication: a guard, not a comment.
 
 Regenerate with `npm run social:assets -- deck` from the root. Every PNG is committed.
 
-The `og:url` and `og:image` in `index.html` are absolute and assume the Vercel project is
-`cyberdeck-hub`. If it is created under a different name, those two are what has to follow it — a
-card served from the wrong origin does not render at all.
+The `og:url`, `og:image` and `twitter:image` in `index.html` are absolute and pinned to the hub's
+Vercel project, `cyberdeck-deck`. Renaming that project means editing those three — a card served
+from the wrong origin does not render at all, and nothing in the build objects.
 
 ## Adding a program to the door
 
