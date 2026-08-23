@@ -11,6 +11,7 @@ import {
 import type { ChainActions } from '../glitch/editor-state'
 import { EFFECT_ORDER } from '../glitch/presets'
 import {
+  CHANNEL_NAMES,
   CHANNEL_SHIFT_AMOUNT_RANGE,
   type ChannelName,
   DEFAULT_BLOCK_DISPLACEMENT,
@@ -22,11 +23,13 @@ import {
   DEFAULT_SCANLINES,
   DEFAULT_WAVE,
   HALFTONE_CELL_SIZE_RANGE,
-  type HalftoneTint,
-  type NoiseTint,
+  HALFTONE_TINTS,
+  NOISE_TINTS,
   PIXEL_SORT_RUN_LENGTH_RANGE,
   SCANLINES_DENSITY_STEP,
+  SORT_DIRECTIONS,
   type SortDirection,
+  WAVE_AXES,
   WAVE_WAVELENGTH_RANGE,
   type WaveAxis,
 } from '../glitch/types'
@@ -50,17 +53,9 @@ const PANEL_MIN_HEIGHT = 'min-h-[240px] sm:min-h-[92px]'
  */
 const UNIT_RANGE = { min: 0, max: 1 } as const
 
-const CHANNELS: readonly ChannelName[] = ['r', 'g', 'b']
-
-const NOISE_TINTS: readonly NoiseTint[] = ['mono', 'color']
-
-// Its own list, though it reads the same as NOISE_TINTS: the two tints are different choices about
-// different Effects, and collapsing them would tie Halftone's options to Noise's.
-const HALFTONE_TINTS: readonly HalftoneTint[] = ['mono', 'color']
-
+// The option tuples come from the core beside the params they belong to (types.ts), so this panel
+// and the Chain JSON codec can never offer different sets of the same choice.
 const CHANNEL_LABELS: Record<ChannelName, string> = { r: 'red', g: 'green', b: 'blue' }
-
-const SORT_DIRECTIONS: readonly SortDirection[] = ['horizontal', 'vertical']
 
 const SORT_DIRECTION_LABELS: Record<SortDirection, string> = {
   horizontal: 'horiz',
@@ -70,8 +65,6 @@ const SORT_DIRECTION_LABELS: Record<SortDirection, string> = {
 // Its own list and its own labels, for the reason HALFTONE_TINTS has its own: Pixel Sort's axis is
 // the line it walks and Wave's is the way the pixels travel, so sharing one would tie two unrelated
 // choices together.
-const WAVE_AXES: readonly WaveAxis[] = ['horizontal', 'vertical']
-
 const WAVE_AXIS_LABELS: Record<WaveAxis, string> = {
   horizontal: 'horiz',
   vertical: 'vert',
@@ -226,7 +219,7 @@ function LinkControls({ link, onChange }: LinkProps) {
         <>
           <ToggleGroup
             ariaLabel="channel"
-            options={CHANNELS}
+            options={CHANNEL_NAMES}
             value={params.channel}
             labels={CHANNEL_LABELS}
             fullWidth

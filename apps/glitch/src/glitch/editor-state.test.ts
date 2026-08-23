@@ -55,6 +55,35 @@ describe('RANDOMIZE', () => {
   })
 })
 
+describe('IMPORT_CHAIN', () => {
+  it('takes the brought look, clears provenance and draws a fresh arrangement', () => {
+    const brought = PRESETS[3].chain
+    const state = editorReducer(openedEditor(), {
+      type: 'IMPORT_CHAIN',
+      chain: brought,
+      seed: FRESH_SEED,
+    })
+
+    expect(state.chain).toBe(brought)
+    // A look the user brought is nobody's edit of one of the six — the same call RANDOMIZE makes.
+    expect(state.activePresetId).toBeNull()
+    expect(state.seed).toBe(FRESH_SEED)
+  })
+
+  // Even where the imported look happens to *be* one of the six: the file said nothing about
+  // provenance, and inferring it would claim the user is standing somewhere they never went.
+  it('clears provenance even when the brought look matches a Preset', () => {
+    const state = editorReducer(openedEditor(), {
+      type: 'IMPORT_CHAIN',
+      chain: DEFAULT_PRESET.chain,
+      seed: FRESH_SEED,
+    })
+
+    expect(state.activePresetId).toBeNull()
+    expect(isPresetModified(state)).toBe(false)
+  })
+})
+
 describe('REROLL', () => {
   it('moves the arrangement alone — look and provenance stay put', () => {
     const before = openedEditor()

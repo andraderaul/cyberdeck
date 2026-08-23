@@ -83,6 +83,18 @@ porta de entrada do app; os sliders ficam no modo avançado.
 _Avoid_: filtro, look (como termo de domínio — "look" descreve o que um Preset é, mas o
 termo canônico é Preset)
 
+**Chain JSON**:
+A Chain escrita como arquivo — **o look saindo do app e voltando**, o "Preset do usuário".
+Carrega **só a Chain**: nada de Seed (importar sorteia um arranjo novo, exatamente como aplicar um
+Preset) e nada de `id` (encanamento de UI, que o `chainMatch` já ignora pelo mesmo motivo).
+Importar **apaga a procedência** — é um look que o usuário trouxe, não um dos seis editado. É o
+único caminho pelo qual **variedade estrutural** (quais Links, quantos, em que ordem) entra no app
+vinda de fora, já que o Randomize nunca inventa estrutura e até aqui só os seis Presets podiam
+carregá-la. O arquivo não é confiável: Effect desconhecido, param fora da faixa, JSON quebrado ou
+Chain acima do `MAX_CHAIN_LENGTH` são **recusados** — nunca clampados — com uma mensagem dizendo o
+que está errado, num toast (ADR 0006).
+_Avoid_: preset file, save, projeto, config
+
 **Randomize**:
 O ato de descobrir um look novo sorteando um Preset como base e perturbando seus params
 dentro de faixas curadas ("preset + jitter"). Só os números mudam: a **estrutura da Chain**
@@ -95,9 +107,10 @@ _Avoid_: shuffle, aleatorizar (mecanismo, não intenção)
 O estado que uma sessão de edição segura: o **look** (a Chain), o **arranjo** (o Seed) e a
 **procedência** — de qual Preset o look partiu, se algum, e se já foi editado desde então
 ("modified"). As transições andam juntas e são a regra do produto: aplicar um Preset troca o
-look e sorteia um arranjo novo; Randomize descobre um look e apaga a procedência; Re-roll troca
-só o arranjo; editar a Chain preserva a procedência — o look editado ainda pertence ao Preset de
-onde partiu, marcado modificado, nunca desmarcado.
+look e sorteia um arranjo novo; Randomize descobre um look e apaga a procedência; importar uma
+**Chain JSON** traz um look de fora e apaga a procedência pelo mesmo motivo, sorteando um arranjo
+novo como o Preset faz; Re-roll troca só o arranjo; editar a Chain preserva a procedência — o look
+editado ainda pertence ao Preset de onde partiu, marcado modificado, nunca desmarcado.
 _Avoid_: session, workspace, app state
 
 ## Effects
@@ -121,11 +134,16 @@ O resultado sai do app por quatro caminhos, todos reuso dos padrões do ASCII//C
 vídeo via `canvas.captureStream()` + `MediaRecorder`). Recording grava o canvas de saída —
 **não é datamosh** (manipulação de codec/frames), que fica para o v2.
 
+Esses quatro tiram **a imagem**. A **Chain JSON** é a quinta saída e a única que não é a imagem:
+tira **o look**, para que uma Chain montada à mão possa ser guardada e compartilhada. Export mora
+na aba OUT ao lado dos outros; import mora na aba PRESETS, porque um look trazido se aplica como
+um Preset (ADR 0020).
+
 ## Escopo (v1)
 
 - **Dentro:** imagem estática + Live Source (webcam) em tempo real; a Chain editável de
   Effects — 8 tipos, ordem, presença e repetição nas mãos do usuário (ADR 0017); presets-first
   (6 Presets, um já aplicado na abertura) + Randomize; Seed fixo com Re-roll; PNG Export +
-  Capture + Copy + Recording.
+  Capture + Copy + Recording; export/import da Chain como JSON (**Chain JSON**).
 - **Fora (v2+):** datamosh real; glitch animado
   (Seed avançando por frame na webcam).

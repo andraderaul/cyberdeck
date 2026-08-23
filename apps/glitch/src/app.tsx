@@ -13,8 +13,17 @@ import { useWebcamState } from './hooks/use-webcam-state'
 export default function App() {
   // The look, the arrangement and the provenance live behind the Editor's one interface
   // (editor-state.ts) — App is a caller of its transitions, not the owner of their rules.
-  const { chain, seed, activePresetId, isModified, selectPreset, randomize, reroll, chainActions } =
-    useEditorState()
+  const {
+    chain,
+    seed,
+    activePresetId,
+    isModified,
+    selectPreset,
+    randomize,
+    importChain,
+    reroll,
+    chainActions,
+  } = useEditorState()
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
   // The Live Source lives beside the Source Image rather than in one `source` slot: the two are
   // rendered on different clocks — an image once per change, a webcam on the rAF loop — and each
@@ -153,6 +162,7 @@ export default function App() {
           isModified={isModified}
           onSelect={selectPreset}
           onRandomize={randomize}
+          onImport={importChain}
           actions={chainActions}
           onReroll={reroll}
         />

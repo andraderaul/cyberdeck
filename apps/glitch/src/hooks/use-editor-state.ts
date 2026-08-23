@@ -3,6 +3,7 @@
 // app.test.tsx, and testing past it would be testing past the module's interface.
 
 import { useCallback, useMemo, useReducer } from 'react'
+import type { Chain } from '../glitch/chain'
 import {
   type ChainActions,
   editorReducer,
@@ -32,6 +33,12 @@ export function useEditorState() {
     dispatch({ type: 'RANDOMIZE', chain: randomizeChain(Math.random), seed: createSeed() })
   }, [])
 
+  // Takes a Chain, never a file: reading and validating the file is the shell's half, and by the
+  // time it reaches here the look has already been proven importable (chain-codec.ts).
+  const importChain = useCallback((chain: Chain) => {
+    dispatch({ type: 'IMPORT_CHAIN', chain, seed: createSeed() })
+  }, [])
+
   const reroll = useCallback(() => {
     dispatch({ type: 'REROLL', seed: createSeed() })
   }, [])
@@ -54,6 +61,7 @@ export function useEditorState() {
     isModified: isPresetModified(state),
     selectPreset,
     randomize,
+    importChain,
     reroll,
     chainActions,
   }

@@ -39,6 +39,7 @@ export interface EditorState {
 export type EditorAction =
   | { type: 'SELECT_PRESET'; preset: Preset; seed: Seed }
   | { type: 'RANDOMIZE'; chain: Chain; seed: Seed }
+  | { type: 'IMPORT_CHAIN'; chain: Chain; seed: Seed }
   | { type: 'REROLL'; seed: Seed }
   | { type: 'PATCH_LINK'; id: string; params: Link['params'] }
   | { type: 'MOVE_LINK'; from: number; to: number }
@@ -79,6 +80,8 @@ export function initialEditorState(seed: Seed): EditorState {
  *   arrangement — everyone shares the look, nobody gets handed the byte-identical image.
  * - RANDOMIZE clears provenance rather than marking its base modified: a jittered look is one
  *   the user discovered, not an edit they made to the Preset it happened to start from.
+ * - IMPORT_CHAIN clears provenance for the same reason, and draws its own arrangement as
+ *   SELECT_PRESET does — the file is a look, and a look never carries an arrangement.
  * - REROLL leaves the active Preset alone: a new arrangement is not a customisation.
  * - The five Chain edits move the look alone. An edited look still belongs to the Preset it
  *   started from — `isPresetModified` is what marks it, never a deselection — so none of these
@@ -94,6 +97,11 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       // which Links, how many, in what order, all untouched — is `randomizeChain`'s to keep
       // (presets.ts, pinned by presets.test.ts). Nothing here can enforce it: this case takes
       // any Chain. A reader tracing why Randomize never invents structure goes there, not here.
+      return { chain: action.chain, activePresetId: null, seed: action.seed }
+    case 'IMPORT_CHAIN':
+      // The same shape as RANDOMIZE, and for the same reason: an imported look is one the user
+      // brought, not one of the six edited away from, so there is no provenance to keep. The fresh
+      // Seed is the Preset rule too — a file carries the look, never the arrangement (ADR 0017).
       return { chain: action.chain, activePresetId: null, seed: action.seed }
     case 'REROLL':
       return { ...state, seed: action.seed }

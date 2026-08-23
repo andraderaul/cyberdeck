@@ -11,11 +11,14 @@ layout, the deck-wide comment convention, and the release ritual. Paths below ar
 Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80), Block Displacement with
 Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced panel (#84), Recording
 (#85) and Presets + Randomize (#86), plus Chromatic Aberration (#116) and the composable Effect
-Chain (ADR 0017, #125–#128), plus Halftone (#309) and Wave (#310). All eight Effects are live —
-Source Image *or* Live Source → the Chain → PNG Export / Capture / Copy / Recording — the pure-core
-/ imperative-shell seam is established, and the render is deterministic in Chain + Seed. The front
+Chain (ADR 0017, #125–#128), plus Halftone (#309), Wave (#310) and the Chain as a file (#312). All
+eight Effects are live — Source Image *or* Live Source → the Chain → PNG Export / Capture / Copy /
+Recording — the pure-core / imperative-shell seam is established, and the render is deterministic in
+Chain + Seed. The front
 door is the six Presets plus Randomize; behind the EDIT tab the Chain is fully editable — reorder,
-add, remove, duplicate, the same Effect more than once. The v1 scope in `CONTEXT.md` is complete.
+add, remove, duplicate, the same Effect more than once. A Chain built by hand exports as JSON and
+comes back (**Chain JSON**, `CONTEXT.md`), which is the only way structural variety reaches the app
+from outside the six. The v1 scope in `CONTEXT.md` is complete.
 
 The Preset **values** are taste, not derivation: they are the one thing here a human curates, and
 re-curating a number in `presets.ts` is a design change, not a bug fix.
@@ -84,6 +87,9 @@ Three behaviours hang together, and all of them come from the Seed sitting *outs
   `activePresetId` rather than deriving it, because a look alone can't say which Preset it was
   edited away from, and `isPresetModified()` (editor-state.ts) is the one place `(modified)` is
   derived; the picker only renders the answer.
+- **A brought Chain is nobody's Preset.** Importing a Chain JSON clears `activePresetId` the same
+  way Randomize does, and draws a fresh Seed the same way applying a Preset does — the file is a
+  look, and a look never carries an arrangement or a provenance.
 - **Randomize is preset + jitter** (`randomizeChain`): pick a Preset, perturb its numbers within
   spreads curated well inside the sliders' ranges. Starting from a known-good point is what
   guarantees "always pretty". **The Chain's structure rides through untouched** — which Links, how
@@ -156,13 +162,15 @@ whatever the Source's height. Here the sampled buffer *is* what `applyChain` wal
 
 ### Error handling
 
-Operational errors (Export, Copy, Recording) use the `AppError` plain-object shape
+Operational errors (Export, Copy, Recording, Chain import) use the `AppError` plain-object shape
 (`type`, `message`, `cause?`) from `@cyberdeck/deck-kit/errors`, surfaced via the kit's toast
 system (`useToastError` / `useToastInfo`) — the operational-error *mechanism* crossed the seam in
 ADR 0014; this app keeps only its own `Errors` factories (`src/errors/app-error.ts`). The
 typed-error-class half of ADR 0006 has no counterpart here; this app has no AI surface.
 Image-load failures surface through the kit's image loading `onError` callback straight to the
-same toast.
+same toast. `chainImportFailed` is the one factory that takes an argument: what is wrong with a
+Chain file is a property of the file, so the codec words the reason (`chain-codec.ts` never throws)
+and the factory supplies the app's half of the sentence.
 
 ### Domain language (from CONTEXT.md)
 
@@ -183,6 +191,7 @@ Use these terms precisely — avoid the listed alternatives:
 | **Capture** | One frame of a Live Source taken out as PNG | screenshot, snapshot |
 | **Copy** | The result written to the clipboard as a PNG | copy to clipboard, paste |
 | **Recording** | The glitched Live Source taken out as a video, via MediaRecorder | video export, screen record |
+| **Chain JSON** | The Chain written as a file — the look out and back, the user's own Preset. No Seed, no `id` | preset file, save, project |
 
 Every term now has code behind it. The Seed landed with Block
 Displacement: `createSeed()` is the single place the app draws real randomness, and everything
@@ -224,21 +233,31 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 ## Key files
 
 **Glitch core**
-- `src/glitch/types.ts` — `PixelBuffer`, `Seed`, `ChannelName`,
-  `ChannelShiftParams`, `SortDirection`, `PixelSortParams`, `DEFAULT_PIXEL_SORT`, `ScanlinesParams`,
+- `src/glitch/types.ts` — `PixelBuffer`, `Seed`, `CHANNEL_NAMES` / `ChannelName`,
+  `ChannelShiftParams`, `SORT_DIRECTIONS` / `SortDirection`, `PixelSortParams`, `DEFAULT_PIXEL_SORT`, `ScanlinesParams`,
   `DEFAULT_SCANLINES`, `SPARSEST_SCANLINE_PERIOD`, `TIGHTEST_SCANLINE_PERIOD`,
-  `SCANLINES_DENSITY_STEP`, `NoiseParams`, `NoiseTint`, `DEFAULT_NOISE`, `MAX_NOISE_DELTA`,
+  `SCANLINES_DENSITY_STEP`, `NoiseParams`, `NOISE_TINTS` / `NoiseTint`, `DEFAULT_NOISE`,
+  `MAX_NOISE_DELTA`,
   `BlockDisplacementParams`, `DEFAULT_BLOCK_DISPLACEMENT`, `MAX_DISPLACEMENT_BLOCKS`,
   `MAX_BLOCK_SHIFT_RATIO`, `MAX_BLOCK_HEIGHT_RATIO`, `MIN_BLOCK_WIDTH_RATIO`,
   `ChromaticAberrationParams`, `DEFAULT_CHROMATIC_ABERRATION`,
   `MAX_CHROMATIC_ABERRATION_MAGNIFICATION`,
+<<<<<<< HEAD
   `HalftoneParams`, `HalftoneTint`, `DEFAULT_HALFTONE`, `HALFTONE_MAX_DOT_RADIUS_RATIO`,
-  `WaveParams`, `WaveAxis`, `DEFAULT_WAVE`, `MAX_WAVE_AMPLITUDE_RATIO`,
+  `WaveParams`, `WAVE_AXES` / `WaveAxis`, `DEFAULT_WAVE`, `MAX_WAVE_AMPLITUDE_RATIO`,
+=======
+  `HalftoneParams`, `HALFTONE_TINTS` / `HalftoneTint`, `DEFAULT_HALFTONE`,
+  `HALFTONE_MAX_DOT_RADIUS_RATIO`,
+>>>>>>> 18cdbd1 (refactor(glitch): derive each choice union from the tuple that lists it)
   `DEFAULT_CHANNEL_SHIFT`,
   `CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE`, `HALFTONE_CELL_SIZE_RANGE`,
   `WAVE_WAVELENGTH_RANGE` (the
   params with no natural 0..1 bound — in the core so the sliders and Randomize's clamp share one
-  source of truth)
+  source of truth). **Every choice param declares its tuple first and derives the union from it**
+  (`export const NOISE_TINTS = [...] as const; export type NoiseTint = (typeof NOISE_TINTS)[number]`):
+  a list written the other way round type-checks for validity but never for completeness, so a value
+  added to a union would compile everywhere while going missing from the toggle that offers it and
+  from the Chain JSON that has to read it back
 - `src/glitch/presets.ts` — `PRESETS` (the six curated Chains), `DEFAULT_PRESET` (applied on open),
   `Preset`, `chainMatch()` (total and order-sensitive), `randomizeChain()` (preset + jitter,
   injected randomness, structure rides through), `EFFECT_ORDER` (the palette's order)
@@ -254,6 +273,14 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   `createLink()`, and the pure editing helpers `addLink()` / `removeLink()` / `duplicateLink()` /
   `moveLink()` plus `MAX_CHAIN_LENGTH`. Depends on `pipeline.ts` one-way: the Effects don't know
   the Chain exists
+- `src/glitch/chain-codec.ts` — the Chain as a file (**Chain JSON**, `CONTEXT.md`): `encodeChain()`,
+  `decodeChain()`, `CHAIN_FILE_FORMAT`, `CHAIN_FILE_VERSION`, `ChainDecodeResult`. Pure both ways and
+  never throws — a bad file comes back as a reason the shell words for a toast. `PARAM_DECODERS` is a
+  map over `EffectType`, the same shape as `EFFECT_REGISTRY`, so a newly registered Effect fails to
+  compile here rather than falling silently out of the format. The choice params are covered one
+  layer down by the tuples in `types.ts` — the codec enumerates the same tuple the toggle does, so
+  a value added to a choice can't be offered by the control and refused by the format. Out-of-range params are **rejected,
+  never clamped**
 - `src/glitch/rng.ts` — `createRng()` (pure, Seed → draw stream), `deriveSeed()` (the per-Link occurrence
   sub-seed — ADR 0017), `createSeed()` (impure — the app's only real randomness), `Rng`
 - `src/glitch/editor-state.ts` — the Editor (CONTEXT.md): `EditorState` (Chain + Seed +
@@ -293,7 +320,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   that says which panel each tab carries. Only the active panel is mounted, so one tab's controls
   are in the accessibility tree at a time
 - `src/components/preset-picker.tsx` — the PRESETS panel: the six Preset chips in a horizontally
-  scrollable row (active one highlighted, `(modified)` once edited) and Randomize beside them
+  scrollable row (active one highlighted, `(modified)` once edited), with Randomize and import chain
+  beside them — import lives here because a brought look is applied exactly as one of the six is
 - `src/components/chain-editor.tsx` — the Strip's EDIT tab: the Chain as a row of Link chips
   left→right in processing order, each chip both the selection control and the drag handle (drag, or
   left/right arrows when focused). The focused Link's params fill the panel above the row —
@@ -302,12 +330,14 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   slot with the params, and Re-roll sits outside the row (its own callback — the Seed is not part of
   the look)
 
+- `src/components/import-chain-button.tsx` — the PRESETS panel's import control: the impure half of
+  importing (reading the file, wording the refusal). What a Chain file *is* stays in `chain-codec.ts`
 - `src/components/icon-label-button.tsx` — the Strip control that drops to its glyph alone below
-  `sm` and takes its label back from `sm` up, naming itself by the label at both sizes. Randomize
-  and Re-roll are its two callers; it stayed in the app rather than crossing into the kit, since
+  `sm` and takes its label back from `sm` up, naming itself by the label at both sizes. Randomize,
+  Re-roll, import chain and export chain are its callers; it stayed in the app rather than crossing into the kit, since
   the collapse breakpoint is this Strip's width problem
-- `src/components/output-panel.tsx` — the Strip's OUT tab: PNG Export / Capture / Copy and the
-  Record *start*. Stopping is deliberately absent — a take runs while the user keeps working in
+- `src/components/output-panel.tsx` — the Strip's OUT tab: PNG Export / Capture / Copy, the Chain
+  export (the one output here that is the look rather than the picture) and the Record *start*. Stopping is deliberately absent — a take runs while the user keeps working in
   PRESETS and EDIT, so its stop is the canvas REC badge (ADR 0020)
 
 **Testing**

@@ -32,6 +32,7 @@ interface Props {
   isModified: boolean
   onSelect: (preset: Preset) => void
   onRandomize: () => void
+  onImport: (chain: Chain) => void
   actions: ChainActions
   onReroll: () => void
 }
@@ -55,6 +56,7 @@ export default function ControlStrip({
   isModified,
   onSelect,
   onRandomize,
+  onImport,
   actions,
   onReroll,
 }: Props) {
@@ -68,6 +70,7 @@ export default function ControlStrip({
               isModified={isModified}
               onSelect={onSelect}
               onRandomize={onRandomize}
+              onImport={onImport}
             />
           )}
           {activeTab === 'edit' && (
@@ -76,6 +79,7 @@ export default function ControlStrip({
           {activeTab === 'out' && (
             <OutputPanel
               canvasRef={canvasRef}
+              chain={chain}
               isLive={isLive}
               canRecord={canRecord}
               isRecording={isRecording}
