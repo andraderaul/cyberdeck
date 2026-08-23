@@ -45,6 +45,12 @@ export function renderGlitchFrame(
 
   hiddenEl.width = w
   hiddenEl.height = h
+  // drawImage composites source-over, so a Source with an alpha channel would blend onto whatever
+  // this canvas still holds — sampled pixels that depend on how many renders came before, with
+  // applyChain still perfectly pure. The resize above is not the clear: assigning the width a
+  // value it already has is a no-op, which is every frame of a Live Source. See ADR 0001 for why
+  // clearRect and not a 'copy' composite or a resize.
+  hiddenCtx.clearRect(0, 0, w, h)
   if (isMirrored) {
     hiddenCtx.save()
     hiddenCtx.translate(w, 0)
