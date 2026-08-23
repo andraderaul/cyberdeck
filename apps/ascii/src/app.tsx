@@ -29,6 +29,7 @@ const DEFAULT_SETTINGS: ConversionSettings = {
   contrast: 1.0,
   colorMode: 'matrix',
   charset: 'sharp',
+  edgeGlyphs: false,
 }
 
 export default function App() {

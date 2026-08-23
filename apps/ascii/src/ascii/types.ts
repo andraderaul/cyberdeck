@@ -32,6 +32,8 @@ export interface ConversionSettings {
   contrast: number
   colorMode: ColorMode
   charset: Charset
+  /** The Edge Glyph axis. Off is the deck's shipped look, so it stays the default everywhere. */
+  edgeGlyphs: boolean
 }
 
 export const CHARSET_MAPS: Record<Charset, string> = {

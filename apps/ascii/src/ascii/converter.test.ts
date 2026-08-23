@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { convertImage, getAsciiChar } from './converter'
+import type { AsciiCell } from './types'
 import { CHARSET_MAPS } from './types'
 
 // Minimal 2D-context stub: reports every pixel as opaque white so that any cell
@@ -9,6 +10,30 @@ function whiteCtx(cols: number, rows: number) {
     drawImage: vi.fn(),
     getImageData: vi.fn(() => ({ data: new Uint8ClampedArray(cols * rows * 4).fill(255) })),
   } as unknown as CanvasRenderingContext2D
+}
+
+// A synthetic Source painted straight into the sampled grid: `grey(col, row)` is the level the
+// cell reads. Lets a test state an edge exactly — a hard line, a diagonal, a gentle ramp.
+function greyCtx(cols: number, rows: number, grey: (col: number, row: number) => number) {
+  const data = new Uint8ClampedArray(cols * rows * 4)
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const i = (row * cols + col) * 4
+      const level = grey(col, row)
+      data[i] = level
+      data[i + 1] = level
+      data[i + 2] = level
+      data[i + 3] = 255
+    }
+  }
+  return {
+    drawImage: vi.fn(),
+    getImageData: vi.fn(() => ({ data })),
+  } as unknown as CanvasRenderingContext2D
+}
+
+function charRows(cells: AsciiCell[][]): string[] {
+  return cells.map((row) => row.map((cell) => cell.char).join(''))
 }
 
 describe('getAsciiChar', () => {
@@ -124,5 +149,95 @@ describe('convertImage mirror', () => {
     convertImage(ctx, img, 6, 4, options, region, true)
 
     expect(calls).toEqual(['save', 'translate:4', 'scale:-1', 'drawImage', 'restore'])
+  })
+})
+
+describe('convertImage Edge Glyphs', () => {
+  const img = {} as CanvasImageSource
+  const options = { brightness: 1, contrast: 1, charset: 'classic' } as const
+
+  it('marks a hard vertical contour with the vertical stroke', () => {
+    const ctx = greyCtx(7, 7, (col) => (col < 3 ? 0 : 255))
+
+    const cells = convertImage(ctx, img, 7, 7, { ...options, edgeGlyphs: true })
+
+    expect(cells[3][2].char).toBe('|')
+    expect(cells[3][3].char).toBe('|')
+  })
+
+  it('marks a hard horizontal contour with the horizontal stroke', () => {
+    const ctx = greyCtx(7, 7, (_col, row) => (row < 3 ? 0 : 255))
+
+    const cells = convertImage(ctx, img, 7, 7, { ...options, edgeGlyphs: true })
+
+    expect(cells[2][3].char).toBe('-')
+    expect(cells[3][3].char).toBe('-')
+  })
+
+  it('follows a top-left to bottom-right diagonal with the matching stroke', () => {
+    const ctx = greyCtx(7, 7, (col, row) => (col > row ? 255 : 0))
+
+    const cells = convertImage(ctx, img, 7, 7, { ...options, edgeGlyphs: true })
+
+    expect(cells[3][3].char).toBe('\\')
+  })
+
+  it('follows a bottom-left to top-right diagonal with the matching stroke', () => {
+    const ctx = greyCtx(7, 7, (col, row) => (col + row > 6 ? 255 : 0))
+
+    const cells = convertImage(ctx, img, 7, 7, { ...options, edgeGlyphs: true })
+
+    expect(cells[3][3].char).toBe('/')
+  })
+
+  it('leaves a gentle ramp on the luminosity mapping — no contour to spend shape on', () => {
+    const ramp = (col: number) => col * 8
+
+    const cells = convertImage(greyCtx(8, 8, ramp), img, 8, 8, { ...options, edgeGlyphs: true })
+
+    expect(charRows(cells)).toEqual(charRows(convertImage(greyCtx(8, 8, ramp), img, 8, 8, options)))
+  })
+
+  it('keeps flat interiors on the luminosity mapping while contours take a stroke', () => {
+    const ctx = greyCtx(9, 9, (col, row) =>
+      col >= 3 && col <= 5 && row >= 3 && row <= 5 ? 255 : 0,
+    )
+
+    const cells = convertImage(ctx, img, 9, 9, { ...options, edgeGlyphs: true })
+
+    // The block's middle sees no gradient at all, so it keeps the Charset's brightest glyph.
+    expect(cells[4][4].char).toBe(getAsciiChar(255, 'classic'))
+    expect(cells[4][2].char).toBe('|')
+    expect(cells[2][4].char).toBe('-')
+  })
+
+  it('never reads across the fit region, so the letterbox band is not a contour', () => {
+    const region = { offsetX: 2, offsetY: 0, dCols: 5, dRows: 7 }
+    const ctx = greyCtx(9, 7, () => 255)
+
+    const cells = convertImage(ctx, img, 9, 7, { ...options, edgeGlyphs: true }, region)
+
+    expect(cells[3][2].char).toBe(getAsciiChar(255, 'classic'))
+    expect(cells[3][6].char).toBe(getAsciiChar(255, 'classic'))
+  })
+})
+
+describe('convertImage default output', () => {
+  const img = {} as CanvasImageSource
+  const options = { brightness: 1, contrast: 1, charset: 'classic' } as const
+  const noise = (col: number, row: number) => (col * 37 + row * 91) % 256
+
+  // Pinned from the conversion as it stood before Edge Glyphs existed: the second axis is opt-in,
+  // so every ConversionSettings that predates it must land on exactly these characters.
+  it('is unchanged with the Edge Glyphs axis at its default', () => {
+    const cells = convertImage(greyCtx(8, 5, noise), img, 8, 5, options)
+
+    expect(charRows(cells)).toEqual([' .:-+*# ', '-=+#% :-', '*# .:-+*', ' .-=+#% ', '-+*# .:-'])
+  })
+
+  it('reads an explicit off the same as the default', () => {
+    const off = convertImage(greyCtx(8, 5, noise), img, 8, 5, { ...options, edgeGlyphs: false })
+
+    expect(charRows(off)).toEqual(charRows(convertImage(greyCtx(8, 5, noise), img, 8, 5, options)))
   })
 })

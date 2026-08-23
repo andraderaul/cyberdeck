@@ -15,6 +15,10 @@ Ferramenta client-side que converte uma imagem estática num canvas de arte ASCI
 O conjunto de símbolos disponíveis para mapear luminosidade de pixel em caractere ASCII. Cada charset tem uma densidade expressiva diferente.
 _Avoid_: Density, density map, symbol set
 
+**Edge Glyph**:
+O caractere direcional (`|` `/` `-` `\`) que uma **AsciiCell** assume quando o gradiente local é forte o bastante para valer como contorno. É o segundo eixo do conversor: o **Charset** mapeia luminosidade, o Edge Glyph mapeia *forma* — a orientação da borda, medida por Sobel sobre a grade já amostrada, escolhe o traço. Abaixo do limiar de magnitude nada muda e a célula fica com o glifo de luminosidade, então o eixo é opt-in e desligado por padrão. É a mesma porta que o katakana espelhado do Matrix não atravessa: o que falta a uma charset string é poder dizer forma.
+_Avoid_: edge detection (é o mecanismo, não o termo), borda, sobel char, ASCII edges
+
 **Source Image**:
 A imagem estática trazida pelo usuário como entrada da conversão. Imutável durante a sessão — o conversor a lê a cada re-render mas nunca a modifica.
 _Avoid_: uploadedImage, imagem carregada, input image
@@ -24,7 +28,7 @@ O ato de levar o resultado para fora do app. Dois formatos: **PNG Export** (snap
 _Avoid_: download (descreve o mecanismo do browser, não a intenção)
 
 **ConversionSettings**:
-O conjunto de parâmetros que governa como a imagem é convertida em ASCII — charset, color mode, resolution, brightness e contrast.
+O conjunto de parâmetros que governa como a imagem é convertida em ASCII — charset, edge glyphs, color mode, resolution, brightness e contrast.
 _Avoid_: AsciiOptions, options, settings (genérico)
 
 **AsciiCell**:
@@ -43,6 +47,7 @@ _Avoid_: fontSize, granularity, granularidade, tamanho de fonte
 
 - Uma **Source Image** é convertida por `convertImage()` em uma grade de **AsciiCell** usando os **ConversionSettings** ativos
 - Cada **AsciiCell** carrega um caractere (determinado pelo **Charset**) e o RGB original do pixel
+- Uma **AsciiCell** cujo gradiente ultrapassa o limiar troca o caractere do **Charset** por um **Edge Glyph** — a troca acontece na grade, não na pintura, então **PNG Export** e **TXT Export** carregam a forma junto com o preview
 - O **AsciiCanvas** renderiza a grade de **AsciiCell** aplicando o **Color Mode**
 - O resultado pode ser exportado como **PNG Export** (canvas com cores) ou **TXT Export** (string ASCII pura)
 

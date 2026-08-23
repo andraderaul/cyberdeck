@@ -8,6 +8,7 @@ const SETTINGS: ConversionSettings = {
   colorMode: 'bw',
   brightness: 1,
   contrast: 1,
+  edgeGlyphs: false,
 }
 
 function makeCanvas(width: number, height: number): HTMLCanvasElement {
@@ -177,6 +178,46 @@ describe('renderFrame', () => {
     const plain = emitted(false)
     const flipped = emitted(true)
     expect(flipped).toEqual(plain.map((line) => [...line].reverse().join('')))
+  })
+
+  // Edge Glyphs land in the AsciiCell grid, so there is one place to prove they reach every
+  // consumer: the rows handed to TXT Export and the characters painted for the preview and the
+  // PNG come out of the same conversion.
+  it('carries Edge Glyphs into both the painted canvas and the TXT rows', () => {
+    canvasEl.width = 200
+    canvasEl.height = 200
+    const cols = 33
+    const rows = 20
+    const half = Math.floor(cols / 2)
+    hiddenCtxMock.getImageData = vi.fn(() => {
+      const data = new Uint8ClampedArray(cols * rows * 4)
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const i = (row * cols + col) * 4
+          const lit = col < half ? 255 : 0
+          data[i] = lit
+          data[i + 1] = lit
+          data[i + 2] = lit
+          data[i + 3] = 255
+        }
+      }
+      return { data }
+    }) as unknown as typeof hiddenCtxMock.getImageData
+
+    const onConverted = vi.fn()
+    // 99x100 matches the grid's pixel aspect, so the contour is the only thing in the grid.
+    renderFrame(
+      makeCanvas(99, 100),
+      canvasEl,
+      hiddenEl,
+      { ...SETTINGS, edgeGlyphs: true },
+      'monospace',
+      onConverted,
+    )
+
+    const emitted = onConverted.mock.calls[0][0] as string[]
+    expect(emitted.every((line) => line[half - 1] === '|' && line[half] === '|')).toBe(true)
+    expect(ctxMock.fillText).toHaveBeenCalledWith('|', expect.any(Number), expect.any(Number))
   })
 
   it('returns false when 2d context is unavailable', () => {

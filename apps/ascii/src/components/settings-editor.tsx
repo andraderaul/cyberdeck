@@ -1,4 +1,4 @@
-import { Chip, Label, Slider, Tooltip } from '@cyberdeck/deck-kit/ui'
+import { Chip, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import { useState } from 'react'
 import { getModePalette } from '../ascii/renderer'
@@ -53,12 +53,23 @@ const SOLID_MODES = COLOR_MODES.filter((m) => !Array.isArray(getModePalette(m)))
 const GRADIENT_MODES = COLOR_MODES.filter((m) => Array.isArray(getModePalette(m)))
 
 /**
+ * Off/on as a two-option ToggleGroup rather than a bare switch: it is the spelling every other
+ * discrete choice on the deck already uses, and it names both states out loud instead of leaving
+ * one to be inferred from a control's appearance.
+ */
+const EDGE_GLYPH_STATES = ['off', 'on'] as const
+
+/**
  * The tools, in the order the EDIT row shows them. GLITCH's row is the Chain itself, which
  * processes left→right; ConversionSettings has no such order, so this one is grouped by what it
  * changes — what the characters *are*, then how they're coloured, then how densely they're sampled.
+ * Edge Glyphs sit next to Charset because they are the same question asked on the other axis: the
+ * Charset says which characters a surface spends, the Edge Glyphs say when a contour stops
+ * spending them.
  */
 const TOOLS = [
   { id: 'charset', label: 'charset' },
+  { id: 'edgeGlyphs', label: 'edges' },
   { id: 'colorMode', label: 'color mode' },
   { id: 'resolution', label: 'resolution' },
   { id: 'brightness', label: 'brightness' },
@@ -145,6 +156,27 @@ export default function SettingsEditor({ settings, onChange }: Props) {
                 </fieldset>
               ))}
             </div>
+          </fieldset>
+        )}
+
+        {focus === 'edgeGlyphs' && (
+          <fieldset
+            className="flex flex-col gap-xs border-none p-0 m-0 min-w-0"
+            aria-describedby="tooltip-edge-glyphs"
+          >
+            <legend className="w-full mb-2xs flex items-center gap-2xs">
+              <Label>edge glyphs</Label>
+              <Tooltip
+                id="tooltip-edge-glyphs"
+                content="strong contours take a directional glyph instead of a brightness one"
+              />
+            </legend>
+            <ToggleGroup
+              ariaLabel="edge glyphs"
+              options={EDGE_GLYPH_STATES}
+              value={settings.edgeGlyphs ? 'on' : 'off'}
+              onChange={(state) => onChange({ edgeGlyphs: state === 'on' })}
+            />
           </fieldset>
         )}
 

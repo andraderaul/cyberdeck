@@ -11,6 +11,7 @@ const SETTINGS: ConversionSettings = {
   colorMode: 'matrix',
   brightness: 1,
   contrast: 1,
+  edgeGlyphs: false,
 }
 
 function Wrapper({
