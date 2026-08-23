@@ -4,7 +4,7 @@
 // together, and what makes the exclusion of SPRAWL//Atlas a decision rather than an omission.
 
 import { describe, expect, it } from 'vitest'
-import { declaredThemes } from './audit'
+import { declaredThemes, resolveTokens } from './audit'
 import { prePaintScripts, readTokensCss } from './sources'
 import { DEFAULT_THEME, THEME_ATTRIBUTE, THEME_STORAGE_KEY, THEMES } from './themes'
 
@@ -51,6 +51,26 @@ describe('the hand-inlined pre-paint scripts agree', () => {
 
     it('sets the attribute the Theme blocks select on', () => {
       expect(source).toContain(THEME_ATTRIBUTE)
+    })
+  })
+})
+
+// The browser's own chrome is the fourth place a colour is written by hand, and the only one with
+// nothing reading it: `<meta name="theme-color">` sits beside the pre-paint script, cannot resolve
+// a `var()`, and goes on painting whatever hex it was given long after the token moved. That is the
+// same silent failure the vocabulary guard exists for, one layer out of the stylesheet.
+//
+// SPRAWL//Atlas is absent here on purpose, and for the same reason it is absent above: it takes no
+// Theme, so its chrome answers to the piece's own field rather than to a token. Its half of this
+// pin lives in `apps/sprawl/scripts/social-card.test.mjs`, against `paint.ts`.
+describe('the browser chrome matches the Theme that paints first', () => {
+  const THEME_COLOR = /<meta name="theme-color" content="([^"]+)" \/>/
+
+  describe.each(prePaintScripts())('$program', ({ source }) => {
+    it('is the default Theme’s page background', () => {
+      const declared = THEME_COLOR.exec(source)?.[1]
+      expect(declared, 'no theme-color in this program’s index.html').toBeDefined()
+      expect(declared).toBe(resolveTokens(readTokensCss(), DEFAULT_THEME)['--bg'])
     })
   })
 })

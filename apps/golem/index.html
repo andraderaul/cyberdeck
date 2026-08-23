@@ -2,9 +2,61 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GOLEM//Console</title>
+    <title>GOLEM//Console — a 32-bit fantasy computer</title>
+    <meta
+      name="description"
+      content="A 32-bit fantasy computer in your browser: write assembly, run it from a command line, watch the registers and Terminal move. Share a program as a link."
+    />
+
+    <!--
+      The program's own mark, in the sizes a tab, an iOS home screen and an install prompt each ask
+      for. Cut from `public/favicon.svg` by `scripts/social-assets.mjs`; the 192/512/maskable set is
+      a complete PWA icon set, which is what #324's manifest will point at.
+    -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <!--
+      `ice`'s --bg, which is what the script below paints on a first visit. A stored Theme moves the
+      page but not the browser chrome; every Theme on the deck is a near-black, so the two never
+      disagree by more than a shade (ADR 0024).
+    -->
+    <meta name="theme-color" content="#0a0a0f" />
+
+    <!--
+      The `share` command compresses a Source into the URL fragment, so a link *is* the artifact
+      here — which is what makes the preview below part of it rather than decoration.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CYBERDECK" />
+    <meta property="og:title" content="GOLEM//Console — a 32-bit fantasy computer" />
+    <meta
+      property="og:description"
+      content="Write assembly, assemble it, and drive the machine from a command line while registers, memory and the Terminal update beside you. Share a program as a link."
+    />
+    <meta property="og:url" content="https://cyberdeck-golem.vercel.app/" />
+    <meta property="og:image" content="https://cyberdeck-golem.vercel.app/og-card.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="GOLEM//CONSOLE: a console session — asm, break, run — beside a live register readout and the machine's Terminal."
+    />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="GOLEM//Console — a 32-bit fantasy computer" />
+    <meta
+      name="twitter:description"
+      content="Write assembly, assemble it, and drive the machine from a command line while registers, memory and the Terminal update beside you. Share a program as a link."
+    />
+    <meta name="twitter:image" content="https://cyberdeck-golem.vercel.app/og-card.png" />
+    <meta
+      name="twitter:image:alt"
+      content="GOLEM//CONSOLE: a console session — asm, break, run — beside a live register readout and the machine's Terminal."
+    />
     <!--
       The Theme, before first paint (ADR 0024). Applying it from the module entry point is cleaner
       and wrong: that script is deferred, so the default palette paints for a frame first. It is
