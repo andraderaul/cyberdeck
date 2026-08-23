@@ -48,13 +48,15 @@ A single-page React/TS/Vite app, and about as thin as one gets.
   vocabulary), tagline, description, live URL. **Not a core.** If it ever grows a function that
   transforms something, that is the third clause about to break.
 - `src/app.tsx` — the page: header with the wordmark and `ThemeControl`, the statement, the grid,
-  the footer.
+  and the kit's `Footer`. The hub passes it no `onAbout`: it has no About modal, because a page
+  whose whole subject is the deck says so on the page rather than behind a control (ADR 0025).
 - `src/components/program-card.tsx` — one entry. The whole card is the `<a>`, and it navigates in
   this tab: sending you into a program is what the door is *for*.
 
-Everything visual comes from `@cyberdeck/deck-kit` — tokens, preset, `ThemeControl`. The kit is the
-hub's only dependency of substance, and the hub is the kit's first caller with no domain at all: if
-something here needs the kit and cannot get it, that is a signal about the kit (ADR 0014, ADR 0025).
+Everything visual comes from `@cyberdeck/deck-kit` — tokens, preset, `ThemeControl`, `Footer`. The
+kit is the hub's only dependency of substance, and the hub is the kit's first caller with no domain
+at all: if something here needs the kit and cannot get it, that is a signal about the kit (ADR 0014,
+ADR 0025).
 
 ## Tailwind
 

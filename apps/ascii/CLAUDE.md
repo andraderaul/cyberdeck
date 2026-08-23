@@ -276,12 +276,13 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   it has no honest waiting state of its own, and an empty frame would be a flash the eager version
   never had
 - `src/components/about-modal.tsx` — About/info modal
-- `src/components/footer.tsx` — empty-state bottom chrome: the attribution links plus the About
-  trigger, hidden once a Source loads. The 44px target sits on each control, not on the bar
 - `src/components/ui/` — the two primitives this program still owns: `badge` and `error-text`, both
   single-caller (`error-text` carries the authored Charset's refusal). `header-button` left in #325: the kit's own `UpdateBanner` became its second caller,
   which is the trigger ADR 0014 wrote for it. Everything else — Button, HeaderButton, Chip, Label,
-  Modal, Slider, TabStrip, ToggleGroup, Tooltip, Toast — comes from `@cyberdeck/deck-kit/ui`
+  Modal, Slider, TabStrip, ToggleGroup, Tooltip, Toast — comes from `@cyberdeck/deck-kit/ui`.
+  `footer` left the same way once the hub made a third caller: the bar is `Footer` from the kit,
+  and this program passes its own `sourceHref` (its repository predates the monorepo) plus the
+  About trigger. It is still empty-state only — App hides it once a Source loads
 
 **ADRs**
 - `../../docs/adr/` — all architectural decisions (deck-wide, at the repo root)

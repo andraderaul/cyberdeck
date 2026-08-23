@@ -13,21 +13,21 @@ import {
   expectEveryControlHoldsTheTarget,
   expectNoAxeViolations,
 } from '../support/a11y'
-import { anInlineLinkInASentence, theThemePopover } from '../support/accepted'
+import { theThemePopover } from '../support/accepted'
 
 const THEME_MENU = 'div#root > div > header > div > div'
 
-/** The footer credit, on every surface the hub has. Permanently accepted, not a defect. */
-const THE_FOOTER_CREDIT: Accepted[] = [
-  anInlineLinkInASentence('div#root > div > footer > p > a "source"'),
-]
+// The hub's bottom edge used to be one sentence with a `source` link inside it, permanently
+// accepted under WCAG 2.5.5's Inline exception. It is now the kit's `Footer`, whose links carry
+// their own 44px — so there is nothing left to accept on this screen.
+const NOTHING_ACCEPTED: Accepted[] = []
 
 test('the door is accessible and every card holds its target', A11Y, async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'what the deck runs' })).toBeVisible()
 
-  await expectNoAxeViolations(page, THE_FOOTER_CREDIT)
-  await expectEveryControlHoldsTheTarget(page, THE_FOOTER_CREDIT)
+  await expectNoAxeViolations(page, NOTHING_ACCEPTED)
+  await expectEveryControlHoldsTheTarget(page, NOTHING_ACCEPTED)
 })
 
 test('the Theme menu is accessible and every row holds its target', A11Y, async ({ page }) => {
@@ -35,7 +35,7 @@ test('the Theme menu is accessible and every row holds its target', A11Y, async 
   await page.getByRole('button', { name: /^theme:/ }).click()
   await expect(page.getByRole('menu', { name: 'theme' })).toBeVisible()
 
-  const accepted = [...THE_FOOTER_CREDIT, ...theThemePopover(THEME_MENU)]
+  const accepted = [...NOTHING_ACCEPTED, ...theThemePopover(THEME_MENU)]
   await expectNoAxeViolations(page, accepted)
   await expectEveryControlHoldsTheTarget(page, accepted)
 })

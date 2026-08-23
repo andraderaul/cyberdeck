@@ -24,6 +24,19 @@ describe('the hub', () => {
     expect(container.querySelector('input, textarea, canvas, [contenteditable]')).toBeNull()
   })
 
+  it('carries the deck-wide attribution bar at the bottom edge', () => {
+    render(<App />)
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /source code/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /author/i })).toBeInTheDocument()
+  })
+
+  // The bar is the kit's, and the kit makes `about` optional for exactly this caller
+  it('offers no About trigger, having no About to open', () => {
+    render(<App />)
+    expect(screen.queryByRole('button', { name: 'about' })).not.toBeInTheDocument()
+  })
+
   // The fence forbids an embedded program too, not only an input — and an iframe is how that
   // arrives, wearing a link's clothes. Cheap to check, and the docs claim this test covers it.
   it('runs no program inside itself', () => {
