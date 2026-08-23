@@ -44,6 +44,10 @@ test('a card is a link a press is really followed to', async ({ page }) => {
   // Every program is on its own origin (ADR 0011), so following the link for real would mean
   // reaching the network and a red check the day a deploy is slow. The route stands in for the
   // program: what is under test is that the press leaves the hub for that exact URL.
+  //
+  // Which is also the limit of this test, and worth saying where the stub is rather than only in
+  // `roster.ts`: it proves the anchor is real and followable, never that anything is listening at
+  // the other end. A renamed Vercel project still breaks the door in silence (ADR 0025).
   await page.route(first.url, (route) =>
     route.fulfill({ contentType: 'text/html', body: '<title>the program</title>' }),
   )

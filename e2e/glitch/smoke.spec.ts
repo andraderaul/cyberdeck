@@ -8,11 +8,13 @@
 import { fileURLToPath } from 'node:url'
 import { expect, type Page, test } from '@playwright/test'
 
+/** Any raster will do — this is the workspace's own social card, so nothing is borrowed. */
 const SOURCE_IMAGE = fileURLToPath(new URL('../../apps/glitch/public/og-card.png', import.meta.url))
 
-// VAPORWAVE is the Preset a Source opens on (`DEFAULT_PRESET`), so picking it would compare the
-// canvas against itself. KERNEL PANIC is a different Chain, which is what makes the pixels move.
+/** The Preset a Source opens on (`DEFAULT_PRESET`) — picking it would compare the canvas to itself. */
 const OPENING_PRESET = 'VAPORWAVE'
+
+/** A different Chain from the one already on screen, which is what makes the pixels move. */
 const PICKED_PRESET = 'KERNEL PANIC'
 
 /** What the canvas currently holds, as a string — the cheapest way to ask "did anything move?". */

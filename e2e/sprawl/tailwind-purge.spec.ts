@@ -10,10 +10,19 @@
 
 import { expect, type Locator, test } from '@playwright/test'
 
-// `after:h-[44px]` and `after:content-['']` are spelled ONLY in
-// `packages/deck-kit/src/ui/touch-target.ts`; nothing under `apps/sprawl` names either, so the
-// workspace's own globs cannot keep them alive. (`min-w-[44px]`, which the PNG button also carries,
-// would be useless here — SPRAWL spells that one itself, in `export-controls.tsx`.)
+/**
+ * The overlay's height, from `TOUCH_TARGET_HEIGHT` in
+ * `packages/deck-kit/src/ui/touch-target.ts`.
+ *
+ * Kit-only *for this workspace*, which is the condition that matters and not a stronger one:
+ * nothing under `apps/sprawl` spells `after:h-[44px]`, so SPRAWL's own globs cannot keep it alive.
+ * It is emphatically not kit-only repo-wide — GLITCH//Studio's `glitch-canvas.test.tsx` names it in
+ * a negative assertion and keeps it in GLITCH's stylesheet, which is the poisoning hazard
+ * `support/purge.ts` sets out. Borrowing this canary for GLITCH would be a guard that cannot fail.
+ *
+ * `min-w-[44px]`, which the PNG button also carries, would be useless here for the ordinary reason:
+ * SPRAWL spells that one itself, in `export-controls.tsx`.
+ */
 const TOUCH_TARGET = '44px'
 
 /** A pseudo-element has no box `toHaveCSS` can reach, so the overlay is measured where it lives. */

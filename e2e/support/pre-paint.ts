@@ -21,8 +21,10 @@ export const THEME_STORAGE_KEY = 'cyberdeck:theme'
 /** The Theme every workspace opens on with nothing stored — `ice`, the root block in `tokens.css`. */
 const DEFAULT_THEME = 'ice'
 
-// A stamp that happens after any of these has already let the default palette paint for a frame,
-// which is the precise regression the comment in `index.html` warns about.
+/**
+ * A stamp that happens after any of these has already let the default palette paint for a frame,
+ * which is the precise regression the comment in `index.html` warns about.
+ */
 const DEFERRED_TO_A_LATER_TURN = /DOMContentLoaded|\bonload\b|requestAnimationFrame|setTimeout/
 
 /**

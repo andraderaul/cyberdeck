@@ -5,17 +5,36 @@
 // has a rule behind it — only a computed style, taken from a browser that has loaded the built
 // stylesheet, tells the two apart.
 //
-// A canary has to be a utility that workspace's OWN globs cannot keep alive, which is why there is
-// no single one for the deck: what each workspace renders from the kit differs, and a class the
-// workspace also spells would survive the purge and leave the guard passing over a broken build. The
-// helper below is for the two workspaces whose only kit surface is the Theme control.
+// PICKING A CANARY, which is the part that goes wrong quietly.
+//
+// A canary has to be a utility that the workspace under test CANNOT keep alive on its own globs, so
+// there is no single one for the deck: what each workspace draws from the kit differs, and a class
+// the workspace also spells would survive the purge and leave the guard passing over a broken build.
+// `min-h-[44px]` is the obvious universal candidate and is exactly that trap — ASCII//Convert and
+// GLITCH//Studio both spell it in their own components.
+//
+// The nastier version, and the one to actually watch for: a workspace's Tailwind `content` includes
+// its own `*.test.tsx`, so a class named inside a **negative** assertion is generated anyway. A test
+// written to prove a class is absent resurrects it. `after:h-[44px]` is the live example — it is a
+// kit-only utility everywhere except GLITCH//Studio, where
+// `glitch-canvas.test.tsx` asserts `.not.toContain('after:h-[44px]')` and thereby keeps the rule in
+// GLITCH's stylesheet. Building GLITCH with the deck-kit glob deleted shows both halves at once:
+// `min-h-[160px]` is gone, and `after\:h-\[44px\]:after{content:var(--tw-content);height:44px}` is
+// still there. A canary picked that way is a guard that cannot fail.
+//
+// So the check is not "is this spelled only under `packages/deck-kit/src`" — it is "does anything
+// inside THIS workspace's `content` globs spell it", `.test.tsx` and negative assertions included.
 
 import { expect, type Page } from '@playwright/test'
 
-// Both spelled ONLY in `packages/deck-kit/src/ui/theme-control.tsx` — nothing under `apps/` names
-// either, so no workspace-side glob can keep them alive.
-const MENU_MIN_WIDTH = '128px' // `min-w-[8rem]` — the popover
-const MENU_ITEM_MIN_HEIGHT = '36px' // `min-h-[36px]` — each Theme in it
+/**
+ * The Theme popover's own width. Spelled only in
+ * `packages/deck-kit/src/ui/theme-control.tsx`, and nothing under `apps/` names it.
+ */
+const MENU_MIN_WIDTH = '128px' // `min-w-[8rem]`
+
+/** Each Theme's row in that popover, from the same file and equally unspelled outside the kit. */
+const MENU_ITEM_MIN_HEIGHT = '36px' // `min-h-[36px]`
 
 /**
  * The Theme control's popover, which is the whole of the kit that GOLEM//Console and the hub draw:

@@ -7,6 +7,22 @@
 // reads to the next person as an oversight, and the fix they would reach for is the regression.
 
 import { expect, test } from '@playwright/test'
+import { resolveTokens } from '../../packages/deck-kit/src/theme/audit'
+import { readTokensCss } from '../../packages/deck-kit/src/theme/sources'
+import { DEFAULT_THEME } from '../../packages/deck-kit/src/theme/themes'
+
+/**
+ * The default Theme's page background as a browser reports it, read out of `tokens.css` rather than
+ * transcribed. The kit already owns this resolution and `roster.test.ts` uses the same pair — a hex
+ * pinned here would turn red the day `--void` moves, with a message about a colour rather than
+ * about the decision this test exists to protect.
+ */
+function defaultField(): string {
+  const hex = resolveTokens(readTokensCss(), DEFAULT_THEME)['--bg']
+  const [, r, g, b] = /^#(\w{2})(\w{2})(\w{2})$/.exec(hex) ?? []
+  expect(r, `--bg is not a six-digit hex this can convert: ${hex}`).toBeDefined()
+  return `rgb(${Number.parseInt(r, 16)}, ${Number.parseInt(g, 16)}, ${Number.parseInt(b, 16)})`
+}
 
 test.describe('the Theme SPRAWL//Atlas does not take', () => {
   test('ships no pre-paint script and no attribute for one to stamp', async ({ page, request }) => {
@@ -28,10 +44,10 @@ test.describe('the Theme SPRAWL//Atlas does not take', () => {
   }) => {
     await page.goto('/')
 
-    // No attribute means the root block in `tokens.css` applies — `ice`'s, which is the field the
-    // piece is drawn on. The piece looking right is the whole reason it takes no Theme, so an
-    // unstyled page here would be the failure the exclusion was meant to avoid.
+    // No attribute means the root block in `tokens.css` applies — the default Theme's, which is the
+    // field the piece is drawn on. The piece looking right is the whole reason it takes no Theme, so
+    // an unstyled page here would be the failure the exclusion was meant to avoid.
     const field = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
-    expect(field).toBe('rgb(10, 10, 15)')
+    expect(field).toBe(defaultField())
   })
 })

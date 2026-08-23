@@ -1,13 +1,16 @@
 // GLITCH//Studio opens on the kit's `EmptyStateHero` — the deck's single Source entry point
-// (ADR 0015) — so it can use the same two canaries ASCII//Convert does. See `support/purge.ts` for
-// why the canary has to be picked per workspace rather than once for the deck.
+// (ADR 0015) — so it can use the same two canaries ASCII//Convert does. Both appear only under
+// `packages/deck-kit/src`, and nothing inside GLITCH's own `content` globs spells either — which is
+// the condition that matters, and one this workspace in particular can fail in a way that looks
+// like it passed. See `support/purge.ts`.
 
 import { expect, test } from '@playwright/test'
 
-// Both utilities appear ONLY under `packages/deck-kit/src` — neither the workspace's sources nor its
-// `index.html` spells either one, so the workspace-side globs cannot keep them alive.
-const HERO_PANEL_MIN_HEIGHT = '160px' // `min-h-[160px]` — EmptyStateHero, SourceImageDropZone
-const HERO_ROW_MAX_WIDTH = '720px' // `max-w-[720px]` — EmptyStateHero's row
+/** `min-h-[160px]`, from EmptyStateHero and SourceImageDropZone. */
+const HERO_PANEL_MIN_HEIGHT = '160px'
+
+/** `max-w-[720px]`, from EmptyStateHero's row. */
+const HERO_ROW_MAX_WIDTH = '720px'
 
 test('deck-kit primitives get the sizes their classes ask for', async ({ page }) => {
   await page.goto('/')

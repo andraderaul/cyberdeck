@@ -42,6 +42,14 @@ export default defineConfig({
     testDir: `./e2e/${name}`,
     use: { ...devices['Desktop Chrome'], baseURL: url(port) },
   })),
+  // The cost, named rather than left to be discovered: this is five `vite build`s and five preview
+  // servers per run, and the `Build` job in CI has already built the same five. Playwright starts
+  // every `webServer` regardless of which projects were selected, so even `--project=golem` pays it.
+  //
+  // Kept anyway. Building inside the command is what makes "the suite cannot run against stale
+  // output" a property of each workspace rather than a convention someone has to remember, and a
+  // shared `globalSetup` that built once would move that guarantee a step away from the thing it
+  // guards. If the wall-clock ever stops being worth it, that is the trade to revisit.
   webServer: WORKSPACES.map(({ pkg, port }) => ({
     // Build, then serve `dist`. `vite preview` refuses to start without a build, so the suite can
     // never silently run against stale output.

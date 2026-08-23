@@ -7,11 +7,16 @@
 
 import { expect, test } from '@playwright/test'
 
-// Both utilities appear ONLY under `packages/deck-kit/src` — neither the app's sources nor its
-// `index.html` spells either one, so the app-side globs cannot keep them alive. A class the app
-// also uses would survive the purge and leave this test passing over a broken build.
-const HERO_PANEL_MIN_HEIGHT = '160px' // `min-h-[160px]` — EmptyStateHero, SourceImageDropZone
-const HERO_ROW_MAX_WIDTH = '720px' // `max-w-[720px]` — EmptyStateHero's row
+// Both utilities appear ONLY under `packages/deck-kit/src`, and nothing inside ASCII//Convert's own
+// `content` globs spells either — which is the condition that matters. A class the app also uses
+// would survive the purge and leave this test passing over a broken build; `support/purge.ts` has
+// the full hazard, including the one that is not obvious.
+
+/** `min-h-[160px]`, from EmptyStateHero and SourceImageDropZone. */
+const HERO_PANEL_MIN_HEIGHT = '160px'
+
+/** `max-w-[720px]`, from EmptyStateHero's row. */
+const HERO_ROW_MAX_WIDTH = '720px'
 
 test('deck-kit primitives get the sizes their classes ask for', async ({ page }) => {
   await page.goto('/')

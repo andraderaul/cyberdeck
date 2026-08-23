@@ -9,6 +9,7 @@
 
 import { expect, test } from '@playwright/test'
 
+/** What the starter program writes to the memory-mapped Terminal, one byte at a time. */
 const STARTER_OUTPUT = 'Hello from GOLEM'
 
 test('help answers and run drives the machine, with no console error', async ({ page }) => {

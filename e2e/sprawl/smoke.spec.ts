@@ -9,15 +9,19 @@
 
 import { expect, test } from '@playwright/test'
 
-// The map itself is the control (ADR 0020) — there is no widget, so the slider ARIA rides on the
-// element the canvas sits in.
+/**
+ * The map itself is the control (ADR 0020) — there is no widget, so the slider ARIA rides on the
+ * element the canvas sits in.
+ */
 const SCALE_CONTROL = /scale — connected capacity per pixel/
 
-// One wheel notch is ~deltaY 100 and slides ~0.12 of the range. Against the vendored snapshot the
-// map clears the clip threshold somewhere between the fifth and the sixth notch (`1 px ≈ 3.5 Tbps`
-// is still overflowing, `18.1 Tbps` is not), so seven is past it with room either side — far enough
-// that a dataset refresh nudging the threshold does not turn this red, short enough that the reader
-// is not sitting on the clamp at the coarsest end.
+/**
+ * One wheel notch is ~deltaY 100 and slides ~0.12 of the range (`WHEEL_SENSITIVITY`). Against the
+ * vendored snapshot the map clears the clip threshold somewhere between the fifth and the sixth
+ * notch (`1 px ≈ 3.5 Tbps` is still overflowing, `18.1 Tbps` is not), so seven is past it with room
+ * either side — far enough that a dataset refresh nudging the threshold does not turn this red,
+ * short enough that the reader is not sitting on the clamp at the coarsest end.
+ */
 const A_FEW_NOTCHES_COARSER = 700
 
 test('opens in OVERFLOW and a scale gesture moves the reader out of it', async ({ page }) => {
