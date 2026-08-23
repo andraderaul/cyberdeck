@@ -33,7 +33,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const WORKSPACES = ['ascii', 'deck', 'glitch', 'golem', 'sprawl']
 
 /**
- * The raster set every program ships, and why each size is in it. Complete enough to be a PWA icon
+ * The raster set every workspace ships, and why each size is in it. Complete enough to be a PWA icon
  * set on its own, because #324 adds the manifest that points at these and will not re-cut them.
  */
 const ICONS = [
@@ -167,10 +167,10 @@ async function main() {
   try {
     // One pass over every file, run together rather than in sequence: each shot owns its own
     // context, and the output is a pure function of the input, so order buys nothing.
-    const jobs = workspaces.flatMap((program) => {
-      const publicDir = join(ROOT, 'apps', program, 'public')
+    const jobs = workspaces.flatMap((workspace) => {
+      const publicDir = join(ROOT, 'apps', workspace, 'public')
       const mark = readFileSync(join(publicDir, 'favicon.svg'), 'utf8')
-      const card = buildCard(program, program === 'sprawl' ? sprawl : {})
+      const card = buildCard(workspace, workspace === 'sprawl' ? sprawl : {})
       return [
         {
           body: card,
@@ -178,7 +178,7 @@ async function main() {
           height: CARD_HEIGHT,
           out: join(publicDir, 'og-card.png'),
           needsFont: true,
-          needsPaint: program === 'sprawl',
+          needsPaint: workspace === 'sprawl',
         },
         ...ICONS.map((icon) => ({
           body: iconBody(mark, icon),

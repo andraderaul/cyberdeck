@@ -144,7 +144,7 @@ function measureApp(root, app) {
   return { entry, lazy, css, other, chunks }
 }
 
-/** Every `apps/*` workspace, so a new program cannot slip in without a ceiling. */
+/** Every `apps/*` workspace, so a new one cannot slip in without a ceiling. */
 function measure(root) {
   const apps = readdirSync(join(root, 'apps'))
     .filter((name) => statSync(join(root, 'apps', name)).isDirectory())
@@ -184,7 +184,7 @@ function renderReport(report, budgets, baseline) {
     ? ['app', 'entry', 'ceiling', 'Δ base', 'lazy', 'ceiling', 'Δ base', 'css']
     : ['app', 'entry', 'ceiling', 'lazy', 'ceiling', 'css']
 
-  // The app column sizes to its contents: a program named longer than the header's own width would
+  // The app column sizes to its contents: a workspace named longer than the header's own width would
   // otherwise run into the entry column and skew every row after it.
   const appWidth = Math.max(...Object.keys(report).map((app) => app.length), 'app'.length) + 2
   const widthOf = (index) => (index === 0 ? appWidth : 10)
@@ -244,7 +244,7 @@ function findBreaches(report, budgets) {
     const budget = budgets[app]
     if (!budget) {
       breaches.push(
-        `${app}: no ceiling in bundle-budget.config.mjs — a new program takes one deliberately ` +
+        `${app}: no ceiling in bundle-budget.config.mjs — a new workspace takes one deliberately ` +
           `(measured: entry ${kb(measured.entry).toFixed(2)} kB, lazy ${kb(measured.lazy).toFixed(2)} kB)`,
       )
       continue

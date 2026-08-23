@@ -23,4 +23,11 @@ describe('the hub', () => {
     const { container } = render(<App />)
     expect(container.querySelector('input, textarea, canvas, [contenteditable]')).toBeNull()
   })
+
+  // The fence forbids an embedded program too, not only an input — and an iframe is how that
+  // arrives, wearing a link's clothes. Cheap to check, and the docs claim this test covers it.
+  it('runs no program inside itself', () => {
+    const { container } = render(<App />)
+    expect(container.querySelector('iframe, embed, object')).toBeNull()
+  })
 })

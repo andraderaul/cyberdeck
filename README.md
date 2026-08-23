@@ -1,7 +1,9 @@
 # CYBERDECK
 
-A deck of client-side cyberpunk creative tools. Each app is a "program" that runs on the deck:
-it shares the visual language and code patterns, but ships, versions, and deploys on its own.
+A deck of client-side cyberpunk creative tools. Most apps here are a "program" that runs on the
+deck — it shares the visual language and code patterns, but ships, versions, and deploys on its own.
+One is not: the hub is the deck's *chrome*, a third category that consumes no user material and
+produces no artifact ([ADR 0025](./docs/adr/0025-the-hub-is-chrome-not-a-program.md)).
 
 No backend server — everything runs in the browser.
 
