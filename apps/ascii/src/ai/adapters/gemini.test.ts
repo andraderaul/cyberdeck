@@ -14,6 +14,18 @@ function makeAdapter() {
   return new GeminiAdapter('test-key')
 }
 
+// The suggestion rides the same reply as the prose now (issue #308), so what this adapter has to
+// carry across the wire is the whole object — a payload without it would prove only the old half.
+const SUGGESTION = {
+  charset: 'braille',
+  colorMode: 'neon',
+  edgeGlyphs: true,
+  dithering: 'bayer',
+  resolution: 10,
+  brightness: 1.15,
+  contrast: 1.4,
+}
+
 function successResponse(text: string) {
   return { response: { text: () => text } }
 }
@@ -24,7 +36,7 @@ describe('GeminiAdapter', () => {
   })
 
   it('returns parsed JSON on successful response', async () => {
-    const payload = { description: 'test', threatLevel: 'LOW', tags: ['a'] }
+    const payload = { description: 'test', threatLevel: 'LOW', tags: ['a'], suggestion: SUGGESTION }
     mockGenerateContent.mockResolvedValueOnce(successResponse(JSON.stringify(payload)))
 
     const result = await makeAdapter().analyze('base64data')
@@ -33,7 +45,12 @@ describe('GeminiAdapter', () => {
   })
 
   it('strips ```json markdown wrapper before parsing', async () => {
-    const payload = { description: 'test', threatLevel: 'HIGH', tags: ['b'] }
+    const payload = {
+      description: 'test',
+      threatLevel: 'HIGH',
+      tags: ['b'],
+      suggestion: SUGGESTION,
+    }
     const wrapped = `\`\`\`json\n${JSON.stringify(payload)}\n\`\`\``
     mockGenerateContent.mockResolvedValueOnce(successResponse(wrapped))
 
@@ -80,6 +97,16 @@ describe('GeminiAdapter', () => {
 
   it('throws ParseError when response text is not valid JSON', async () => {
     mockGenerateContent.mockResolvedValueOnce(successResponse('not json'))
+
+    await expect(makeAdapter().analyze('base64data')).rejects.toBeInstanceOf(ParseError)
+  })
+
+  // The failure the bigger payload makes likelier: a reply cut at the token budget lands mid-object,
+  // and mid-object is still just invalid JSON.
+  it('throws ParseError when the reply is truncated mid-suggestion', async () => {
+    const truncated =
+      '{"description":"t","threatLevel":"LOW","tags":["a"],"suggestion":{"charset":"bra'
+    mockGenerateContent.mockResolvedValueOnce(successResponse(truncated))
 
     await expect(makeAdapter().analyze('base64data')).rejects.toBeInstanceOf(ParseError)
   })

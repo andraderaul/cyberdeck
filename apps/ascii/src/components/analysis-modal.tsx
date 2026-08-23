@@ -1,6 +1,7 @@
 import { Button, Modal } from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import type { AnalysisState, ThreatLevel } from '../ai/types'
+import type { ConversionSettings } from '../ascii/types'
 import Badge from './ui/badge'
 
 /** A barely-there tint of a role's own colour, for the band behind a threat level. */
@@ -12,6 +13,62 @@ interface Props {
   state: AnalysisState
   onClose: () => void
   onRetry?: () => void
+  onApplySuggestion: (suggestion: ConversionSettings) => void
+}
+
+/**
+ * The scan's second half: the suggestion laid out to be read before it is spent, every field in the
+ * EDIT tab's own order so what the chips will look like afterwards is legible from here. Values
+ * only, no controls — this modal reports, and the one thing it can do to the conversion is `apply`.
+ *
+ * Applying closes the modal on purpose: the answer to "was that a good call" is the canvas, and it
+ * is behind this panel.
+ */
+function SuggestedConversion({
+  suggestion,
+  onApply,
+  onClose,
+}: {
+  suggestion: ConversionSettings
+  onApply: (suggestion: ConversionSettings) => void
+  onClose: () => void
+}) {
+  const rows: [string, string][] = [
+    ['charset', suggestion.charset],
+    ['edge glyphs', suggestion.edgeGlyphs ? 'on' : 'off'],
+    ['dithering', suggestion.dithering],
+    ['color mode', suggestion.colorMode],
+    ['resolution', `${suggestion.resolution}px`],
+    ['brightness', suggestion.brightness.toFixed(2)],
+    ['contrast', suggestion.contrast.toFixed(2)],
+  ]
+
+  return (
+    <section
+      aria-label="suggested conversion"
+      className="flex flex-col gap-xs border-t border-base pt-md"
+    >
+      <span className="text-accent text-xs tracking-wider font-bold">◈ SUGGESTED CONVERSION</span>
+      <dl className="grid grid-cols-2 gap-x-md gap-y-2xs m-0 sm:grid-cols-3">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex flex-col">
+            <dt className="text-fg-subtle text-xs tracking-wide">{label}</dt>
+            <dd className="text-fg text-xs m-0 lowercase">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <Button
+        variant="primary"
+        onClick={() => {
+          onApply(suggestion)
+          onClose()
+        }}
+        className="self-start mt-2xs"
+      >
+        apply
+      </Button>
+    </section>
+  )
 }
 
 /**
@@ -84,7 +141,7 @@ function ScanErrorState({ status, onRetry }: { status: ErrorStatus; onRetry?: ()
   )
 }
 
-export default function AnalysisModal({ state, onClose, onRetry }: Props) {
+export default function AnalysisModal({ state, onClose, onRetry, onApplySuggestion }: Props) {
   return (
     <Modal
       onClose={onClose}
@@ -143,6 +200,12 @@ export default function AnalysisModal({ state, onClose, onRetry }: Props) {
               <Badge key={tag}>#{tag}</Badge>
             ))}
           </div>
+
+          <SuggestedConversion
+            suggestion={state.analysis.suggestion}
+            onApply={onApplySuggestion}
+            onClose={onClose}
+          />
         </>
       )}
 

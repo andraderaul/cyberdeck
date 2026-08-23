@@ -10,9 +10,20 @@ interface Props {
   // which Preset it was edited away from.
   activePresetId: string | null
   onSelect: (preset: Preset) => void
+  /**
+   * Undoes the last applied Analysis suggestion, absent when there is nothing to undo. It lands in
+   * this tab rather than beside the Analyze control because what it restores is a look, and looks
+   * are chosen here — and because the OUT tab stays one act wide (issue #308).
+   */
+  onRevertSuggestion?: () => void
 }
 
-export default function PresetPicker({ settings, activePresetId, onSelect }: Props) {
+export default function PresetPicker({
+  settings,
+  activePresetId,
+  onSelect,
+  onRevertSuggestion,
+}: Props) {
   // `min-w-0` on the fieldset: its default min-width is min-content, which would stop the chips
   // scrolling and spill them past the Strip's right edge instead.
   return (
@@ -20,6 +31,18 @@ export default function PresetPicker({ settings, activePresetId, onSelect }: Pro
       {/* The Strip's PRESETS tab already names this group on screen (ADR 0020) — the legend stays
           for the accessible name rather than repeating the word underneath it. */}
       <legend className="sr-only">presets</legend>
+      {/* Outside the scrolling row, and ahead of it: the toast that names this chip lands in the
+          bottom-right corner, so the right edge is the one place it can be covered on arrival. */}
+      {onRevertSuggestion && (
+        <Chip
+          selected={false}
+          onClick={onRevertSuggestion}
+          className="shrink-0"
+          aria-label="revert suggestion"
+        >
+          <span aria-hidden="true">↺</span> revert
+        </Chip>
+      )}
       <div className="flex-1 min-w-0 flex gap-2xs overflow-x-auto">
         {PRESETS.map((preset) => {
           const isActive = preset.id === activePresetId

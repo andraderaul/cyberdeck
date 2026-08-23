@@ -47,6 +47,15 @@ Single-page React/TS/Vite app. Fully client-side — no backend server. AI analy
 
 Optional feature — user supplies their own API key. `use-ai-config` stores the `AIConfig` in `localStorage`. `analyzeCanvas()` in `analysis-service.ts` dynamically imports the correct adapter (Anthropic, OpenAI, or Gemini), calls it, and validates the response with `validate()`. AI errors (`AuthError`, `QuotaError`, `ParseError`) are typed classes caught in `app.tsx` and routed to `AnalysisModal` for type-specific feedback (see ADR 0003, ADR 0006).
 
+An `Analysis` carries a **Suggestion** — the `ConversionSettings` the Provider proposes for this
+image — on the same round trip as the prose (issue #308). **`src/ai/suggestion.ts` is the trust
+boundary**: it is the one place a provider's JSON becomes domain values, so an unknown Charset or
+Color Mode, an out-of-range number or a missing field is a `ParseError` for the whole Analysis
+rather than a coerced setting. Not per-adapter (three normalisers drift) and not at the point of
+application (three callers, three opinions of what a Charset is). Nothing applies on arrival: the
+modal shows the suggestion, `App` waits for the click, and what it displaced is one `revert` chip
+away in the PRESETS tab until the user's own next edit.
+
 ### Error handling
 
 Two coexisting error flows (see ADR 0006):
@@ -76,7 +85,8 @@ Use these terms precisely — avoid the listed alternatives:
 | **HTML Export** | Self-contained document holding the characters *and* their colours as selectable text | SVG Export, web export |
 | **Capture** | Exporting a single frame from Live Source (doesn't stop the loop) | snapshot, screenshot |
 | **Recording** | Capturing Live Source as a video file via MediaRecorder | video export, screen record |
-| **AI Analysis** | Optional AI-powered description + threat-level of the ASCII canvas | AI scan, AI detection |
+| **AI Analysis** | Optional AI-powered description + threat-level of the ASCII canvas, with the Suggestion on the same round trip | AI scan, AI detection |
+| **Suggestion** | The ConversionSettings an Analysis proposes; applied only when the user asks, reversible until they edit | recommendation, AI preset |
 
 ### Design system
 
@@ -98,7 +108,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 ### Key files
 
 **ASCII core**
-- `src/ascii/types.ts` — `ConversionSettings`, `ColorMode`, `Charset`, `CHARSET_MAPS`, `AsciiCell`
+- `src/ascii/types.ts` — `ConversionSettings`, `ColorMode`, `Charset` (derived from `CHARSETS`),
+  `DITHERINGS`, `CHARSET_MAPS`, `AsciiCell`, and the numeric ranges the sliders and the Suggestion
+  reader share
 - `src/ascii/converter.ts` — `convertImage()`, `getAsciiChar()`, luminosity math, and the two
   opt-in passes over the sampled grid (both pure, ADR 0005): the Dithering, then the Edge Glyph
   (Sobel). That order is load-bearing and the file says why — a Dithering *manufactures* the sharp
@@ -121,6 +133,10 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 **AI analysis**
 - `src/ai/types.ts` — `AIConfig`, `AIProviderName`, `AIProvider`, `Analysis`, `ThreatLevel`, `AnalysisState`
 - `src/ai/analysis-service.ts` — `analyzeCanvas()`, lazy-imports correct adapter, validates response
+- `src/ai/suggestion.ts` — `readSuggestion()`, `SUGGESTION_PROMPT`: the untrusted → typed crossing
+  for the Suggestion, keyed on `ConversionSettings` itself so a seventh axis can't fall out of the
+  format, and spelling the prompt's vocabulary from the same constants it enforces. Rejects rather
+  than clamps, for GLITCH's `chain-codec.ts` reason (#312)
 - `src/ai/adapters/` — `AnthropicAdapter`, `OpenAIAdapter`, `GeminiAdapter`
 - `src/ai/errors.ts` — `AuthError`, `QuotaError`, `ParseError`
 - `src/ai/use-ai-config.ts` — `AIConfig` state + `localStorage` persistence
@@ -162,7 +178,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   redesigned — whatever lands empty-diff is what crosses into deck-kit
 - `src/components/preset-picker.tsx` — the Strip's PRESETS tab: the Preset chips in a horizontally
   scrollable row, the active one tracked rather than derived — an edit has to leave you standing on
-  the Preset you started from, marked modified
+  the Preset you started from, marked modified. Carries the `revert` chip for an applied Suggestion,
+  ahead of the scrolling row: it restores a look, and looks are chosen here
 - `src/components/settings-editor.tsx` — the Strip's EDIT tab: every ConversionSettings control as
   a row of tool chips, the focused tool's control in the panel above. The three sliders are
   siblings, so at `sm` the whole group reads at once while mobile focuses one (adaptive density);
@@ -174,7 +191,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   it advertises
 - `src/components/ai-config-banner.tsx` — informational banner for AI config, rendered inside the
   OUT tab; dismiss state in `sessionStorage`
-- `src/components/analysis-modal.tsx` — AI Analysis results with threat-level display
+- `src/components/analysis-modal.tsx` — AI Analysis results with threat-level display, and the
+  Suggestion's `apply` — the only control in the app that moves every ConversionSetting at once
 - `src/components/api-key-modal.tsx` — API key configuration
 - `src/components/about-modal.tsx` — About/info modal
 - `src/components/footer.tsx` — empty-state bottom chrome: the attribution links plus the About

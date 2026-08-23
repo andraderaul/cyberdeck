@@ -37,6 +37,8 @@ interface Props {
   activePresetId: string | null
   onPresetSelect: (preset: Preset) => void
   onSettingsChange: (patch: Partial<ConversionSettings>) => void
+  /** Present only while an applied suggestion still stands unedited — see `App`'s revert point. */
+  onRevertSuggestion?: () => void
 }
 
 /**
@@ -64,6 +66,7 @@ export default function ControlStrip({
   activePresetId,
   onPresetSelect,
   onSettingsChange,
+  onRevertSuggestion,
 }: Props) {
   return (
     <TabStrip tabs={TABS} ariaLabel="controls">
@@ -74,6 +77,7 @@ export default function ControlStrip({
               settings={settings}
               activePresetId={activePresetId}
               onSelect={onPresetSelect}
+              onRevertSuggestion={onRevertSuggestion}
             />
           )}
           {activeTab === 'edit' && (

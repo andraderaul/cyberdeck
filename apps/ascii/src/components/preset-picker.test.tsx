@@ -67,6 +67,20 @@ describe('PresetPicker', () => {
     expect(btn.querySelector('span.text-warning')?.textContent).toBe('*')
   })
 
+  it('offers no revert chip when nothing has been applied', () => {
+    renderPicker()
+    expect(screen.queryByRole('button', { name: /revert/i })).not.toBeInTheDocument()
+  })
+
+  it('shows a revert chip while an applied suggestion still stands, and calls it back', async () => {
+    const user = userEvent.setup()
+    const onRevertSuggestion = vi.fn()
+    renderPicker({ onRevertSuggestion })
+
+    await user.click(screen.getByRole('button', { name: 'revert suggestion' }))
+    expect(onRevertSuggestion).toHaveBeenCalledOnce()
+  })
+
   it('does not mark modified when settings exactly match the active preset', () => {
     const activePreset = PRESETS[0]
     renderPicker({ settings: activePreset.settings, activePresetId: activePreset.id })

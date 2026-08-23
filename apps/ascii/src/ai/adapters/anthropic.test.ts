@@ -14,6 +14,18 @@ function makeAdapter() {
   return new AnthropicAdapter('test-key')
 }
 
+// The suggestion rides the same reply as the prose now (issue #308), so what this adapter has to
+// carry across the wire is the whole object — a payload without it would prove only the old half.
+const SUGGESTION = {
+  charset: 'braille',
+  colorMode: 'neon',
+  edgeGlyphs: true,
+  dithering: 'bayer',
+  resolution: 10,
+  brightness: 1.15,
+  contrast: 1.4,
+}
+
 function successResponse(json: object) {
   return { content: [{ type: 'text', text: JSON.stringify(json) }] }
 }
@@ -24,7 +36,7 @@ describe('AnthropicAdapter', () => {
   })
 
   it('returns parsed JSON on successful response', async () => {
-    const payload = { description: 'test', threatLevel: 'LOW', tags: ['a'] }
+    const payload = { description: 'test', threatLevel: 'LOW', tags: ['a'], suggestion: SUGGESTION }
     mockCreate.mockResolvedValueOnce(successResponse(payload))
 
     const result = await makeAdapter().analyze('base64data')
@@ -64,6 +76,16 @@ describe('AnthropicAdapter', () => {
 
   it('throws ParseError when response text is not valid JSON', async () => {
     mockCreate.mockResolvedValueOnce({ content: [{ type: 'text', text: 'not json' }] })
+
+    await expect(makeAdapter().analyze('base64data')).rejects.toBeInstanceOf(ParseError)
+  })
+
+  // The failure the bigger payload makes likelier: a reply cut at the token budget lands mid-object,
+  // and mid-object is still just invalid JSON.
+  it('throws ParseError when the reply is truncated mid-suggestion', async () => {
+    const truncated =
+      '{"description":"t","threatLevel":"LOW","tags":["a"],"suggestion":{"charset":"bra'
+    mockCreate.mockResolvedValueOnce({ content: [{ type: 'text', text: truncated }] })
 
     await expect(makeAdapter().analyze('base64data')).rejects.toBeInstanceOf(ParseError)
   })

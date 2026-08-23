@@ -1,6 +1,12 @@
 import OpenAI from 'openai'
 import type { AIProvider } from '../types'
-import { ANALYZE_TIMEOUT_MS, mapHttpError, PROMPT, parseJsonOrThrow } from './shared'
+import {
+  ANALYZE_MAX_TOKENS,
+  ANALYZE_TIMEOUT_MS,
+  mapHttpError,
+  PROMPT,
+  parseJsonOrThrow,
+} from './shared'
 
 export class OpenAIAdapter implements AIProvider {
   private client: OpenAI
@@ -16,7 +22,7 @@ export class OpenAIAdapter implements AIProvider {
       response = await this.client.chat.completions.create(
         {
           model: 'gpt-4o',
-          max_tokens: 256,
+          max_tokens: ANALYZE_MAX_TOKENS,
           messages: [
             {
               role: 'user',

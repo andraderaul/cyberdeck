@@ -3,7 +3,14 @@ import { cn } from '@cyberdeck/deck-kit/utils'
 import { useState } from 'react'
 import { getModePalette } from '../ascii/renderer'
 import type { Charset, ColorMode, ConversionSettings } from '../ascii/types'
-import { CHARSET_MAPS, COLOR_MODES, DITHERINGS } from '../ascii/types'
+import {
+  BRIGHTNESS_RANGE,
+  CHARSET_MAPS,
+  COLOR_MODES,
+  CONTRAST_RANGE,
+  DITHERINGS,
+  RESOLUTION_RANGE,
+} from '../ascii/types'
 
 /**
  * The params panel's reserved height. Reserve the tallest tool's height (color mode — two chip
@@ -14,10 +21,6 @@ import { CHARSET_MAPS, COLOR_MODES, DITHERINGS } from '../ascii/types'
  * values it can see literally.
  */
 const PANEL_MIN_HEIGHT = 'min-h-[120px]'
-
-const RESOLUTION_RANGE = { min: 6, max: 24, step: 1 }
-const BRIGHTNESS_RANGE = { min: 0.5, max: 2.0, step: 0.05 }
-const CONTRAST_RANGE = { min: 0.5, max: 3.0, step: 0.05 }
 
 const CHARSET_CATEGORIES: { label: string; charsets: Charset[] }[] = [
   { label: 'ascii gradient', charsets: ['classic', 'sharp', 'detailed', 'ascii'] },

@@ -92,6 +92,10 @@ await page.route('**/v1/messages', (route) =>   // Anthropic; OpenAI/Gemini have
         description: 'a fake analysis',
         threatLevel: 'HIGH',       // one of LOW | MODERATE | HIGH | CRITICAL | UNKNOWN
         tags: ['fake', 'canned'],  // REQUIRED — see below
+        suggestion: {              // REQUIRED, and every field of it — see below
+          charset: 'braille', colorMode: 'neon', edgeGlyphs: true,
+          resolution: 10, brightness: 1.15, contrast: 1.4,
+        },
       }) }],
     }),
   }),
@@ -100,10 +104,16 @@ await page.route('**/v1/messages', (route) =>   // Anthropic; OpenAI/Gemini have
 
 Two traps, both of which cost me a debugging round:
 
-- **`tags: string[]` is mandatory.** `validate()` (analysis-service.ts) rejects a payload without it,
-  and the modal then reads **"FEED CORRUPTED — Analysis feed returned unexpected data"**. That is a
+- **`tags: string[]` and a whole `suggestion` are mandatory.** `validate()` (analysis-service.ts)
+  rejects a payload missing either, and `readSuggestion()` (suggestion.ts) rejects a suggestion with
+  a missing field, an unknown Charset or Color Mode, or a number outside the slider's range — the
+  modal then reads **"FEED CORRUPTED — Analysis feed returned unexpected data"**. That is a
   `parse-error`, i.e. *your mock is wrong*, not the app. A real failure of the app on this path looks
-  the same, so check the payload before believing the screen.
+  the same, so check the payload before believing the screen. Feeding a deliberately bad suggestion
+  (`charset: 'dither'`) is also how you drive the rejection path on purpose.
+- **Applying is what to actually watch.** The modal's `apply` swaps every ConversionSetting at once
+  and closes, so the canvas behind it re-renders — then `presets` carries a `revert` chip that puts
+  the old look back. Changing any setting yourself makes that chip disappear, by design.
 - **The Analyze control only exists with a config**, and `useAIConfig` reads `localStorage` once at
   mount. Set it and reload:
   ```js

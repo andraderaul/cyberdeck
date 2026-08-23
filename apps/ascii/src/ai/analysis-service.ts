@@ -1,4 +1,5 @@
 import { AuthError, NetworkError, ParseError, QuotaError } from './errors'
+import { readSuggestion } from './suggestion'
 import type {
   AIConfig,
   AIProvider,
@@ -44,7 +45,16 @@ function validate(data: unknown): Analysis {
   ) {
     throw new ParseError()
   }
-  return data as Analysis
+  // Rebuilt rather than cast through: the suggestion is the one field that goes on to *drive* the
+  // converter, so what leaves here is the reader's own object and never the provider's, extra keys
+  // and all.
+  const raw = data as Record<string, unknown>
+  return {
+    description: raw.description as string,
+    threatLevel: raw.threatLevel as ThreatLevel,
+    tags: raw.tags as string[],
+    suggestion: readSuggestion(raw.suggestion),
+  }
 }
 
 const ADAPTERS: Record<AIProviderName, (key: string) => Promise<AIProvider>> = {

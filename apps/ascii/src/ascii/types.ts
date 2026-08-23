@@ -12,19 +12,29 @@ export const COLOR_MODES = [
 ] as const
 
 export type ColorMode = (typeof COLOR_MODES)[number]
-export type Charset =
-  | 'classic'
-  | 'sharp'
-  | 'detailed'
-  | 'ascii'
-  | 'blocks'
-  | 'halfblock'
-  | 'braille'
-  | 'katakana'
-  | 'geometric'
-  | 'circles'
-  | 'box'
-  | 'binary'
+
+/**
+ * The Charsets as a tuple, with the union derived from it rather than written beside it — the same
+ * shape `COLOR_MODES` already has. A single list is what lets anything that has to *enumerate* the
+ * vocabulary (the Analysis prompt, the suggestion reader) stay correct when a Charset is added,
+ * instead of quietly refusing one the app itself offers.
+ */
+export const CHARSETS = [
+  'classic',
+  'sharp',
+  'detailed',
+  'ascii',
+  'blocks',
+  'halfblock',
+  'braille',
+  'katakana',
+  'geometric',
+  'circles',
+  'box',
+  'binary',
+] as const
+
+export type Charset = (typeof CHARSETS)[number]
 
 export const DITHERINGS = ['none', 'bayer', 'floyd'] as const
 
@@ -44,6 +54,16 @@ export interface ConversionSettings {
   edgeGlyphs: boolean
   dithering: Dithering
 }
+
+/**
+ * The bounds of each numeric ConversionSetting, beside the interface they belong to rather than in
+ * the editor that happens to draw them: the sliders and the Analysis suggestion reader are two
+ * readers of one range, and a suggestion the sliders couldn't have produced is not a look this
+ * program can hold.
+ */
+export const RESOLUTION_RANGE = { min: 6, max: 24, step: 1 }
+export const BRIGHTNESS_RANGE = { min: 0.5, max: 2.0, step: 0.05 }
+export const CONTRAST_RANGE = { min: 0.5, max: 3.0, step: 0.05 }
 
 export const CHARSET_MAPS: Record<Charset, string> = {
   classic: ' .:-=+*#%@',
