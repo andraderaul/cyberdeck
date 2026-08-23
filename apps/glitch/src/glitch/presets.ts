@@ -7,6 +7,7 @@ import {
   SCANLINES_DENSITY_STEP,
   SPARSEST_SCANLINE_PERIOD,
   TIGHTEST_SCANLINE_PERIOD,
+  WAVE_WAVELENGTH_RANGE,
 } from './types'
 
 /** A named Chain — a curated look, carrying no Seed (see CONTEXT.md). */
@@ -168,6 +169,8 @@ const BLOCK_DENSITY_SPREAD = 0.12
 const BLOCK_AMOUNT_SPREAD = 0.15
 const SORT_THRESHOLD_SPREAD = 0.08
 const SORT_RUN_LENGTH_SPREAD = 25
+const WAVE_AMPLITUDE_SPREAD = 0.1
+const WAVE_WAVELENGTH_SPREAD = 20
 const CHANNEL_AMOUNT_SPREAD = 6
 const CHROMATIC_STRENGTH_SPREAD = 0.1
 const HALFTONE_CELL_SIZE_SPREAD = 3
@@ -218,6 +221,22 @@ const LINK_JITTERS: {
       Math.round(jitter(source, params.runLength, SORT_RUN_LENGTH_SPREAD)),
       PIXEL_SORT_RUN_LENGTH_RANGE.min,
       PIXEL_SORT_RUN_LENGTH_RANGE.max,
+    ),
+  }),
+  // Unreachable until a Preset carries Wave (#320), the same as Halftone's entry — Randomize only
+  // jitters the Links of the base it picked, and no curated look holds one yet. The entry is
+  // required all the same: the map is total over EffectType.
+  //
+  // Both numbers move; the axis rides through, being a choice rather than a number. The wavelength
+  // moves over a narrow slice of its range: it is what decides whether a look reads as a slow bend
+  // or a tight ripple, so a wide jitter would swing it between two looks rather than around one.
+  wave: (source, params) => ({
+    ...params,
+    amplitude: jitterUnit(source, params.amplitude, WAVE_AMPLITUDE_SPREAD),
+    wavelength: clamp(
+      Math.round(jitter(source, params.wavelength, WAVE_WAVELENGTH_SPREAD)),
+      WAVE_WAVELENGTH_RANGE.min,
+      WAVE_WAVELENGTH_RANGE.max,
     ),
   }),
   channelShift: (source, params) => ({
@@ -312,7 +331,10 @@ export function randomizeChain(source: Rng): Chain {
 /**
  * Where each Effect sits in the canonical order — structural (they move pixels) before surface
  * (they lay texture over them), with Halftone on the seam between the two, being neither
- * (CONTEXT.md). Only the ranks' order carries meaning; the numbers themselves carry none.
+ * (CONTEXT.md). Wave closes the structural group: it is the only one that moves the picture as a
+ * whole, so it carries whatever the discrete Effects left behind along the bend rather than being
+ * flattened back onto the frame's grid by a sort that runs after it. Only the ranks' order carries
+ * meaning; the numbers themselves carry none.
  *
  * A Record over `EffectType` rather than a hand-kept list, so a newly registered Effect fails to
  * compile here instead of quietly missing from the add palette — the one failure that leaves an
@@ -321,11 +343,12 @@ export function randomizeChain(source: Rng): Chain {
 const EFFECT_RANK: Record<EffectType, number> = {
   blockDisplacement: 0,
   pixelSort: 1,
-  channelShift: 2,
-  chromaticAberration: 3,
-  halftone: 4,
-  scanlines: 5,
-  noise: 6,
+  wave: 2,
+  channelShift: 3,
+  chromaticAberration: 4,
+  halftone: 5,
+  scanlines: 6,
+  noise: 7,
 }
 
 /** Every Effect a Link can be, in the canonical order the Presets and the palette read in. */

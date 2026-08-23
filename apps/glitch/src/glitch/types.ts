@@ -270,3 +270,53 @@ export const DEFAULT_HALFTONE: HalftoneParams = Object.freeze({
   dotScale: 0.75,
   tint: 'color',
 })
+
+/**
+ * The axis Wave displaces along: `horizontal` slides whole rows sideways, `vertical` slides whole
+ * columns up and down. Named for where the pixels travel, the same way Block Displacement and
+ * Channel Shift are — the sine runs *across* that axis, so a horizontal Wave varies down the frame.
+ */
+export type WaveAxis = 'horizontal' | 'vertical'
+
+export interface WaveParams {
+  axis: WaveAxis
+  /** How far a line travels at the crest, on the normalised 0..1 scale; 0 is the Effect off. */
+  amplitude: number
+  /** The span of one full cycle, in pixels — how tight the bend is. */
+  wavelength: number
+}
+
+/**
+ * The farthest a line travels at amplitude 1, as a fraction of the buffer's span along the axis it
+ * moves on. Lives in the core beside the param it bounds, for the same reason as
+ * MAX_CHROMATIC_ABERRATION_MAGNIFICATION.
+ *
+ * Curated well below the full span. Sampling clamps at the edges, so every pixel a crest pushes out
+ * of frame is paid for with a band of the edge column smeared back in; past roughly an eighth of the
+ * frame that smear is the loudest thing on screen and the bend it came from stops being what the
+ * eye reads.
+ */
+export const MAX_WAVE_AMPLITUDE_RATIO = 0.12
+
+/**
+ * The cycles the control offers and Randomize must stay inside — a property of the Effect, held in
+ * the core beside the param it bounds, the same as HALFTONE_CELL_SIZE_RANGE.
+ *
+ * Floored at 8: below that neighbouring lines sit near opposite crests and the image reads as combed
+ * apart rather than bent. Capped at 400 because the sampling cap is 800px, so past there fewer than
+ * two cycles cross the frame and a wave reads as a single lean.
+ */
+export const WAVE_WAVELENGTH_RANGE = { min: 8, max: 400 } as const
+
+/**
+ * The default Wave look, and the value the sliders reset to on double-click. Lives in the core for
+ * the same reason as DEFAULT_PIXEL_SORT, and is frozen for the same reason.
+ *
+ * A wavelength well under the frame, so a fresh Link shows several cycles at once and reads as a
+ * ripple: one long bend is hard to tell from the image simply hanging crooked.
+ */
+export const DEFAULT_WAVE: WaveParams = Object.freeze({
+  axis: 'horizontal',
+  amplitude: 0.4,
+  wavelength: 64,
+})

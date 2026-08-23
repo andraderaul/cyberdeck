@@ -14,6 +14,7 @@ import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
   type ChannelName,
   DEFAULT_HALFTONE,
+  DEFAULT_WAVE,
   type NoiseTint,
   PIXEL_SORT_RUN_LENGTH_RANGE,
   type PixelBuffer,
@@ -277,6 +278,19 @@ describe('chainMatch', () => {
     expect(chainMatch([createLink('halftone', { ...DEFAULT_HALFTONE, tint: 'mono' })], base)).toBe(
       false,
     )
+  })
+
+  it('notices a change to any Wave param, though no Preset carries one', () => {
+    // Same reason as Halftone above: the key walk has to cover a newly registered Effect before any
+    // curated look holds one, or the first Preset that does would open already marked modified.
+    const base: Chain = [createLink('wave')]
+
+    expect(chainMatch([createLink('wave')], base)).toBe(true)
+    expect(chainMatch([createLink('wave', { ...DEFAULT_WAVE, axis: 'vertical' })], base)).toBe(
+      false,
+    )
+    expect(chainMatch([createLink('wave', { ...DEFAULT_WAVE, amplitude: 0.9 })], base)).toBe(false)
+    expect(chainMatch([createLink('wave', { ...DEFAULT_WAVE, wavelength: 120 })], base)).toBe(false)
   })
 })
 

@@ -12,6 +12,7 @@ import {
   MAX_CHROMATIC_ABERRATION_MAGNIFICATION,
   MAX_DISPLACEMENT_BLOCKS,
   MAX_NOISE_DELTA,
+  MAX_WAVE_AMPLITUDE_RATIO,
   MIN_BLOCK_WIDTH_RATIO,
   type NoiseParams,
   type PixelBuffer,
@@ -20,6 +21,8 @@ import {
   type Seed,
   SPARSEST_SCANLINE_PERIOD,
   TIGHTEST_SCANLINE_PERIOD,
+  WAVE_WAVELENGTH_RANGE,
+  type WaveParams,
 } from './types'
 
 /** Normalises a param that rides the 0..1 scale, so a value off the end lands on the curated end. */
@@ -174,41 +177,16 @@ export function pixelSort(pixels: PixelBuffer, params: PixelSortParams): PixelBu
 }
 
 /**
- * Effect: displaces one colour channel horizontally — the uniform "RGB split".
- * Pure: builds a new PixelBuffer, never touches the input. See ADR 0005.
+ * One channel read at a fractional position, blended from the four pixels around it — the resampler
+ * both geometric Effects read their source through.
  *
- * Sampling clamps at the edges rather than wrapping: a wrapped column drags the far
- * side's colour into frame, which reads as a bug instead of a glitch.
- */
-export function channelShift(pixels: PixelBuffer, params: ChannelShiftParams): PixelBuffer {
-  const { width, height, data } = pixels
-  const out = new Uint8ClampedArray(data)
-  const { amount } = params
-  if (amount === 0) {
-    return { data: out, width, height }
-  }
-
-  const offset = CHANNEL_OFFSET[params.channel]
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const sourceX = Math.min(Math.max(x - amount, 0), width - 1)
-      out[(y * width + x) * 4 + offset] = data[(y * width + sourceX) * 4 + offset]
-    }
-  }
-
-  return { data: out, width, height }
-}
-
-/**
- * One channel read at a fractional position, blended from the four pixels around it.
- *
- * Bilinear rather than nearest-neighbour specifically because Chromatic Aberration's displacement
- * is well under a pixel near the centre — exactly where rounding would collapse it to zero and then
- * snap into a visible stair-step ring instead of the smooth centre-to-edge gradient the
- * magnification model exists to produce.
+ * Bilinear rather than nearest-neighbour because a displacement of well under a pixel is exactly
+ * what these two Effects are made of: Chromatic Aberration's is sub-pixel near the centre, and
+ * Wave's is sub-pixel wherever the sine passes through zero. Rounding would collapse it there and
+ * then snap into a visible stair-step instead of the smooth gradient both models exist to produce.
  *
  * Reads clamp at the edges, matching `channelShift`: a wrapped sample would drag the far side's
- * colour into the corner, which reads as a bug instead of a lens.
+ * colour into frame, which reads as a bug instead of a lens or a bend.
  */
 function sampleBilinear(
   data: Uint8ClampedArray<ArrayBuffer>,
@@ -236,6 +214,101 @@ function sampleBilinear(
   const above = topLeft + (topRight - topLeft) * fractionX
   const below = bottomLeft + (bottomRight - bottomLeft) * fractionX
   return above + (below - above) * fractionY
+}
+
+/**
+ * Effect: displaces whole rows or columns along a sine — the signal bending rather than breaking.
+ * Pure: builds a new PixelBuffer, never touches the input. See ADR 0005.
+ *
+ * The axis every other geometric Effect leaves uncovered. Block Displacement moves **discrete**
+ * blocks, drawn off the Seed and each landing somewhere unrelated to its neighbours; Chromatic
+ * Aberration moves each **channel** on its own, radially. Wave moves the picture *as a whole* along
+ * a **continuous** function, so neighbouring lines land next to each other and the image stays one
+ * image — which is what makes it read as a bend and not as damage.
+ *
+ * Draws on nothing — no Seed, like Chromatic Aberration. A sine is fully described by its amplitude
+ * and its wavelength; there is no arrangement left for a Seed to choose, and jittering the phase
+ * per line would be Block Displacement's job by another name.
+ *
+ * Amplitude zero is the Effect off, the floor every other slider here teaches. The guard is also
+ * what keeps that floor exact rather than merely near-exact: without it every pixel would still run
+ * through the sampler, and a nominally zero offset would land back a rounding step off.
+ */
+export function wave(pixels: PixelBuffer, params: WaveParams): PixelBuffer {
+  const { width, height, data } = pixels
+  const out = new Uint8ClampedArray(data)
+  const amplitude = clampUnit(params.amplitude)
+  if (amplitude <= 0) {
+    return { data: out, width, height }
+  }
+
+  const horizontal = params.axis === 'horizontal'
+  // Measured against the span the lines travel along, so a wide frame bends further sideways than a
+  // narrow one does and the look survives the sampling cap's aspect ratio.
+  const farthest = amplitude * MAX_WAVE_AMPLITUDE_RATIO * (horizontal ? width : height)
+  // Held to the cycles the control offers at both ends, the same as Halftone's cell: the range is a
+  // property of the bend (types.ts), so the Effect enforces it rather than trusting every caller to
+  // have come through a slider.
+  const wavelength = Math.min(
+    WAVE_WAVELENGTH_RANGE.max,
+    Math.max(WAVE_WAVELENGTH_RANGE.min, params.wavelength),
+  )
+
+  // One offset per line rather than per pixel: the sine varies *across* the axis the pixels travel
+  // on, so every pixel of a row shares its row's displacement — which is precisely what moves the
+  // image as a whole instead of shearing it.
+  const lineCount = horizontal ? height : width
+  const angularStep = (2 * Math.PI) / wavelength
+  const offsets = new Float64Array(lineCount)
+  for (let line = 0; line < lineCount; line++) {
+    offsets[line] = farthest * Math.sin(line * angularStep)
+  }
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      // Subtracted, not added: the sample runs inverse — an output pixel reads the source the
+      // displacement brought to it — so a positive offset moves the picture the way the sine points.
+      const displacement = offsets[horizontal ? y : x]
+      const sourceX = horizontal ? x - displacement : x
+      const sourceY = horizontal ? y : y - displacement
+      const target = (y * width + x) * 4
+
+      // Alpha rides along with the other three, unlike every other Effect here: this one *moves* a
+      // pixel rather than tinting it, and a pixel that travelled without its own transparency would
+      // pick up whatever transparency happened to sit where it landed.
+      for (let channel = 0; channel < 4; channel++) {
+        out[target + channel] = sampleBilinear(data, width, height, sourceX, sourceY, channel)
+      }
+    }
+  }
+
+  return { data: out, width, height }
+}
+
+/**
+ * Effect: displaces one colour channel horizontally — the uniform "RGB split".
+ * Pure: builds a new PixelBuffer, never touches the input. See ADR 0005.
+ *
+ * Sampling clamps at the edges rather than wrapping: a wrapped column drags the far
+ * side's colour into frame, which reads as a bug instead of a glitch.
+ */
+export function channelShift(pixels: PixelBuffer, params: ChannelShiftParams): PixelBuffer {
+  const { width, height, data } = pixels
+  const out = new Uint8ClampedArray(data)
+  const { amount } = params
+  if (amount === 0) {
+    return { data: out, width, height }
+  }
+
+  const offset = CHANNEL_OFFSET[params.channel]
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const sourceX = Math.min(Math.max(x - amount, 0), width - 1)
+      out[(y * width + x) * 4 + offset] = data[(y * width + sourceX) * 4 + offset]
+    }
+  }
+
+  return { data: out, width, height }
 }
 
 /**

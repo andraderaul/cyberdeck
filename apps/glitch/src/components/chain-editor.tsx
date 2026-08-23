@@ -20,12 +20,15 @@ import {
   DEFAULT_NOISE,
   DEFAULT_PIXEL_SORT,
   DEFAULT_SCANLINES,
+  DEFAULT_WAVE,
   HALFTONE_CELL_SIZE_RANGE,
   type HalftoneTint,
   type NoiseTint,
   PIXEL_SORT_RUN_LENGTH_RANGE,
   SCANLINES_DENSITY_STEP,
   type SortDirection,
+  WAVE_WAVELENGTH_RANGE,
+  type WaveAxis,
 } from '../glitch/types'
 import { type ChipBounds, dropTargetAt, isDragGesture } from './chain-drag'
 import IconLabelButton from './icon-label-button'
@@ -33,16 +36,17 @@ import IconLabelButton from './icon-label-button'
 /**
  * The params panel's reserved height. On mobile the params stack (the sm grid flows into columns
  * only at ≥640px), so each Effect's stacked height differs — 1 to 3 controls. Reserve the tallest
- * (pixel sort and halftone: a toggle + two sliders) so switching Effects doesn't reflow. At sm every
- * Effect is one row, so the floor drops back to the single-row height. A full class string, not an
- * interpolated `min-h-[${n}px]` — Tailwind only emits arbitrary values it can see literally.
+ * (pixel sort, wave and halftone: a toggle + two sliders) so switching Effects doesn't reflow. At
+ * sm every Effect is one row, so the floor drops back to the single-row height. A full class
+ * string, not an interpolated `min-h-[${n}px]` — Tailwind only emits arbitrary values it can see
+ * literally.
  */
 const PANEL_MIN_HEIGHT = 'min-h-[240px] sm:min-h-[92px]'
 
 /**
  * Every slider here spans the unit interval; the params with no natural 0..1 bound
- * (`CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE`, `HALFTONE_CELL_SIZE_RANGE`) get
- * their ranges from the core.
+ * (`CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE`, `HALFTONE_CELL_SIZE_RANGE`,
+ * `WAVE_WAVELENGTH_RANGE`) get their ranges from the core.
  */
 const UNIT_RANGE = { min: 0, max: 1 } as const
 
@@ -63,10 +67,21 @@ const SORT_DIRECTION_LABELS: Record<SortDirection, string> = {
   vertical: 'vert',
 }
 
+// Its own list and its own labels, for the reason HALFTONE_TINTS has its own: Pixel Sort's axis is
+// the line it walks and Wave's is the way the pixels travel, so sharing one would tie two unrelated
+// choices together.
+const WAVE_AXES: readonly WaveAxis[] = ['horizontal', 'vertical']
+
+const WAVE_AXIS_LABELS: Record<WaveAxis, string> = {
+  horizontal: 'horiz',
+  vertical: 'vert',
+}
+
 /** What each Effect is called in the editor — the Link chip's name and its panel heading. */
 export const EFFECT_LABELS: Record<EffectType, string> = {
   blockDisplacement: 'block displacement',
   pixelSort: 'pixel sort',
+  wave: 'wave',
   channelShift: 'channel shift',
   chromaticAberration: 'chromatic aberration',
   halftone: 'halftone',
@@ -77,6 +92,7 @@ export const EFFECT_LABELS: Record<EffectType, string> = {
 const EFFECT_TOOLTIPS: Record<EffectType, string> = {
   blockDisplacement: 'tears rectangular blocks sideways — data corruption',
   pixelSort: 'sorts bright runs of pixels — the melted smear',
+  wave: 'bends whole rows or columns along a sine — the signal warping',
   channelShift: 'offsets one r/g/b channel by a constant — rgb split',
   chromaticAberration: 'splits r/b outward from the centre — lens fringe',
   halftone: 'redraws the image as a grid of dots sized by brightness — print screen',
@@ -165,6 +181,41 @@ function LinkControls({ link, onChange }: LinkProps) {
             defaultValue={DEFAULT_PIXEL_SORT.runLength}
             format={(v) => `${v}px`}
             onChange={(runLength) => onChange({ ...params, runLength })}
+          />
+        </>
+      )
+    }
+    case 'wave': {
+      const params = link.params
+      return (
+        <>
+          <ToggleGroup
+            ariaLabel="wave axis"
+            options={WAVE_AXES}
+            value={params.axis}
+            labels={WAVE_AXIS_LABELS}
+            fullWidth
+            onChange={(axis) => onChange({ ...params, axis })}
+          />
+          <Slider
+            label="amplitude"
+            value={params.amplitude}
+            min={UNIT_RANGE.min}
+            max={UNIT_RANGE.max}
+            step={0.01}
+            defaultValue={DEFAULT_WAVE.amplitude}
+            format={(v) => `${Math.round(v * 100)}%`}
+            onChange={(amplitude) => onChange({ ...params, amplitude })}
+          />
+          <Slider
+            label="wavelength"
+            value={params.wavelength}
+            min={WAVE_WAVELENGTH_RANGE.min}
+            max={WAVE_WAVELENGTH_RANGE.max}
+            step={1}
+            defaultValue={DEFAULT_WAVE.wavelength}
+            format={(v) => `${v}px`}
+            onChange={(wavelength) => onChange({ ...params, wavelength })}
           />
         </>
       )

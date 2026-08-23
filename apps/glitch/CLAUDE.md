@@ -11,9 +11,9 @@ layout, the deck-wide comment convention, and the release ritual. Paths below ar
 Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80), Block Displacement with
 Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced panel (#84), Recording
 (#85) and Presets + Randomize (#86), plus Chromatic Aberration (#116) and the composable Effect
-Chain (ADR 0017, #125–#128), plus Halftone (#309). All seven Effects are live — Source Image *or*
-Live Source → the Chain → PNG Export / Capture / Copy / Recording — the pure-core /
-imperative-shell seam is established, and the render is deterministic in Chain + Seed. The front
+Chain (ADR 0017, #125–#128), plus Halftone (#309) and Wave (#310). All eight Effects are live —
+Source Image *or* Live Source → the Chain → PNG Export / Capture / Copy / Recording — the pure-core
+/ imperative-shell seam is established, and the render is deterministic in Chain + Seed. The front
 door is the six Presets plus Randomize; behind the EDIT tab the Chain is fully editable — reorder,
 add, remove, duplicate, the same Effect more than once. The v1 scope in `CONTEXT.md` is complete.
 
@@ -233,17 +233,21 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   `ChromaticAberrationParams`, `DEFAULT_CHROMATIC_ABERRATION`,
   `MAX_CHROMATIC_ABERRATION_MAGNIFICATION`,
   `HalftoneParams`, `HalftoneTint`, `DEFAULT_HALFTONE`, `HALFTONE_MAX_DOT_RADIUS_RATIO`,
+  `WaveParams`, `WaveAxis`, `DEFAULT_WAVE`, `MAX_WAVE_AMPLITUDE_RATIO`,
   `DEFAULT_CHANNEL_SHIFT`,
-  `CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE`, `HALFTONE_CELL_SIZE_RANGE` (the
+  `CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE`, `HALFTONE_CELL_SIZE_RANGE`,
+  `WAVE_WAVELENGTH_RANGE` (the
   params with no natural 0..1 bound — in the core so the sliders and Randomize's clamp share one
   source of truth)
 - `src/glitch/presets.ts` — `PRESETS` (the six curated Chains), `DEFAULT_PRESET` (applied on open),
   `Preset`, `chainMatch()` (total and order-sensitive), `randomizeChain()` (preset + jitter,
   injected randomness, structure rides through), `EFFECT_ORDER` (the palette's order)
-- `src/glitch/pipeline.ts` — the seven Effects: `blockDisplacement()`, `pixelSort()`,
+- `src/glitch/pipeline.ts` — the eight Effects: `blockDisplacement()`, `pixelSort()`, `wave()`,
   `channelShift()`, `chromaticAberration()`, `halftone()`, `scanlines()`, `noise()` — see ADR 0005.
   Halftone is the one that is neither structural nor surface: it re-quantizes, which is why the
-  canonical order sits it on the seam between the two (`CONTEXT.md`)
+  canonical order sits it on the seam between the two (`CONTEXT.md`). Wave closes the structural
+  group — the only Effect that moves the image as a whole, along a continuous function, and the
+  second caller of the shared `sampleBilinear` resampler
 - `src/glitch/chain.ts` — the composable Effect Chain (ADR 0017): `Chain`, `Link`, `EffectType`,
   `EffectParams`, `EFFECT_REGISTRY` (type → pure fn + `DEFAULT_*`), `applyChain()` (the fold),
   `createLink()`, and the pure editing helpers `addLink()` / `removeLink()` / `duplicateLink()` /

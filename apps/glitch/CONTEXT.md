@@ -11,8 +11,17 @@ Uma lista **ordenada e editável** de Links, cada um uma instância de Effect �
 **PixelBuffer**. A ordem em que os Presets são montados continua sendo a canônica — estruturais
 (reorganizam pixels) antes de superfície (sobrepõem textura):
 
-`Block Displacement → Pixel Sort → Channel Shift → Chromatic Aberration → Halftone → Scanlines →
-Noise`
+`Block Displacement → Pixel Sort → Wave → Channel Shift → Chromatic Aberration → Halftone →
+Scanlines → Noise`
+
+**Wave fecha o grupo dos estruturais**, logo depois do Pixel Sort e antes do Channel Shift. Ele
+também reorganiza pixels, então é estrutural — mas é o único que move a imagem **inteira** ao longo
+de uma função contínua, e por isso vem por último entre eles: assim carrega junto na curva o que os
+discretos deixaram (os rasgos do Block Displacement, os rastros do Pixel Sort), em vez de ter a
+curva achatada de volta na grade do quadro por um sort que roda depois — o Pixel Sort percorre as
+linhas do quadro, não as linhas entortadas. E vem antes do Channel Shift e do Chromatic Aberration
+para que a separação de canais ande sobre a imagem já entortada: uma lente franja o que chegou até
+ela, e chegou torto.
 
 **Halftone fica na emenda entre os dois grupos**, e não dentro de nenhum deles: ele não reorganiza
 pixels nem sobrepõe textura — ele **re-quantiza**, jogando fora o detalhe de cada célula e
@@ -34,17 +43,17 @@ _Avoid_: ImageData (é o tipo do DOM que a casca embrulha/desembrulha), bitmap, 
 
 **Effect**:
 Uma transformação nomeada e isolada do pipeline; função pura `PixelBuffer → PixelBuffer`
-parametrizada pelos seus próprios params. Os sete Effects são Block Displacement,
-Pixel Sort, Channel Shift, Chromatic Aberration, Halftone, Scanlines e Noise.
+parametrizada pelos seus próprios params. Os oito Effects são Block Displacement,
+Pixel Sort, Wave, Channel Shift, Chromatic Aberration, Halftone, Scanlines e Noise.
 _Avoid_: filter, layer, camada
 
 **Chain**:
 A lista **ordenada** de **Links** aplicada para produzir a saída — **o look** (ADR 0017). A ordem
 é significativa: o PixelBuffer flui de um Link para o próximo. Repetições são permitidas — o mesmo
 Effect pode aparecer mais de uma vez. Não contém o Seed: o look e o arranjo são coisas distintas.
-A ordem canônica (`Block Displacement → Pixel Sort → Channel Shift → Chromatic Aberration →
-Halftone → Scanlines → Noise`) deixou de ser lei e passou a ser só como as Chains dos Presets são
-montadas.
+A ordem canônica (`Block Displacement → Pixel Sort → Wave → Channel Shift →
+Chromatic Aberration → Halftone → Scanlines → Noise`) deixou de ser lei e passou a ser só como as
+Chains dos Presets são montadas.
 _Avoid_: stack (o modelo é uma **Chain**, não uma "stack" — ver ADR 0017); pipeline (a Pipeline
 fixa era o caso particular que a Chain substituiu); options, config, filters
 
@@ -94,6 +103,7 @@ _Avoid_: session, workspace, app state
 |---|---|
 | **Block Displacement** | Desloca blocos retangulares (semeados pelo Seed) horizontalmente — o sabor "corrupção de dados". Único Effect com aleatoriedade |
 | **Pixel Sort** | Ordena faixas contíguas de pixels por luminância dentro de uma banda de threshold — o efeito "derretido" icônico |
+| **Wave** | Desloca linhas ou colunas inteiras ao longo de uma senoide — o sinal **entortando** em vez de quebrar. É o eixo que faltava: **distorção geométrica da imagem inteira**, contínua, onde o Block Displacement move blocos **discretos** (e semeados) e o Chromatic Aberration move cada **canal** por si, radialmente. Amostragem bilinear, bordas em clamp; puramente geométrico (não usa Seed) |
 | **Channel Shift** | Desloca os canais R/G/B por um vetor **uniforme** — o "RGB split". O deslocamento **constante** (o mesmo em toda a imagem) é o que o separa do Chromatic Aberration: são dois Effects distintos, não um com modos |
 | **Chromatic Aberration** | Amplia cada canal em torno do centro por uma fração diferente (R para fora, B para dentro), de modo que o deslocamento **cresce com o raio** — centro nítido, franjas coloridas nas bordas: o sabor de **lente óptica**. Amostragem bilinear, bordas em clamp; puramente geométrico (não usa Seed) |
 | **Halftone** | Redesenha a imagem como uma grade de pontos cuja **área** acompanha a luminância de cada célula — a retícula de impressão. Nem estrutural nem de superfície: **re-quantiza**, e por isso ocupa a emenda entre os dois grupos na ordem canônica. `color` dá ao ponto a cor média da célula, `mono` entinta de branco e deixa só a área carregando o tom. Puramente uma função dos pixels (não usa Seed) |
@@ -111,7 +121,7 @@ vídeo via `canvas.captureStream()` + `MediaRecorder`). Recording grava o canvas
 ## Escopo (v1)
 
 - **Dentro:** imagem estática + Live Source (webcam) em tempo real; a Chain editável de
-  Effects — 7 tipos, ordem, presença e repetição nas mãos do usuário (ADR 0017); presets-first
+  Effects — 8 tipos, ordem, presença e repetição nas mãos do usuário (ADR 0017); presets-first
   (6 Presets, um já aplicado na abertura) + Randomize; Seed fixo com Re-roll; PNG Export +
   Capture + Copy + Recording.
 - **Fora (v2+):** datamosh real; glitch animado

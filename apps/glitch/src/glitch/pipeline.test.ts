@@ -7,6 +7,7 @@ import {
   noise,
   pixelSort,
   scanlines,
+  wave,
 } from './pipeline'
 import { structuredBuffer } from './test-pixels'
 import {
@@ -16,11 +17,14 @@ import {
   type HalftoneParams,
   MAX_BLOCK_SHIFT_RATIO,
   MAX_NOISE_DELTA,
+  MAX_WAVE_AMPLITUDE_RATIO,
   type NoiseParams,
   type PixelBuffer,
   type PixelSortParams,
   SCANLINES_DENSITY_STEP,
   type ScanlinesParams,
+  WAVE_WAVELENGTH_RANGE,
+  type WaveParams,
 } from './types'
 
 /** Greys are the clearest Pixel Sort fixture: luminance tracks the channel value directly. */
@@ -1064,6 +1068,169 @@ describe('halftone', () => {
 
     const first = halftone(pixels, { cellSize: 5, dotScale: 0.7, tint: 'color' })
     const second = halftone(pixels, { cellSize: 5, dotScale: 0.7, tint: 'color' })
+
+    expect(Array.from(first.data)).toEqual(Array.from(second.data))
+  })
+})
+
+describe('wave', () => {
+  /**
+   * A frame whose every pixel is unique on both axes, so a displaced pixel can be traced back to
+   * exactly the one it came from — which is what lets these assertions pin the sine rather than
+   * merely notice that something moved.
+   */
+  function traceable(width: number, height: number): PixelBuffer {
+    return buildPixels(
+      width,
+      height,
+      Array.from({ length: width * height }, (_, i) => [i % width, Math.floor(i / width), 7, 255]),
+    )
+  }
+
+  // 100 wide against MAX_WAVE_AMPLITUDE_RATIO puts the crest exactly 12px out, and a wavelength of
+  // 8 puts the crests on whole rows (y=2 rides sin +1, y=6 rides sin -1, y=0 rides 0). The
+  // displacement is therefore a whole number of pixels and the sampler blends nothing, so the
+  // assertions below read the sine itself rather than a rounding of it.
+  const CREST_WIDTH = 100
+  const CREST_WAVELENGTH = 8
+  const CREST_OFFSET = MAX_WAVE_AMPLITUDE_RATIO * CREST_WIDTH
+
+  const BEND: WaveParams = { axis: 'horizontal', amplitude: 1, wavelength: CREST_WAVELENGTH }
+
+  it('never mutates the input buffer', () => {
+    const pixels = traceable(CREST_WIDTH, 8)
+    const before = Array.from(pixels.data)
+
+    wave(pixels, BEND)
+
+    expect(Array.from(pixels.data)).toEqual(before)
+  })
+
+  it('returns an equivalent buffer at zero amplitude', () => {
+    // The floor of the slider means the Effect off, the same as it does for Noise, Scanlines,
+    // Chromatic Aberration and Halftone — a true pass-through, not merely a bend too small to see.
+    const pixels = structuredBuffer(16, 12)
+
+    const out = wave(pixels, { ...BEND, amplitude: 0 })
+
+    expect(Array.from(out.data)).toEqual(Array.from(pixels.data))
+  })
+
+  it('preserves the buffer dimensions', () => {
+    const out = wave(structuredBuffer(13, 7), BEND)
+
+    expect([out.width, out.height]).toEqual([13, 7])
+  })
+
+  it('displaces a row by the sine of its own position', () => {
+    const pixels = traceable(CREST_WIDTH, 8)
+
+    const out = wave(pixels, BEND)
+
+    // The positive crest pulls the picture right, so the pixel that lands at x came from its left.
+    expect(pixelAt(out, 50, 2)).toEqual(pixelAt(pixels, 50 - CREST_OFFSET, 2))
+    // Half a wavelength on, the sine has flipped and the same row's worth travels the other way.
+    expect(pixelAt(out, 50, 6)).toEqual(pixelAt(pixels, 50 + CREST_OFFSET, 6))
+  })
+
+  it('leaves a row sitting on a zero of the sine where it was', () => {
+    const pixels = traceable(CREST_WIDTH, 8)
+
+    const out = wave(pixels, BEND)
+
+    expect(pixelAt(out, 50, 0)).toEqual(pixelAt(pixels, 50, 0))
+  })
+
+  it('moves a whole row together rather than shearing it', () => {
+    // The claim that separates Wave from every other geometric Effect here: one offset for the
+    // entire line, so the image travels as one image.
+    const pixels = traceable(CREST_WIDTH, 8)
+
+    const out = wave(pixels, BEND)
+
+    for (const x of [20, 45, 80]) {
+      expect(pixelAt(out, x, 2)).toEqual(pixelAt(pixels, x - CREST_OFFSET, 2))
+    }
+  })
+
+  it('clamps at the edge rather than wrapping the far side in', () => {
+    // A crest pushes the left of the row out of frame; what fills the gap is the edge column
+    // repeated. Wrapping would drag the right-hand end of the row into the left margin, which
+    // reads as a bug rather than as a bend — the same choice `channelShift` makes.
+    const pixels = traceable(CREST_WIDTH, 8)
+
+    const out = wave(pixels, BEND)
+
+    expect(pixelAt(out, 0, 2)).toEqual(pixelAt(pixels, 0, 2))
+    expect(pixelAt(out, CREST_OFFSET - 1, 2)).toEqual(pixelAt(pixels, 0, 2))
+  })
+
+  it('displaces columns instead of rows on the vertical axis', () => {
+    // Square, so the two axes span the same distance and the crest lands on the same offset.
+    const pixels = traceable(CREST_WIDTH, CREST_WIDTH)
+
+    const out = wave(pixels, { ...BEND, axis: 'vertical' })
+
+    expect(pixelAt(out, 2, 50)).toEqual(pixelAt(pixels, 2, 50 - CREST_OFFSET))
+    expect(pixelAt(out, 6, 50)).toEqual(pixelAt(pixels, 6, 50 + CREST_OFFSET))
+  })
+
+  it('travels further as the amplitude rises', () => {
+    const pixels = traceable(CREST_WIDTH, 8)
+
+    const half = wave(pixels, { ...BEND, amplitude: 0.5 })
+    const full = wave(pixels, BEND)
+
+    expect(pixelAt(half, 50, 2)).toEqual(pixelAt(pixels, 50 - CREST_OFFSET / 2, 2))
+    expect(pixelAt(full, 50, 2)).toEqual(pixelAt(pixels, 50 - CREST_OFFSET, 2))
+  })
+
+  it('spaces the crests by the wavelength', () => {
+    // Doubling the cycle moves the crest from row 2 to row 4 — the param does what its name says.
+    const pixels = traceable(CREST_WIDTH, 16)
+
+    const out = wave(pixels, { ...BEND, wavelength: CREST_WAVELENGTH * 2 })
+
+    expect(pixelAt(out, 50, 4)).toEqual(pixelAt(pixels, 50 - CREST_OFFSET, 4))
+  })
+
+  // Both ends, because the range is a property of the bend rather than of the slider that edits it:
+  // a cycle outside it stops reading as a wave, whichever way the caller came in.
+  it.each([
+    ['below the tightest', 0, WAVE_WAVELENGTH_RANGE.min],
+    ['above the widest', 5000, WAVE_WAVELENGTH_RANGE.max],
+  ])('bends a wavelength %s the control offers as that one', (_label, asked, held) => {
+    const pixels = structuredBuffer(64, 48)
+
+    const out = wave(pixels, { ...BEND, wavelength: asked })
+
+    expect(Array.from(out.data)).toEqual(
+      Array.from(wave(pixels, { ...BEND, wavelength: held }).data),
+    )
+  })
+
+  it('carries a pixel\u2019s alpha along with it', () => {
+    // Wave *moves* a pixel where the other Effects tint one, so its transparency has to travel with
+    // it — left behind, a displaced pixel would inherit whatever alpha sat where it landed.
+    const pixels = buildPixels(
+      CREST_WIDTH,
+      8,
+      Array.from({ length: CREST_WIDTH * 8 }, (_, i) => [200, 200, 200, (i % CREST_WIDTH) * 2]),
+    )
+
+    const out = wave(pixels, BEND)
+
+    expect(pixelAt(out, 50, 2)[3]).toBe(pixelAt(pixels, 50 - CREST_OFFSET, 2)[3])
+  })
+
+  it('renders the same buffer identically every time', () => {
+    // Wave draws on nothing — no Seed, no Math.random — so its output is a function of the pixels
+    // and its params alone (ADR 0005). `chain.test.ts` pins the same property through the Chain,
+    // where the Seed it ignores actually travels.
+    const pixels = structuredBuffer(24, 18)
+
+    const first = wave(pixels, { axis: 'vertical', amplitude: 0.6, wavelength: 33 })
+    const second = wave(pixels, { axis: 'vertical', amplitude: 0.6, wavelength: 33 })
 
     expect(Array.from(first.data)).toEqual(Array.from(second.data))
   })

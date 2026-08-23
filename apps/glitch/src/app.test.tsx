@@ -404,6 +404,23 @@ describe('App', () => {
       })
     })
 
+    it('adds Wave from the palette and edits it in the panel', () => {
+      // No Preset carries Wave either, so the palette is its only way into a Chain — and reaching
+      // its params afterwards is what proves the registry carried the new Effect the whole way
+      // through.
+      renderWithEditOpen()
+      openPalette()
+
+      fireEvent.click(screen.getByRole('button', { name: '+ wave' }))
+      focusLink('wave')
+      fireEvent.change(screen.getByLabelText('wavelength'), { target: { value: '128' } })
+
+      expect(lastParamsOf('wave')).toMatchObject({
+        wavelength: 128,
+        axis: EFFECT_REGISTRY.wave.defaults.axis,
+      })
+    })
+
     it('removes the focused Link', () => {
       renderWithEditOpen()
       focusLink('scanlines')
