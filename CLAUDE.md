@@ -80,11 +80,27 @@ Packages" PR; merging that one applies the bumps and tags the release. See `.cha
 
 ## Name the role, not the hue
 
-Deck-wide. The visual language is a set of named Themes — `ice`, `construct`, `chiba` — and only
-the *semantic* layer varies between them (ADR 0024). Write `text-accent`, never `text-violet`;
-`bg-bg-elevated`, never `bg-shadow`. The primitive hue names are `ice`'s vocabulary and are not in
-the Tailwind preset at all, so naming one renders unstyled rather than erroring — which is why the
-kit's vocabulary guard fails the build with the class, the file and the line.
+Deck-wide. The visual language is a set of seven named Themes, and only the *semantic* layer varies
+between them (ADR 0024). Names come from the *internal* vocabulary of the fictions, never their
+titles — the deck speaks the work's language rather than quoting it.
+
+| Theme | What it is |
+|-------|------------|
+| `ice` | The look the deck shipped with — violet accent, cyan info. The default, and the fallback for any value it doesn't recognise |
+| `construct` | Green phosphor: the screen of a machine that only knew how to show one colour |
+| `chiba` | Grey and sodium-vapour amber — the washed-out sky under the streetlight |
+| `kuang` | Arterial red on near-black, the icebreaker cutting ice. Danger vacates red for magenta, so a critical badge never blends into the chrome |
+| `ougou` | Blued steel under a warm ember — the loa of iron, and the only Theme with a cool surface and a warm accent |
+| `solitude` | Rust corrosion over a poisoned brown, with a chem-yellow warning: the toxic junkyard |
+| `onyx` | The neon off — silver on true black, colour spent only on genuine status |
+
+The picker lists the whole roster, so it is no longer width-capped: adding a Theme is a question of
+design and contrast, not of control shape. `packages/deck-kit/CONTEXT.md` carries the roster in full.
+
+Write `text-accent`, never `text-violet`; `bg-bg-elevated`, never `bg-shadow`. The primitive hue
+names are `ice`'s vocabulary and are not in the Tailwind preset at all, so naming one renders
+unstyled rather than erroring — which is why the kit's vocabulary guard fails the build with the
+class, the file and the line.
 
 SPRAWL//Atlas is excluded from Themes by explicit decision (ADR 0021, ADR 0024), but not from this
 rule: it promotes like everything else and simply never sets the theme attribute.

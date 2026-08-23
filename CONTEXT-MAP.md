@@ -17,8 +17,12 @@ inglês.
   preview em tempo real, presets e Export.
 - [GOLEM//Console](./apps/golem/CONTEXT.md) — um *fantasy computer* de 32 bits: assembler,
   emulador e um Console de linha de comando, com registradores, memória e Terminal visíveis
-  ao vivo durante a execução. **Em construção** — o modelo está fixado e o scaffold existe; o
-  assembler, a Machine e o Console ainda não.
+  ao vivo durante a execução. **v3 completo** — v1 (#133) trouxe as 42 instruções, o assembler e o
+  Console; v2 (#203) fechou a unidade 2 inteira, com interrupções despachando para ISRs escritas
+  pelo usuário e os dispositivos memory-mapped (Watchdog, FPU) no painel DEVICES; v3 (#233) fechou a
+  unidade 3 e o projeto, com o cache como *lente de classificador* — não dá nada novo à máquina, não
+  custa tempo, nunca serve um valor, só classifica cada acesso como Hit ou Miss (ADR 0023). O teto é
+  princípio, não pendência: **sem oráculo, sem feature** (ADR 0019).
 - **SPRAWL//Atlas** (`apps/sprawl`) — o mapa de capacidade de troca de dados do mundo como luz:
   cada pixel vale N gigabytes, a janela logarítmica é contínua, e em `1 px = 1 GB` a tela satura
   em branco (OVERFLOW) até você reescalar mais grosso e a estrutura emergir. Inspirado na passagem
@@ -38,8 +42,9 @@ inglês.
   (mecanismo de erro operacional, core de Recording). **Não** é um core de domínio — o pipeline de
   cada app (conversão ASCII, Effects de glitch) fica no app. Escopo e fronteiras em ADR 0014;
   `EmptyStateHero` e `Tooltip` cruzaram numa segunda leva (ADR 0015). A linguagem visual deixou de
-  ser uma paleta só e virou um conjunto nomeado de **Themes** — `ice`, `construct`, `chiba` —
-  com um contrato de contraste que todo Theme precisa cumprir (ADR 0024).
+  ser uma paleta só e virou um conjunto nomeado de **Themes** — sete: `ice`, `construct`, `chiba`,
+  `kuang`, `ougou`, `solitude`, `onyx` — com um contrato de contraste que todo Theme precisa cumprir
+  (ADR 0024). O roster com o caráter de cada um está no `CONTEXT.md` do Deck Kit.
 
 ## Relationships
 
@@ -84,7 +89,7 @@ inglês.
   um pipeline novo pro deck — snapshot vendorizado do PeeringDB, commitado e datado (ADR 0022) —
   que fica no app, não no Deck Kit, até um segundo consumidor provar a junção.
 - **O Theme para onde começam os pixels do usuário** — a linguagem visual virou um conjunto nomeado
-  de Themes (`ice`, `construct`, `chiba`), e a fronteira do que eles alcançam não é nova: é a mesma
+  de Themes (sete deles, do `ice` ao `onyx`), e a fronteira do que eles alcançam não é nova: é a mesma
   linha que a ADR 0013 traçou pros overlays de canvas, reusada pra outro fim. **O deck pode
   recolorir o que ele desenhou; não pode recolorir o que você trouxe.** Casca, painéis, o fósforo do
   Terminal e os badges seguem o Theme; a Source, a saída da Chain do GLITCH e os Color Modes do
@@ -92,8 +97,8 @@ inglês.
   do usuário, são a peça, e a ADR 0021 diz que a peça *é* luz ciano contra o escuro (ADR 0024).
 - **Color Mode (ASCII) ≠ Theme (deck)** — os dois são "o esquema de cores", e o ASCII é o único
   programa onde os dois controles ficam à vista. Color Mode pinta a arte do usuário; Theme pinta a
-  casca. Os Themes se chamam `ice`, `construct` e `chiba` porque `matrix` e `neon` já são Color
-  Modes — nomes vêm do vocabulário interno das ficções, nunca do título delas.
+  casca. Nenhum Theme do roster se chama `matrix` ou `neon` porque esses dois já são Color Modes —
+  nomes vêm do vocabulário interno das ficções, nunca do título delas.
 - **"Shell" e "Console" não são sinônimos aqui** — *shell* continua significando a camada
   impura do código (imperative shell / functional core) em todo o deck; **Console** é o painel
   de linha de comando do GOLEM. E, dentro do GOLEM, **Terminal** é o dispositivo de saída da

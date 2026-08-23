@@ -27,7 +27,8 @@ Single-page React/TS/Vite app. Fully client-side — no backend server. AI analy
 
 ### Conversion pipeline
 
-1. `UploadZone` hands either an `HTMLImageElement` (Source Image) or `HTMLVideoElement` (Live Source) to `App`
+1. The kit's `EmptyStateHero` is the single entry (ADR 0015): it hands `App` either an
+   `HTMLImageElement` (Source Image) or, through the webcam path, an `HTMLVideoElement` (Live Source)
 2. `App` holds `ConversionSettings` state and passes both down to `AsciiCanvas`
 3. `AsciiCanvas` keeps a **hidden off-screen canvas** (`hiddenRef`) sized `cols × rows` — this is used only for pixel sampling via `getImageData`. The visible canvas is sized in pixels. These two canvases must stay separate (see ADR 0001)
 4. `AsciiCanvas` decides *when* to render: once per settings change via `useEffect` for Source Image, or in a `requestAnimationFrame` loop throttled to ~15fps for Live Source (see ADR 0002). It calls `renderFrame()` from `src/ascii/render-frame.ts`
@@ -93,6 +94,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/ascii/image-utils.ts` — `resizeImage()` (caps Source Image at 800px wide before sampling)
 - `src/ascii/renderer.ts` — `computeFrame()` (pure), `paintFrame()` (side effects) — see ADR 0005
 - `src/ascii/render-frame.ts` — `renderFrame()`: pipeline orchestrator — cols/rows math, convertImage → computeFrame → paintFrame; returns `boolean`
+- `src/ascii/fit.ts` — `computeContainFit()`, `sliceToRegion()`: the centered "contain" sub-region of
+  the char grid that keeps the Source's aspect, compared against the grid's *pixel* aspect because
+  the monospace cell is ~0.6 wide × 1 tall (ADR 0010)
 - `src/ascii/presets.ts` — `PRESETS`, `Preset`, `settingsMatch()` (named ConversionSettings snapshots)
 
 **AI analysis**
@@ -103,14 +107,19 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/ai/use-ai-config.ts` — `AIConfig` state + `localStorage` persistence
 
 **Errors & utilities**
-- `src/errors/app-error.ts` — `AppError`, `createError`, `normalizeError`, `Errors` namespace
-- `src/hooks/use-recording.ts` — `useRecording`, `isRecordingSupported`, format detection
-- `src/hooks/use-toast.ts` — toast queue state
-- `src/hooks/use-webcam-state.ts` — webcam lifecycle state
-- `src/utils/cn.ts` — `cn()` (clsx + tailwind-merge)
-- `src/utils/load-image-file.ts` — `loadImageFile()` (File → HTMLImageElement, validates type/size)
-- `src/utils/device.ts` — device/browser detection helpers
-- `src/utils/share.ts` — `shareOrDownloadBlob()` (Web Share API with download fallback)
+- `src/errors/app-error.ts` — `Errors`: this app's error factories (Export, Capture, localStorage)
+  over the kit's `AppError` / `createError` (`@cyberdeck/deck-kit/errors`) — only the wording stays
+  here (ADR 0014)
+- `src/export/output.ts` — `outputFilename()`, `OutputKind`, `planPngExport()`, `MAX_EXPORT_DIM`,
+  `PngScale`: the pure naming and sizing decisions for Export & Capture, blob construction left to
+  the shells. Deliberately still a hand-copy of GLITCH's (ADR 0014) — the filenames diverge
+- `src/hooks/use-webcam-state.ts` — `useWebcamState()`, `planEffects()`, `reducer()`: the Live
+  Source's MediaStream lifecycle — deliberately still a hand-copy (ADR 0014)
+- Everything else shared comes from `@cyberdeck/deck-kit` (ADR 0014): `recording` (`useRecording`,
+  `formatElapsedTime` — the Recording's share-or-download on completion lives in there too), `ui`
+  (the primitives plus `EmptyStateHero`, `ErrorBoundary`, `TabStrip`, `ThemeControl`,
+  `ToastProvider` and the toast hooks, `ICON_GLYPH_SIZE`, `TOUCH_TARGET_*`), `utils` (`cn`,
+  `shareOrDownloadCanvas`, `isTouchDevice`), `errors`
 
 **Components**
 - `src/components/ascii-canvas.tsx` — lifecycle coordinator: drives static and rAF render paths.
@@ -125,25 +134,28 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   (ADR 0020's extraction slice); this file is the wiring that says which panel each tab carries.
   Only the active panel is mounted, so one tab's controls are in the accessibility tree at a time. The shell is GLITCH's, ported rather than
   redesigned — whatever lands empty-diff is what crosses into deck-kit
+- `src/components/preset-picker.tsx` — the Strip's PRESETS tab: the Preset chips in a horizontally
+  scrollable row, the active one tracked rather than derived — an edit has to leave you standing on
+  the Preset you started from, marked modified
 - `src/components/settings-editor.tsx` — the Strip's EDIT tab: every ConversionSettings control as
   a row of tool chips, the focused tool's control in the panel above. The three sliders are
   siblings, so at `sm` the whole group reads at once while mobile focuses one (adaptive density);
   the off-density ones are `hidden`, which keeps them out of the accessibility tree too
-- `src/components/upload-zone.tsx` — image upload and Live Source activation
 - `src/components/output-panel.tsx` — the Strip's OUT tab: one surface for every way the result
   leaves, gated by Source — PNG/TXT Export for a Source Image, Capture/Record for a Live Source,
   AI Analysis for both. It carries the Record *start* only: stopping is the canvas REC badge, so a
   take survives a tab switch (ADR 0020). The AI config banner lives here too, beside the Analysis
   it advertises
-- `src/components/empty-state-hero.tsx` — initial empty state with upload and webcam entry points
 - `src/components/ai-config-banner.tsx` — informational banner for AI config, rendered inside the
   OUT tab; dismiss state in `sessionStorage`
 - `src/components/analysis-modal.tsx` — AI Analysis results with threat-level display
 - `src/components/api-key-modal.tsx` — API key configuration
 - `src/components/about-modal.tsx` — About/info modal
-- `src/components/toast-provider.tsx` — renders the toast queue
-- `src/components/error-boundary.tsx` — generic React error boundary with customizable fallback
-- `src/components/ui/` — design system primitives: `badge`, `button`, `error-text`, `label`, `modal`, `slider`, `toast`, `toggle-group`, `tooltip`
+- `src/components/footer.tsx` — empty-state bottom chrome: the attribution links plus the About
+  trigger, hidden once a Source loads. The 44px target sits on each control, not on the bar
+- `src/components/ui/` — the three primitives this program still owns: `badge`, `error-text`, and
+  `header-button` (the header's own control shape). Everything else — Button, Chip, Label, Modal,
+  Slider, TabStrip, ToggleGroup, Tooltip, Toast — comes from `@cyberdeck/deck-kit/ui`
 
 **ADRs**
 - `../../docs/adr/` — all architectural decisions (deck-wide, at the repo root)

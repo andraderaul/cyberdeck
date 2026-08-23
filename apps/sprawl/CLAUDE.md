@@ -99,7 +99,13 @@ costs nothing and changes nothing — with no theme attribute set, it resolves t
   `clippedFraction()`, `isOverflow()`, `formatScaleUnit()`, `OVERFLOW_TOP_CAPACITY_MBPS`
 - `src/atlas/paint.ts` — `paintFrame()` + `createGlowSprite()`: the only canvas-touching functions
 - `src/atlas/dataset.ts` — `DATASET`, `Dataset`, `maxCapacity()`, `skeletonScale()`
-- `src/data/dataset-sample.json` — the #225 stand-in; #227 adds the vendored `dataset-YYYY-MM.json`
+- `src/data/dataset-YYYY-MM.json` — the committed, dated PeeringDB snapshots (ADR 0022). The #225
+  stand-in went out when the real data landed in #227; older months stay, because a snapshot is a
+  versioned artifact and not a cache
+- `src/data/snapshot.ts` — the **generated** pointer (`npm run vendor:dataset`) naming the month
+  currently on air. It is the only line re-vendoring changes; never edited by hand
+- `src/data/coastline.json` — the earned basemap's Natural Earth 110m coastline, vendored once
+  (`npm run vendor:coastline`) — coastlines don't drift
 - `src/hooks/use-scale.ts` — `useScale()`: binds wheel / drag / arrow keys on the map to the scale
 - `src/components/atlas-canvas.tsx` — the imperative shell + the scale surface (the map *is* the control)
 - `src/components/scale-reader.tsx` — the always-visible live reader / OVERFLOW voice
