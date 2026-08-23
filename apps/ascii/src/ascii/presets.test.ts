@@ -32,6 +32,7 @@ describe('PRESETS', () => {
       resolution: 12,
       brightness: 1.0,
       contrast: 1.0,
+      edgeGlyphs: false,
     }
 
     it('returns true when both objects have identical values', () => {
@@ -50,6 +51,12 @@ describe('PRESETS', () => {
       expect(settingsMatch(base, { ...base, colorMode: 'neon' })).toBe(false)
     })
 
+    // Edge Glyphs change the look as plainly as a Charset does, so a Preset chip must stop
+    // reading as active the moment the axis is switched on under it.
+    it('returns false when the Edge Glyphs axis differs', () => {
+      expect(settingsMatch(base, { ...base, edgeGlyphs: true })).toBe(false)
+    })
+
     it('is not fooled by key-ordering differences that would confuse JSON.stringify', () => {
       const reordered = {
         contrast: base.contrast,
@@ -57,6 +64,7 @@ describe('PRESETS', () => {
         resolution: base.resolution,
         colorMode: base.colorMode,
         charset: base.charset,
+        edgeGlyphs: base.edgeGlyphs,
       } as ConversionSettings
       expect(settingsMatch(base, reordered)).toBe(true)
     })

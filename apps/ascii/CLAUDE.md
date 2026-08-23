@@ -61,9 +61,10 @@ Use these terms precisely — avoid the listed alternatives:
 | Term | Meaning | Avoid |
 |------|---------|-------|
 | **Charset** | Symbol set mapping luminosity to a character | density, symbol set |
+| **Edge Glyph** | Directional character a cell takes where the local gradient reads as a contour — the shape axis beside the Charset's brightness one; opt-in, off by default | edge detection, sobel char |
 | **Source Image** | Static uploaded image; immutable during session | uploadedImage, input image |
 | **Live Source** | Active webcam stream | stream, camera, video source |
-| **ConversionSettings** | All conversion params (charset, colorMode, resolution, brightness, contrast) | options, settings |
+| **ConversionSettings** | All conversion params (charset, edgeGlyphs, colorMode, resolution, brightness, contrast) | options, settings |
 | **AsciiCell** | Atomic unit: one character + its original RGB | ProcessedPixel |
 | **Color Mode** | Colorization scheme applied during render | colorMode as domain term |
 | **Resolution** | Chars-per-canvas (controlled by character size) | fontSize, granularity |
@@ -93,7 +94,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 
 **ASCII core**
 - `src/ascii/types.ts` — `ConversionSettings`, `ColorMode`, `Charset`, `CHARSET_MAPS`, `AsciiCell`
-- `src/ascii/converter.ts` — `convertImage()`, `getAsciiChar()`, luminosity math
+- `src/ascii/converter.ts` — `convertImage()`, `getAsciiChar()`, luminosity math, and the Edge
+  Glyph pass (Sobel over the sampled grid — pure, ADR 0005)
 - `src/ascii/image-utils.ts` — `resizeImage()` (caps Source Image at 800px wide before sampling)
 - `src/ascii/renderer.ts` — `computeFrame()` (pure), `paintFrame()` (side effects) — see ADR 0005
 - `src/ascii/render-frame.ts` — `renderFrame()`: pipeline orchestrator — cols/rows math, convertImage → computeFrame → paintFrame; returns `boolean`

@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS: ConversionSettings = {
   charset: 'classic',
   brightness: 1.0,
   contrast: 1.0,
+  edgeGlyphs: false,
 }
 
 function renderEditor(onChange = vi.fn()) {
@@ -27,7 +28,14 @@ describe('SettingsEditor', () => {
   it('offers every ConversionSettings control as a tool chip', () => {
     renderEditor()
 
-    for (const tool of ['charset', 'color mode', 'resolution', 'brightness', 'contrast']) {
+    for (const tool of [
+      'charset',
+      'edge glyphs',
+      'color mode',
+      'resolution',
+      'brightness',
+      'contrast',
+    ]) {
       expect(screen.getByRole('button', { name: tool })).toBeInTheDocument()
     }
   })
@@ -158,6 +166,40 @@ describe('SettingsEditor', () => {
       for (const charset of Object.keys(CHARSET_MAPS)) {
         expect(screen.getByRole('button', { name: charset })).toBeInTheDocument()
       }
+    })
+  })
+
+  describe('Edge Glyphs', () => {
+    it('calls onChange with an edgeGlyphs patch when the axis is switched on', async () => {
+      const user = userEvent.setup()
+      const { onChange } = renderEditor()
+      focusTool('edge glyphs')
+
+      await user.click(screen.getByRole('button', { name: 'on' }))
+
+      expect(onChange).toHaveBeenCalledWith({ edgeGlyphs: true })
+    })
+
+    it('calls onChange with an edgeGlyphs patch when the axis is switched off', async () => {
+      const user = userEvent.setup()
+      const onChange = vi.fn()
+      render(
+        <SettingsEditor settings={{ ...DEFAULT_SETTINGS, edgeGlyphs: true }} onChange={onChange} />,
+      )
+      focusTool('edge glyphs')
+
+      await user.click(screen.getByRole('button', { name: 'off' }))
+
+      expect(onChange).toHaveBeenCalledWith({ edgeGlyphs: false })
+    })
+
+    // Colour and border alone are no state at all to a screen reader (WCAG 4.1.2).
+    it('presses the state the ConversionSettings are actually on', () => {
+      renderEditor()
+      focusTool('edge glyphs')
+
+      expect(screen.getByRole('button', { name: 'off' })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('button', { name: 'on' })).toHaveAttribute('aria-pressed', 'false')
     })
   })
 

@@ -32,6 +32,8 @@ export interface ConversionSettings {
   contrast: number
   colorMode: ColorMode
   charset: Charset
+  /** The Edge Glyph axis. Off is the deck's shipped look, so it stays the default everywhere. */
+  edgeGlyphs: boolean
 }
 
 export const CHARSET_MAPS: Record<Charset, string> = {
@@ -48,6 +50,12 @@ export const CHARSET_MAPS: Record<Charset, string> = {
   box: ' ╴─│┼╪╬█',
   binary: ' 01',
 }
+
+/**
+ * Width of a monospace cell as a fraction of its height. Grid geometry, not paint: the fit region,
+ * the cols/rows math and the Edge Glyph angle all need it, and only one of those three paints.
+ */
+export const MONOSPACE_CHAR_WIDTH_RATIO = 0.6
 
 export interface AsciiCell {
   char: string

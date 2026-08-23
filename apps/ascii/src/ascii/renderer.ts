@@ -1,5 +1,10 @@
 import { computeLuminosity } from './converter'
-import type { AsciiCell, ColorMode, ConversionSettings } from './types'
+import {
+  type AsciiCell,
+  type ColorMode,
+  type ConversionSettings,
+  MONOSPACE_CHAR_WIDTH_RATIO,
+} from './types'
 
 export interface RenderInstruction {
   char: string
@@ -31,8 +36,6 @@ export const DUAL_COLOR_MODES: Partial<Record<ColorMode, DualColorPair>> = {
 export function getModePalette(mode: ColorMode): string | DualColorPair {
   return DUAL_COLOR_MODES[mode] ?? COLOR_MODE_COLORS[mode] ?? '#c8c8e0'
 }
-
-export const MONOSPACE_CHAR_WIDTH_RATIO = 0.6
 
 /**
  * Pure: derives render instructions and ascii text from a cell grid — no DOM, fully testable.

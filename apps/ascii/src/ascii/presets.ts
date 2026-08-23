@@ -6,7 +6,8 @@ export function settingsMatch(a: ConversionSettings, b: ConversionSettings): boo
     a.colorMode === b.colorMode &&
     a.resolution === b.resolution &&
     a.brightness === b.brightness &&
-    a.contrast === b.contrast
+    a.contrast === b.contrast &&
+    a.edgeGlyphs === b.edgeGlyphs
   )
 }
 
@@ -26,6 +27,7 @@ export const PRESETS: Preset[] = [
       resolution: 10,
       brightness: 1.0,
       contrast: 1.3,
+      edgeGlyphs: false,
     },
   },
   {
@@ -37,6 +39,7 @@ export const PRESETS: Preset[] = [
       resolution: 8,
       brightness: 1.1,
       contrast: 1.4,
+      edgeGlyphs: false,
     },
   },
   {
@@ -48,6 +51,7 @@ export const PRESETS: Preset[] = [
       resolution: 6,
       brightness: 0.9,
       contrast: 1.5,
+      edgeGlyphs: false,
     },
   },
   {
@@ -59,6 +63,7 @@ export const PRESETS: Preset[] = [
       resolution: 12,
       brightness: 1.2,
       contrast: 1.2,
+      edgeGlyphs: false,
     },
   },
 ]

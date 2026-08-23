@@ -1,7 +1,7 @@
 import { convertImage } from './converter'
 import { computeContainFit, sliceToRegion } from './fit'
-import { computeFrame, MONOSPACE_CHAR_WIDTH_RATIO, paintFrame } from './renderer'
-import type { ConversionSettings } from './types'
+import { computeFrame, paintFrame } from './renderer'
+import { type ConversionSettings, MONOSPACE_CHAR_WIDTH_RATIO } from './types'
 
 /**
  * Intrinsic pixel dimensions of the Source, by type. Used to preserve its
@@ -42,7 +42,7 @@ export function renderFrame(
     return false
   }
 
-  const { resolution, brightness, contrast, charset } = settings
+  const { resolution, brightness, contrast, charset, edgeGlyphs } = settings
   const charW = resolution * MONOSPACE_CHAR_WIDTH_RATIO
   const charH = resolution
   const cols = Math.floor(canvasEl.width / charW)
@@ -63,7 +63,7 @@ export function renderFrame(
     source,
     cols,
     rows,
-    { brightness, contrast, charset },
+    { brightness, contrast, charset, edgeGlyphs },
     region,
     isMirrored,
   )
