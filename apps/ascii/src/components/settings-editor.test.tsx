@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS: ConversionSettings = {
   brightness: 1.0,
   contrast: 1.0,
   edgeGlyphs: false,
+  dithering: 'none',
 }
 
 function renderEditor(onChange = vi.fn()) {
@@ -31,6 +32,7 @@ describe('SettingsEditor', () => {
     for (const tool of [
       'charset',
       'edge glyphs',
+      'dithering',
       'color mode',
       'resolution',
       'brightness',
@@ -200,6 +202,41 @@ describe('SettingsEditor', () => {
 
       expect(screen.getByRole('button', { name: 'off' })).toHaveAttribute('aria-pressed', 'true')
       expect(screen.getByRole('button', { name: 'on' })).toHaveAttribute('aria-pressed', 'false')
+    })
+  })
+
+  describe('Dithering', () => {
+    it('offers every Dithering the conversion knows', () => {
+      renderEditor()
+      focusTool('dithering')
+
+      for (const label of ['none', 'bayer', 'floyd–steinberg']) {
+        expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
+      }
+    })
+
+    it('calls onChange with a dithering patch when one is picked', async () => {
+      const user = userEvent.setup()
+      const { onChange } = renderEditor()
+      focusTool('dithering')
+
+      await user.click(screen.getByRole('button', { name: 'floyd–steinberg' }))
+
+      expect(onChange).toHaveBeenCalledWith({ dithering: 'floyd' })
+    })
+
+    // Colour and border alone are no state at all to a screen reader (WCAG 4.1.2).
+    it('presses the Dithering the ConversionSettings are actually on', () => {
+      render(
+        <SettingsEditor
+          settings={{ ...DEFAULT_SETTINGS, dithering: 'bayer' }}
+          onChange={vi.fn()}
+        />,
+      )
+      focusTool('dithering')
+
+      expect(screen.getByRole('button', { name: 'bayer' })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('button', { name: 'none' })).toHaveAttribute('aria-pressed', 'false')
     })
   })
 

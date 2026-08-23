@@ -3,7 +3,7 @@ import { cn } from '@cyberdeck/deck-kit/utils'
 import { useState } from 'react'
 import { getModePalette } from '../ascii/renderer'
 import type { Charset, ColorMode, ConversionSettings } from '../ascii/types'
-import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
+import { CHARSET_MAPS, COLOR_MODES, DITHERINGS } from '../ascii/types'
 
 /**
  * The params panel's reserved height. Reserve the tallest tool's height (color mode — two chip
@@ -60,16 +60,30 @@ const GRADIENT_MODES = COLOR_MODES.filter((m) => Array.isArray(getModePalette(m)
 const EDGE_GLYPH_STATES = ['off', 'on'] as const
 
 /**
+ * The Dithering names as the panel says them out loud. `floyd` is the code's shorthand; the option
+ * carries the algorithm's full name because that is what a user searching for the look will
+ * recognise, and the row has the width for it.
+ */
+const DITHERING_LABELS = {
+  none: 'none',
+  bayer: 'bayer',
+  floyd: 'floyd–steinberg',
+} as const
+
+/**
  * The tools, in the order the EDIT row shows them. GLITCH's row is the Chain itself, which
  * processes left→right; ConversionSettings has no such order, so this one is grouped by what it
  * changes — what the characters *are*, then how they're coloured, then how densely they're sampled.
  * Edge Glyphs sit next to Charset because they are the same question asked on the other axis: the
  * Charset says which characters a surface spends, the Edge Glyphs say when a contour stops
- * spending them.
+ * spending them. Dithering joins that cluster for the same reason — it decides how the Charset's
+ * characters get spent across a gradient — and sits after Edge Glyphs because it is the inner
+ * pass: a contour's stroke overrides whatever the pattern chose.
  */
 const TOOLS = [
   { id: 'charset', label: 'charset' },
   { id: 'edgeGlyphs', label: 'edge glyphs' },
+  { id: 'dithering', label: 'dithering' },
   { id: 'colorMode', label: 'color mode' },
   { id: 'resolution', label: 'resolution' },
   { id: 'brightness', label: 'brightness' },
@@ -189,6 +203,21 @@ export default function SettingsEditor({ settings, onChange }: Props) {
           options={EDGE_GLYPH_STATES}
           value={settings.edgeGlyphs ? 'on' : 'off'}
           onChange={(state) => onChange({ edgeGlyphs: state === 'on' })}
+        />
+      </ToolPanel>
+    ),
+    dithering: (
+      <ToolPanel
+        label="dithering"
+        tooltipId="tooltip-dithering"
+        tooltip="trades a hard bucket edge for a pattern, so few characters still carry a gradient"
+      >
+        <ToggleGroup
+          ariaLabel="dithering"
+          options={DITHERINGS}
+          labels={DITHERING_LABELS}
+          value={settings.dithering}
+          onChange={(dithering) => onChange({ dithering })}
         />
       </ToolPanel>
     ),

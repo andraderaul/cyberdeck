@@ -20,6 +20,7 @@ const SETTINGS: ConversionSettings = {
   brightness: 1,
   contrast: 1,
   edgeGlyphs: false,
+  dithering: 'none',
 }
 
 function Wrapper({

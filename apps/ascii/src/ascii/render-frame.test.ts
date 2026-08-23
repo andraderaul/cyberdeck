@@ -10,6 +10,7 @@ const SETTINGS: ConversionSettings = {
   brightness: 1,
   contrast: 1,
   edgeGlyphs: false,
+  dithering: 'none',
 }
 
 function makeCanvas(width: number, height: number): HTMLCanvasElement {
@@ -240,6 +241,31 @@ describe('renderFrame', () => {
     const emitted = onConverted.mock.calls[0][0] as string[]
     expect(emitted.every((line) => line[half - 1] === '|' && line[half] === '|')).toBe(true)
     expect(ctxMock.fillText).toHaveBeenCalledWith('|', expect.any(Number), expect.any(Number))
+  })
+
+  // Same seam as Edge Glyphs above: the Dithering lands in the AsciiCell grid, so proving it
+  // reaches the TXT rows and the painted characters proves it reaches every Export.
+  it('carries the Dithering into both the painted canvas and the TXT rows', () => {
+    canvasEl.width = 200
+    canvasEl.height = 200
+    // 96 sits between two `blocks` buckets: undithered the whole field floors to a single `░`.
+    hiddenCtxMock.getImageData = vi.fn(() => ({
+      data: new Uint8ClampedArray(33 * 20 * 4).fill(96),
+    })) as unknown as typeof hiddenCtxMock.getImageData
+
+    const onConverted = vi.fn()
+    renderFrame(
+      makeCanvas(99, 100),
+      canvasEl,
+      hiddenEl,
+      { ...SETTINGS, charset: 'blocks', dithering: 'bayer' },
+      'monospace',
+      onConverted,
+    )
+
+    const emitted = (onConverted.mock.calls[0][0] as string[]).join('')
+    expect(new Set(emitted)).toEqual(new Set(['░', '▒']))
+    expect(ctxMock.fillText).toHaveBeenCalledWith('▒', expect.any(Number), expect.any(Number))
   })
 
   it('returns false when 2d context is unavailable', () => {
