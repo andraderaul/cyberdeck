@@ -24,6 +24,7 @@ import {
 // The shell the piece is served in, as text. Vite's `?raw` rather than a filesystem read: the test
 // runs from wherever the runner was started, and the import resolves against this file.
 import html from '../index.html?raw'
+import manifestJson from '../public/manifest.webmanifest?raw'
 import { FIELD } from '../src/atlas/paint'
 // The piece's paint, as text. Its glow constants are module-private and should stay that way — the
 // card has no business importing them at runtime — but a transcription of a private constant still
@@ -139,5 +140,15 @@ describe('the browser chrome sits on the piece, not on a Theme', () => {
     // guard already asserts the absence of the pre-paint script; this is the same absence checked
     // from the side that would have been tempted to add one.
     expect(html).not.toContain('data-theme')
+  })
+
+  // The manifest is the same hand-written colour one layer further out, and the one an *OS* paints
+  // an installed program's splash and window chrome with before a byte of the page loads (ADR 0027).
+  // `roster.test.ts` pins the other three programs' manifests to the default Theme's `--bg` and
+  // leaves this one alone for exactly the reason above — so the pin has to land here instead.
+  it('hands an installed piece the field as well, not a Theme’s background', () => {
+    const manifest = JSON.parse(manifestJson)
+    expect(manifest.theme_color).toBe(FIELD)
+    expect(manifest.background_color).toBe(FIELD)
   })
 })

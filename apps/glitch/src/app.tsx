@@ -1,3 +1,4 @@
+import { UpdateBanner, useAppUpdate } from '@cyberdeck/deck-kit/pwa'
 import { useRecording } from '@cyberdeck/deck-kit/recording'
 import { EmptyStateHero, ErrorBoundary, ThemeControl, useToastError } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -37,6 +38,7 @@ export default function App() {
   const [isAboutOpen, setIsAboutOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const showError = useToastError()
+  const update = useAppUpdate()
 
   const handleLiveSource = useCallback((video: HTMLVideoElement | null) => {
     setLiveSource(video)
@@ -109,6 +111,8 @@ export default function App() {
             Strip — PRESETS | EDIT | OUT are all about the Chain being made (ADR 0020, 0024). */}
         <ThemeControl className="ml-auto" />
       </header>
+
+      {update.isReady && <UpdateBanner onApply={update.apply} />}
 
       {/* One column at both breakpoints now: the Strip below carries every control, so there is no
           aside to make room for (ADR 0020). */}

@@ -1,3 +1,4 @@
+import { UpdateBanner, useAppUpdate } from '@cyberdeck/deck-kit/pwa'
 import { ErrorBoundary } from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DATASET } from './atlas/dataset'
@@ -24,6 +25,7 @@ const CITY_LABEL_MIN_DISTANCE = 52
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const update = useAppUpdate()
 
   // Boot from a shared link (#230): the URL encodes the scale (and basemap) the sender left, so the
   // recipient opens at the same point in the vertigo and keeps sliding. Read once, on mount.
@@ -74,6 +76,10 @@ export default function App() {
           rewrite the map. increase the scale.
         </span>
       </header>
+
+      {/* Under the header and in flow, never over the map: an overlay there would land on the piece
+          to announce housekeeping, and the piece is the whole surface (ADR 0013, ADR 0021). */}
+      {update.isReady && <UpdateBanner onApply={update.apply} />}
 
       <main className="flex-1 relative overflow-hidden">
         <ErrorBoundary

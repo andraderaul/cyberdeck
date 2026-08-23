@@ -11,6 +11,7 @@
     "./hooks": "./src/hooks/index.ts",
     "./errors": "./src/errors/app-error.ts",
     "./recording": "./src/recording/use-recording.ts",
+    "./pwa": "./src/pwa/index.ts",
     "./tokens.css": "./src/tokens.css",
     "./tailwind-preset": "./src/tailwind-preset.js"
   },

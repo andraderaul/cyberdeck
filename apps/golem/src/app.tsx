@@ -1,3 +1,4 @@
+import { UpdateBanner, useAppUpdate } from '@cyberdeck/deck-kit/pwa'
 import { ErrorBoundary, ThemeControl } from '@cyberdeck/deck-kit/ui'
 import { useEffect } from 'react'
 import Cache from './components/cache'
@@ -47,6 +48,10 @@ export default function App() {
   const loaded = useSourceLoading(STARTER_SOURCE)
   const console = useConsole(STARTER_SOURCE)
   const { replaceSource, note } = console
+  // A parked build only ever offers (ADR 0027). This program is the reason that rule is written the
+  // way it is: a Machine mid-`run` at a chosen Clock, with its Terminal and its Registers, is the
+  // most session state on the deck and none of it is persisted anywhere.
+  const update = useAppUpdate()
 
   // The Source resolves after first render, since reading a share link means decompressing it.
   useEffect(() => {
@@ -81,6 +86,8 @@ export default function App() {
               rule about the Console being the only control grammar is untouched (ADR 0024). */}
           <ThemeControl />
         </header>
+
+        {update.isReady && <UpdateBanner onApply={update.apply} />}
 
         {/* One column on a phone, scrolling; two side by side once there is room. The state panels
             come first on a small screen only in source order — visually the Source stays on top,

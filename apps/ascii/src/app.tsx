@@ -1,8 +1,10 @@
 import { normalizeError } from '@cyberdeck/deck-kit/errors'
+import { UpdateBanner, useAppUpdate } from '@cyberdeck/deck-kit/pwa'
 import { useRecording } from '@cyberdeck/deck-kit/recording'
 import {
   EmptyStateHero,
   ErrorBoundary,
+  HeaderButton,
   ThemeControl,
   useToastError,
   useToastInfo,
@@ -20,11 +22,8 @@ import ApiKeyModal from './components/api-key-modal'
 import AsciiCanvas from './components/ascii-canvas'
 import ControlStrip from './components/control-strip'
 import Footer from './components/footer'
-import HeaderButton from './components/ui/header-button'
-import UpdateBanner from './components/update-banner'
 import { outputFilename } from './export/output'
 import { useWebcamState } from './hooks/use-webcam-state'
-import { useAppUpdate } from './pwa/use-app-update'
 
 type ActiveModal =
   | { kind: 'apiKey' }

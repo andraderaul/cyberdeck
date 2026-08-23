@@ -91,6 +91,30 @@ Its chrome still names roles rather than hues, like every other program: the lit
 gone from the Tailwind preset, so `text-cyan` would render nothing at all. Naming `text-info` here
 costs nothing and changes nothing — with no theme attribute set, it resolves to the same cyan.
 
+## Installing and offline
+
+The policy and all its machinery are the kit's — read `packages/deck-kit/README.md` ("Making a
+program installable") and ADR 0027; nothing about it is described again here. This app's whole share
+of it is `public/manifest.webmanifest`, one line of `vite.config.ts`, and the two lines in `app.tsx`
+that render the bar. The bar goes under the header, in flow — never over the map, because the map is
+the piece (ADR 0013, ADR 0021).
+
+The three things that are this program's:
+
+**The largest precache on the deck**, 621 kB against roughly 280 kB for the other three: the vendored
+snapshot is compiled into the entry chunk (ADR 0022), so installing the piece downloads the dataset.
+It changed nothing observable — ten files in one batch, cold to a controlling worker in about a
+quarter of a second locally, the same as the programs half its size. The named exclusion ADR 0027
+held in reserve for this case is not needed; if it ever is, it is `precacheShell({ exclude })` here
+and nowhere else.
+
+**The manifest's colours are `paint.ts`'s `FIELD`**, not a Theme's `--bg`: this program takes no
+Theme, so an OS painting an installed splash is painting the piece. `scripts/social-card.test.mjs`
+pins both, because the kit's roster guard deliberately leaves this program's manifest alone for the
+same reason it asserts the absence of a pre-paint script.
+
+**Still no pre-paint script**, and installing did not become a reason to add one.
+
 ## Key files
 
 - `src/atlas/types.ts` — `DataPoint`, `Scale`, `Viewport`, `RenderInstruction` (the DOM-free core)
@@ -111,7 +135,9 @@ costs nothing and changes nothing — with no theme attribute set, it resolves t
 - `src/hooks/use-scale.ts` — `useScale()`: binds wheel / drag / arrow keys on the map to the scale
 - `src/components/atlas-canvas.tsx` — the imperative shell + the scale surface (the map *is* the control)
 - `src/components/scale-reader.tsx` — the always-visible live reader / OVERFLOW voice
-- `../../docs/adr/0021-*`, `0022-*` — the piece-not-tool and vendored-snapshot decisions
+- `public/manifest.webmanifest` — hand-written; its colours are pinned to `paint.ts`'s `FIELD`
+- `../../docs/adr/0021-*`, `0022-*`, `0027-*` — the piece-not-tool, vendored-snapshot and
+  precached-shell decisions
 
 ## Comment convention
 

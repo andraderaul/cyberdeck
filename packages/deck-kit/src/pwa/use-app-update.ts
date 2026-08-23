@@ -1,3 +1,10 @@
+// The reference is here rather than in a `vite-env.d.ts` per consumer because this file is where
+// the dependency is: `import.meta.env.PROD` below is the only thing on the deck that needs Vite's
+// ambient types outside an app's own source. A directive in the file that uses it travels with the
+// import; four copies of a four-line `.d.ts` would not, and the one a new program forgot would fail
+// as a type error a long way from here.
+/// <reference types="vite/client" />
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { SKIP_WAITING } from './policy'
 
@@ -28,9 +35,9 @@ export type AppUpdate = {
  *
  * The policy this implements is the half of ADR 0027 the worker cannot enforce on its own. The
  * worker never calls `skipWaiting`, so a new build parks and the running session keeps every byte
- * it started with — a Recording in flight, a Live Source, a half-written API key. It goes live when
- * the last tab closes, or here, when the user asks for it: that is the way out of a stale version
- * that does not involve clearing site data by hand.
+ * it started with — a Recording in flight, a Live Source, a half-written API key, a GOLEM Machine
+ * partway through a `run`. It goes live when the last tab closes, or here, when the user asks for
+ * it: that is the way out of a stale version that does not involve clearing site data by hand.
  *
  * Which is why this also goes *looking* — hourly, and whenever the tab comes back to the front. An
  * offer nobody is shown is not an escape hatch, and the browser's own check only runs on

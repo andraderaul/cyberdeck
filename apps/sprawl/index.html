@@ -12,11 +12,21 @@
     <!--
       The piece's own mark, in the sizes a tab, an iOS home screen and an install prompt each ask
       for. Cut from `public/favicon.svg` by `scripts/social-assets.mjs`; the 192/512/maskable set is
-      a complete PWA icon set, which is what #324's manifest will point at.
+      the PWA icon set `manifest.webmanifest` points at.
     -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <!--
+      What makes the piece installable (ADR 0027). Its `theme_color` and `background_color` are the
+      field below rather than a Theme's `--bg`, for the same reason the meta is: SPRAWL//Atlas takes
+      no Theme, so an OS painting its splash is painting the piece. `social-card.test.mjs` pins both
+      to `paint.ts`, which is where the kit's roster guard hands that pin over.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="SPRAWL//Atlas" />
 
     <!--
       The dark field the world is light against — `FIELD` in `src/atlas/paint.ts`, not a Theme's

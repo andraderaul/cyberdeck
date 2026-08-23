@@ -1,4 +1,12 @@
-import { cn } from '@cyberdeck/deck-kit/utils'
+// The header's control shape: pill, transparent until hovered, and never filled unless it is
+// announcing something. Distinct from `Button`, which is a control *of* the program — this one is
+// chrome *about* it, which is why it is quieter and why it lives at the top edge.
+//
+// It rose into the kit on the trigger ADR 0014 wrote for it: one caller is a hypothetical seam, and
+// a second makes it real. The second is the kit's own `UpdateBanner` (ADR 0027) — a bar that four
+// programs render, whose one control is exactly this shape.
+
+import { cn } from '../utils/cn'
 
 const VARIANT_CLASSES = {
   neutral: 'border-transparent text-fg-subtle hover:border-base hover:text-fg',

@@ -47,7 +47,7 @@ was that app, and the condition fired: **`packages/deck-kit`** now holds the pro
 
 | Package | What crosses the seam |
 |---------|----------------------|
-| **`@cyberdeck/deck-kit`** | Visual language (`tokens.css` + Tailwind preset + the Themes and their guards), `ui/` primitives, framework-neutral `hooks/` and `utils/`, the operational-error *mechanism*, the Recording core |
+| **`@cyberdeck/deck-kit`** | Visual language (`tokens.css` + Tailwind preset + the Themes and their guards), `ui/` primitives, framework-neutral `hooks/` and `utils/`, the operational-error *mechanism*, the Recording core, the precached shell every program installs from (ADR 0027) |
 
 Consumed **as source** — `exports` point at `src/*` and each app's Vite transpiles it. No build
 step, no `dist/`, no build ordering, which keeps the light-tooling stance intact. One non-obvious
