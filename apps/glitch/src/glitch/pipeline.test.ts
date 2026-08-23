@@ -901,6 +901,17 @@ describe('halftone', () => {
     expect(Array.from(pixels.data)).toEqual(before)
   })
 
+  it('returns an equivalent buffer at zero dot scale', () => {
+    // The floor of the slider means the Effect off, the same as it does for Noise, Scanlines and
+    // Chromatic Aberration. Read literally it would ink nothing and hand back a black frame — the
+    // picture erased rather than the screen stopped, which is not what a slider's floor promises.
+    const pixels = structuredBuffer(16, 12)
+
+    const out = halftone(pixels, { ...SCREEN, dotScale: 0 })
+
+    expect(Array.from(out.data)).toEqual(Array.from(pixels.data))
+  })
+
   it('preserves the buffer dimensions', () => {
     const out = halftone(structuredBuffer(13, 7), SCREEN)
 
@@ -970,7 +981,7 @@ describe('halftone', () => {
     const checker = buildPixels(
       4,
       4,
-      Array.from({ length: 16 }, (_, i) => grey((i % 2) * 254)),
+      Array.from({ length: 16 }, (_, i) => grey((((i % 4) + Math.floor(i / 4)) % 2) * 254)),
     )
     const flat = uniform(4, 127)
 
@@ -1015,13 +1026,20 @@ describe('halftone', () => {
     expect(Array.from(fine.data)).not.toEqual(Array.from(coarse.data))
   })
 
-  it('screens a cell below the smallest the control offers as the smallest one', () => {
-    const pixels = structuredBuffer(16, 16)
+  // Both ends, because the range is a property of the screen rather than of the slider that edits
+  // it: a cell outside it is a grid that stops reading as one, whichever way the caller came in.
+  it.each([
+    ['below the smallest', 0, HALFTONE_CELL_SIZE_RANGE.min],
+    ['above the largest', 400, HALFTONE_CELL_SIZE_RANGE.max],
+  ])('screens a cell %s the control offers as that one', (_label, asked, held) => {
+    // Wider than two of the largest cells, or an uncapped run would land on a single cell here and
+    // agree with the capped one for the wrong reason.
+    const pixels = structuredBuffer(64, 48)
 
-    const out = halftone(pixels, { ...SCREEN, cellSize: 0 })
+    const out = halftone(pixels, { ...SCREEN, cellSize: asked })
 
     expect(Array.from(out.data)).toEqual(
-      Array.from(halftone(pixels, { ...SCREEN, cellSize: HALFTONE_CELL_SIZE_RANGE.min }).data),
+      Array.from(halftone(pixels, { ...SCREEN, cellSize: held }).data),
     )
   })
 

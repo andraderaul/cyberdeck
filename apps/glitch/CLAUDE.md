@@ -12,11 +12,10 @@ Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80), Block D
 Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced panel (#84), Recording
 (#85) and Presets + Randomize (#86), plus Chromatic Aberration (#116) and the composable Effect
 Chain (ADR 0017, #125–#128), plus Halftone (#309). All seven Effects are live — Source Image *or*
-Live Source → the Chain
-→ PNG Export / Capture / Copy / Recording — the pure-core / imperative-shell seam is established,
-and the render is deterministic in Chain + Seed. The front door is the six Presets plus Randomize;
-behind the EDIT tab the Chain is fully editable — reorder, add, remove, duplicate, the
-same Effect more than once. The v1 scope in `CONTEXT.md` is complete.
+Live Source → the Chain → PNG Export / Capture / Copy / Recording — the pure-core /
+imperative-shell seam is established, and the render is deterministic in Chain + Seed. The front
+door is the six Presets plus Randomize; behind the EDIT tab the Chain is fully editable — reorder,
+add, remove, duplicate, the same Effect more than once. The v1 scope in `CONTEXT.md` is complete.
 
 The Preset **values** are taste, not derivation: they are the one thing here a human curates, and
 re-curating a number in `presets.ts` is a design change, not a bug fix.

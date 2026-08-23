@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  applyChain,
-  type Chain,
-  createLink,
-  EFFECT_REGISTRY,
-  type EffectType,
-  type Link,
-} from './chain'
+import { applyChain, type Chain, createLink, type Link } from './chain'
 import {
   blockDisplacement,
   channelShift,
@@ -15,7 +8,7 @@ import {
   pixelSort,
   scanlines,
 } from './pipeline'
-import { chainMatch, DEFAULT_PRESET, EFFECT_ORDER, PRESETS, randomizeChain } from './presets'
+import { chainMatch, DEFAULT_PRESET, PRESETS, randomizeChain } from './presets'
 import { structuredBuffer } from './test-pixels'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
@@ -284,14 +277,6 @@ describe('chainMatch', () => {
     expect(chainMatch([createLink('halftone', { ...DEFAULT_HALFTONE, tint: 'mono' })], base)).toBe(
       false,
     )
-  })
-})
-
-describe('EFFECT_ORDER', () => {
-  it('carries every registered Effect through to the palette', () => {
-    // Hand-kept, and the compiler cannot see the gap: an Effect left out here is registered,
-    // runnable and yet unreachable from the editor — the one failure the add palette can have.
-    expect([...EFFECT_ORDER].sort()).toEqual((Object.keys(EFFECT_REGISTRY) as EffectType[]).sort())
   })
 })
 

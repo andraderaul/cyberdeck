@@ -236,6 +236,10 @@ const LINK_JITTERS: {
   chromaticAberration: (source, params) => ({
     strength: jitterUnit(source, params.strength, CHROMATIC_STRENGTH_SPREAD),
   }),
+  // Unreachable until a Preset carries Halftone (#320) — Randomize only ever jitters the Links of
+  // the base it picked, and no curated look holds one yet. The entry is required all the same: the
+  // map is total over EffectType.
+  //
   // The cell moves by a few pixels at most: it sets how much of the Source survives the screen, so
   // a wide jitter would swing a look between "the photo, dotted" and an unreadable grid.
   halftone: (source, params) => ({
@@ -305,15 +309,26 @@ export function randomizeChain(source: Rng): Chain {
   return PRESETS[index].chain.map((link) => jitterLink(source, link))
 }
 
+/**
+ * Where each Effect sits in the canonical order — structural (they move pixels) before surface
+ * (they lay texture over them), with Halftone on the seam between the two, being neither
+ * (CONTEXT.md). Only the ranks' order carries meaning; the numbers themselves carry none.
+ *
+ * A Record over `EffectType` rather than a hand-kept list, so a newly registered Effect fails to
+ * compile here instead of quietly missing from the add palette — the one failure that leaves an
+ * Effect registered, runnable and unreachable.
+ */
+const EFFECT_RANK: Record<EffectType, number> = {
+  blockDisplacement: 0,
+  pixelSort: 1,
+  channelShift: 2,
+  chromaticAberration: 3,
+  halftone: 4,
+  scanlines: 5,
+  noise: 6,
+}
+
 /** Every Effect a Link can be, in the canonical order the Presets and the palette read in. */
-export const EFFECT_ORDER: readonly EffectType[] = [
-  'blockDisplacement',
-  'pixelSort',
-  'channelShift',
-  'chromaticAberration',
-  // On the seam: Halftone is neither structural nor surface — it re-quantizes what the structural
-  // Effects rearranged, and the surface Effects lay their texture over its dots (CONTEXT.md).
-  'halftone',
-  'scanlines',
-  'noise',
-]
+export const EFFECT_ORDER: readonly EffectType[] = (Object.keys(EFFECT_RANK) as EffectType[]).sort(
+  (a, b) => EFFECT_RANK[a] - EFFECT_RANK[b],
+)

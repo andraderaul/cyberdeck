@@ -431,10 +431,11 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
               <Label>add effect</Label>
             </legend>
             {/* The palette reads EFFECT_ORDER (presets.ts) — the canonical order the Presets share
-                — rather than the registry's incidental key order. That list is hand-kept: a new
-                Effect must be added there to reach the palette, and the compiler won't point at it.
-                It wraps rather than scrolls: it's a set of options, not the ordered Chain, so showing
-                every Effect at once beats hiding half behind a horizontal scroll. */}
+                — rather than the registry's incidental key order. That list derives from a Record
+                over EffectType, so a newly registered Effect can't reach the editor missing: it
+                fails to compile there first. It wraps rather than scrolls: it's a set of options,
+                not the ordered Chain, so showing every Effect at once beats hiding half behind a
+                horizontal scroll. */}
             <div className="flex flex-wrap gap-2xs">
               {EFFECT_ORDER.map((type) => (
                 <Chip

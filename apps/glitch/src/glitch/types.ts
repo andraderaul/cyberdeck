@@ -231,7 +231,7 @@ export type HalftoneTint = 'mono' | 'color'
 export interface HalftoneParams {
   /** The side of one cell of the dot grid, in pixels — how coarsely the image is re-quantized. */
   cellSize: number
-  /** How fat a dot grows at full luminance, on the normalised 0..1 scale. */
+  /** How fat a dot grows at full luminance, on the normalised 0..1 scale; 0 is the Effect off. */
   dotScale: number
   tint: HalftoneTint
 }
