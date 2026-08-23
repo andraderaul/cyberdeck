@@ -22,13 +22,16 @@ Each app owns its `CLAUDE.md` and `CONTEXT.md` — read the one for the app you'
 apps are **tools** — each consumes your material and is worth `f(your_input)`. SPRAWL//Atlas is the
 one **piece**, admitted as a recorded exception, and ADR 0021 fenced it there: a second piece is the
 deck losing its identity, so the default answer to another one is no. The third category is
-**chrome** — the deck's *casca* — and it is defined by two absences: it consumes no user material
-and it produces no artifact. That is why the hub (`apps/deck`, decided in ADR 0025, built in #323)
-sits *outside* ADR 0021's fence instead of spending its one exception. The test for anything new is
-flat: **does it take user material, or hand back an artifact?** If either, it is a program and
-ADR 0021 applies at full strength. Chrome fences itself too — the hub may never gain an upload, an
-export, a domain core, an embedded program, retention machinery, or content that is not the deck
-describing itself.
+**chrome** — the deck's *casca* — constituted by three clauses, all required: it consumes no user
+material, it produces no artifact, and **it is about the deck itself**. That third clause is not
+decoration. A piece needs neither an input nor an artifact either — its ruler is the first screen —
+so absences alone would admit any no-input generative page as chrome, which is the fence ADR 0021
+exists to hold. A piece is about its *subject*; chrome has no subject but the deck. That is why the
+hub (`apps/deck`, decided in ADR 0025, built in #323) sits *outside* ADR 0021's fence instead of
+spending its one exception. The test for anything new: **does it take user material, does it hand
+back an artifact, and is it about anything other than this deck?** Any one of the three makes it a
+program and ADR 0021 applies at full strength. Chrome fences itself too — the hub may never gain an
+upload, an export, a domain core, an embedded program, or retention machinery.
 
 ## Structure
 
