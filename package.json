@@ -27,6 +27,7 @@
     "lint": "biome lint .",
     "lint:fix": "biome lint . --write",
     "changeset": "changeset",
+    "social:assets": "node scripts/social-assets.mjs",
     "version": "changeset version && npm install --package-lock-only",
     "release": "changeset tag"
   },

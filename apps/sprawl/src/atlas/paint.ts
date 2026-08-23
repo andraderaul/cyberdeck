@@ -11,8 +11,11 @@ import type { RenderInstruction, Viewport } from './types'
  * context can't resolve `var(--bg)`, and this is the one true background of *the piece*, which is
  * the reason SPRAWL//Atlas takes no Theme at all (ADR 0021, ADR 0024): recolouring it by setting
  * would be recolouring a work.
+ *
+ * Exported because the browser's own chrome has to sit on the same field: `index.html`'s
+ * `theme-color` is this value, and `scripts/social-card.test.mjs` holds the two together.
  */
-const FIELD = '#0a0a0f'
+export const FIELD = '#0a0a0f'
 
 /** Edge of the sprite canvas in px. The glow fills it; points are drawn scaled down from here. */
 const SPRITE_SIZE = 64

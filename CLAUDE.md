@@ -78,6 +78,10 @@ npm run format       # biome format . --write
 
 npm run changeset    # add a changeset (see Releases)
 
+# the committed social assets — every program's favicon set and its 1200x630 card
+npm run social:assets            # all four programs
+npm run social:assets -- golem   # one; needs Node 22+ and `npx playwright install chromium`
+
 # scoping to one app
 npm run test --workspace @cyberdeck/ascii
 npx vitest run src/ascii/renderer.test.ts   # from within apps/ascii

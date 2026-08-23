@@ -1,0 +1,17 @@
+<!--
+  GLITCH//Studio's mark: the same block ASCII//Convert's mark is, after the Chain has been through
+  it. Three slabs displaced horizontally (Block Displacement) and split across channels (Channel
+  Shift) — the program applied to the deck's own shape, which is what makes it read as *broken* and
+  not merely as a different icon.
+
+  Fixed hexes rather than tokens: an SVG served from `public/` has no stylesheet and no Theme
+  (ADR 0024). These are `ice`'s --void, --color-info, --fg-strong and --color-danger, pinned.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="GLITCH//Studio">
+  <rect width="32" height="32" rx="2" fill="#0a0a0f" />
+  <rect x="7" y="5" width="21" height="7" fill="#00e5ff" />
+  <rect x="3" y="13" width="23" height="6" fill="#eeeef8" />
+  <rect x="9" y="20" width="20" height="7" fill="#ff2d78" />
+  <rect x="3" y="12" width="26" height="1" fill="#0a0a0f" />
+  <rect x="3" y="19" width="26" height="1" fill="#0a0a0f" />
+</svg>

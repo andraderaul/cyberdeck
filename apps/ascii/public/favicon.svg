@@ -1,0 +1,27 @@
+<!--
+  ASCII//Convert's mark: the ▓ density block, drawn rather than typeset.
+
+  Drawn, because a favicon cannot depend on the reader having a monospace face that carries the
+  Block Elements — and because at 16px the glyph's own shading turns to mush. A 4x4 cell grid with
+  four cells cut out is the dark-shade block at the resolution a tab actually renders it.
+
+  Fixed hexes rather than tokens: an SVG served from `public/` has no stylesheet and no Theme
+  (ADR 0024). These are `ice`'s --void and --accent — the deck's default look, pinned.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="ASCII//Convert">
+  <rect width="32" height="32" rx="2" fill="#0a0a0f" />
+  <g fill="#b829ff">
+    <rect x="4" y="4" width="5" height="5" />
+    <rect x="16" y="4" width="5" height="5" />
+    <rect x="22" y="4" width="5" height="5" />
+    <rect x="10" y="10" width="5" height="5" />
+    <rect x="16" y="10" width="5" height="5" />
+    <rect x="22" y="10" width="5" height="5" />
+    <rect x="4" y="16" width="5" height="5" />
+    <rect x="10" y="16" width="5" height="5" />
+    <rect x="16" y="16" width="5" height="5" />
+    <rect x="4" y="22" width="5" height="5" />
+    <rect x="10" y="22" width="5" height="5" />
+    <rect x="22" y="22" width="5" height="5" />
+  </g>
+</svg>

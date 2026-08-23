@@ -1,0 +1,29 @@
+<!--
+  SPRAWL//Atlas's mark: light on a dark field. Not a glyph and not a block — the piece has no
+  chrome to put on a tab, so the tab gets what the piece is made of: one facility incandescent
+  under its own load, with the faint ones still readable around it.
+
+  SPRAWL//Atlas takes no Theme by explicit decision (ADR 0021, ADR 0024). Its palette is fixed
+  cyan-on-dark everywhere else too, so these hexes are the piece's own, not a Theme's default.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="SPRAWL//Atlas">
+  <defs>
+    <radialGradient id="bloom">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1" />
+      <stop offset="18%" stop-color="#c8f7ff" stop-opacity="0.95" />
+      <stop offset="45%" stop-color="#00e5ff" stop-opacity="0.55" />
+      <stop offset="100%" stop-color="#00e5ff" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="spark">
+      <stop offset="0%" stop-color="#c8f7ff" stop-opacity="0.85" />
+      <stop offset="30%" stop-color="#00e5ff" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#00e5ff" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="32" height="32" rx="2" fill="#0a0a0f" />
+  <circle cx="11" cy="25" r="6" fill="url(#spark)" />
+  <circle cx="26" cy="22" r="5" fill="url(#spark)" />
+  <circle cx="25" cy="7" r="4.5" fill="url(#spark)" />
+  <circle cx="17" cy="14" r="13" fill="url(#bloom)" />
+  <circle cx="17" cy="14" r="1.6" fill="#ffffff" />
+</svg>

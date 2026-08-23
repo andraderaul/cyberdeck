@@ -2,9 +2,61 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SPRAWL//Atlas</title>
+    <title>SPRAWL//Atlas — connected capacity as light</title>
+    <meta
+      name="description"
+      content="The world's connected capacity as light. It opens blown white; slide the scale coarser until continents come out of the glare. Nothing to upload."
+    />
+
+    <!--
+      The piece's own mark, in the sizes a tab, an iOS home screen and an install prompt each ask
+      for. Cut from `public/favicon.svg` by `scripts/social-assets.mjs`; the 192/512/maskable set is
+      a complete PWA icon set, which is what #324's manifest will point at.
+    -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <!--
+      The dark field the world is light against — `FIELD` in `src/atlas/paint.ts`, not a Theme's
+      background. SPRAWL//Atlas takes no Theme at all (ADR 0021, ADR 0024): its two colours are the
+      work rather than the chrome, so the browser's chrome matches the piece and nothing else.
+    -->
+    <meta name="theme-color" content="#0a0a0f" />
+
+    <!--
+      The whole export here is a URL: the scale rides in the query, so the link opens the recipient
+      at the same point in the vertigo. A link with no preview would be half the artifact.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CYBERDECK" />
+    <meta property="og:title" content="SPRAWL//Atlas — connected capacity as light" />
+    <meta
+      property="og:description"
+      content="The world's connected capacity as light. It opens blown white; you repair it by sliding the scale coarser until continents come out of the glare."
+    />
+    <meta property="og:url" content="https://atlas-sprawl.vercel.app/" />
+    <meta property="og:image" content="https://atlas-sprawl.vercel.app/og-card.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="SPRAWL//ATLAS: the world's data-exchange facilities as cyan light on a dark field, the continents legible from the density of the points alone."
+    />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SPRAWL//Atlas — connected capacity as light" />
+    <meta
+      name="twitter:description"
+      content="The world's connected capacity as light. It opens blown white; you repair it by sliding the scale coarser until continents come out of the glare."
+    />
+    <meta name="twitter:image" content="https://atlas-sprawl.vercel.app/og-card.png" />
+    <meta
+      name="twitter:image:alt"
+      content="SPRAWL//ATLAS: the world's data-exchange facilities as cyan light on a dark field, the continents legible from the density of the points alone."
+    />
   </head>
   <body>
     <div id="root"></div>
