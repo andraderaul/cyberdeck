@@ -14,7 +14,7 @@ and sends you into them. It is the deck's **chrome, not a program** — it consu
 produces no artifact, and is about nothing but the deck itself, which is what keeps it outside the
 tool/piece fence rather than spending its one exception
 ([ADR 0025](./docs/adr/0025-the-hub-is-chrome-not-a-program.md)).
-**Live →** _pending its Vercel project._
+**[Live →](https://cyberdeck-deck.vercel.app/)**
 
 ## Programs
 

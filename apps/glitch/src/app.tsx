@@ -1,10 +1,15 @@
 import { UpdateBanner, useAppUpdate } from '@cyberdeck/deck-kit/pwa'
 import { useRecording } from '@cyberdeck/deck-kit/recording'
-import { EmptyStateHero, ErrorBoundary, ThemeControl, useToastError } from '@cyberdeck/deck-kit/ui'
+import {
+  EmptyStateHero,
+  ErrorBoundary,
+  Footer,
+  ThemeControl,
+  useToastError,
+} from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import AboutModal from './components/about-modal'
 import ControlStrip from './components/control-strip'
-import Footer from './components/footer'
 import GlitchCanvas from './components/glitch-canvas'
 import { Errors } from './errors/app-error'
 import { outputFilename } from './export/output'
@@ -179,7 +184,12 @@ export default function App() {
 
       {/* Empty state only: with a Source the Control Strip owns the bottom edge, and a footer
           directly under it invites a mis-tap on the way to a control. */}
-      {!hasSource && <Footer onAbout={() => setIsAboutOpen(true)} />}
+      {!hasSource && (
+        <Footer
+          sourceHref="https://github.com/andraderaul/cyberdeck"
+          onAbout={() => setIsAboutOpen(true)}
+        />
+      )}
 
       {isAboutOpen && <AboutModal onClose={() => setIsAboutOpen(false)} />}
     </div>

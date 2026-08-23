@@ -1,4 +1,4 @@
-import { ThemeControl } from '@cyberdeck/deck-kit/ui'
+import { Footer, ThemeControl } from '@cyberdeck/deck-kit/ui'
 import ProgramCard from './components/program-card'
 import { PROGRAMS } from './roster'
 
@@ -43,17 +43,9 @@ export default function App() {
         </ul>
       </main>
 
-      <footer className="mx-auto w-full max-w-[72rem] shrink-0 px-sm py-md text-fg-subtle text-xs sm:px-lg">
-        <p>
-          client-side, no backend ·{' '}
-          <a
-            href="https://github.com/andraderaul/cyberdeck"
-            className="text-link underline decoration-transparent underline-offset-4 transition-colors duration-fast hover:decoration-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-          >
-            source
-          </a>
-        </p>
-      </footer>
+      {/* No `about` trigger: the hub has no About to open, because a page whose whole subject is
+          the deck says it on the page rather than behind a control (ADR 0025). */}
+      <Footer sourceHref="https://github.com/andraderaul/cyberdeck" />
     </div>
   )
 }

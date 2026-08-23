@@ -16,7 +16,7 @@ is fine, nothing else consumes it.
 | Import | What |
 |--------|------|
 | `@cyberdeck/deck-kit/utils` | `cn`, `isTouchDevice`, `loadImageFile`, `shareOrDownloadBlob`, `shareOrDownloadCanvas` |
-| `@cyberdeck/deck-kit/ui` | `Button`, `HeaderButton`, `TabStrip`, `ThemeControl`, and the rest of the primitives |
+| `@cyberdeck/deck-kit/ui` | `Button`, `HeaderButton`, `TabStrip`, `ThemeControl`, `Footer`, and the rest of the primitives |
 | `@cyberdeck/deck-kit/hooks` | `useToast`, `useDialog` |
 | `@cyberdeck/deck-kit/errors` | the operational-error mechanism (`AppError`, `createError`, `normalizeError`) |
 | `@cyberdeck/deck-kit/recording` | `useRecording`, `formatElapsedTime` |

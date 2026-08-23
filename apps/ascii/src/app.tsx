@@ -4,6 +4,7 @@ import { useRecording } from '@cyberdeck/deck-kit/recording'
 import {
   EmptyStateHero,
   ErrorBoundary,
+  Footer,
   HeaderButton,
   ThemeControl,
   useToastError,
@@ -18,7 +19,6 @@ import type { ConversionSettings } from './ascii/types'
 import AboutModal from './components/about-modal'
 import AsciiCanvas from './components/ascii-canvas'
 import ControlStrip from './components/control-strip'
-import Footer from './components/footer'
 import ScanPendingModal from './components/scan-pending-modal'
 import { outputFilename } from './export/output'
 import { useWebcamState } from './hooks/use-webcam-state'
@@ -325,7 +325,10 @@ export default function App() {
       {/* Empty state only: with a Source the Control Strip owns the bottom edge, and a footer
           directly under it invites a mis-tap on the way to a control. */}
       {!(sourceImage || sourceVideo) && (
-        <Footer onAbout={() => setActiveModal({ kind: 'about' })} />
+        <Footer
+          sourceHref="https://github.com/andraderaul/ascii-art-converter"
+          onAbout={() => setActiveModal({ kind: 'about' })}
+        />
       )}
 
       {activeModal?.kind === 'apiKey' && (

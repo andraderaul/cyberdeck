@@ -202,20 +202,3 @@ export function thePiecesOwnInk(element: string): Accepted {
     why: "ADR 0021: drawn onto the program's own render at the coordinates of what it names, not chrome standing on pixels this program did not choose. A plate behind each one would charge the piece for its own labels.",
   }
 }
-
-/**
- * A link sitting inside a sentence, whose box is set by the line height of the words around it.
- *
- * The one **permanent** entry in this file, and the only one that is not a defect: WCAG 2.5.5 carries
- * an explicit Inline exception for exactly this, because the alternative is a paragraph whose line
- * spacing is decided by its links. The hub's footer credit is the case — `source` inside a sentence
- * of ordinary text, with the same destination reachable from every card above it.
- */
-export function anInlineLinkInASentence(element: string): Accepted {
-  return {
-    rule: 'target-size-44',
-    target: element,
-    at: null,
-    why: 'WCAG 2.5.5 Inline exception: the target sits in a sentence and its size is set by the line height of the non-target text around it. Not a defect, and not expected to be fixed.',
-  }
-}
