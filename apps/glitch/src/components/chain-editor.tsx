@@ -361,8 +361,14 @@ interface Props {
   actions: ChainActions
   // Re-roll rides its own callback rather than joining the bundle: the Seed is not part of the
   // look, and the actions edit the look. Threading it as a Link patch would put the arrangement
-  // inside the Chain by the back door.
+  // inside the Chain by the back door. Animate is the same callback shape for the same reason —
+  // it is Re-roll on every frame.
   onReroll: () => void
+  // A Source Image has no elapsing time for the arrangement to advance through, so animate is
+  // absent rather than disabled there — the same gate Record uses (output-panel.tsx).
+  isLive: boolean
+  isSeedAnimated: boolean
+  onToggleSeedAnimation: () => void
 }
 
 /**
@@ -373,7 +379,14 @@ interface Props {
  * ADR 0017 instead of stacking it (ADR 0020). Keyed by Link id, not by Effect: a Chain may hold the
  * same Effect twice, and keying by type would collapse the repeats into one chip.
  */
-export default function ChainEditor({ chain, actions, onReroll }: Props) {
+export default function ChainEditor({
+  chain,
+  actions,
+  onReroll,
+  isLive,
+  isSeedAnimated,
+  onToggleSeedAnimation,
+}: Props) {
   const { onLinkChange, onReorder, onAdd, onRemove, onDuplicate } = actions
   const isFull = chain.length >= MAX_CHAIN_LENGTH
   const [focus, setFocus] = useState<Focus>({ kind: 'link', id: null })
@@ -596,7 +609,7 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
             +
           </Chip>
         </div>
-        {/* The Seed sits outside the Chain, so its control sits outside the Link row rather than
+        {/* The Seed sits outside the Chain, so its controls sit outside the Link row rather than
             becoming a seventh chip that looks like part of the look. */}
         <IconLabelButton
           variant="ghost"
@@ -605,6 +618,19 @@ export default function ChainEditor({ chain, actions, onReroll }: Props) {
           label="re-roll"
           className="shrink-0"
         />
+        {/* Beside Re-roll because it *is* Re-roll, once a frame — and the pressed state carries
+            "still running" rather than the label changing, so the row doesn't reflow every time
+            it is switched. */}
+        {isLive && (
+          <IconLabelButton
+            variant={isSeedAnimated ? 'primary' : 'ghost'}
+            aria-pressed={isSeedAnimated}
+            onClick={onToggleSeedAnimation}
+            glyph="≋"
+            label="animate"
+            className="shrink-0"
+          />
+        )}
       </div>
 
       {/* Referenced by every chip rather than repeated into each accessible name, which would make

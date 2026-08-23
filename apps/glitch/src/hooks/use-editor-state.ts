@@ -43,6 +43,16 @@ export function useEditorState() {
     dispatch({ type: 'REROLL', seed: createSeed() })
   }, [])
 
+  const toggleSeedAnimation = useCallback(() => {
+    dispatch({ type: 'TOGGLE_SEED_ANIMATION' })
+  }, [])
+
+  // Called from the rAF loop, once per painted frame, so it draws the app's real randomness on
+  // the same terms Re-roll does — the reducer only ever receives the Seed already drawn.
+  const advanceSeed = useCallback(() => {
+    dispatch({ type: 'ADVANCE_SEED', seed: createSeed() })
+  }, [])
+
   const chainActions: ChainActions = useMemo(
     () => ({
       onLinkChange: (id, params) => dispatch({ type: 'PATCH_LINK', id, params }),
@@ -59,10 +69,13 @@ export function useEditorState() {
     seed: state.seed,
     activePresetId: state.activePresetId,
     isModified: isPresetModified(state),
+    isSeedAnimated: state.isSeedAnimated,
     selectPreset,
     randomize,
     importChain,
     reroll,
+    toggleSeedAnimation,
+    advanceSeed,
     chainActions,
   }
 }

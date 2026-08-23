@@ -51,6 +51,10 @@ interface Props {
   isMirrored?: boolean
   onMirrorToggle?: () => void
   onSwitchCamera?: () => void | Promise<void>
+  // Given only while the Seed is animated (CONTEXT.md): the loop calls it after each painted
+  // frame, so the next frame comes up on a new arrangement. Absent is the held Seed the app has
+  // always had — this component is told to advance, never why.
+  onAdvanceSeed?: () => void
 }
 
 /**
@@ -71,8 +75,17 @@ export default function GlitchCanvas({
   isMirrored = false,
   onMirrorToggle,
   onSwitchCamera,
+  onAdvanceSeed,
 }: Props) {
   const hiddenRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
+  // The throttle's clock outlives the effect that reads it. While the Seed animates, every painted
+  // frame changes `seed` and so tears the loop down and builds it again — a `lastTime` scoped to
+  // the effect would be reset each time, leaving the throttle permanently satisfied and the Chain
+  // running on every rAF tick instead of every fourth.
+  //
+  // Not 0: the first frame must paint on its own merits, not because rAF's timestamp happens to
+  // already be past one interval.
+  const lastFrameTime = useRef(Number.NEGATIVE_INFINITY)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -83,8 +96,9 @@ export default function GlitchCanvas({
   }, [sourceImage, chain, seed, isMirrored, canvasRef])
 
   // rAF loop throttled to ~15fps — see ADR 0002 for the Web Worker upgrade path. The Seed is held
-  // across frames rather than re-rolled per frame: that's what keeps the corruption pattern from
-  // boiling. Animating it is deliberately out of v1 scope (CONTEXT.md).
+  // across frames by default: that's what keeps the corruption pattern from boiling. `onAdvanceSeed`
+  // is what makes the boiling a choice — the loop asks for the next arrangement once a frame has
+  // actually been painted, so the Seed advances per *painted* frame rather than per rAF tick.
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !liveSource) {
@@ -93,24 +107,22 @@ export default function GlitchCanvas({
 
     const video = liveSource
     let rafId: number
-    // Not 0: the first frame must paint on its own merits, not because rAF's timestamp happens to
-    // already be past one interval.
-    let lastTime = Number.NEGATIVE_INFINITY
 
     const loop = (now: number) => {
       rafId = requestAnimationFrame(loop)
-      if (now - lastTime < LIVE_SOURCE_FRAME_INTERVAL_MS) {
+      if (now - lastFrameTime.current < LIVE_SOURCE_FRAME_INTERVAL_MS) {
         return
       }
-      lastTime = now
+      lastFrameTime.current = now
       if (video.readyState >= HAVE_ENOUGH_DATA) {
         renderGlitchFrame(video, canvas, hiddenRef.current, chain, seed, isMirrored)
+        onAdvanceSeed?.()
       }
     }
 
     rafId = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafId)
-  }, [liveSource, chain, seed, isMirrored, canvasRef])
+  }, [liveSource, chain, seed, isMirrored, canvasRef, onAdvanceSeed])
 
   const isLive = liveSource !== null
 

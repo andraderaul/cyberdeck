@@ -73,6 +73,15 @@ Seed) e o Noise (cujo grão sai de um hash posicional que recebe o Seed), de mod
 Re-roll move os dois. Vive ao lado da Chain, não dentro: é o que permite que o
 Re-roll troque o arranjo sem alterar o look. Fixo por padrão tanto na imagem quanto na
 webcam; **Re-roll** gera um novo Seed.
+No **Live Source** ele pode ser **animado**: um Seed novo a cada frame pintado — Re-roll a cada
+quadro, e por isso o glitch **ferve** em vez de ficar parado. Só faz sentido ali (uma imagem
+estática não tem tempo passando), não toca no look nem na procedência — `chainMatch` nunca vê o
+arranjo — e desligar assenta no último Seed sorteado, um arranjo inteiro como qualquer outro,
+nunca num meio-quadro congelado. O que se move num look é exatamente a parte que sai do Seed:
+Block Displacement e Noise. Os dez Presets carregam Noise, então todos animam ao menos o grão; os
+oito que também carregam Block Displacement animam os rasgos junto. O que o Seed não alimenta
+(Wave, Halftone, Scanlines, os por-canal) fica onde está — no DEGAUSS e no PHOSPHOR, os dois sem
+Block Displacement, o quadro inteiro permanece parado sob um grão que ferve.
 _Avoid_: random, rng
 
 **Preset**:
@@ -149,7 +158,8 @@ um Preset (ADR 0020).
 
 - **Dentro:** imagem estática + Live Source (webcam) em tempo real; a Chain editável de
   Effects — 8 tipos, ordem, presença e repetição nas mãos do usuário (ADR 0017); presets-first
-  (a lista curada, um já aplicado na abertura) + Randomize; Seed fixo com Re-roll; PNG Export +
+  (a lista curada, um já aplicado na abertura) + Randomize; Seed fixo com Re-roll, e **animado**
+  (um Seed novo por frame) no Live Source; PNG Export +
   Capture + Copy + Recording; export/import da Chain como JSON (**Chain JSON**).
 - **Fora (v2+):** datamosh real — **caminho de saída próprio**, só para Live Source, fora da Chain
-  e fora do Recording (ADR 0026); glitch animado (Seed avançando por frame na webcam).
+  e fora do Recording (ADR 0026).

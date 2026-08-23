@@ -35,6 +35,8 @@ interface Props {
   onImport: (chain: Chain) => void
   actions: ChainActions
   onReroll: () => void
+  isSeedAnimated: boolean
+  onToggleSeedAnimation: () => void
 }
 
 /**
@@ -59,6 +61,8 @@ export default function ControlStrip({
   onImport,
   actions,
   onReroll,
+  isSeedAnimated,
+  onToggleSeedAnimation,
 }: Props) {
   return (
     <TabStrip tabs={TABS} ariaLabel="controls">
@@ -74,7 +78,14 @@ export default function ControlStrip({
             />
           )}
           {activeTab === 'edit' && (
-            <ChainEditor chain={chain} actions={actions} onReroll={onReroll} />
+            <ChainEditor
+              chain={chain}
+              actions={actions}
+              onReroll={onReroll}
+              isLive={isLive}
+              isSeedAnimated={isSeedAnimated}
+              onToggleSeedAnimation={onToggleSeedAnimation}
+            />
           )}
           {activeTab === 'out' && (
             <OutputPanel

@@ -11,11 +11,11 @@ layout, the deck-wide comment convention, and the release ritual. Paths below ar
 Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80), Block Displacement with
 Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced panel (#84), Recording
 (#85) and Presets + Randomize (#86), plus Chromatic Aberration (#116) and the composable Effect
-Chain (ADR 0017, #125–#128), plus Halftone (#309), Wave (#310) and the Chain as a file (#312). All
-eight Effects are live — Source Image *or* Live Source → the Chain → PNG Export / Capture / Copy /
-Recording — the pure-core / imperative-shell seam is established, and the render is deterministic in
-Chain + Seed. The front
-door is the curated Presets plus Randomize; behind the EDIT tab the Chain is fully editable —
+Chain (ADR 0017, #125–#128), plus Halftone (#309), Wave (#310), the Chain as a file (#312) and the
+animated Seed (#311). All eight Effects are live — Source Image *or* Live Source → the Chain → PNG
+Export / Capture / Copy / Recording — the pure-core / imperative-shell seam is established, and the
+render is deterministic in Chain + Seed, which is what lets a Live Source animate by advancing the
+Seed alone. The front door is the curated Presets plus Randomize; behind the EDIT tab the Chain is fully editable —
 reorder, add, remove, duplicate, the same Effect more than once. A Chain built by hand exports as JSON and
 comes back (**Chain JSON**, `CONTEXT.md`), which is the only way structural variety reaches the app
 from outside the roster. The v1 scope in `CONTEXT.md` is complete.
@@ -130,8 +130,28 @@ ASCII//Convert in mechanism as well as feature: both flip the Source on the samp
 ahead of the pure core. A CSS-only mirror was never an option here, where the canvas *is* the
 output, and ASCII dropped its own (#124) so its PNG and TXT stop disagreeing with the preview.
 
-The Seed is held across frames rather than re-rolled per frame — that's what keeps the corruption
-pattern still instead of boiling. Animating it is explicitly v2 (`CONTEXT.md`).
+The Seed is held across frames by default — that's what keeps the corruption pattern still instead
+of boiling. **Animate** makes the boiling a choice: with it on, the loop draws a new Seed once a
+frame has actually been painted, so the arrangement advances per *painted* frame rather than per
+rAF tick. It is Re-roll at 15fps, and it is cheap for exactly the reason Re-roll is — the Seed
+already sat beside the Chain (ADR 0017), so nothing about the look, the provenance or `chainMatch`
+is involved.
+
+Two details are load-bearing. The **throttle's clock lives in a ref** (`lastFrameTime`), not in the
+effect: an advancing Seed rebuilds the loop on every painted frame, and a `lastTime` scoped to the
+effect would be reset with it — leaving the throttle permanently satisfied and the Chain running on
+every rAF tick. And **ADVANCE_SEED is refused while the animation is off** (editor-state.ts): the
+loop and React's render are on different clocks, so a frame in flight when the user switches off
+must not move the arrangement afterwards. Switching off keeps the Seed the last frame drew, which
+is a whole arrangement like any other — the picture settles on what is already on screen rather
+than jumping or freezing mid-frame.
+
+The control is in EDIT beside Re-roll, and **only for a Live Source** — a Source Image has no
+elapsing time for the arrangement to advance through, the same gate Record uses. Only Block
+Displacement and Noise consume the Seed, so a look animates in exactly those two: all ten Presets
+carry Noise, so every one of them at least shimmers, and the eight carrying Block Displacement move
+their tears as well. DEGAUSS and PHOSPHOR are the two without it — their geometry stands still
+under a boiling grain.
 
 **Capture** is PNG Export on a different Source: it reads the pixels the loop last painted and never
 touches the loop, so the feed keeps running.
@@ -194,7 +214,7 @@ Use these terms precisely — avoid the listed alternatives:
 | **Effect** | A named, isolated pure `PixelBuffer → PixelBuffer` transform | filter, layer |
 | **Chain** | The ordered, editable list of Links — the look. Order matters; repeats allowed | stack, pipeline, options, config, filters |
 | **Link** | One Effect instance in the Chain: `{ type, params }` plus a UI-only `id`. Presence in the Chain is on/off | enabled flag, step, row |
-| **Seed** | Seeds the Chain's pseudo-randomness — the arrangement. Lives beside the Chain | random, rng |
+| **Seed** | Seeds the Chain's pseudo-randomness — the arrangement. Lives beside the Chain; held across frames by default, or animated per frame on a Live Source | random, rng |
 | **Preset** | A named Chain — a curated look | filter, look |
 | **Randomize** | Discovering a look by picking a Preset and jittering its params | shuffle |
 | **Source Image** | Static uploaded image; immutable during session | uploadedImage, input image |
@@ -293,7 +313,7 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/glitch/rng.ts` — `createRng()` (pure, Seed → draw stream), `deriveSeed()` (the per-Link occurrence
   sub-seed — ADR 0017), `createSeed()` (impure — the app's only real randomness), `Rng`
 - `src/glitch/editor-state.ts` — the Editor (CONTEXT.md): `EditorState` (Chain + Seed +
-  `activePresetId`), `EditorAction`, `editorReducer()` (the whole transition table — pure, all
+  `activePresetId` + `isSeedAnimated`), `EditorAction`, `editorReducer()` (the whole transition table — pure, all
   randomness arrives in the payload), `isPresetModified()` (the one place `(modified)` is derived),
   `initialEditorState()`, `ChainActions` (the five Chain edits as one callback bundle — Editor
   vocabulary, so the panels import it from here)
@@ -319,7 +339,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 
 **Components**
 - `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render, and owns the
-  ~15fps rAF loop for a Live Source. Carries the LIVE badge and the REC badge, which is also the
+  ~15fps rAF loop for a Live Source. Takes `onAdvanceSeed` and calls it after each painted frame —
+  told to advance, never why, so the animation's on/off is the caller withholding the callback. Carries the LIVE badge and the REC badge, which is also the
   Recording's stop control and its elapsed timer — the canvas is the one surface every tab shows,
   so that is where a stop reachable from anywhere has to live (ADR 0020)
 - `src/components/control-strip.tsx` — the Control Strip (ADR 0020): the bottom-anchored control
@@ -337,7 +358,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   stacked on mobile, one grid row of equal columns at `sm` (adaptive density, ADR 0020) — with
   duplicate and remove as actions on that panel. The registry-driven add palette shares the panel
   slot with the params, and Re-roll sits outside the row (its own callback — the Seed is not part of
-  the look)
+  the look), with **animate** beside it for a Live Source: it is Re-roll once a frame, so it belongs
+  where Re-roll is rather than in OUT
 
 - `src/components/import-chain-button.tsx` — the PRESETS panel's import control: the impure half of
   importing (reading the file, wording the refusal). What a Chain file *is* stays in `chain-codec.ts`

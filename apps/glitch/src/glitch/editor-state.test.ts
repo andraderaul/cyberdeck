@@ -95,6 +95,94 @@ describe('REROLL', () => {
   })
 })
 
+// The Seed advancing per frame (CONTEXT.md) — Re-roll on every frame, which is only cheap because
+// the Seed was already sitting beside the Chain rather than inside it (ADR 0017).
+describe('the animated Seed', () => {
+  function animating(): EditorState {
+    return editorReducer(openedEditor(), { type: 'TOGGLE_SEED_ANIMATION' })
+  }
+
+  it('opens held rather than animating — the corruption stands still until asked', () => {
+    expect(openedEditor().isSeedAnimated).toBe(false)
+  })
+
+  it('TOGGLE_SEED_ANIMATION switches it on and off again', () => {
+    const on = animating()
+    expect(on.isSeedAnimated).toBe(true)
+
+    expect(editorReducer(on, { type: 'TOGGLE_SEED_ANIMATION' }).isSeedAnimated).toBe(false)
+  })
+
+  it('leaves the look and the arrangement alone on the way on', () => {
+    const before = openedEditor()
+    const on = animating()
+
+    expect(on.chain).toBe(before.chain)
+    expect(on.seed).toBe(before.seed)
+  })
+
+  // Switching off is not a freeze: the Seed the last frame drew is a whole arrangement like any
+  // other, so the picture settles on what is already on screen.
+  it('keeps the last drawn arrangement when switched off', () => {
+    const advanced = editorReducer(animating(), { type: 'ADVANCE_SEED', seed: FRESH_SEED })
+    const off = editorReducer(advanced, { type: 'TOGGLE_SEED_ANIMATION' })
+
+    expect(off.seed).toBe(FRESH_SEED)
+  })
+
+  it('ADVANCE_SEED moves the arrangement alone while animating', () => {
+    const before = animating()
+    const state = editorReducer(before, { type: 'ADVANCE_SEED', seed: FRESH_SEED })
+
+    expect(state.seed).toBe(FRESH_SEED)
+    expect(state.chain).toBe(before.chain)
+    expect(state.activePresetId).toBe(before.activePresetId)
+    expect(state.isSeedAnimated).toBe(true)
+  })
+
+  // The rAF loop and React's render run on different clocks, so a frame can be in flight when the
+  // user switches off. The guard is what makes "off" mean stopped rather than nearly stopped.
+  it('refuses ADVANCE_SEED while switched off, so a frame in flight cannot move the arrangement', () => {
+    const held = openedEditor()
+    const state = editorReducer(held, { type: 'ADVANCE_SEED', seed: FRESH_SEED })
+
+    expect(state).toBe(held)
+  })
+
+  // The animation is how the arrangement is being watched, not part of the look — so it rides
+  // through a look change the way the mirror does (ADR 0016), instead of being switched off by one.
+  it.each<[string, EditorAction]>([
+    ['SELECT_PRESET', { type: 'SELECT_PRESET', preset: presetById('vhs'), seed: FRESH_SEED }],
+    ['RANDOMIZE', { type: 'RANDOMIZE', chain: presetById('vhs').chain, seed: FRESH_SEED }],
+    ['IMPORT_CHAIN', { type: 'IMPORT_CHAIN', chain: presetById('vhs').chain, seed: FRESH_SEED }],
+    ['REROLL', { type: 'REROLL', seed: FRESH_SEED }],
+    ['ADD_LINK', { type: 'ADD_LINK', effect: 'noise' }],
+  ])('keeps animating through %s', (_label, action) => {
+    expect(editorReducer(animating(), action).isSeedAnimated).toBe(true)
+  })
+
+  // Re-roll and the animation are the same act at two rates, so they compose rather than fight:
+  // a Re-roll mid-animation jumps to its arrangement and the next frame carries on from there.
+  it('takes a Re-roll mid-animation without stopping', () => {
+    const state = editorReducer(animating(), { type: 'REROLL', seed: FRESH_SEED })
+
+    expect(state.seed).toBe(FRESH_SEED)
+    expect(state.isSeedAnimated).toBe(true)
+  })
+
+  // The whole point of the Seed sitting outside the Chain: `chainMatch` never sees the arrangement,
+  // so a Preset cannot drift into `(modified)` because the picture is moving.
+  it('never marks the active Preset modified, however many frames advance', () => {
+    let state = animating()
+    for (const seed of [1, 2, 3, 4, 5]) {
+      state = editorReducer(state, { type: 'ADVANCE_SEED', seed })
+    }
+
+    expect(state.activePresetId).toBe(DEFAULT_PRESET.id)
+    expect(isPresetModified(state)).toBe(false)
+  })
+})
+
 describe('Chain edits', () => {
   it('PATCH_LINK replaces the target Link params and leaves the rest of the Chain alone', () => {
     const before = openedEditor()
