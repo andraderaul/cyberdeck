@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyChain, type Chain, createLink, type Link } from './chain'
+import { applyChain, type Chain, createLink, type EffectType, type Link } from './chain'
 import {
   blockDisplacement,
   channelShift,
@@ -8,30 +8,51 @@ import {
   pixelSort,
   scanlines,
 } from './pipeline'
-import { chainMatch, DEFAULT_PRESET, PRESETS, randomizeChain } from './presets'
+import {
+  chainMatch,
+  DEFAULT_PRESET,
+  EFFECT_ORDER,
+  PRESETS,
+  type Preset,
+  randomizeChain,
+} from './presets'
 import { structuredBuffer } from './test-pixels'
 import {
   CHANNEL_SHIFT_AMOUNT_RANGE,
   type ChannelName,
-  DEFAULT_HALFTONE,
-  DEFAULT_WAVE,
+  HALFTONE_CELL_SIZE_RANGE,
   type NoiseTint,
   PIXEL_SORT_RUN_LENGTH_RANGE,
   type PixelBuffer,
   SCANLINES_DENSITY_STEP,
   type Seed,
   type SortDirection,
+  WAVE_WAVELENGTH_RANGE,
 } from './types'
 
 // 0.5 is the one draw that perturbs nothing: the spread is applied signed, around the base.
 const NO_JITTER = 0.5
 
+/** The Preset with this id, failing loudly rather than handing back an undefined look. */
+function preset(id: string): Preset {
+  const found = PRESETS.find((p) => p.id === id)
+  if (!found) {
+    throw new Error(`no Preset with id "${id}"`)
+  }
+  return found
+}
+
 /**
  * Hands randomizeChain a pinned stream instead of real randomness: its first draw — the one that
- * picks the base Preset — lands on `index`, and every draw after it, one per jittered param, hands
- * back `draw`. So a whole look can be pulled to one extreme at once.
+ * picks the base Preset — lands on the Preset with this `id`, and every draw after it, one per
+ * jittered param, hands back `draw`. So a whole look can be pulled to one extreme at once.
+ *
+ * Named by id rather than by position on purpose. The roster is ordered gentlest first and a newly
+ * curated look is inserted at the loudness it lands on, so every index moves the next time someone
+ * curates — and a renumbered assertion still passes while testing a different look than it reads as.
  */
-function basedOn(index: number, draw: number) {
+function basedOn(id: string, draw: number) {
+  const index = PRESETS.indexOf(preset(id))
   let picked = false
   return () => {
     if (picked) {
@@ -43,15 +64,21 @@ function basedOn(index: number, draw: number) {
 }
 
 describe('PRESETS', () => {
-  it('offers the six curated looks the front door is built on', () => {
-    expect(PRESETS).toHaveLength(6)
+  it('offers more curated looks than the six the front door started on', () => {
+    expect(PRESETS.length).toBeGreaterThan(6)
   })
 
   it('gives every Preset its own id', () => {
     expect(new Set(PRESETS.map((p) => p.id)).size).toBe(PRESETS.length)
   })
 
-  it('opens on a Preset that is one of the six', () => {
+  it('gives every Preset its own name', () => {
+    // The name is the whole chip: two looks sharing one would be indistinguishable at the front
+    // door however different their Chains are.
+    expect(new Set(PRESETS.map((p) => p.name)).size).toBe(PRESETS.length)
+  })
+
+  it('opens on a Preset that is on the roster', () => {
     expect(PRESETS).toContain(DEFAULT_PRESET)
   })
 
@@ -64,16 +91,45 @@ describe('PRESETS', () => {
   it('carries only the Links each look actually uses', () => {
     // The migration ADR 0017 asks for: off is the Link's absence, so the Effects a v1 Preset
     // switched off in its params are simply gone.
-    const typesOf = (id: string) => PRESETS.find((p) => p.id === id)?.chain.map((link) => link.type)
+    const typesOf = (id: string) => preset(id).chain.map((link) => link.type)
 
     expect(typesOf('vhs')).not.toContain('pixelSort')
     expect(typesOf('signal-loss')).not.toContain('pixelSort')
     expect(typesOf('neon-rain')).not.toContain('scanlines')
     expect(typesOf('corrupted')).not.toContain('scanlines')
     expect(typesOf('vaporwave')).toContain('chromaticAberration')
-    expect(
-      PRESETS.filter((p) => p.chain.some((l) => l.type === 'chromaticAberration')),
-    ).toHaveLength(1)
+    expect(typesOf('phosphor')).not.toContain('blockDisplacement')
+    expect(typesOf('crosstalk')).not.toContain('scanlines')
+  })
+
+  it.each(PRESETS)('assembles $name in the canonical order', ({ chain }) => {
+    // The order stopped being a law with ADR 0017, but the front door is where a user learns what
+    // it is — a Preset that reads out of order teaches the wrong thing about the Chain it opens on.
+    const ranks = chain.map((link) => EFFECT_ORDER.indexOf(link.type))
+
+    expect(ranks).toEqual([...ranks].sort((a, b) => a - b))
+    // A Preset repeating an Effect would satisfy the sort above while the roster has no look that
+    // wants one; catching it here keeps the assertion honest rather than accidentally weak.
+    expect(new Set(ranks).size).toBe(ranks.length)
+  })
+
+  it('exploits the Effects the six could not express', () => {
+    // Neither Halftone nor Wave was reachable from the front door at all until a curated Chain
+    // carried one: Randomize rides a base's structure through untouched, so a Preset is the only
+    // thing that can put a new Effect in a casual creator's hands (#320, ADR 0017).
+    const carriers = (type: EffectType) =>
+      PRESETS.filter((p) => p.chain.some((link) => link.type === type))
+
+    expect(carriers('halftone').map((p) => p.id)).toEqual(['phosphor', 'billboard'])
+    expect(carriers('wave').map((p) => p.id)).toEqual(['degauss', 'crosstalk'])
+  })
+
+  it('gives every Effect at least one curated look to be met in', () => {
+    // The failure this catches is an Effect that is registered, runnable and unreachable without
+    // opening the EDIT tab — which is exactly the state Halftone and Wave shipped in.
+    for (const type of EFFECT_ORDER) {
+      expect(PRESETS.some((p) => p.chain.some((link) => link.type === type))).toBe(true)
+    }
   })
 })
 
@@ -178,7 +234,28 @@ describe('the migrated Presets preserve the v1 looks', () => {
 
   const SEED = 90210
 
-  it.each(PRESETS)('renders $name exactly as its flat Preset did', ({ id, chain }) => {
+  // Only the six that were migrated — a look curated after the Chain landed has no flat Preset
+  // behind it to preserve. Pinned to six so a renamed id drops out of LEGACY loudly rather than
+  // quietly leaving a golden test running over five looks.
+  const MIGRATED = PRESETS.filter((p) => p.id in LEGACY)
+
+  it('still holds all six of the looks the Chain migrated', () => {
+    expect(MIGRATED).toHaveLength(Object.keys(LEGACY).length)
+    expect(MIGRATED).toHaveLength(6)
+  })
+
+  it('leaves Chromatic Aberration to the one migrated look that carried it', () => {
+    // VAPORWAVE was the only v1 Preset with a non-zero strength, and the lens flavour is what
+    // separates it from VHS. Scoped to the migrated six: this pins the migration, not a promise
+    // that no future curation may reach for CA.
+    expect(
+      MIGRATED.filter((p) => p.chain.some((l) => l.type === 'chromaticAberration')).map(
+        (p) => p.id,
+      ),
+    ).toEqual(['vaporwave'])
+  })
+
+  it.each(MIGRATED)('renders $name exactly as its flat Preset did', ({ id, chain }) => {
     const pixels = structuredBuffer(40, 30)
 
     expect(Array.from(applyChain(pixels, chain, SEED).data)).toEqual(
@@ -238,84 +315,79 @@ describe('chainMatch', () => {
   // Exhaustive by design: the comparison is total, so every param of every Effect has to be able to
   // break a match. A param left out would silently keep a Preset highlighted after the user had
   // edited their way off it.
-  it.each([
-    ['blockDisplacement', 'density', 0.99],
-    ['blockDisplacement', 'amount', 0.99],
-    ['pixelSort', 'direction', 'vertical'],
-    ['pixelSort', 'threshold', 0.99],
-    ['pixelSort', 'runLength', 199],
-    ['channelShift', 'channel', 'g'],
-    ['channelShift', 'amount', 39],
-    ['chromaticAberration', 'strength', 0.99],
-    ['scanlines', 'density', 0.99],
-    ['scanlines', 'intensity', 0.99],
-    ['noise', 'amount', 0.99],
-    ['noise', 'tint', 'mono'],
-  ] as const)('notices a change to %s.%s', (type, key, value) => {
-    const base = DEFAULT_PRESET.chain
+  //
+  // Each row names the Preset it edits, because no single look carries all eight Effects any more —
+  // and naming one is what lets the guard below check the fixture actually holds the Effect rather
+  // than the edit quietly being a no-op.
+  const PARAM_EDITS = [
+    ['vaporwave', 'blockDisplacement', 'density', 0.99],
+    ['vaporwave', 'blockDisplacement', 'amount', 0.99],
+    ['vaporwave', 'pixelSort', 'direction', 'vertical'],
+    ['vaporwave', 'pixelSort', 'threshold', 0.99],
+    ['vaporwave', 'pixelSort', 'runLength', 199],
+    ['degauss', 'wave', 'axis', 'vertical'],
+    ['degauss', 'wave', 'amplitude', 0.99],
+    ['degauss', 'wave', 'wavelength', 399],
+    ['vaporwave', 'channelShift', 'channel', 'g'],
+    ['vaporwave', 'channelShift', 'amount', 39],
+    ['vaporwave', 'chromaticAberration', 'strength', 0.99],
+    ['phosphor', 'halftone', 'cellSize', 23],
+    ['phosphor', 'halftone', 'dotScale', 0.42],
+    ['phosphor', 'halftone', 'tint', 'mono'],
+    ['vaporwave', 'scanlines', 'density', 0.99],
+    ['vaporwave', 'scanlines', 'intensity', 0.99],
+    ['vaporwave', 'noise', 'amount', 0.99],
+    ['vaporwave', 'noise', 'tint', 'mono'],
+  ] as const
+
+  it.each(PARAM_EDITS)('notices a change to %s’s %s.%s', (id, type, key, value) => {
+    const base = preset(id).chain
     const edited = base.map((link) =>
       link.type === type ? ({ ...link, params: { ...link.params, [key]: value } } as Link) : link,
     )
 
-    // Guards the fixture: VAPORWAVE has to actually carry this Effect, or the map is a no-op and
-    // the assertion below would pass without comparing anything.
+    // Guards the fixture: the named Preset has to actually carry this Effect, or the map is a no-op
+    // and the assertion below would pass without comparing anything.
     expect(base.some((link) => link.type === type)).toBe(true)
     expect(chainMatch(edited, base)).toBe(false)
   })
 
-  it('notices a change to any Halftone param, though no Preset carries one', () => {
-    // The key walk covers a new Effect the day it is registered — pinned separately because the
-    // exhaustive case above reads VAPORWAVE, and no curated look holds a Halftone Link.
-    const base: Chain = [createLink('halftone')]
-
-    expect(chainMatch([createLink('halftone')], base)).toBe(true)
-    expect(chainMatch([createLink('halftone', { ...DEFAULT_HALFTONE, cellSize: 12 })], base)).toBe(
-      false,
-    )
-    expect(
-      chainMatch([createLink('halftone', { ...DEFAULT_HALFTONE, dotScale: 0.42 })], base),
-    ).toBe(false)
-    expect(chainMatch([createLink('halftone', { ...DEFAULT_HALFTONE, tint: 'mono' })], base)).toBe(
-      false,
-    )
-  })
-
-  it('notices a change to any Wave param, though no Preset carries one', () => {
-    // Same reason as Halftone above: the key walk has to cover a newly registered Effect before any
-    // curated look holds one, or the first Preset that does would open already marked modified.
-    const base: Chain = [createLink('wave')]
-
-    expect(chainMatch([createLink('wave')], base)).toBe(true)
-    expect(chainMatch([createLink('wave', { ...DEFAULT_WAVE, axis: 'vertical' })], base)).toBe(
-      false,
-    )
-    expect(chainMatch([createLink('wave', { ...DEFAULT_WAVE, amplitude: 0.9 })], base)).toBe(false)
-    expect(chainMatch([createLink('wave', { ...DEFAULT_WAVE, wavelength: 120 })], base)).toBe(false)
+  it('covers every Effect the registry offers', () => {
+    // The exhaustive table above is only exhaustive if it reaches all eight — a newly registered
+    // Effect would otherwise be added to the Chain and left uncompared, and the first Preset to
+    // carry it would open already marked modified.
+    expect(new Set(PARAM_EDITS.map(([, type]) => type))).toEqual(new Set(EFFECT_ORDER))
   })
 })
 
 describe('randomizeChain', () => {
   it('starts from a Preset — an unperturbing stream lands exactly on the base look', () => {
-    expect(chainMatch(randomizeChain(basedOn(2, NO_JITTER)), PRESETS[2].chain)).toBe(true)
+    expect(
+      chainMatch(randomizeChain(basedOn('neon-rain', NO_JITTER)), preset('neon-rain').chain),
+    ).toBe(true)
   })
 
   it.each(
-    PRESETS.map((preset, index) => [preset.name, index] as const),
-  )('can pick %s as its base', (_name, index) => {
-    expect(chainMatch(randomizeChain(basedOn(index, NO_JITTER)), PRESETS[index].chain)).toBe(true)
+    PRESETS.map(({ name, id }) => [name, id] as const),
+  )('can pick %s as its base', (_name, id) => {
+    expect(chainMatch(randomizeChain(basedOn(id, NO_JITTER)), preset(id).chain)).toBe(true)
   })
 
   // Math.random's own range is [0, 1) — but a source that hands back exactly 1 must not index off
-  // the end and hand the app an undefined look.
+  // the end and hand the app an undefined look. The last Preset by position is what "off the end"
+  // means here, so this one reads the roster's tail deliberately rather than by an index.
   it('stays inside the Presets when the source draws its highest value', () => {
     const chain = randomizeChain(() => 1)
+    const loudest = PRESETS[PRESETS.length - 1]
 
     expect(chain).toBeDefined()
-    expect(chain.map((l) => l.type)).toEqual(PRESETS[PRESETS.length - 1].chain.map((l) => l.type))
+    expect(chain.map((l) => l.type)).toEqual(loudest.chain.map((l) => l.type))
   })
 
   it('perturbs the base look rather than returning it untouched', () => {
-    expect(chainMatch(randomizeChain(basedOn(0, 0)), PRESETS[0].chain)).toBe(false)
+    expect(chainMatch(randomizeChain(basedOn('vaporwave', 0)), preset('vaporwave').chain)).toBe(
+      false,
+    )
   })
 
   // The rule ADR 0017 raises from "a Preset's choices ride through" to the structural level: bad
@@ -326,35 +398,42 @@ describe('randomizeChain', () => {
     ['unperturbing', NO_JITTER],
     ['highest', 1],
   ])('rides the base structure through untouched on the %s draw', (_label, draw) => {
-    PRESETS.forEach((preset, index) => {
-      const rolled = randomizeChain(basedOn(index, draw))
+    for (const base of PRESETS) {
+      const rolled = randomizeChain(basedOn(base.id, draw))
 
-      expect(rolled).toHaveLength(preset.chain.length)
-      expect(rolled.map((link) => link.type)).toEqual(preset.chain.map((link) => link.type))
-    })
+      expect(rolled).toHaveLength(base.chain.length)
+      expect(rolled.map((link) => link.type)).toEqual(base.chain.map((link) => link.type))
+    }
   })
 
   it('never invents a Link the base Preset did not carry', () => {
     // The concrete failure structural jitter would cause: a look assembled from Effects no curator
-    // put together. VHS has no Pixel Sort and CORRUPTED no Scanlines — Randomize must not add them.
+    // put together. VHS has no Pixel Sort, CORRUPTED no Scanlines, and PHOSPHOR nothing structural
+    // at all — Randomize must not add them.
     for (const draw of [0, NO_JITTER, 1]) {
-      const vhs = randomizeChain(basedOn(1, draw))
-      const corrupted = randomizeChain(basedOn(3, draw))
-
-      expect(vhs.some((link) => link.type === 'pixelSort')).toBe(false)
-      expect(corrupted.some((link) => link.type === 'scanlines')).toBe(false)
+      expect(randomizeChain(basedOn('vhs', draw)).some((link) => link.type === 'pixelSort')).toBe(
+        false,
+      )
+      expect(
+        randomizeChain(basedOn('corrupted', draw)).some((link) => link.type === 'scanlines'),
+      ).toBe(false)
+      expect(
+        randomizeChain(basedOn('phosphor', draw)).some((link) => link.type === 'blockDisplacement'),
+      ).toBe(false)
     }
   })
 
   it('rides a Preset’s non-numeric choices through untouched', () => {
-    // Which channel splits and which way the sort runs are choices, not magnitudes: flipping one
-    // lands outside everything the base promised.
+    // Which channel splits, which way the sort runs, which axis the bend travels on and how a dot
+    // is inked are choices, not magnitudes: flipping one lands outside everything the base
+    // promised. Halftone's tint is the loudest of them — `mono` spends the Source's colour, so a
+    // flipped tint would hand out a look in a palette the curator never vouched for.
     for (const draw of [0, 1]) {
-      PRESETS.forEach((preset, index) => {
-        const rolled = randomizeChain(basedOn(index, draw))
+      for (const curated of PRESETS) {
+        const rolled = randomizeChain(basedOn(curated.id, draw))
 
         rolled.forEach((link, position) => {
-          const base = preset.chain[position]
+          const base = curated.chain[position]
           if (link.type === 'channelShift' && base.type === 'channelShift') {
             expect(link.params.channel).toBe(base.params.channel)
           }
@@ -364,8 +443,14 @@ describe('randomizeChain', () => {
           if (link.type === 'noise' && base.type === 'noise') {
             expect(link.params.tint).toBe(base.params.tint)
           }
+          if (link.type === 'wave' && base.type === 'wave') {
+            expect(link.params.axis).toBe(base.params.axis)
+          }
+          if (link.type === 'halftone' && base.type === 'halftone') {
+            expect(link.params.tint).toBe(base.params.tint)
+          }
         })
-      })
+      }
     }
   })
 
@@ -376,7 +461,7 @@ describe('randomizeChain', () => {
     ['its lowest', 0],
     ['its highest', 1],
   ])('when the source draws %s value', (_label, draw) => {
-    const looks = PRESETS.map((_, index) => randomizeChain(basedOn(index, draw)))
+    const looks = PRESETS.map((base) => randomizeChain(basedOn(base.id, draw)))
 
     it('keeps every unit-scale param on the 0..1 scale', () => {
       for (const chain of looks) {
@@ -386,13 +471,17 @@ describe('randomizeChain', () => {
               ? [link.params.density, link.params.amount]
               : link.type === 'pixelSort'
                 ? [link.params.threshold]
-                : link.type === 'chromaticAberration'
-                  ? [link.params.strength]
-                  : link.type === 'scanlines'
-                    ? [link.params.density, link.params.intensity]
-                    : link.type === 'noise'
-                      ? [link.params.amount]
-                      : []
+                : link.type === 'wave'
+                  ? [link.params.amplitude]
+                  : link.type === 'chromaticAberration'
+                    ? [link.params.strength]
+                    : link.type === 'halftone'
+                      ? [link.params.dotScale]
+                      : link.type === 'scanlines'
+                        ? [link.params.density, link.params.intensity]
+                        : link.type === 'noise'
+                          ? [link.params.amount]
+                          : []
 
           for (const value of values) {
             expect(value).toBeGreaterThanOrEqual(0)
@@ -425,12 +514,67 @@ describe('randomizeChain', () => {
       }
     })
 
+    it('keeps Halftone to a whole cell its control offers', () => {
+      for (const chain of looks) {
+        for (const link of chain) {
+          if (link.type === 'halftone') {
+            expect(Number.isInteger(link.params.cellSize)).toBe(true)
+            expect(link.params.cellSize).toBeGreaterThanOrEqual(HALFTONE_CELL_SIZE_RANGE.min)
+            expect(link.params.cellSize).toBeLessThanOrEqual(HALFTONE_CELL_SIZE_RANGE.max)
+          }
+        }
+      }
+    })
+
+    it('keeps Wave to a whole wavelength its control offers', () => {
+      for (const chain of looks) {
+        for (const link of chain) {
+          if (link.type === 'wave') {
+            expect(Number.isInteger(link.params.wavelength)).toBe(true)
+            expect(link.params.wavelength).toBeGreaterThanOrEqual(WAVE_WAVELENGTH_RANGE.min)
+            expect(link.params.wavelength).toBeLessThanOrEqual(WAVE_WAVELENGTH_RANGE.max)
+          }
+        }
+      }
+    })
+
     it('lands Scanlines density on a notch of its slider', () => {
       for (const chain of looks) {
         for (const link of chain) {
           if (link.type === 'scanlines') {
             const notches = link.params.density / SCANLINES_DENSITY_STEP
             expect(Math.abs(notches - Math.round(notches))).toBeLessThan(1e-9)
+          }
+        }
+      }
+    })
+
+    // The looks that survive a roll are the point of the jitter spreads, not just the clamps: a
+    // param pinned to the end of its own range on every draw means the base was curated too close
+    // to that end for the look to stay itself (presets.ts).
+    it('leaves every Wave a bend rather than a comb or a lean', () => {
+      // A wavelength this short puts neighbouring lines near opposite crests; this long leaves
+      // fewer than two cycles across the sampled frame (types.ts). Both are looks nobody curated.
+      for (const chain of looks) {
+        for (const link of chain) {
+          if (link.type === 'wave') {
+            expect(link.params.wavelength).toBeGreaterThanOrEqual(24)
+            expect(link.params.wavelength).toBeLessThanOrEqual(200)
+          }
+        }
+      }
+    })
+
+    it('leaves every Halftone a screen the Source can still be read through', () => {
+      // Past ~0.75 a dot fills its cell before full luminance and the highlights flatten into
+      // solid ink; at the range's floor the cell holds one dot decision and the screen collapses
+      // into a posterize (types.ts).
+      for (const chain of looks) {
+        for (const link of chain) {
+          if (link.type === 'halftone') {
+            expect(link.params.cellSize).toBeGreaterThan(HALFTONE_CELL_SIZE_RANGE.min)
+            expect(link.params.dotScale).toBeLessThanOrEqual(0.9)
+            expect(link.params.dotScale).toBeGreaterThanOrEqual(0.5)
           }
         }
       }

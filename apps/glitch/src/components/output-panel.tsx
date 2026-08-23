@@ -23,7 +23,7 @@ interface Props {
  * only reads the pixels already painted and never touches the rAF loop that painted them.
  *
  * The Chain export is the one output here that isn't the picture: it takes the *look* out, so a
- * Chain built by hand can be kept and shared where only the six Presets could carry structure
+ * Chain built by hand can be kept and shared where only the curated Presets could carry structure
  * before (ADR 0017). Import is deliberately elsewhere — a brought look is applied like a Preset,
  * and lives in the Strip's PRESETS tab beside them (ADR 0020).
  *

@@ -903,7 +903,7 @@ describe('App', () => {
         expect(renderedSeed.mock.lastCall?.[0]).not.toBe(before)
       })
 
-      // A look the user brought is nobody's edit of one of the six.
+      // A look the user brought is nobody's edit of a Preset.
       it('leaves no Preset highlighted', async () => {
         openWithSource()
 

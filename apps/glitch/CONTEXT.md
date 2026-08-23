@@ -80,6 +80,12 @@ Uma Chain nomeada — um **look** curado para render bonito num clique,
 ex.: `VHS`, `CORRUPTED`, `VAPORWAVE`, `SIGNAL LOSS`. Não carrega Seed: aplicar um Preset
 gera um Seed novo, de modo que cada usuário recebe um arranjo próprio daquele look. É a
 porta de entrada do app; os sliders ficam no modo avançado.
+A lista é ordenada **do mais suave ao mais destrutivo** — um look novo é *inserido* na altura em que
+cai, não acrescentado no fim.
+Curar é a **única alavanca estrutural** do app: o Randomize carrega a estrutura da base intacta, então
+só um Preset consegue pôr um Effect novo na mão de quem usa a porta da frente. Halftone e Wave
+nasceram registrados, executáveis e inalcançáveis dali; `PHOSPHOR`, `DEGAUSS`, `BILLBOARD` e
+`CROSSTALK` são o que os alcança.
 _Avoid_: filtro, look (como termo de domínio — "look" descreve o que um Preset é, mas o
 termo canônico é Preset)
 
@@ -87,9 +93,9 @@ termo canônico é Preset)
 A Chain escrita como arquivo — **o look saindo do app e voltando**, o "Preset do usuário".
 Carrega **só a Chain**: nada de Seed (importar sorteia um arranjo novo, exatamente como aplicar um
 Preset) e nada de `id` (encanamento de UI, que o `chainMatch` já ignora pelo mesmo motivo).
-Importar **apaga a procedência** — é um look que o usuário trouxe, não um dos seis editado. É o
+Importar **apaga a procedência** — é um look que o usuário trouxe, não um Preset editado. É o
 único caminho pelo qual **variedade estrutural** (quais Links, quantos, em que ordem) entra no app
-vinda de fora, já que o Randomize nunca inventa estrutura e até aqui só os seis Presets podiam
+vinda de fora, já que o Randomize nunca inventa estrutura e só os Presets curados podiam
 carregá-la. O arquivo não é confiável: Effect desconhecido, param fora da faixa, JSON quebrado ou
 Chain acima do `MAX_CHAIN_LENGTH` são **recusados** — nunca clampados — com uma mensagem dizendo o
 que está errado, num toast (ADR 0006).

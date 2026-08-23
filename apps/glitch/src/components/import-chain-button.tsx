@@ -17,7 +17,7 @@ interface Props {
  * (ADR 0006) and never an exception or a silent no-op.
  *
  * Sits in the Strip's PRESETS tab rather than beside the export in OUT: a look brought from a file
- * is applied exactly as one of the six is, and reaching it must not cost a tab switch (ADR 0020).
+ * is applied exactly as a curated one is, and reaching it must not cost a tab switch (ADR 0020).
  */
 export default function ImportChainButton({ onImport }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)

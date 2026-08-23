@@ -15,10 +15,10 @@ Chain (ADR 0017, #125–#128), plus Halftone (#309), Wave (#310) and the Chain a
 eight Effects are live — Source Image *or* Live Source → the Chain → PNG Export / Capture / Copy /
 Recording — the pure-core / imperative-shell seam is established, and the render is deterministic in
 Chain + Seed. The front
-door is the six Presets plus Randomize; behind the EDIT tab the Chain is fully editable — reorder,
-add, remove, duplicate, the same Effect more than once. A Chain built by hand exports as JSON and
+door is the ten curated Presets plus Randomize; behind the EDIT tab the Chain is fully editable —
+reorder, add, remove, duplicate, the same Effect more than once. A Chain built by hand exports as JSON and
 comes back (**Chain JSON**, `CONTEXT.md`), which is the only way structural variety reaches the app
-from outside the six. The v1 scope in `CONTEXT.md` is complete.
+from outside the roster. The v1 scope in `CONTEXT.md` is complete.
 
 The Preset **values** are taste, not derivation: they are the one thing here a human curates, and
 re-curating a number in `presets.ts` is a design change, not a bug fix.
@@ -70,11 +70,22 @@ Single-page React/TS/Vite app. Fully client-side — no backend, no network.
 
 ### Presets and Randomize
 
-The six Presets in `src/glitch/presets.ts` are the app's primary surface — `PresetPicker` fills the
-Control Strip's PRESETS tab (ADR 0020), and `DEFAULT_PRESET` is applied on open. A Preset is a whole Chain rather
-than a diff from a default: a curator can read one entire look in one place, and re-curate it
-without moving the other five. Each carries **only the Links its look uses** — off is a Link's
-absence (ADR 0017), so VHS has no Pixel Sort and CORRUPTED no Scanlines.
+The ten Presets in `src/glitch/presets.ts` are the app's primary surface — `PresetPicker` fills the
+Control Strip's PRESETS tab (ADR 0020), and `DEFAULT_PRESET` is applied on open. A Preset is a whole
+Chain rather than a diff from a default: a curator can read one entire look in one place, and
+re-curate it without moving the others. Each carries **only the Links its look uses** — off is a
+Link's absence (ADR 0017), so VHS has no Pixel Sort, CORRUPTED no Scanlines and PHOSPHOR nothing
+structural at all.
+
+The list is ordered **gentlest first** and reads as a dial from "still clearly the photo" to "barely
+survived", so a newly curated look is *inserted* at the loudness it lands on rather than appended.
+Nothing may index `PRESETS` by position for that reason — the tests select by id (#320).
+
+**Curating is the app's only structural lever.** Randomize rides a base's structure through
+untouched, so a Preset is the one thing that can put a new Effect in a casual creator's hands:
+Halftone and Wave shipped registered, runnable and unreachable from the front door, and #320 curated
+PHOSPHOR, DEGAUSS, BILLBOARD and CROSSTALK to close that. A Preset test pins that every registered
+Effect has at least one curated look to be met in.
 
 Three behaviours hang together, and all of them come from the Seed sitting *outside* the Chain:
 
@@ -254,7 +265,7 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   a list written the other way round type-checks for validity but never for completeness, so a value
   added to a union would compile everywhere while going missing from the toggle that offers it and
   from the Chain JSON that has to read it back
-- `src/glitch/presets.ts` — `PRESETS` (the six curated Chains), `DEFAULT_PRESET` (applied on open),
+- `src/glitch/presets.ts` — `PRESETS` (the curated Chains), `DEFAULT_PRESET` (applied on open),
   `Preset`, `chainMatch()` (total and order-sensitive), `randomizeChain()` (preset + jitter,
   injected randomness, structure rides through), `EFFECT_ORDER` (the palette's order)
 - `src/glitch/pipeline.ts` — the eight Effects: `blockDisplacement()`, `pixelSort()`, `wave()`,
@@ -315,9 +326,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   right. The shell is the kit's `TabStrip` (ADR 0020's extraction slice); this file is the wiring
   that says which panel each tab carries. Only the active panel is mounted, so one tab's controls
   are in the accessibility tree at a time
-- `src/components/preset-picker.tsx` — the PRESETS panel: the six Preset chips in a horizontally
+- `src/components/preset-picker.tsx` — the PRESETS panel: the Preset chips in a horizontally
   scrollable row (active one highlighted, `(modified)` once edited), with Randomize and import chain
-  beside them — import lives here because a brought look is applied exactly as one of the six is
+  beside them — import lives here because a brought look is applied exactly as a curated one is
 - `src/components/chain-editor.tsx` — the Strip's EDIT tab: the Chain as a row of Link chips
   left→right in processing order, each chip both the selection control and the drag handle (drag, or
   left/right arrows when focused). The focused Link's params fill the panel above the row —
