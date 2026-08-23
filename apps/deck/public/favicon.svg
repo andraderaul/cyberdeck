@@ -1,0 +1,20 @@
+<!--
+  The hub's mark: the deck's four programs as four blocks, and one of them is not like the others.
+
+  The hub has no program of its own to draw — it is chrome, and chrome has no subject but the deck
+  (ADR 0025) — so the only honest picture it can show is the roster itself. Three blocks carry the
+  accent and the fourth carries the info hue, which is the deck as it actually stands: three tools
+  and exactly one piece, the fence ADR 0021 holds at one.
+
+  Fixed hexes rather than tokens: an SVG served from `public/` has no stylesheet and no Theme
+  (ADR 0024). These are `ice`'s --void, --accent and --color-info, pinned.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="CYBERDECK">
+  <rect width="32" height="32" rx="2" fill="#0a0a0f" />
+  <g fill="#b829ff">
+    <rect x="4" y="4" width="11" height="11" />
+    <rect x="17" y="4" width="11" height="11" />
+    <rect x="4" y="17" width="11" height="11" />
+  </g>
+  <rect x="17" y="17" width="11" height="11" fill="#00e5ff" />
+</svg>

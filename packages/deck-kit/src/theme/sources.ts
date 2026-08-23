@@ -31,8 +31,12 @@ export function readTokensCss(): string {
   return readFileSync(resolve(repoRoot(), TOKENS_FROM_ROOT), 'utf8')
 }
 
-/** Every program on the deck, by directory name. */
-export function programs(): string[] {
+/**
+ * Every workspace under `apps/`, by directory name. Not `programs()`: since the hub landed there
+ * the directory holds the deck's workspaces, one of which is deliberately not a program but the
+ * deck's chrome (ADR 0025). The guards want all of them either way — they scan what ships.
+ */
+export function workspaces(): string[] {
   const root = resolve(repoRoot(), APPS_FROM_ROOT)
   return readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -72,20 +76,20 @@ function walk(dir: string, root: string, out: Source[]): void {
   }
 }
 
-/** Every source and stylesheet in every program and in the kit, minus the handful that define the
+/** Every source and stylesheet in every workspace and in the kit, minus the handful that define the
  *  vocabulary rather than consume it. */
 export function colourBearingSources(): Source[] {
   const root = repoRoot()
   const out: Source[] = []
-  for (const program of programs()) {
-    const src = join(root, APPS_FROM_ROOT, program, 'src')
+  for (const workspace of workspaces()) {
+    const src = join(root, APPS_FROM_ROOT, workspace, 'src')
     if (existsSync(src)) {
       walk(src, root, out)
     }
-    // The shell each program is served in. It sits outside `src/`, so a walk of the source tree
+    // The shell each workspace is served in. It sits outside `src/`, so a walk of the source tree
     // misses it entirely — and it is the one file that carries a `<style>` block and the inline
     // pre-paint script, which is to say the two places a hue could be named before React exists.
-    const html = join(root, APPS_FROM_ROOT, program, 'index.html')
+    const html = join(root, APPS_FROM_ROOT, workspace, 'index.html')
     if (existsSync(html)) {
       out.push({ path: relative(root, html), source: readFileSync(html, 'utf8') })
     }
@@ -95,21 +99,21 @@ export function colourBearingSources(): Source[] {
 }
 
 /**
- * The blocking Theme script inlined into each program's HTML, for the programs that have one.
- * Found by looking rather than by a list, so a program that quietly loses its script — or quietly
- * gains one — shows up as a failure instead of as nothing.
+ * The blocking Theme script inlined into each workspace's HTML, for the ones that have it. Found by
+ * looking rather than by a list, so a workspace that quietly loses its script — or quietly gains
+ * one — shows up as a failure instead of as nothing.
  */
-export function prePaintScripts(): { program: string; source: string }[] {
+export function prePaintScripts(): { workspace: string; source: string }[] {
   const root = repoRoot()
-  const found: { program: string; source: string }[] = []
-  for (const program of programs()) {
-    const html = join(root, APPS_FROM_ROOT, program, 'index.html')
+  const found: { workspace: string; source: string }[] = []
+  for (const workspace of workspaces()) {
+    const html = join(root, APPS_FROM_ROOT, workspace, 'index.html')
     if (!existsSync(html)) {
       continue
     }
     const source = readFileSync(html, 'utf8')
     if (source.includes('data-theme')) {
-      found.push({ program, source })
+      found.push({ workspace, source })
     }
   }
   return found

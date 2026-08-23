@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "npm run dev --workspace @cyberdeck/ascii",
     "dev:ascii": "npm run dev --workspace @cyberdeck/ascii",
+    "dev:deck": "npm run dev --workspace @cyberdeck/deck",
     "dev:glitch": "npm run dev --workspace @cyberdeck/glitch",
     "dev:golem": "npm run dev --workspace @cyberdeck/golem",
     "dev:sprawl": "npm run dev --workspace @cyberdeck/sprawl",
