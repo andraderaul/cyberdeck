@@ -4,6 +4,11 @@
 app é um "programa" que roda no deck e compartilha a linguagem visual e os padrões de
 código, mas é versionado e deployado de forma independente (ver ADR 0011 e ADR 0012).
 
+Nem todo workspace em `apps/` é um programa. O deck tem três categorias — **ferramenta**, **peça**
+e **casca** — e a última é o hub (`apps/deck`, decidido na ADR 0025, construído em #323): a porta de
+entrada, que não consome material do usuário, não produz artefato e é sobre o próprio deck. Ver
+"Ferramenta vs. peça vs. casca" em Relationships.
+
 As decisões arquiteturais de todo o deck vivem em [`docs/adr/`](./docs/adr/). ADRs novos seguem o
 template padrão em [`docs/adr/TEMPLATE.md`](./docs/adr/TEMPLATE.md) — uma decisão por arquivo, em
 inglês.
@@ -78,7 +83,7 @@ inglês.
   mesma saída, sem tempo), enquanto o GOLEM é uma máquina de estados no tempo. Por isso o
   Export não é um artefato visual — é um link compartilhável com o Source, e `.hex`/trace como
   comandos.
-- **Ferramenta vs. peça — o deck admite uma exceção, e só uma** — ASCII, GLITCH e GOLEM são
+- **Ferramenta vs. peça vs. casca — o deck admite uma exceção, e só uma** — ASCII, GLITCH e GOLEM são
   *ferramentas*: cada um consome material do usuário e vale `f(seu_input)`, e a régua é a
   retenção. SPRAWL//Atlas é a primeira **peça**: não tem entrada de usuário, o "material" é a
   função de mapeamento (onde a janela log cai, o viewport), e a régua é a *primeira tela* (ADR
@@ -88,13 +93,37 @@ inglês.
   peça é o deck perdendo identidade; o default para "mais uma peça" é não. O dado real chega por
   um pipeline novo pro deck — snapshot vendorizado do PeeringDB, commitado e datado (ADR 0022) —
   que fica no app, não no Deck Kit, até um segundo consumidor provar a junção.
+  A **casca** é a terceira categoria, e ela não gasta essa exceção. O hub (`apps/deck`) não é
+  ferramenta nem peça por **três cláusulas, todas necessárias**: não consome material do usuário,
+  não produz artefato, e **é sobre o próprio deck**. As duas primeiras sozinhas não bastariam, e a
+  história do deck é a prova — peça não precisa de entrada nem de artefato (a régua dela é a primeira
+  tela), e o SPRAWL//Atlas *como a ADR 0021 o admitiu* passava nas duas: o link e o PNG só chegaram
+  depois (#230). Uma definição feita só de ausências chamaria a peça de casca no dia em que ela foi
+  admitida. **A terceira cláusula é a que separa:** peça é sobre um *assunto* — o SPRAWL é sobre a
+  capacidade de troca do mundo, e é por isso que a função de mapeamento é material de verdade —
+  enquanto casca não tem assunto nenhum além do deck. Por isso o hub fica *fora* da cerca da ADR 0021
+  em vez de passar por ela, e SPRAWL//Atlas continua sendo a única peça (ADR 0025). O teste que uma
+  proposta futura responde não é estético e sim seco: *pega material do usuário, devolve artefato, ou
+  é sobre outra coisa que não este deck?* Qualquer um dos três e é programa — a cerca da ADR 0021
+  vale inteira e o default continua sendo não. A casca também se cerca: o hub nunca pode ganhar
+  upload, drop zone, webcam, export, download, link que codifica algo montado nele, core de domínio
+  (domínio é assunto), programa rodando dentro (iframe, "mini mode") nem maquinaria de retenção
+  (favoritos, histórico, contas). Galeria de output de usuário não entra nessa lista porque não é
+  item novo e sim a terceira cláusula mordendo — mas é a forma que a proposta vai tomar de verdade,
+  então vale dizer: ela parece casca, consome material do usuário por procuração, e transforma esse
+  material na coisa que você veio ver.
 - **O Theme para onde começam os pixels do usuário** — a linguagem visual virou um conjunto nomeado
   de Themes (sete deles, do `ice` ao `onyx`), e a fronteira do que eles alcançam não é nova: é a mesma
   linha que a ADR 0013 traçou pros overlays de canvas, reusada pra outro fim. **O deck pode
   recolorir o que ele desenhou; não pode recolorir o que você trouxe.** Casca, painéis, o fósforo do
   Terminal e os badges seguem o Theme; a Source, a saída da Chain do GLITCH e os Color Modes do
   ASCII não. SPRAWL//Atlas fica **fora por decisão registrada** — os pixels dele não são casca nem
-  do usuário, são a peça, e a ADR 0021 diz que a peça *é* luz ciano contra o escuro (ADR 0024).
+  do usuário, são a peça, e a ADR 0021 diz que a peça *é* luz ciano contra o escuro (ADR 0024). O
+  hub é o caso mais fácil da régua, não o mais difícil: ele é *inteiro* aquilo que o deck desenhou,
+  então **seta o atributo** como as três ferramentas, com o mesmo script de pre-paint inline e o
+  mesmo controle (ADR 0025). E é ele que torna visível uma coisa que a ADR 0024 pôde supor: a
+  seleção persiste **por origem** porque "nenhum programa linka pro outro" — o hub é exatamente o
+  que linka. Escolher `chiba` na porta e abrir o ASCII em `ice` é consequência registrada, não bug.
 - **Color Mode (ASCII) ≠ Theme (deck)** — os dois são "o esquema de cores", e o ASCII é o único
   programa onde os dois controles ficam à vista. Color Mode pinta a arte do usuário; Theme pinta a
   casca. Nenhum Theme do roster se chama `matrix` ou `neon` porque esses dois já são Color Modes —
@@ -103,3 +132,13 @@ inglês.
   impura do código (imperative shell / functional core) em todo o deck; **Console** é o painel
   de linha de comando do GOLEM. E, dentro do GOLEM, **Terminal** é o dispositivo de saída da
   máquina simulada, não a linha de comando.
+- **"Casca" tem três sentidos, e a pergunta que os separa é *o que tem dentro*** — em inglês os ADRs
+  escrevem *chrome* e o vocabulário fica limpo (`chrome` ≠ `shell` ≠ `Console`); em português a
+  palavra acumulou três usos e todos os três estão neste arquivo. **(1)** O **Deck Kit** é "a casca
+  compartilhada sobre a qual todo programa do deck é montado" — casca como *código*, aquilo em que
+  você monta em cima (ADR 0014). **(2)** Dentro de um programa, casca é o que o deck **desenhou em
+  volta** dos pixels do usuário, por oposição a eles — casca como *fronteira de pintura*, e é essa
+  que o Theme alcança (ADR 0013, ADR 0024). **(3)** No nível do deck, casca é a **categoria** do hub:
+  casca **sem nada dentro**, nem pixel de usuário nem assunto próprio (ADR 0025). Ou seja: o Kit é
+  casca que se monta em cima, a casca de um programa envolve a obra do usuário, e a do hub não
+  envolve nada — é justamente o vazio que faz dela uma terceira categoria.
