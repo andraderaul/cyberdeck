@@ -47,6 +47,15 @@ Single-page React/TS/Vite app. Fully client-side — no backend server. AI analy
 
 Optional feature — user supplies their own API key. `use-ai-config` stores the `AIConfig` in `localStorage`. `analyzeCanvas()` in `analysis-service.ts` dynamically imports the correct adapter (Anthropic, OpenAI, or Gemini), calls it, and validates the response with `validate()`. AI errors (`AuthError`, `QuotaError`, `ParseError`) are typed classes caught in `app.tsx` and routed to `AnalysisModal` for type-specific feedback (see ADR 0003, ADR 0006).
 
+**The whole surface is off the first-paint path** (#357), not just the adapters: `app.tsx` reaches
+`analysis-service.ts`, `AnalysisModal` and `ApiKeyModal` through `import()`, so a visitor with no AI
+Config fetches none of them — which is the same argument "optional and off by default" already made
+one layer down. `e2e/ascii/ai-surface.spec.ts` holds it, and holds it from both sides: "no AI chunk
+at first paint" is equally true of a build that emits none, so every check there is paired with the
+fetch the click has to produce. The one part that stays eager is `scan-pending-modal.tsx` — the
+frame a scan opens on, which has to be drawable before the modal's chunk lands or Analyze answers a
+click with nothing.
+
 An `Analysis` carries a **Suggestion** — the `ConversionSettings` the Provider proposes for this
 image — on the same round trip as the prose (issue #308). **`src/ai/suggestion.ts` is the trust
 boundary**: it is the one place a provider's JSON becomes domain values, so an unknown Charset or
@@ -257,8 +266,15 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/components/ai-config-banner.tsx` — informational banner for AI config, rendered inside the
   OUT tab; dismiss state in `sessionStorage`
 - `src/components/analysis-modal.tsx` — AI Analysis results with threat-level display, and the
-  Suggestion's `apply` — the only control in the app that moves every ConversionSetting at once
-- `src/components/api-key-modal.tsx` — API key configuration
+  Suggestion's `apply` — the only control in the app that moves every ConversionSetting at once.
+  Lazy (#357), and it hands its `loading` state back to `scan-pending-modal.tsx`
+- `src/components/scan-pending-modal.tsx` — the scan in flight, and the only piece of the AI surface
+  in the entry chunk: `AnalysisModal`'s `loading` state *and* the Suspense fallback that stands in
+  for that modal while its chunk arrives, so what the user sees cannot depend on which got there
+  first. `SCAN_MODAL` is the frame both wear, spelled once now that they live in different chunks
+- `src/components/api-key-modal.tsx` — API key configuration. Lazy (#357), behind a `null` fallback:
+  it has no honest waiting state of its own, and an empty frame would be a flash the eager version
+  never had
 - `src/components/about-modal.tsx` — About/info modal
 - `src/components/footer.tsx` — empty-state bottom chrome: the attribution links plus the About
   trigger, hidden once a Source loads. The 44px target sits on each control, not on the bar

@@ -9,21 +9,27 @@ import {
   useToastError,
   useToastInfo,
 } from '@cyberdeck/deck-kit/ui'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { analyzeCanvas, toAnalysisState } from './ai/analysis-service'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import type { AnalysisState } from './ai/types'
 import { useAIConfig } from './ai/use-ai-config'
 import type { Preset } from './ascii/presets'
 import type { RenderInstruction } from './ascii/renderer'
 import type { ConversionSettings } from './ascii/types'
 import AboutModal from './components/about-modal'
-import AnalysisModal from './components/analysis-modal'
-import ApiKeyModal from './components/api-key-modal'
 import AsciiCanvas from './components/ascii-canvas'
 import ControlStrip from './components/control-strip'
 import Footer from './components/footer'
+import ScanPendingModal from './components/scan-pending-modal'
 import { outputFilename } from './export/output'
 import { useWebcamState } from './hooks/use-webcam-state'
+
+// The rest of the AI surface, following the three provider adapters off the first-paint path
+// (#357). The surface is optional and off by default — ADR 0003 keeps the key on the user's own
+// device, and with no AI Config the Analyze control is not even rendered — so `analysis-service.ts`
+// has fetched its adapter on demand since the feature landed. These two modals are the same
+// surface one layer up, and a visitor who never configures a provider now never fetches them.
+const AnalysisModal = lazy(() => import('./components/analysis-modal'))
+const ApiKeyModal = lazy(() => import('./components/api-key-modal'))
 
 type ActiveModal =
   | { kind: 'apiKey' }
@@ -202,11 +208,22 @@ export default function App() {
     const dataUrl = canvas.toDataURL('image/png')
     setActiveModal({ kind: 'analysis', state: { status: 'loading' } })
 
+    // The service is fetched rather than bundled, so its own arrival has to be answered before its
+    // error vocabulary is in hand. Answered as a network failure, which is what it is: the shell
+    // precaches every chunk it emitted (ADR 0027), so a chunk that will not load is a visitor who
+    // has not installed and has lost the network. Left unhandled it would strand the modal on
+    // `loading`, which has no close control to escape by.
+    const service = await import('./ai/analysis-service').catch(() => null)
+    if (!service) {
+      setActiveModal({ kind: 'analysis', state: { status: 'network-error' } })
+      return
+    }
+
     try {
-      const analysis = await analyzeCanvas(dataUrl, aiConfig)
-      setActiveModal({ kind: 'analysis', state: toAnalysisState({ ok: analysis }) })
+      const analysis = await service.analyzeCanvas(dataUrl, aiConfig)
+      setActiveModal({ kind: 'analysis', state: service.toAnalysisState({ ok: analysis }) })
     } catch (err) {
-      setActiveModal({ kind: 'analysis', state: toAnalysisState({ error: err }) })
+      setActiveModal({ kind: 'analysis', state: service.toAnalysisState({ error: err }) })
     }
   }, [aiConfig])
 
@@ -312,21 +329,31 @@ export default function App() {
       )}
 
       {activeModal?.kind === 'apiKey' && (
-        <ApiKeyModal
-          current={aiConfig}
-          onSave={handleSaveAiConfig}
-          onRemove={handleRemoveAiConfig}
-          onClose={() => setActiveModal(null)}
-        />
+        // `null` on purpose: this modal has no honest waiting state of its own, and a bordered
+        // frame with its content still in flight is a flash of empty the eager version never had.
+        // Nothing on screen moves until the modal opens fully formed, exactly as it used to.
+        <Suspense fallback={null}>
+          <ApiKeyModal
+            current={aiConfig}
+            onSave={handleSaveAiConfig}
+            onRemove={handleRemoveAiConfig}
+            onClose={() => setActiveModal(null)}
+          />
+        </Suspense>
       )}
 
       {activeModal?.kind === 'analysis' && (
-        <AnalysisModal
-          state={activeModal.state}
-          onClose={() => setActiveModal(null)}
-          onRetry={activeModal.state.status === 'parse-error' ? handleAnalyze : undefined}
-          onApplySuggestion={handleApplySuggestion}
-        />
+        // This one does have an honest first frame, and it is the frame the eager version opened
+        // on: the click that opens the modal is the click that starts the request. Drawing it from
+        // the entry chunk is what keeps Analyze answering instantly (scan-pending-modal.tsx).
+        <Suspense fallback={<ScanPendingModal />}>
+          <AnalysisModal
+            state={activeModal.state}
+            onClose={() => setActiveModal(null)}
+            onRetry={activeModal.state.status === 'parse-error' ? handleAnalyze : undefined}
+            onApplySuggestion={handleApplySuggestion}
+          />
+        </Suspense>
       )}
 
       {activeModal?.kind === 'about' && <AboutModal onClose={() => setActiveModal(null)} />}
