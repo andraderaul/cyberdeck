@@ -2,8 +2,16 @@ import { TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { renderFrame } from '../ascii/render-frame'
 import type { ConversionSettings } from '../ascii/types'
 import AsciiCanvas from './ascii-canvas'
+
+// The real implementation still runs — this only makes the call itself observable, which is the
+// only way to see *what the loop asks for* rather than what the canvas ends up showing.
+vi.mock('../ascii/render-frame', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../ascii/render-frame')>()
+  return { ...actual, renderFrame: vi.fn(actual.renderFrame) }
+})
 
 const SETTINGS: ConversionSettings = {
   resolution: 12,
@@ -16,6 +24,7 @@ const SETTINGS: ConversionSettings = {
 
 function Wrapper({
   sourceImage = null,
+  sourceVideo = null,
   isRecording,
   isLive,
   isMirrored,
@@ -24,6 +33,7 @@ function Wrapper({
   onStopRecording,
 }: {
   sourceImage?: HTMLImageElement | null
+  sourceVideo?: HTMLVideoElement | null
   isRecording?: boolean
   isLive?: boolean
   isMirrored?: boolean
@@ -35,7 +45,7 @@ function Wrapper({
   return (
     <AsciiCanvas
       sourceImage={sourceImage}
-      sourceVideo={null}
+      sourceVideo={sourceVideo}
       settings={SETTINGS}
       onConverted={vi.fn()}
       canvasRef={canvasRef}
@@ -163,5 +173,40 @@ describe('AsciiCanvas', () => {
     render(<Wrapper isLive={true} isMirrored={true} onMirrorToggle={vi.fn()} />)
 
     expect(document.querySelector('canvas')?.style.transform).toBe('')
+  })
+
+  // The Export path is gated behind `!isLive` (output-panel), so nothing on the ~15fps loop can
+  // consume a converted frame. The loop therefore asks renderFrame for no conversion at all: no
+  // second computeFrame() over the cells, no per-frame setState carrying one object per cell. This
+  // is the assertion that keeps that true, because the cost of losing it is invisible — a slower
+  // Live Source, not a broken one (ADR 0002).
+  it('asks for no converted frame on the Live Source loop', () => {
+    vi.mocked(renderFrame).mockClear()
+    const video = document.createElement('video')
+    Object.defineProperty(video, 'readyState', { value: 4 })
+    // happy-dom's HTMLMediaElement carries no readyState constants, so the loop's guard would
+    // compare against `undefined` and skip every frame — the test would then pass over a loop that
+    // never ran.
+    Object.defineProperty(HTMLMediaElement, 'HAVE_ENOUGH_DATA', { value: 4, configurable: true })
+
+    let scheduled = 0
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      // Only the first tick runs the callback — the loop re-schedules itself from inside it.
+      if (scheduled++ === 0) {
+        cb(1000)
+      }
+      return 1
+    })
+    vi.stubGlobal('cancelAnimationFrame', () => {})
+
+    render(<Wrapper sourceVideo={video} isLive={true} />)
+
+    const liveCalls = vi.mocked(renderFrame).mock.calls.filter(([source]) => source === video)
+    expect(liveCalls.length).toBeGreaterThan(0)
+    for (const call of liveCalls) {
+      expect(call[5]).toBeUndefined()
+    }
+
+    vi.unstubAllGlobals()
   })
 })

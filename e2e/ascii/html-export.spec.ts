@@ -6,12 +6,15 @@
 
 import { expect, test } from '@playwright/test'
 import type { RenderInstruction } from '../../apps/ascii/src/ascii/renderer'
+import { MONOSPACE_CHAR_WIDTH_RATIO } from '../../apps/ascii/src/ascii/types'
 import { buildHtmlDocument } from '../../apps/ascii/src/export/html-document'
 
 const GREEN = '#00ff41'
 const PINK = '#ff2d78'
 const CHAR_HEIGHT = 16
+const CHAR_WIDTH = CHAR_HEIGHT * MONOSPACE_CHAR_WIDTH_RATIO
 const BACKGROUND = '#0a0a0f'
+const COLUMNS = 4
 
 // Two rows of four, deliberately mixing the narrowest and widest glyphs a proportional font would
 // draw at different widths — under a monospace one they measure the same.
@@ -21,7 +24,7 @@ const GRID: RenderInstruction[] = [
 ].flatMap((line, row) =>
   line.map((char, col) => ({
     char,
-    x: col * CHAR_HEIGHT * 0.6,
+    x: col * CHAR_WIDTH,
     y: row * CHAR_HEIGHT,
     color: row === 0 ? GREEN : PINK,
   })),
@@ -30,7 +33,11 @@ const GRID: RenderInstruction[] = [
 test.describe('the HTML Export document', () => {
   test.beforeEach(async ({ page }) => {
     await page.setContent(
-      buildHtmlDocument(GRID, { charHeight: CHAR_HEIGHT, background: BACKGROUND }),
+      buildHtmlDocument(GRID, {
+        charWidth: CHAR_WIDTH,
+        charHeight: CHAR_HEIGHT,
+        background: BACKGROUND,
+      }),
     )
   })
 
@@ -64,6 +71,17 @@ test.describe('the HTML Export document', () => {
     // Row step, not glyph height: an inline box is as tall as the font draws, while the line box is
     // what the Resolution sets, and it is the line box that keeps the rows on the preview's pitch.
     expect((wide?.y ?? 0) - (narrow?.y ?? 0)).toBeCloseTo(CHAR_HEIGHT, 1)
+  })
+
+  // The document holds its columns on the resolved font's own advance — a box per cell is what
+  // would stop a `<pre>` copying back as text. That only lands on the preview's proportions if the
+  // advance really is MONOSPACE_CHAR_WIDTH_RATIO, the ratio computeFrame() positions on, so measure
+  // it rather than claiming it. Tolerance of a tenth of a px per column: the deck's own IBM Plex
+  // Mono is exactly 0.6em, and the generic monospace a bare machine falls back to is within that.
+  test('holds its columns on the pitch the preview positions on', async ({ page }) => {
+    const row = await page.locator('pre span').nth(0).boundingBox()
+
+    expect((row?.width ?? 0) / COLUMNS).toBeCloseTo(CHAR_WIDTH, 1)
   })
 
   test('paints the Color Mode colours the preview painted, on the canvas ground', async ({

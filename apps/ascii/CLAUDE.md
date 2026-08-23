@@ -105,8 +105,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   `CANVAS_BACKGROUND` is the ground both the canvas and the HTML Export stand on: the user's art,
   so a literal rather than a Theme token (ADR 0013)
 - `src/ascii/render-frame.ts` — `renderFrame()`: pipeline orchestrator — cols/rows math, convertImage → computeFrame → paintFrame; returns `boolean`
-- `src/ascii/fit.ts` — `computeContainFit()`, `sliceToRegion()` (generic over the row, so text rows
-  and AsciiCell rows crop through the same function): the centered "contain" sub-region of
+- `src/ascii/fit.ts` — `computeContainFit()`, `sliceToRegion()` (crops the *cells*, upstream of
+  `computeFrame()`, which leaves TXT and HTML Export downstream of one crop by construction): the
+  centered "contain" sub-region of
   the char grid that keeps the Source's aspect, compared against the grid's *pixel* aspect because
   the monospace cell is ~0.6 wide × 1 tall (ADR 0010)
 - `src/ascii/presets.ts` — `PRESETS`, `Preset`, `settingsMatch()` (named ConversionSettings snapshots)

@@ -2,6 +2,7 @@ import { Button, Chip, useToastError } from '@cyberdeck/deck-kit/ui'
 import { isTouchDevice, shareOrDownloadCanvas } from '@cyberdeck/deck-kit/utils'
 import { type RefObject, useState } from 'react'
 import { CANVAS_BACKGROUND, type RenderInstruction } from '../ascii/renderer'
+import { MONOSPACE_CHAR_WIDTH_RATIO } from '../ascii/types'
 import { Errors } from '../errors/app-error'
 import { buildHtmlDocument } from '../export/html-document'
 import { outputFilename, type PngScale, planPngExport } from '../export/output'
@@ -101,9 +102,11 @@ export default function OutputPanel({
       return
     }
     try {
-      // Resolution is the preview's type size, so handing it over as the document's is what makes
-      // the exported grid the same shape the user was looking at.
+      // The preview's own cell metrics: Resolution is the type size it paints at, and the pitch it
+      // positions on is that times MONOSPACE_CHAR_WIDTH_RATIO. Handing the document the same two is
+      // what puts its grid on the preview's proportions.
       const html = buildHtmlDocument(renderInstructions, {
+        charWidth: resolution * MONOSPACE_CHAR_WIDTH_RATIO,
         charHeight: resolution,
         background: CANVAS_BACKGROUND,
       })
@@ -180,7 +183,7 @@ export default function OutputPanel({
             <Button variant="secondary" onClick={exportTxt} className="flex-1 sm:flex-none">
               export txt
             </Button>
-            <Button variant="ghost" onClick={exportHtml} className="flex-1 sm:flex-none">
+            <Button variant="secondary" onClick={exportHtml} className="flex-1 sm:flex-none">
               export html
             </Button>
           </>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { computeContainFit, sliceToRegion } from './fit'
+import type { AsciiCell } from './types'
 
 describe('computeContainFit', () => {
   it('fills the whole grid when source aspect matches the grid pixel-aspect', () => {
@@ -69,19 +70,26 @@ describe('computeContainFit', () => {
 })
 
 describe('sliceToRegion', () => {
-  const grid = ['ABCDE', 'FGHIJ', 'KLMNO', 'PQRST']
+  // Cell grids, spelled as text rows for legibility — the crop runs over AsciiCells now, upstream of
+  // computeFrame(), which is what leaves TXT and HTML Export downstream of one crop.
+  const cells = (rows: string[]): AsciiCell[][] =>
+    rows.map((row) => [...row].map((char) => ({ char, r: 0, g: 0, b: 0 })))
+  const text = (rows: AsciiCell[][]): string[] =>
+    rows.map((row) => row.map((cell) => cell.char).join(''))
+
+  const grid = cells(['ABCDE', 'FGHIJ', 'KLMNO', 'PQRST'])
 
   it('slices an interior sub-region by offset and dimensions', () => {
     const region = { offsetX: 1, offsetY: 1, dCols: 3, dRows: 2 }
-    expect(sliceToRegion(grid, region)).toEqual(['GHI', 'LMN'])
+    expect(text(sliceToRegion(grid, region))).toEqual(['GHI', 'LMN'])
   })
 
   it('returns exactly dRows rows, each dCols wide', () => {
     const region = { offsetX: 2, offsetY: 0, dCols: 2, dRows: 3 }
     const out = sliceToRegion(grid, region)
     expect(out).toHaveLength(3)
-    for (const line of out) {
-      expect(line).toHaveLength(2)
+    for (const row of out) {
+      expect(row).toHaveLength(2)
     }
   })
 
@@ -92,8 +100,19 @@ describe('sliceToRegion', () => {
 
   it('drops the letterbox bands of a padded grid', () => {
     // a wide source: top/bottom void rows + left/right void columns around 'HI'/'MN'
-    const padded = ['     ', ' HI  ', ' MN  ', '     ']
+    const padded = cells(['     ', ' HI  ', ' MN  ', '     '])
     const region = { offsetX: 1, offsetY: 1, dCols: 2, dRows: 2 }
-    expect(sliceToRegion(padded, region)).toEqual(['HI', 'MN'])
+    expect(text(sliceToRegion(padded, region))).toEqual(['HI', 'MN'])
+  })
+
+  it('carries each cell whole, colour included', () => {
+    const coloured: AsciiCell[][] = [
+      [
+        { char: 'x', r: 1, g: 2, b: 3 },
+        { char: 'y', r: 4, g: 5, b: 6 },
+      ],
+    ]
+    const region = { offsetX: 1, offsetY: 0, dCols: 1, dRows: 1 }
+    expect(sliceToRegion(coloured, region)).toEqual([[{ char: 'y', r: 4, g: 5, b: 6 }]])
   })
 })
