@@ -24,6 +24,7 @@ class FakeWorker extends EventTarget {
 class FakeRegistration extends EventTarget {
   waiting: FakeWorker | null = null
   installing: FakeWorker | null = null
+  readonly update = vi.fn(async () => {})
 
   startInstalling(worker: FakeWorker): void {
     this.installing = worker
@@ -190,5 +191,117 @@ describe('useAppUpdate', () => {
     })
 
     expect(reload).not.toHaveBeenCalled()
+  })
+})
+
+// The gap the review found: without these, the offer only ever appears when the *browser* runs its
+// own check, which it does on navigation — so the session that never navigates, the one the parking
+// rule costs the most, is the one never shown the way out of it.
+describe('useAppUpdate goes looking for a new build', () => {
+  function visibility(state: 'visible' | 'hidden'): void {
+    Object.defineProperty(document, 'visibilityState', { value: state, configurable: true })
+  }
+
+  it('checks when the tab comes back to the front', async () => {
+    const container = new FakeContainer()
+    install(container)
+    visibility('visible')
+
+    renderHook(() => useAppUpdate(true))
+    await settle()
+    container.registration.update.mockClear()
+
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+
+    expect(container.registration.update).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not check when the tab is only being hidden', async () => {
+    const container = new FakeContainer()
+    install(container)
+    visibility('hidden')
+
+    renderHook(() => useAppUpdate(true))
+    await settle()
+    container.registration.update.mockClear()
+
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+
+    expect(container.registration.update).not.toHaveBeenCalled()
+    visibility('visible')
+  })
+
+  it('checks on its own for a session that never navigates and never hides', async () => {
+    vi.useFakeTimers()
+    try {
+      const container = new FakeContainer()
+      install(container)
+
+      renderHook(() => useAppUpdate(true))
+      // The registration promise still has to resolve; fake timers do not stop microtasks.
+      await act(async () => {
+        await Promise.resolve()
+      })
+      container.registration.update.mockClear()
+
+      act(() => {
+        vi.advanceTimersByTime(60 * 60 * 1000)
+      })
+      expect(container.registration.update).toHaveBeenCalledTimes(1)
+
+      act(() => {
+        vi.advanceTimersByTime(2 * 60 * 60 * 1000)
+      })
+      expect(container.registration.update).toHaveBeenCalledTimes(3)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('stops looking once the program is gone', async () => {
+    vi.useFakeTimers()
+    try {
+      const container = new FakeContainer()
+      install(container)
+      visibility('visible')
+
+      const { unmount } = renderHook(() => useAppUpdate(true))
+      await act(async () => {
+        await Promise.resolve()
+      })
+      unmount()
+      container.registration.update.mockClear()
+
+      act(() => {
+        vi.advanceTimersByTime(4 * 60 * 60 * 1000)
+        document.dispatchEvent(new Event('visibilitychange'))
+      })
+
+      expect(container.registration.update).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // `update()` rejects offline, which is a normal state for this program rather than an error.
+  it('survives a check that fails', async () => {
+    const container = new FakeContainer()
+    install(container)
+    visibility('visible')
+    container.registration.update.mockRejectedValue(new Error('offline'))
+
+    const { result } = renderHook(() => useAppUpdate(true))
+    await settle()
+
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    await settle()
+
+    expect(result.current.isReady).toBe(false)
   })
 })

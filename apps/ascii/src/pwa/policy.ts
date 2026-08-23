@@ -92,13 +92,6 @@ export function resolveShell(entries: readonly ShellEntry[], scope: string): She
  * cache would be both wrong and alarming.
  */
 export function planShellFetch(intent: FetchIntent, shell: Shell, origin: string): string | null {
-  // A cache can only replay a request whose meaning does not depend on its body. Every provider
-  // call is a POST, so this line alone would already exclude them — the origin check below is the
-  // rule, and this one is not load-bearing for it.
-  if (intent.method !== 'GET') {
-    return null
-  }
-
   let target: URL
   try {
     target = new URL(intent.url)
@@ -106,8 +99,16 @@ export function planShellFetch(intent: FetchIntent, shell: Shell, origin: string
     return null
   }
 
-  // Anything not served by this deploy is none of the worker's business.
+  // The rule, and deliberately the *first* thing asked: anything not served by this deploy is none
+  // of the worker's business. Every AI Provider endpoint is excluded right here, on the origin
+  // alone, before the method is looked at — so no rule below can accidentally become the thing
+  // holding them out, and none has to be renewed when a fourth provider is added.
   if (target.origin !== origin) {
+    return null
+  }
+
+  // Same-origin, but a cache can only replay a request whose meaning does not depend on its body.
+  if (intent.method !== 'GET') {
     return null
   }
 

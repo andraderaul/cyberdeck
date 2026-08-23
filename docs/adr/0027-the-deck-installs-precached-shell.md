@@ -106,7 +106,11 @@ the rule is easiest on. The remaining three follow.
 **Negative:**
 
 - A deploy reaches an open tab one session late, by construction. A user who never closes the tab
-  runs the old build until they take the offer in the bar.
+  runs the old build until they take the offer in the bar — so the program has to go and *find* the
+  new build for them, because the browser's own update check runs on navigation, which is the one
+  thing that session never does. It checks hourly and whenever the tab returns to the front. The
+  price is a conditional `GET` of a ~2 kB file per hour per open tab, answering `304` every time but
+  the one that matters; the price of not paying it is an escape hatch nobody is ever shown.
 - The escape hatch is inside the app, so a shell broken badly enough not to render is beyond it. The
   precache is all-or-nothing at install, which makes that unlikely rather than impossible.
 - Every program now has a fifth hand-written copy of the default Theme's background — the
@@ -114,6 +118,17 @@ the rule is easiest on. The remaining three follow.
   kit's roster guard pins it, the same way it pins the meta.
 - The lazily-split AI adapters are precached along with everything else, so a user who has no key
   still downloads them on install. The alternative is a runtime strategy, which this ADR declines.
+
+  This is not a quiet reversal of the bundle budget's two-ceiling design (#318), and the two are
+  worth reading together rather than as a contradiction. That budget keeps `entry` and `lazy`
+  separate so that **first paint** is never charged for the three AI SDK chunks — a summed ceiling
+  would have read as pressure to undo a deliberate code split. The split still holds and still does
+  its job: those chunks are not in the entry graph, nothing about first paint changed, and the
+  budget check still reports them apart. What an install adds is a *different* cost at a *different*
+  moment — one deliberate, one-off download of the whole shell, which is the price of the program
+  working with the network gone. Install is not first paint. The number to watch is therefore the
+  budget's, not the precache's, and the day it says otherwise the answer is a named exclusion in the
+  plugin, not a runtime strategy.
 
 ## Related ADRs
 
@@ -133,10 +148,13 @@ the rule is easiest on. The remaining three follow.
 - `apps/ascii/scripts/precache-shell.ts` — the Vite plugin: walk `dist` after it is written (in
   `closeBundle`, because `public/` is copied late), hash each file, and run a nested Vite build of
   the worker with that manifest defined in. `og-card.png` and `sw.js` are excluded — the first is
-  for a link-preview crawler, the second must never be answered from a cache it controls.
-- `apps/ascii/src/pwa/use-app-update.ts` — registration, and the one branch worth its test: an
-  `installed` worker with no controller is a *first install*, not an update, and announcing it would
-  offer to reload the page onto itself.
+  for a link-preview crawler, the second must never be answered from a cache it controls. Every
+  emitted file must be *classified*, precached or excluded by name, and an unrecognised one fails
+  the build: dropping it silently would leave `addAll` succeeding, the build green, and the file
+  missing only for a user who is already offline. #325 inherits this shape.
+- `apps/ascii/src/pwa/use-app-update.ts` — registration, the hourly and on-visible update checks,
+  and the one branch worth its test: an `installed` worker with no controller is a *first install*,
+  not an update, and announcing it would offer to reload the page onto itself.
 - `apps/ascii/public/manifest.webmanifest` — hand-written beside the hand-drawn `favicon.svg`, for
   the same reason.
 - `e2e/ascii/offline.spec.ts` — the claim, made where it can be made: install, go offline, reload,

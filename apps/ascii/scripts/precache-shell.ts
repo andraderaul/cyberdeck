@@ -24,7 +24,17 @@ const SHELL_EXTENSIONS = ['.html', '.css', '.js', '.svg', '.png', '.webmanifest'
  */
 const NOT_THE_SHELL = new Set(['og-card.png', 'sw.js'])
 
-/** Every file of the built shell, in a stable order so the cache name is a function of the build. */
+/**
+ * Every file of the built shell, in a stable order so the cache name is a function of the build.
+ *
+ * Every emitted file must be *classified* — precached, or named in `NOT_THE_SHELL` — and anything
+ * else stops the build. The tempting shape is to let an unrecognised extension fall through the
+ * allowlist quietly, and that failure is invisible in the worst possible way: `addAll` still
+ * succeeds, the build is green, and the missing file surfaces as a broken asset for a user who is
+ * already offline and has no way to go and fetch it. The first `.woff2`, `.json` or `.wasm` this
+ * deck emits should be a decision someone makes here, not a hole someone finds later — and doubly
+ * so because #325 inherits this plugin's shape for the other three programs.
+ */
 function collectShell(outDir: string): ShellEntry[] {
   const entries: ShellEntry[] = []
   const walk = (dir: string): void => {
@@ -34,9 +44,22 @@ function collectShell(outDir: string): ShellEntry[] {
         walk(path)
         continue
       }
-      const url = relative(outDir, path).split(sep).join('/')
-      if (!SHELL_EXTENSIONS.some((ext) => name.endsWith(ext)) || NOT_THE_SHELL.has(url)) {
+      // `.DS_Store` and friends are the filesystem's, not the build's.
+      if (name.startsWith('.')) {
         continue
+      }
+      const url = relative(outDir, path).split(sep).join('/')
+      if (NOT_THE_SHELL.has(url)) {
+        continue
+      }
+      if (!SHELL_EXTENSIONS.some((ext) => name.endsWith(ext))) {
+        throw new Error(
+          `${url} was emitted into the build but is neither part of the shell nor excluded from it.\n` +
+            'An unclassified file would be dropped from the precache silently and go missing only ' +
+            'for a user who is already offline. Decide which it is, in apps/ascii/scripts/precache-shell.ts:\n' +
+            `  · the running program fetches it  → add its extension to SHELL_EXTENSIONS (${SHELL_EXTENSIONS.join(' ')})\n` +
+            `  · it exists for something else    → add '${url}' to NOT_THE_SHELL (${[...NOT_THE_SHELL].join(' ')})`,
+        )
       }
       entries.push({
         url,
