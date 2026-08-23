@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ConversionSettings } from '../ascii/types'
 import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
@@ -18,6 +19,29 @@ const DEFAULT_SETTINGS: ConversionSettings = {
 function renderEditor(onChange = vi.fn()) {
   render(<SettingsEditor settings={DEFAULT_SETTINGS} onChange={onChange} />)
   return { onChange }
+}
+
+/**
+ * The editor with a parent that actually applies the patch. The authored-ramp field mirrors the
+ * Charset in ConversionSettings rather than shadowing it, so a parent that never updates would be
+ * testing a state the app never reaches.
+ */
+function renderControlled(initial: ConversionSettings = DEFAULT_SETTINGS) {
+  const onChange = vi.fn()
+  function Harness() {
+    const [settings, setSettings] = useState(initial)
+    return (
+      <SettingsEditor
+        settings={settings}
+        onChange={(patch) => {
+          onChange(patch)
+          setSettings((current) => ({ ...current, ...patch }))
+        }}
+      />
+    )
+  }
+  render(<Harness />)
+  return { onChange, field: screen.getByLabelText('custom charset') }
 }
 
 /** Puts a tool's control in the panel — the row only ever selects (ADR 0020). */
@@ -168,6 +192,70 @@ describe('SettingsEditor', () => {
       for (const charset of Object.keys(CHARSET_MAPS)) {
         expect(screen.getByRole('button', { name: charset })).toBeInTheDocument()
       }
+    })
+  })
+
+  describe('Authored Charset', () => {
+    it('converts as the ramp is typed, once it has two characters to spend', async () => {
+      const { onChange, field } = renderControlled()
+
+      await userEvent.type(field, ' .@')
+
+      expect(onChange).toHaveBeenLastCalledWith({ charset: 'custom: .@' })
+      expect(field).toHaveValue(' .@')
+    })
+
+    it('refuses a single character, applying nothing and saying what a Charset needs', () => {
+      const { onChange, field } = renderControlled()
+
+      fireEvent.change(field, { target: { value: '@' } })
+
+      expect(onChange).not.toHaveBeenCalled()
+      expect(screen.getByText(/2 characters or more, ordered darkest to lightest/)).toBeVisible()
+      expect(field).toHaveAttribute('aria-invalid', 'true')
+    })
+
+    it('refuses a lone astral character — one glyph, however many UTF-16 units', () => {
+      const { onChange, field } = renderControlled()
+
+      fireEvent.change(field, { target: { value: '🌑' } })
+
+      expect(onChange).not.toHaveBeenCalled()
+      expect(screen.getByText(/2 characters or more/)).toBeVisible()
+    })
+
+    it('accepts a pair of astral characters and hands them over whole', () => {
+      const { onChange, field } = renderControlled()
+
+      fireEvent.change(field, { target: { value: '🌑🌕' } })
+
+      expect(onChange).toHaveBeenCalledWith({ charset: 'custom:🌑🌕' })
+    })
+
+    it('keeps the last Charset that read cleanly when the ramp is emptied', async () => {
+      const { onChange, field } = renderControlled()
+
+      await userEvent.type(field, ' .@')
+      await userEvent.clear(field)
+
+      expect(onChange).toHaveBeenLastCalledWith({ charset: 'custom: .@' })
+      expect(screen.getByText(/2 characters or more/)).toBeVisible()
+    })
+
+    it('mirrors the authored ramp already in ConversionSettings', () => {
+      const { field } = renderControlled({ ...DEFAULT_SETTINGS, charset: 'custom: .:@' })
+
+      expect(field).toHaveValue(' .:@')
+    })
+
+    it('empties the field and the refusal when a curated Charset is chosen instead', () => {
+      const { field } = renderControlled()
+
+      fireEvent.change(field, { target: { value: '@' } })
+      fireEvent.click(screen.getByRole('button', { name: 'braille' }))
+
+      expect(field).toHaveValue('')
+      expect(screen.queryByText(/2 characters or more/)).not.toBeInTheDocument()
     })
   })
 

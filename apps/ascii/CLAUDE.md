@@ -100,7 +100,7 @@ Use these terms precisely — avoid the listed alternatives:
 
 | Term | Meaning | Avoid |
 |------|---------|-------|
-| **Charset** | Symbol set mapping luminosity to a character | density, symbol set |
+| **Charset** | Symbol set mapping luminosity to a character — one of the twelve curated maps, or a ramp the user authored in the EDIT tab. Same term either way | density, symbol set, custom charset as a separate axis |
 | **Edge Glyph** | Directional character a cell takes where the local gradient reads as a contour — the shape axis beside the Charset's brightness one; opt-in, off by default | edge detection, sobel char |
 | **Dithering** | Pattern spent on the sampled grid before the Charset buckets a cell, so a coarse Charset carries a gradient instead of banding it — `none` / `bayer` / `floyd`; runs *before* the Edge Glyph pass, which never reads it | noise, halftone, error diffusion |
 | **Source Image** | Static uploaded image; immutable during session | uploadedImage, input image |
@@ -137,9 +137,19 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 ### Key files
 
 **ASCII core**
-- `src/ascii/types.ts` — `ConversionSettings`, `ColorMode`, `Charset` (derived from `CHARSETS`),
+- `src/ascii/types.ts` — `ConversionSettings`, `ColorMode`, `Charset` (`CharsetName` derived from
+  `CHARSETS`, plus the `custom:`-tagged `CustomCharset` an authored ramp wears),
   `DITHERINGS`, `CHARSET_MAPS`, `AsciiCell`, and the numeric ranges the sliders and the Suggestion
   reader share
+- `src/ascii/charset.ts` — `charsetGlyphs()`, `charsetRamp()`, `isCustomCharset()`,
+  `readCustomCharset()`: a Charset resolved to the glyphs a cell draws, and the boundary an
+  authored ramp crosses to become one. Two things live here and only here. The split is **by code
+  point**, because a ramp reaching past the BMP is two UTF-16 units and `map[i]` hands the grid
+  half a surrogate pair — which would then carry into all three Exports, the same way the Edge
+  Glyph does. And `readCustomCharset` is the only way a `CustomCharset` is minted: a ramp under two
+  glyphs is refused with the reason, so a half-typed ramp never reaches `ConversionSettings` and
+  the canvas keeps the last Charset that read cleanly. It rejects rather than clamps and returns
+  its reason rather than throwing, for `suggestion.ts`' reasons
 - `src/ascii/converter.ts` — `convertImage()`, `getAsciiChar()`, luminosity math, and the two
   opt-in passes over the sampled grid (both pure, ADR 0005): the Dithering, then the Edge Glyph
   (Sobel). That order is load-bearing and the file says why — a Dithering *manufactures* the sharp
@@ -253,7 +263,7 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/components/footer.tsx` — empty-state bottom chrome: the attribution links plus the About
   trigger, hidden once a Source loads. The 44px target sits on each control, not on the bar
 - `src/components/ui/` — the two primitives this program still owns: `badge` and `error-text`, both
-  single-caller. `header-button` left in #325: the kit's own `UpdateBanner` became its second caller,
+  single-caller (`error-text` carries the authored Charset's refusal). `header-button` left in #325: the kit's own `UpdateBanner` became its second caller,
   which is the trigger ADR 0014 wrote for it. Everything else — Button, HeaderButton, Chip, Label,
   Modal, Slider, TabStrip, ToggleGroup, Tooltip, Toast — comes from `@cyberdeck/deck-kit/ui`
 

@@ -1,16 +1,17 @@
 import { Chip, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import { useState } from 'react'
+import { charsetGlyphs, charsetRamp, isCustomCharset, readCustomCharset } from '../ascii/charset'
 import { getModePalette } from '../ascii/renderer'
-import type { Charset, ColorMode, ConversionSettings } from '../ascii/types'
+import type { CharsetName, ColorMode, ConversionSettings } from '../ascii/types'
 import {
   BRIGHTNESS_RANGE,
-  CHARSET_MAPS,
   COLOR_MODES,
   CONTRAST_RANGE,
   DITHERINGS,
   RESOLUTION_RANGE,
 } from '../ascii/types'
+import ErrorText from './ui/error-text'
 
 /**
  * The params panel's reserved height. Reserve the tallest tool's height (color mode — two chip
@@ -22,7 +23,7 @@ import {
  */
 const PANEL_MIN_HEIGHT = 'min-h-[120px]'
 
-const CHARSET_CATEGORIES: { label: string; charsets: Charset[] }[] = [
+const CHARSET_CATEGORIES: { label: string; charsets: CharsetName[] }[] = [
   { label: 'ascii gradient', charsets: ['classic', 'sharp', 'detailed', 'ascii'] },
   { label: 'unicode blocks', charsets: ['blocks', 'halfblock'] },
   { label: 'writing systems', charsets: ['braille', 'katakana'] },
@@ -31,8 +32,8 @@ const CHARSET_CATEGORIES: { label: string; charsets: Charset[] }[] = [
 ]
 
 /** Spans the full luminosity ramp: indices 0, ¼, ½, ¾, last. */
-function sampleChars(charset: Charset): string {
-  const chars = [...CHARSET_MAPS[charset]]
+function sampleChars(charset: CharsetName): string {
+  const chars = charsetGlyphs(charset)
   if (chars.length <= 5) {
     return chars.join('')
   }
@@ -118,6 +119,16 @@ type ToolId = (typeof TOOLS)[number]['id']
  */
 const SLIDER_GROUP: readonly ToolId[] = ['resolution', 'brightness', 'contrast']
 
+const CUSTOM_CHARSET_ERROR_ID = 'charset-custom-error'
+
+// The same spelling `api-key-modal` gives a text field — the deck has one input look, and this is
+// it. `w-40` keeps the authored ramp a column in the scrolling category row rather than a band
+// under it: the charset panel then costs exactly the height it already did (PANEL_MIN_HEIGHT).
+const CUSTOM_CHARSET_INPUT = cn(
+  'w-40 shrink-0 bg-bg-surface border border-base text-fg font-mono text-sm rounded-xs',
+  '[padding:var(--input-padding)]',
+)
+
 interface Props {
   settings: ConversionSettings
   onChange: (patch: Partial<ConversionSettings>) => void
@@ -165,6 +176,25 @@ function ToolPanel({
 export default function SettingsEditor({ settings, onChange }: Props) {
   const [focus, setFocus] = useState<ToolId>('charset')
 
+  // Only a *refused* ramp needs state of its own: one the reader accepted is already the Charset in
+  // ConversionSettings, so the field mirrors it rather than shadowing it. That is what keeps the
+  // box honest when the Charset moves from somewhere else — a Preset, an applied Suggestion — with
+  // no effect to synchronise, and it makes "text in the box" mean "this ramp is what you are
+  // seeing", except while the message says otherwise.
+  const [refusal, setRefusal] = useState<{ ramp: string; reason: string } | null>(null)
+
+  const authored = isCustomCharset(settings.charset) ? charsetRamp(settings.charset) : ''
+
+  // Rejected input is never applied, so the canvas keeps the last Charset that read cleanly and a
+  // half-written ramp can't reach the grid.
+  const editCustom = (ramp: string) => {
+    const read = readCustomCharset(ramp)
+    setRefusal(read.ok ? null : { ramp, reason: read.reason })
+    if (read.ok) {
+      onChange({ charset: read.charset })
+    }
+  }
+
   // A slider outside the focused group is hidden rather than unmounted, which is what lets one
   // markup tree serve both densities: `hidden` takes it out of the accessibility tree too, so a
   // mobile user reaches exactly the one control in focus. `data-tool` is what the tests read —
@@ -196,7 +226,10 @@ export default function SettingsEditor({ settings, onChange }: Props) {
                     key={cs}
                     selected={settings.charset === cs}
                     aria-label={cs}
-                    onClick={() => onChange({ charset: cs })}
+                    onClick={() => {
+                      setRefusal(null)
+                      onChange({ charset: cs })
+                    }}
                     className="shrink-0 flex-col items-start text-left"
                   >
                     <span>{cs}</span>
@@ -208,7 +241,27 @@ export default function SettingsEditor({ settings, onChange }: Props) {
               </div>
             </fieldset>
           ))}
+          {/* The thirteenth Charset, authored rather than curated — a Charset is a string of
+              characters ordered darkest to lightest whoever wrote it (CONTEXT.md). It stands in the
+              scrolling row with the categories rather than under it, so the panel keeps its
+              reserved height and the ramps stay one row to read across. */}
+          <fieldset className="flex flex-col gap-2xs border-none p-0 m-0 shrink-0">
+            <legend className="text-fg-subtle font-mono text-xs uppercase tracking-wide mb-2xs">
+              custom
+            </legend>
+            <input
+              type="text"
+              aria-label="custom charset"
+              aria-invalid={refusal !== null}
+              aria-describedby={refusal ? CUSTOM_CHARSET_ERROR_ID : undefined}
+              value={refusal ? refusal.ramp : authored}
+              onChange={(e) => editCustom(e.target.value)}
+              placeholder="darkest → lightest"
+              className={CUSTOM_CHARSET_INPUT}
+            />
+          </fieldset>
         </div>
+        {refusal && <ErrorText id={CUSTOM_CHARSET_ERROR_ID}>{refusal.reason}</ErrorText>}
       </ToolPanel>
     ),
     edgeGlyphs: (
