@@ -88,17 +88,17 @@ describe('the browser chrome matches the Theme that paints first', () => {
 // program is painted with before a byte of the page loads: the OS draws the splash and the window
 // chrome from `theme_color` and `background_color`, and neither can resolve a `var()` (ADR 0027).
 //
-// Only the themed programs are pinned. SPRAWL//Atlas is absent for the reason it is absent above —
+// Only the themed workspaces are pinned. SPRAWL//Atlas is absent for the reason it is absent above —
 // it takes no Theme, so its chrome answers to the piece's own field rather than to a token.
 describe('an installed program is painted the Theme that paints first', () => {
-  const themed = new Set(prePaintScripts().map(({ program }) => program))
-  const installable = manifests().filter(({ program }) => themed.has(program))
+  const themed = new Set(prePaintScripts().map(({ workspace }) => workspace))
+  const installable = manifests().filter(({ workspace }) => themed.has(workspace))
 
   it('is a set someone has to opt into, not an empty guard passing by default', () => {
     expect(installable.length).toBeGreaterThan(0)
   })
 
-  describe.each(installable)('$program', ({ manifest }) => {
+  describe.each(installable)('$workspace', ({ manifest }) => {
     const background = resolveTokens(readTokensCss(), DEFAULT_THEME)['--bg']
 
     it('opens on the default Theme’s page background', () => {
@@ -113,9 +113,9 @@ describe('an installed program is painted the Theme that paints first', () => {
 
 // The manifest is the one place the icon set from #314 is named by hand, and a `src` that resolves
 // to nothing costs an install prompt with no error anywhere — the browser simply declines to offer
-// one. Every program with a manifest is checked, SPRAWL//Atlas included: an icon is not a Theme.
+// one. Every workspace with a manifest is checked, SPRAWL//Atlas included: an icon is not a Theme.
 describe('every icon a manifest names is a file that exists', () => {
-  describe.each(manifests())('$program', ({ manifest, publicDir }) => {
+  describe.each(manifests())('$workspace', ({ manifest, publicDir }) => {
     const icons = manifest.icons as { src: string; sizes: string; purpose?: string }[]
 
     it.each(icons)('$src', ({ src }) => {
