@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { convertImage, getAsciiChar } from './converter'
-import type { AsciiCell } from './types'
+import type { AsciiCell, Charset } from './types'
 import { CHARSET_MAPS } from './types'
 
 // Minimal 2D-context stub: reports every pixel as opaque white so that any cell
@@ -77,6 +77,7 @@ describe('convertImage void mask', () => {
       contrast: 1,
       charset: 'classic',
       edgeGlyphs: false,
+      dithering: 'none',
     })
     for (const row of cells) {
       for (const cell of row) {
@@ -93,7 +94,7 @@ describe('convertImage void mask', () => {
       img,
       4,
       4,
-      { brightness: 1, contrast: 0.5, charset: 'classic', edgeGlyphs: false },
+      { brightness: 1, contrast: 0.5, charset: 'classic', edgeGlyphs: false, dithering: 'none' },
       region,
     )
 
@@ -113,7 +114,13 @@ describe('convertImage void mask', () => {
 
 describe('convertImage mirror', () => {
   const img = {} as CanvasImageSource
-  const options = { brightness: 1, contrast: 1, charset: 'classic', edgeGlyphs: false } as const
+  const options = {
+    brightness: 1,
+    contrast: 1,
+    charset: 'classic',
+    edgeGlyphs: false,
+    dithering: 'none',
+  } as const
 
   // Records the ordered transform calls so a test can assert the flip wraps the sampling draw.
   function recordingCtx(cols: number, rows: number) {
@@ -178,7 +185,13 @@ describe('convertImage mirror', () => {
 // left in it, so the cells depended on how many renders came before (#335).
 describe('convertImage sampling canvas', () => {
   const img = {} as CanvasImageSource
-  const options = { brightness: 1, contrast: 1, charset: 'classic', edgeGlyphs: false } as const
+  const options = {
+    brightness: 1,
+    contrast: 1,
+    charset: 'classic',
+    edgeGlyphs: false,
+    dithering: 'none',
+  } as const
 
   /** A Source pixel, as the compositing double hands it to `drawImage`. */
   type Rgba = [number, number, number, number]
@@ -301,7 +314,13 @@ describe('convertImage sampling canvas', () => {
 
 describe('convertImage Edge Glyphs', () => {
   const img = {} as CanvasImageSource
-  const options = { brightness: 1, contrast: 1, charset: 'classic', edgeGlyphs: false } as const
+  const options = {
+    brightness: 1,
+    contrast: 1,
+    charset: 'classic',
+    edgeGlyphs: false,
+    dithering: 'none',
+  } as const
 
   it('marks a hard vertical contour with the vertical stroke', () => {
     const ctx = greyCtx(7, 7, (col) => (col < 3 ? 0 : 255))
@@ -404,16 +423,417 @@ describe('convertImage Edge Glyphs', () => {
   })
 })
 
-describe('convertImage default output', () => {
+// Two fixed Sources for the Dithering tests: a level ramp across the grid, and a flat field parked
+// between two Charset buckets — the exact place a Charset with few characters has nothing to say
+// and bands instead.
+const RAMP = (cols: number) => (col: number) => Math.round((col / (cols - 1)) * 255)
+
+// 96 sits 1.51 buckets up the `blocks` ramp, so the honest rendering is half `░` and half `▒`;
+// undithered every cell floors to `░` and the field comes out a whole bucket dark.
+const BETWEEN_BUCKETS = 96
+const BLOCKS_BUCKET_WIDTH = 255 / (CHARSET_MAPS.blocks.length - 1)
+
+/** Where in the Charset each rendered cell landed — the axis every Dithering claim is about. */
+function charIndices(cells: AsciiCell[][], charset: Charset): number[] {
+  return cells.flatMap((row) => row.map((cell) => CHARSET_MAPS[charset].indexOf(cell.char)))
+}
+
+function meanCharIndex(cells: AsciiCell[][], charset: Charset): number {
+  const indices = charIndices(cells, charset)
+  return indices.reduce((sum, i) => sum + i, 0) / indices.length
+}
+
+// A 16-level ramp over four rows in `blocks`, which `none` renders as four identical bands.
+const BAYER_RAMP = ['   ░░░░▒▒▒▒▓▓▓▓█', '  ░░░░▒▒▒▒▓▓▓▓██', '   ░░▒░▒▒▓▒▓▓█▓█', '  ░░▒░▒▒▓▒▓▓█▓██']
+const FLOYD_RAMP = ['   ░░░░▒▒▒▒▓▓▓██', '   ░░░▒▒▒▒▓▓▓▓██', '  ░░░░▒▒▒▒▓▓▓█▓█', '   ░░░▒░▒▓▒▓▓███']
+
+const STROKES = new Set(['|', '/', '-', '\\'])
+
+/** Which cells took an Edge Glyph — that pass's whole output, as a comparable value. */
+function strokePositions(cells: AsciiCell[][]): string[] {
+  return cells.flatMap((row, rowIndex) =>
+    row.flatMap((cell, colIndex) => (STROKES.has(cell.char) ? [`${rowIndex},${colIndex}`] : [])),
+  )
+}
+
+describe('convertImage Dithering', () => {
   const img = {} as CanvasImageSource
-  const options = { brightness: 1, contrast: 1, charset: 'classic', edgeGlyphs: false } as const
+  const options = {
+    brightness: 1,
+    contrast: 1,
+    charset: 'blocks',
+    edgeGlyphs: false,
+    dithering: 'none',
+  } as const
+
+  describe('bayer', () => {
+    it("splits a field parked between two buckets across both, in the tile's own proportion", () => {
+      const cells = convertImage(
+        greyCtx(8, 8, () => BETWEEN_BUCKETS),
+        img,
+        8,
+        8,
+        {
+          ...options,
+          dithering: 'bayer',
+        },
+      )
+
+      // The 4x4 tile crosses the boundary at 16 evenly spaced levels, so a level 51% of the way
+      // into the bucket takes the higher character on 8 of the 16 turns — exactly, not on average.
+      const indices = charIndices(cells, 'blocks')
+      expect(indices.filter((i) => i === 1)).toHaveLength(32)
+      expect(indices.filter((i) => i === 2)).toHaveLength(32)
+    })
+
+    it('leaves that same field a whole bucket dark with no Dithering', () => {
+      const cells = convertImage(
+        greyCtx(8, 8, () => BETWEEN_BUCKETS),
+        img,
+        8,
+        8,
+        options,
+      )
+
+      expect(new Set(charRows(cells).join(''))).toEqual(new Set(['░']))
+    })
+
+    // The point of the pass, stated as the number it moves: the average character a region spends
+    // has to land where the Source's own level sat, not a bucket below it.
+    it('brings the rendered average back to the level the Source actually held', () => {
+      const cells = convertImage(
+        greyCtx(8, 8, () => BETWEEN_BUCKETS),
+        img,
+        8,
+        8,
+        {
+          ...options,
+          dithering: 'bayer',
+        },
+      )
+
+      expect(meanCharIndex(cells, 'blocks')).toBeCloseTo(BETWEEN_BUCKETS / BLOCKS_BUCKET_WIDTH, 1)
+    })
+
+    it('never moves a cell further than the one bucket it was short of', () => {
+      const ramp = RAMP(16)
+
+      const plain = charIndices(convertImage(greyCtx(16, 4, ramp), img, 16, 4, options), 'blocks')
+      const dithered = charIndices(
+        convertImage(greyCtx(16, 4, ramp), img, 16, 4, { ...options, dithering: 'bayer' }),
+        'blocks',
+      )
+
+      for (const [i, index] of dithered.entries()) {
+        expect(Math.abs(index - plain[i])).toBeLessThanOrEqual(1)
+      }
+    })
+
+    it('holds the ends of the ramp — pure black and pure white have nothing to trade', () => {
+      const cells = convertImage(greyCtx(12, 4, RAMP(12)), img, 12, 4, {
+        ...options,
+        dithering: 'bayer',
+      })
+
+      for (const row of charRows(cells)) {
+        expect(row[0]).toBe(' ')
+        expect(row[11]).toBe('█')
+      }
+    })
+
+    // A 16-level ramp over four rows, so the tile repeats vertically and the pattern reads as a
+    // pattern. Pinned: the matrix's order is a choice, and swapping two of its ranks would still
+    // pass every proportion test above while changing every picture the program renders.
+    it('lays the pattern down in the matrix order', () => {
+      const cells = convertImage(greyCtx(16, 4, RAMP(16)), img, 16, 4, {
+        ...options,
+        dithering: 'bayer',
+      })
+
+      expect(charRows(cells)).toEqual(BAYER_RAMP)
+    })
+  })
+
+  describe('floyd', () => {
+    it('spends only the two characters the level sits between', () => {
+      const cells = convertImage(
+        greyCtx(16, 16, () => BETWEEN_BUCKETS),
+        img,
+        16,
+        16,
+        {
+          ...options,
+          dithering: 'floyd',
+        },
+      )
+
+      expect(new Set(charRows(cells).join(''))).toEqual(new Set(['░', '▒']))
+    })
+
+    it('brings the rendered average back to the level the Source actually held', () => {
+      const cells = convertImage(
+        greyCtx(16, 16, () => BETWEEN_BUCKETS),
+        img,
+        16,
+        16,
+        {
+          ...options,
+          dithering: 'floyd',
+        },
+      )
+
+      expect(meanCharIndex(cells, 'blocks')).toBeCloseTo(BETWEEN_BUCKETS / BLOCKS_BUCKET_WIDTH, 1)
+    })
+
+    it('holds the dark end of the ramp — pure black has nothing to trade', () => {
+      const cells = convertImage(greyCtx(12, 4, RAMP(12)), img, 12, 4, {
+        ...options,
+        dithering: 'floyd',
+      })
+
+      for (const row of charRows(cells)) {
+        expect(row[0]).toBe(' ')
+      }
+    })
+
+    // The error walks left to right and down, so the same level renders differently depending on
+    // what preceded it — the pass is order-dependent by construction and this is the shape of it.
+    // Pinned for the same reason as the matrix order above.
+    it("carries each cell's shortfall into the cells it has not reached yet", () => {
+      const cells = convertImage(greyCtx(16, 4, RAMP(16)), img, 16, 4, {
+        ...options,
+        dithering: 'floyd',
+      })
+
+      expect(charRows(cells)).toEqual(FLOYD_RAMP)
+    })
+
+    // Order-dependence inside one grid is the algorithm; order-dependence *between* grids would be
+    // a bug, and it is the one a diffusion pass invites — a scratch buffer hoisted out of the
+    // function to save the allocation would carry the previous Source's error into this one. A
+    // Live Source runs this back to back forever, so the failure would be a frame that depends on
+    // what was in front of the camera before it.
+    it('carries nothing from one conversion into the next', () => {
+      const other = greyCtx(16, 4, (col, row) => (col * 53 + row * 17) % 256)
+      const subject = () => greyCtx(16, 4, RAMP(16))
+      const convert = (ctx: CanvasRenderingContext2D) =>
+        charRows(convertImage(ctx, img, 16, 4, { ...options, dithering: 'floyd' }))
+
+      const alone = convert(subject())
+      convert(other)
+      const afterAnother = convert(subject())
+
+      expect(afterAnother).toEqual(alone)
+    })
+  })
+
+  // The property the region handling actually buys, stated as what a user would notice: the same
+  // Source dithers the same way whether or not its aspect leaves letterbox bands beside it.
+  // Neither the loop bounds nor the neighbour guard shows up alone — a void cell reads 0 and
+  // quantises with no error to pass on — so this is the assertion that fails when either is
+  // dropped, and the earlier one about the bands staying void was not: an offset under a bucket
+  // wide floors to the same space either way.
+  describe('the fit region', () => {
+    const region = { offsetX: 2, offsetY: 0, dCols: 5, dRows: 7 }
+    const content = (col: number, row: number) => 40 + col * 17 + row * 9
+
+    it('dithers a letterboxed Source exactly as it dithers the same content at full bleed', () => {
+      const boxed = convertImage(
+        greyCtx(9, 7, (col, row) => content(col - 2, row)),
+        img,
+        9,
+        7,
+        { ...options, dithering: 'floyd' },
+        region,
+      )
+      const tight = convertImage(greyCtx(5, 7, content), img, 5, 7, {
+        ...options,
+        dithering: 'floyd',
+      })
+
+      expect(charRows(boxed).map((row) => row.slice(2, 7))).toEqual(charRows(tight))
+    })
+
+    // Bayer is the exception and it is deliberate — the tile's phase comes from the absolute grid
+    // position, so bands of a different width land the pattern on a different phase. Pinned as a
+    // difference rather than left to be discovered as a bug report about a resize.
+    it('shifts the bayer tile when the letterbox changes, and only the tile', () => {
+      const boxed = convertImage(
+        greyCtx(9, 7, (col, row) => content(col - 2, row)),
+        img,
+        9,
+        7,
+        { ...options, dithering: 'bayer' },
+        region,
+      )
+      const tight = convertImage(greyCtx(5, 7, content), img, 5, 7, {
+        ...options,
+        dithering: 'bayer',
+      })
+
+      expect(charRows(boxed).map((row) => row.slice(2, 7))).not.toEqual(charRows(tight))
+    })
+
+    it.each([
+      'bayer',
+      'floyd',
+    ] as const)('leaves the letterbox bands void under %s', (dithering) => {
+      const ctx = greyCtx(9, 7, () => BETWEEN_BUCKETS)
+
+      const cells = convertImage(ctx, img, 9, 7, { ...options, dithering }, region)
+
+      for (const row of charRows(cells)) {
+        expect(row.slice(0, 2)).toBe('  ')
+        expect(row.slice(7)).toBe('  ')
+      }
+    })
+  })
+
+  // The order of the two passes, held as a test rather than left to the comment that explains it.
+  // `binary` throughout: two characters make one bucket half the whole ramp, the largest swing a
+  // Dithering can put between neighbouring cells anywhere in this program.
+  describe('beside the Edge Glyph pass', () => {
+    const withAxis = { ...options, charset: 'binary', edgeGlyphs: true } as const
+
+    // The mechanism, on the Source that can only answer one way: a *flat* field has a gradient of
+    // exactly zero everywhere, so the Edge Glyph pass reading it can produce no stroke at all and
+    // every stroke here would be one the Dithering manufactured. Floyd–Steinberg because its error
+    // runs along a row and accumulates: hand the gradient the dithered grid instead and this comes
+    // back with two dozen interior contours that are nowhere in the Source.
+    it('reads the undithered luminance, so a flat Source takes no stroke under floyd', () => {
+      const cells = convertImage(
+        greyCtx(24, 24, () => 20),
+        img,
+        24,
+        24,
+        {
+          ...withAxis,
+          dithering: 'floyd',
+        },
+      )
+
+      expect(strokePositions(cells)).toEqual([])
+    })
+
+    // Bayer deliberately gets no such test. Its tile is a small enough swing that it cannot reach
+    // the magnitude threshold in *any* Charset — the most it drives the kernel to is ~71 of the 255
+    // a contour needs, and that is in `binary`, the coarsest ramp there is. A bayer version of the
+    // test above would pass with the passes in either order, which is worth saying out loud: it
+    // would look like coverage and be decorative. The order is still the rule for both, because
+    // the threshold is a tuned constant and that headroom is not a promise.
+
+    // A real contour, in a Source with flat ground either side of it for the Dithering to work on.
+    it.each([
+      'bayer',
+      'floyd',
+    ] as const)('finds exactly the contours it finds without a Dithering, under %s', (dithering) => {
+      const contour = (col: number) => (col < 12 ? 20 : 240)
+
+      const plain = convertImage(greyCtx(24, 24, contour), img, 24, 24, withAxis)
+      const dithered = convertImage(greyCtx(24, 24, contour), img, 24, 24, {
+        ...withAxis,
+        dithering,
+      })
+
+      expect(strokePositions(plain).length).toBeGreaterThan(0)
+      expect(strokePositions(dithered)).toEqual(strokePositions(plain))
+    })
+
+    it('lets a contour keep its stroke over whatever the pattern chose for the cell', () => {
+      const cells = convertImage(
+        greyCtx(24, 24, (col) => (col < 12 ? 20 : 240)),
+        img,
+        24,
+        24,
+        {
+          ...withAxis,
+          dithering: 'bayer',
+        },
+      )
+
+      expect(cells[12][11].char).toBe('|')
+      expect(cells[12][12].char).toBe('|')
+    })
+  })
+})
+
+// Captured from the conversion as it stood before the Dithering pass existed — a table, not a
+// snapshot of the code as it now stands, which would agree with any regression it introduced.
+// `none` has to reproduce every row of it, character for character, in every Charset.
+//
+// This is also where the Edge Glyph axis's own default is now pinned: its narrower version of this
+// test held one Charset's noise rows and every character of it appears below, so the two were the
+// same assertion written twice. Both axes are opt-in and this table is what "opt-in" means.
+const PRE_DITHERING_OUTPUT: Record<Charset, { noise: string[]; ramp: string[] }> = {
+  classic: {
+    noise: [' .:-+*# ', '-=+#% :-', '*# .:-+*', ' .-=+#% ', '-+*# .:-'],
+    ramp: ['  .:-==+*#%@', '  .:-==+*#%@'],
+  },
+  sharp: {
+    noise: [' .^*<%$ ', '!<&%# ^!', '%$ .^*<%', ' ^!<&%# ', '*<%$ .^*'],
+    ramp: ['  .^!*<&%$#@', '  .^!*<&%$#@'],
+  },
+  detailed: {
+    noise: [' l]tXm* ', '1xCd&"~)', 'Zo l]tXm', '^<1xCd&"', '/zZo l]t'],
+    ramp: [' ,i-)fvJmkM$', ' ,i-)fvJmkM$'],
+  },
+  ascii: {
+    noise: [' ,|=l*X ', '+1tx0.;+', '*X ,|=l*', '.;+1tx0.', '=l*X ,|='],
+    ramp: [' .,|+i1t*X0@', ' .,|+i1t*X0@'],
+  },
+  blocks: {
+    noise: ['  ░░▒▒▓ ', '░▒▒▓▓  ░', '▒▓  ░░▒▒', '  ░▒▒▓▓ ', '░▒▒▓  ░░'],
+    ramp: ['   ░░░▒▒▒▓▓█', '   ░░░▒▒▒▓▓█'],
+  },
+  halfblock: {
+    noise: ['   ▄▄▀▀ ', '▄▄▄▀▀  ▄', '▀▀   ▄▄▀', '  ▄▄▄▀▀ ', '▄▄▀▀   ▄'],
+    ramp: ['    ▄▄▄▄▀▀▀█', '    ▄▄▄▄▀▀▀█'],
+  },
+  braille: {
+    noise: [' ⠁⠃⠇⡇⣇⣧ ', '⠃⡇⣇⣧⣷ ⠁⠃', '⣇⣧ ⠁⠃⠇⡇⣇', ' ⠁⠃⡇⣇⣧⣷ ', '⠇⡇⣇⣧ ⠁⠃⠇'],
+    ramp: ['  ⠁⠃⠃⠇⡇⣇⣇⣧⣷⣿', '  ⠁⠃⠃⠇⡇⣇⣇⣧⣷⣿'],
+  },
+  katakana: {
+    noise: [' ｲｺﾁﾇﾏﾗ ', 'ｽﾄﾊﾑﾚｧｸｽ', 'ﾎﾗ ｲｺﾁﾇﾏ', 'ｦｸｽﾄﾊﾑﾚｧ', 'ｿﾆﾎﾗ ｲｺﾁ'],
+    ramp: [' ｧｵｷｽﾂﾅﾊﾏﾒﾙﾝ', ' ｧｵｷｽﾂﾅﾊﾏﾒﾙﾝ'],
+  },
+  geometric: {
+    noise: [' ·○◆■▼▶ ', '◇□▲◀★·•◇', '▼▶ ·○◆■▼', ' •◇□▲◀★·', '◆■▼▶ ·○◆'],
+    ramp: [' ·•○◇◆■▲▼◀▶✦', ' ·•○◇◆■▲▼◀▶✦'],
+  },
+  circles: {
+    noise: ['  ·∘∘○◎ ', '·∘○○◎ ··', '○◎  ·∘∘○', ' ··∘○○◎ ', '∘∘○◎  ·∘'],
+    ramp: ['   ··∘∘○○◎◎●', '   ··∘∘○○◎◎●'],
+  },
+  box: {
+    noise: [' ╴─│┼╪╬ ', '─│┼╪╬ ╴─', '┼╬ ╴─│┼╪', ' ╴─│┼╪╬ ', '─│┼╬ ╴─│'],
+    ramp: ['  ╴╴─││┼╪╪╬█', '  ╴╴─││┼╪╪╬█'],
+  },
+  binary: {
+    noise: ['    000 ', ' 0000   ', '00    00', '   0000 ', ' 000    '],
+    ramp: ['      000001', '      000001'],
+  },
+}
+
+describe('convertImage with no Dithering', () => {
+  const img = {} as CanvasImageSource
   const noise = (col: number, row: number) => (col * 37 + row * 91) % 256
 
-  // Pinned from the conversion as it stood before Edge Glyphs existed: the second axis is opt-in,
-  // so every ConversionSettings that predates it must land on exactly these characters.
-  it('is unchanged with the Edge Glyphs axis at its default', () => {
-    const cells = convertImage(greyCtx(8, 5, noise), img, 8, 5, options)
+  it.each(
+    Object.keys(CHARSET_MAPS) as Charset[],
+  )('renders %s exactly as it did before the pass existed', (charset) => {
+    const options = { brightness: 1, contrast: 1, charset, edgeGlyphs: false } as const
 
-    expect(charRows(cells)).toEqual([' .:-+*# ', '-=+#% :-', '*# .:-+*', ' .-=+#% ', '-+*# .:-'])
+    const onNoise = convertImage(greyCtx(8, 5, noise), img, 8, 5, {
+      ...options,
+      dithering: 'none',
+    })
+    const onRamp = convertImage(greyCtx(12, 2, RAMP(12)), img, 12, 2, {
+      ...options,
+      dithering: 'none',
+    })
+
+    expect(charRows(onNoise)).toEqual(PRE_DITHERING_OUTPUT[charset].noise)
+    expect(charRows(onRamp)).toEqual(PRE_DITHERING_OUTPUT[charset].ramp)
   })
 })

@@ -26,6 +26,14 @@ export type Charset =
   | 'box'
   | 'binary'
 
+export const DITHERINGS = ['none', 'bayer', 'floyd'] as const
+
+/**
+ * Which Dithering the conversion spends before the Charset buckets a cell — see CONTEXT.md.
+ * `none` is the conversion as it stood before the pass existed and stays the default everywhere.
+ */
+export type Dithering = (typeof DITHERINGS)[number]
+
 export interface ConversionSettings {
   resolution: number
   brightness: number
@@ -34,6 +42,7 @@ export interface ConversionSettings {
   charset: Charset
   /** The Edge Glyph axis. Off is the deck's shipped look, so it stays the default everywhere. */
   edgeGlyphs: boolean
+  dithering: Dithering
 }
 
 export const CHARSET_MAPS: Record<Charset, string> = {

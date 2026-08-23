@@ -65,9 +65,10 @@ Use these terms precisely — avoid the listed alternatives:
 |------|---------|-------|
 | **Charset** | Symbol set mapping luminosity to a character | density, symbol set |
 | **Edge Glyph** | Directional character a cell takes where the local gradient reads as a contour — the shape axis beside the Charset's brightness one; opt-in, off by default | edge detection, sobel char |
+| **Dithering** | Pattern spent on the sampled grid before the Charset buckets a cell, so a coarse Charset carries a gradient instead of banding it — `none` / `bayer` / `floyd`; runs *before* the Edge Glyph pass, which never reads it | noise, halftone, error diffusion |
 | **Source Image** | Static uploaded image; immutable during session | uploadedImage, input image |
 | **Live Source** | Active webcam stream | stream, camera, video source |
-| **ConversionSettings** | All conversion params (charset, edgeGlyphs, colorMode, resolution, brightness, contrast) | options, settings |
+| **ConversionSettings** | All conversion params (charset, edgeGlyphs, dithering, colorMode, resolution, brightness, contrast) | options, settings |
 | **AsciiCell** | Atomic unit: one character + its original RGB | ProcessedPixel |
 | **Color Mode** | Colorization scheme applied during render | colorMode as domain term |
 | **Resolution** | Chars-per-canvas (controlled by character size) | fontSize, granularity |
@@ -98,8 +99,13 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 
 **ASCII core**
 - `src/ascii/types.ts` — `ConversionSettings`, `ColorMode`, `Charset`, `CHARSET_MAPS`, `AsciiCell`
-- `src/ascii/converter.ts` — `convertImage()`, `getAsciiChar()`, luminosity math, and the Edge
-  Glyph pass (Sobel over the sampled grid — pure, ADR 0005)
+- `src/ascii/converter.ts` — `convertImage()`, `getAsciiChar()`, luminosity math, and the two
+  opt-in passes over the sampled grid (both pure, ADR 0005): the Dithering, then the Edge Glyph
+  (Sobel). That order is load-bearing and the file says why — a Dithering *manufactures* the sharp
+  neighbour differences Sobel hunts for, so the gradient reads the undithered luminance and its
+  stroke wins over whatever character the pattern chose. Measured, it is `floyd` that would invent
+  contours (a flat field comes back with two dozen); `bayer`'s swing reaches only ~71 of the 255 the
+  threshold wants, so the rule is free for it today and stated for both anyway
 - `src/ascii/image-utils.ts` — `resizeImage()` (caps Source Image at 800px wide before sampling)
 - `src/ascii/renderer.ts` — `computeFrame()` (pure), `paintFrame()` (side effects) — see ADR 0005.
   `CANVAS_BACKGROUND` is the ground both the canvas and the HTML Export stand on: the user's art,

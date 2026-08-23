@@ -2,6 +2,7 @@ import {
   type AsciiCell,
   CHARSET_MAPS,
   type Charset,
+  type Dithering,
   type FitRegion,
   MONOSPACE_CHAR_WIDTH_RATIO,
 } from './types'
@@ -22,11 +23,134 @@ export function computeLuminosity(r: number, g: number, b: number): number {
   )
 }
 
+/**
+ * The bucket a luminosity falls in — the whole of the Charset mapping, factored out so the
+ * Dithering pass can ask which bucket a cell *would* take and how far short of it the cell fell.
+ * A floor, not a round: it is the mapping every conversion the deck has ever shipped used, and
+ * changing it would restyle every one of them.
+ */
+function charIndex(brightness: number, mapLength: number): number {
+  const clamped = Math.max(0, Math.min(255, brightness))
+  return Math.floor((clamped / 255) * (mapLength - 1))
+}
+
 export function getAsciiChar(brightness: number, charset: Charset): string {
   const map = CHARSET_MAPS[charset]
-  const clamped = Math.max(0, Math.min(255, brightness))
-  const index = Math.floor((clamped / 255) * (map.length - 1))
-  return map[index]
+  return map[charIndex(brightness, map.length)]
+}
+
+/**
+ * Luminosity levels one Charset bucket spans. The Dithering amplitude: a cell may be pushed by
+ * up to one bucket and no further, which is what keeps the pass a *reordering* of the ramp's own
+ * levels rather than added noise.
+ */
+function bucketWidth(charset: Charset): number {
+  return 255 / (CHARSET_MAPS[charset].length - 1)
+}
+
+/**
+ * The 4x4 ordered matrix, in its recursive Bayer order — each entry is that cell's rank in the
+ * turn-taking, so the 16 cells of a tile cross the same bucket boundary at 16 evenly spaced
+ * levels. Held at 4x4 rather than 8x8 because the tile is measured in *characters*: at the
+ * Resolutions this program renders at, an 8x8 tile is a visible plaid across the picture where a
+ * 4x4 one reads as texture.
+ */
+const BAYER_MATRIX = [
+  [0, 8, 2, 10],
+  [12, 4, 14, 6],
+  [3, 11, 1, 9],
+  [15, 7, 13, 5],
+]
+const BAYER_ORDER = BAYER_MATRIX.length
+const BAYER_RANKS = BAYER_ORDER * BAYER_ORDER
+
+/**
+ * Floyd–Steinberg's weights: the fraction of a cell's quantisation error each unvisited neighbour
+ * takes, over a left-to-right raster. Sixteenths, and they sum to one — the error is *moved*, never
+ * created, which is what makes the pass preserve the picture's average level rather than lighten it.
+ */
+const FLOYD_DIFFUSION = [
+  { dCol: 1, dRow: 0, weight: 7 / 16 },
+  { dCol: -1, dRow: 1, weight: 3 / 16 },
+  { dCol: 0, dRow: 1, weight: 5 / 16 },
+  { dCol: 1, dRow: 1, weight: 1 / 16 },
+]
+
+/**
+ * The Dithering pass: returns a new luminosity grid whose cells, once bucketed, spend neighbouring
+ * characters in the proportion the original levels sat between them — so a coarse Charset carries a
+ * gradient it would otherwise posterize into bands.
+ *
+ * Pure over the grid, which is the contract that matters (ADR 0005) — `floyd` is order-dependent
+ * *inside* the pass because it hands each cell's quantisation error to neighbours that have not
+ * been visited yet, and that dependence is exactly why the pass is a grid transform and not a
+ * per-cell function the sampling loop could call.
+ *
+ * The pass is confined to the fit region, never the grid — the loop bounds keep the void bands from
+ * seeding it and the neighbour guard keeps its error from landing in them (ADR 0010). Neither half
+ * shows up on its own, because a void cell reads 0 and quantises with no error to pass on; together
+ * they are what makes a letterboxed Source dither exactly as the same Source does at full bleed,
+ * which is the property the tests hold.
+ */
+function ditherLuma(
+  luma: number[],
+  cols: number,
+  region: FitRegion,
+  charset: Charset,
+  dithering: Exclude<Dithering, 'none'>,
+): number[] {
+  const { offsetX, offsetY, dCols, dRows } = region
+  const step = bucketWidth(charset)
+  const out = luma.slice()
+
+  if (dithering === 'bayer') {
+    // The tile's phase is taken from the absolute grid position, not from the fit region's origin,
+    // so a Source whose letterbox bands change width — a resize, a camera switch — lands on a
+    // different phase and its pattern shifts by a cell or two. Deliberate: phase relative to the
+    // region would instead move the pattern across the *picture* every time the bands moved, and
+    // an absolute tile is the one that stays put under the thing being drawn. It does mean bayer
+    // is the one Dithering whose output is not invariant to the letterbox, and a test says so.
+    //
+    // The offset spans a whole bucket and is entirely *positive*, which reads like a brightening
+    // and is really the correction for `charIndex` flooring: a cell three quarters of the way up
+    // its bucket has to take the next character on twelve of the tile's sixteen turns for the
+    // tile's average to come back out where the cell actually sat. Recentre the offset on zero and
+    // every picture drops half a bucket against `none`.
+    for (let row = offsetY; row < offsetY + dRows; row++) {
+      for (let col = offsetX; col < offsetX + dCols; col++) {
+        const rank = BAYER_MATRIX[row % BAYER_ORDER][col % BAYER_ORDER]
+        out[row * cols + col] += (step * (rank + 0.5)) / BAYER_RANKS
+      }
+    }
+    return out
+  }
+
+  const mapLength = CHARSET_MAPS[charset].length
+  for (let row = offsetY; row < offsetY + dRows; row++) {
+    for (let col = offsetX; col < offsetX + dCols; col++) {
+      const index = row * cols + col
+      // Error against the bucket's *floor*, matching `charIndex`: the character drawn stands for
+      // the level the bucket starts at, so that is the level the cell actually spent. It keeps the
+      // error in [0, step) — one-sided, and bounded, so the diffusion can never run away.
+      //
+      // The value at visit time is final for this cell — only cells still ahead take inflow — so
+      // the working grid *is* the answer and needs no second copy.
+      const error = out[index] - charIndex(out[index], mapLength) * step
+      for (const { dCol, dRow, weight } of FLOYD_DIFFUSION) {
+        const neighbourCol = col + dCol
+        const neighbourRow = row + dRow
+        if (
+          neighbourCol < offsetX ||
+          neighbourCol >= offsetX + dCols ||
+          neighbourRow >= offsetY + dRows
+        ) {
+          continue
+        }
+        out[neighbourRow * cols + neighbourCol] += error * weight
+      }
+    }
+  }
+  return out
 }
 
 function applyBrightnessContrast(value: number, brightness: number, contrast: number): number {
@@ -127,6 +251,9 @@ function edgeGlyphAt(
  * @param options.edgeGlyphs Opt-in second axis: where the local gradient is strong, the cell takes
  *   a directional glyph instead of its luminosity one. Off is the shape of every conversion that
  *   predates it, and `ConversionSettings` is the one place that default is written down.
+ * @param options.dithering Trades a bucket boundary for a pattern before the Charset buckets a
+ *   cell, so a coarse Charset carries a gradient instead of banding it. `none` is the conversion
+ *   that predates the pass, character for character.
  * @param region Contain-fit sub-region the Source is drawn into; cells outside it are void.
  *   Defaults to a full-grid fill. See ADR 0010.
  * @param isMirrored Flips the Source on this sampling draw, *before* any pixel is read into a
@@ -138,11 +265,17 @@ export function convertImage(
   img: CanvasImageSource,
   cols: number,
   rows: number,
-  options: { brightness: number; contrast: number; charset: Charset; edgeGlyphs: boolean },
+  options: {
+    brightness: number
+    contrast: number
+    charset: Charset
+    edgeGlyphs: boolean
+    dithering: Dithering
+  },
   region: FitRegion = { offsetX: 0, offsetY: 0, dCols: cols, dRows: rows },
   isMirrored = false,
 ): AsciiCell[][] {
-  const { brightness, contrast, charset, edgeGlyphs } = options
+  const { brightness, contrast, charset, edgeGlyphs, dithering } = options
   const { offsetX, offsetY, dCols, dRows } = region
 
   // The sampling canvas (ADR 0001) outlives a single conversion and drawImage composites
@@ -168,11 +301,14 @@ export function convertImage(
   const data = ctx.getImageData(0, 0, cols, rows).data
 
   const result: AsciiCell[][] = []
-  // The gradient pass reads a whole neighbourhood, so the adjusted luminance is kept as its own
-  // grid: brightness and contrast are already folded in, which is what makes the two sliders move
-  // the contours the same way they move the ramp. Allocated only for a conversion that asked for
-  // the axis — the Live Source loop runs this ~15 times a second with it off (ADR 0002).
-  const luma: number[] | null = edgeGlyphs ? new Array(cols * rows).fill(0) : null
+  // Both passes below read more than the cell in front of them — the gradient a whole
+  // neighbourhood, the Dithering the cells it has already spent — so the adjusted luminance is
+  // kept as its own grid: brightness and contrast are already folded in, which is what makes the
+  // two sliders move the contours and the pattern the same way they move the ramp. Allocated only
+  // for a conversion that asked for one of them — the Live Source loop runs this ~15 times a
+  // second with both off (ADR 0002).
+  const needsLuma = edgeGlyphs || dithering !== 'none'
+  const luma: number[] | null = needsLuma ? new Array(cols * rows).fill(0) : null
 
   for (let row = 0; row < rows; row++) {
     const rowData: AsciiCell[] = []
@@ -202,9 +338,39 @@ export function convertImage(
     return result
   }
 
+  // Dithering first, Edge Glyphs second, and the gradient reads `luma` — the *undithered* grid —
+  // because both passes read the same sampled cells and only one of them may see the other's work.
+  // Sobel asks whether neighbouring cells differ sharply and a Dithering's whole job is to *make*
+  // neighbouring cells differ, by up to a bucket, everywhere the picture is smooth.
+  //
+  // How much that costs depends on the algorithm, and the honest answer is not the same for both.
+  // Bayer's tile is too small a swing to reach the magnitude threshold in any Charset — measured,
+  // the most it can drive the kernel to is ~71 of the 255 a contour needs, in `binary`, the
+  // coarsest ramp there is. Floyd–Steinberg is a different matter: its error runs along a row and
+  // accumulates, and fed to the gradient it turns a *flat* field into two dozen contours that are
+  // not in the Source at all. So the order is load-bearing for one of the two today and free for
+  // the other, and it is written down as the rule for both — the threshold is a tuned constant and
+  // bayer's headroom is not a guarantee anybody should have to re-derive.
+  //
+  // Where the gradient does find a contour, its stroke replaces whatever character the Dithering
+  // chose: the shape axis stays the outer one, as it was before this pass existed.
+  if (dithering !== 'none') {
+    const dithered = ditherLuma(luma, cols, region, charset, dithering)
+    for (let row = offsetY; row < offsetY + dRows; row++) {
+      for (let col = offsetX; col < offsetX + dCols; col++) {
+        const char = getAsciiChar(dithered[row * cols + col], charset)
+        result[row][col] = { ...result[row][col], char }
+      }
+    }
+  }
+
+  if (!edgeGlyphs) {
+    return result
+  }
+
   // The second axis lands in the AsciiCell grid, not at paint time: every consumer downstream —
-  // the preview, the PNG Export and the TXT Export — reads this one grid, so all three carry the
-  // shape without knowing it exists.
+  // the preview, the PNG Export, the TXT Export and the HTML Export — reads this one grid, so all
+  // four carry the shape without knowing it exists. The same is true of the Dithering above.
   for (let row = offsetY; row < offsetY + dRows; row++) {
     for (let col = offsetX; col < offsetX + dCols; col++) {
       const glyph = edgeGlyphAt(luma, cols, region, col, row)

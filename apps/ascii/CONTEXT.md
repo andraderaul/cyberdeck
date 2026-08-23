@@ -19,6 +19,10 @@ _Avoid_: Density, density map, symbol set
 O caractere direcional (`|` `/` `-` `\`) que uma **AsciiCell** assume quando o gradiente local é forte o bastante para valer como contorno. É o segundo eixo do conversor: o **Charset** mapeia luminosidade, o Edge Glyph mapeia *forma* — a orientação da borda, medida por Sobel sobre a grade já amostrada, escolhe o traço. Abaixo do limiar de magnitude nada muda e a célula fica com o glifo de luminosidade, então o eixo é opt-in e desligado por padrão. É a mesma porta que o katakana espelhado do Matrix não atravessa: o que falta a uma charset string é poder dizer forma.
 _Avoid_: edge detection (é o mecanismo, não o termo), borda, sobel char, ASCII edges
 
+**Dithering**:
+A troca de uma fronteira dura de bucket por um padrão, feita sobre a grade amostrada *antes* de o **Charset** escolher o caractere. Um Charset curto divide 0–255 em pouquíssimos níveis e a diferença que não cabe entre eles vira banda; o Dithering gasta essa diferença espalhando-a entre células vizinhas, de modo que a média do que foi desenhado volte ao nível que a **Source Image** realmente tinha. Três valores: `none` (a conversão que existia antes do passe, caractere por caractere), `bayer` (matriz ordenada 4x4 — cada célula do tile atravessa a fronteira num nível diferente, padrão fixo e sem memória) e `floyd` (Floyd–Steinberg — cada célula entrega o resto da própria quantização às vizinhas que ainda não foram visitadas, então o passe é dependente de ordem por construção, ainda que puro sobre a grade). Roda *antes* do **Edge Glyph**, e o **Edge Glyph** nunca o lê: Sobel procura vizinhas que diferem muito e o Dithering existe justamente para fazer vizinhas diferirem. O quanto isso custa depende do algoritmo, e a resposta honesta não é a mesma para os dois — medido, o `bayer` só chega a ~71 do 255 que o limiar exige, então hoje ele não teria como inventar contorno em Charset nenhum; já o `floyd`, cujo erro corre pela linha e acumula, transforma um campo *chapado* em duas dezenas de contornos que não existem na **Source Image**. A ordem é a regra para ambos porque o limiar é uma constante ajustável e essa folga do `bayer` não é promessa de ninguém.
+_Avoid_: ruído, noise, halftone, error diffusion (é o mecanismo do `floyd`, não o termo), anti-aliasing
+
 **Source Image**:
 A imagem estática trazida pelo usuário como entrada da conversão. Imutável durante a sessão — o conversor a lê a cada re-render mas nunca a modifica.
 _Avoid_: uploadedImage, imagem carregada, input image
@@ -32,7 +36,7 @@ O documento HTML autocontido que leva o resultado inteiro para fora: cada **Asci
 _Avoid_: SVG Export, web export, exportar a página, HTML5
 
 **ConversionSettings**:
-O conjunto de parâmetros que governa como a imagem é convertida em ASCII — charset, edge glyphs, color mode, resolution, brightness e contrast.
+O conjunto de parâmetros que governa como a imagem é convertida em ASCII — charset, edge glyphs, dithering, color mode, resolution, brightness e contrast.
 _Avoid_: AsciiOptions, options, settings (genérico)
 
 **AsciiCell**:
@@ -51,7 +55,8 @@ _Avoid_: fontSize, granularity, granularidade, tamanho de fonte
 
 - Uma **Source Image** é convertida por `convertImage()` em uma grade de **AsciiCell** usando os **ConversionSettings** ativos
 - Cada **AsciiCell** carrega um caractere (determinado pelo **Charset**) e o RGB original do pixel
-- Uma **AsciiCell** cujo gradiente ultrapassa o limiar troca o caractere do **Charset** por um **Edge Glyph** — a troca acontece na grade, não na pintura, então **PNG Export**, **TXT Export** e **HTML Export** carregam a forma junto com o preview
+- Sob um **Dithering**, o caractere que uma **AsciiCell** recebe do **Charset** pode subir um bucket para que a média da vizinhança feche no nível da **Source Image** — nunca mais que um, então o passe reordena a própria rampa em vez de acrescentar ruído
+- Uma **AsciiCell** cujo gradiente ultrapassa o limiar troca o caractere do **Charset** por um **Edge Glyph** — a troca acontece na grade, não na pintura, então **PNG Export**, **TXT Export** e **HTML Export** carregam a forma junto com o preview. O mesmo vale para o **Dithering**, e é por isso que os dois moram em `convertImage()` e não em `paintFrame()`
 - O **AsciiCanvas** renderiza a grade de **AsciiCell** aplicando o **Color Mode**
 - O resultado pode ser exportado como **PNG Export** (canvas com cores), **TXT Export** (string ASCII pura) ou **HTML Export** (texto selecionável com cores)
 

@@ -44,7 +44,7 @@ export function renderFrame(
     return false
   }
 
-  const { resolution, brightness, contrast, charset, edgeGlyphs } = settings
+  const { resolution, brightness, contrast, charset, edgeGlyphs, dithering } = settings
   const charW = resolution * MONOSPACE_CHAR_WIDTH_RATIO
   const charH = resolution
   const cols = Math.floor(canvasEl.width / charW)
@@ -65,7 +65,7 @@ export function renderFrame(
     source,
     cols,
     rows,
-    { brightness, contrast, charset, edgeGlyphs },
+    { brightness, contrast, charset, edgeGlyphs, dithering },
     region,
     isMirrored,
   )
