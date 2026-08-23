@@ -50,7 +50,7 @@ The split is mechanical: if the surface is part of the AI Analysis flow → cybe
 | `analysis-modal.tsx` — network error headline | `◈ TRANSMISSION FAILURE` | Cyberpunk | — |
 | `analysis-modal.tsx` — network error detail | `Connection to provider lost. Check your network and try again.` | Neutral (detail within cyberpunk surface) | — |
 | `analysis-modal.tsx` — retry button | `retry` | Neutral | — |
-| `api-key-modal.tsx` — modal title | `⚿ AI CONFIG` | Cyberpunk | — |
+| `api-key-modal.tsx` — modal title | `◇ AI CONFIG` | Cyberpunk | — |
 | `api-key-modal.tsx` — provider label | `PROVIDER` | Cyberpunk | — |
 | `api-key-modal.tsx` — key label | `API KEY` | Cyberpunk | — |
 | `api-key-modal.tsx` — key placeholder | `paste your key here` | Neutral | — |
@@ -61,32 +61,30 @@ The split is mechanical: if the surface is part of the AI Analysis flow → cybe
 | `about-modal.tsx` — section heading | `AI Scan` | Mixed — title-cased heading on neutral surface | `ai scan` (lowercase to match neutral register) |
 | `about-modal.tsx` — section heading | `Made with AI` | Mixed — title-cased heading on neutral surface | `made with ai` (lowercase to match neutral register) |
 | `about-modal.tsx` — body prose | `Turn any photo or your webcam into ASCII art…` | Neutral | — |
-| `upload-zone.tsx` — mode toggle | `↑ upload` / `◉ webcam` | Neutral | — |
-| `upload-zone.tsx` — drop zone (desktop) | `drag & drop or click to upload` | Neutral | — |
-| `upload-zone.tsx` — drop zone (touch) | `tap to upload` | Neutral | — |
-| `upload-zone.tsx` — file types hint | `jpg · png · webp` | Neutral | — |
-| `upload-zone.tsx` — live indicator | `LIVE` | Cyberpunk | — |
-| `upload-zone.tsx` — webcam starting | `starting camera...` | Neutral | — |
-| `upload-zone.tsx` — live helper | `adjust controls to tune the feed` | Neutral | — |
-| `upload-zone.tsx` — source mode aria-label | `Source mode` | Neutral | — |
-| `download-bar.tsx` — analyze button (desktop) | `◈ scan & analyze` | Cyberpunk | — |
-| `download-bar.tsx` — analyze button (touch) | `◈ analyze` | Cyberpunk | — |
-| `download-bar.tsx` — export PNG button | `export png` | Neutral | — |
-| `download-bar.tsx` — export TXT button | `export txt` | Neutral | — |
-| `download-bar.tsx` — capture button | `◎ capture` | Neutral | — |
-| `download-bar.tsx` — record button | `⏺ record` | Neutral | — |
-| `download-bar.tsx` — stop recording | `● {elapsed} ⏹ stop` | Neutral | — |
-| `app.tsx` — empty canvas state | `upload an image or enable webcam to begin` | Neutral | — |
+| deck-kit `ui/source-image-drop-zone.tsx` — drop zone (desktop) | `drag & drop or click to upload` | Neutral | — |
+| deck-kit `ui/source-image-drop-zone.tsx` — drop zone (touch) | `tap to upload` | Neutral | — |
+| deck-kit `ui/source-image-drop-zone.tsx` — file types hint | `jpg · png · webp` | Neutral | — |
+| deck-kit `ui/empty-state-hero.tsx` — Live Source entry | `use webcam` / `live source` | Neutral | — |
+| `ascii-canvas.tsx` — live indicator | `◉ LIVE` | Cyberpunk | — |
+| `ascii-canvas.tsx` — REC badge (also the stop control) | `● {elapsed} ⏹` | Neutral | — |
+| `ascii-canvas.tsx` — REC badge `aria-label` | `stop recording — {elapsed} elapsed` | Neutral | — |
+| `output-panel.tsx` — analyze button (desktop) | `◈ scan & analyze` | Cyberpunk | — |
+| `output-panel.tsx` — analyze button (touch) | `◈ analyze` | Cyberpunk | — |
+| `output-panel.tsx` — export PNG button | `export png` | Neutral | — |
+| `output-panel.tsx` — export TXT button | `export txt` | Neutral | — |
+| `output-panel.tsx` — capture button | `◎ capture` | Neutral | — |
+| `output-panel.tsx` — record button | `⏺ record` | Neutral | — |
+| `app.tsx` — hero tagline | `it gets converted right here — nothing leaves your browser` | Neutral | — |
 | `app.tsx` — render error fallback | `render failed — try a different image or adjust settings` | Neutral | — |
 | `app.tsx` — header subtitle | `image → ascii art` | Neutral | — |
-| `app.tsx` — about nav button | `about` | Neutral | — |
-| `app.tsx` — AI config nav button (active) | `⚿ ai configured` | Neutral | — |
-| `app.tsx` — AI config nav button (inactive) | `⚿ configure ai` | Neutral | — |
-| `control-panel.tsx` — slider label | `resolution` | Neutral | — |
-| `control-panel.tsx` — toggle label | `color mode` | Neutral | — |
-| `control-panel.tsx` — toggle label | `charset` | Neutral | — |
-| `control-panel.tsx` — slider label | `brightness` | Neutral | — |
-| `control-panel.tsx` — slider label | `contrast` | Neutral | — |
+| `footer.tsx` — about trigger | `about` | Neutral | — |
+| `app.tsx` — AI config nav button (active) | `◇ ai configured` | Neutral | — |
+| `app.tsx` — AI config nav button (inactive) | `◇ configure ai` | Neutral | — |
+| `settings-editor.tsx` — tool label | `charset` | Neutral | — |
+| `settings-editor.tsx` — tool label | `color mode` | Neutral | — |
+| `settings-editor.tsx` — tool label | `resolution` | Neutral | — |
+| `settings-editor.tsx` — tool label | `brightness` | Neutral | — |
+| `settings-editor.tsx` — tool label | `contrast` | Neutral | — |
 | `errors/app-error.ts` — export toast | `export PNG failed` / `export TXT failed` | Neutral | — |
 | `errors/app-error.ts` — capture toast | `capture failed` | Neutral | — |
 | `errors/app-error.ts` — storage toast | `ai configured (session only — storage unavailable)` | Neutral | — |

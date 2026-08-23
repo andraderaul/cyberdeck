@@ -27,8 +27,11 @@ Single-page React/TS/Vite app. Fully client-side — no backend server. AI analy
 
 ### Conversion pipeline
 
-1. The kit's `EmptyStateHero` is the single entry (ADR 0015): it hands `App` either an
-   `HTMLImageElement` (Source Image) or, through the webcam path, an `HTMLVideoElement` (Live Source)
+1. The kit's `EmptyStateHero` is the single entry (ADR 0015), but only the Source Image travels
+   through it: `onImage` hands `App` an `HTMLImageElement`, while `onUseWebcam` is a bare signal that
+   asks `App` to switch mode. The `HTMLVideoElement` (Live Source) arrives on the other path —
+   `useWebcamState`'s stream callback in `app.tsx`, which is also what a camera switch re-enters
+   through
 2. `App` holds `ConversionSettings` state and passes both down to `AsciiCanvas`
 3. `AsciiCanvas` keeps a **hidden off-screen canvas** (`hiddenRef`) sized `cols × rows` — this is used only for pixel sampling via `getImageData`. The visible canvas is sized in pixels. These two canvases must stay separate (see ADR 0001)
 4. `AsciiCanvas` decides *when* to render: once per settings change via `useEffect` for Source Image, or in a `requestAnimationFrame` loop throttled to ~15fps for Live Source (see ADR 0002). It calls `renderFrame()` from `src/ascii/render-frame.ts`
@@ -115,11 +118,13 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   the shells. Deliberately still a hand-copy of GLITCH's (ADR 0014) — the filenames diverge
 - `src/hooks/use-webcam-state.ts` — `useWebcamState()`, `planEffects()`, `reducer()`: the Live
   Source's MediaStream lifecycle — deliberately still a hand-copy (ADR 0014)
-- Everything else shared comes from `@cyberdeck/deck-kit` (ADR 0014): `recording` (`useRecording`,
-  `formatElapsedTime` — the Recording's share-or-download on completion lives in there too), `ui`
-  (the primitives plus `EmptyStateHero`, `ErrorBoundary`, `TabStrip`, `ThemeControl`,
-  `ToastProvider` and the toast hooks, `ICON_GLYPH_SIZE`, `TOUCH_TARGET_*`), `utils` (`cn`,
-  `shareOrDownloadCanvas`, `isTouchDevice`), `errors`
+- Everything else shared comes from `@cyberdeck/deck-kit` (ADR 0014), across its five entrypoints:
+  `ui` (the primitives plus `EmptyStateHero`, `SourceImageDropZone`, `ErrorBoundary`, `TabStrip`,
+  `ThemeControl`, `ICON_GLYPH_SIZE`, `TOUCH_TARGET_*`, and `ToastProvider` with the `useToastError` /
+  `useToastInfo` / `useToastWarn` senders); `hooks` (`useToast` — the queue itself, which the
+  Provider owns — and `useDialog`); `recording` (`useRecording`, `formatElapsedTime`, and the
+  share-or-download a finished take goes out through); `utils` (`cn`, `loadImageFile`,
+  `shareOrDownloadCanvas`, `shareOrDownloadBlob`, `isTouchDevice`); `errors`
 
 **Components**
 - `src/components/ascii-canvas.tsx` — lifecycle coordinator: drives static and rAF render paths.
