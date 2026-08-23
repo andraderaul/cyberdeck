@@ -67,17 +67,22 @@ displaced is one `revert` away in the PRESETS tab until the user's own next edit
 ### Installing and offline
 
 The program precaches its whole built shell and serves only from that cache — no runtime strategies,
-because nothing here fetches at runtime (ADR 0027). The one rule that matters lives in
-`src/pwa/policy.ts`: the worker answers only same-origin requests for files this build emitted, which
-is what keeps the AI Provider call out of the cache by *origin* rather than by an exception anyone
-could forget to renew (ADR 0003). That the call now also carries the Suggestion home changes nothing
-here, and that is the point of deciding on origin: the rule never looks at what the request or its
-reply contains.
+because nothing here fetches at runtime (ADR 0027). **The machinery is the kit's**
+(`packages/deck-kit/src/pwa/`, `packages/deck-kit/scripts/precache-shell.ts`); this app supplies
+`public/manifest.webmanifest`, `precacheShell({ cachePrefix: 'ascii-shell-' })` in `vite.config.ts`,
+and the two lines in `app.tsx` that render the bar.
+
+Read `packages/deck-kit/README.md` ("Making a program installable") for the mechanism. The one rule
+that matters lives in the kit's `pwa/policy.ts`: the worker answers only same-origin
+requests for files this build emitted, which is what keeps the AI Provider call out of the cache by
+*origin* rather than by an exception anyone could forget to renew (ADR 0003). That the call now also
+carries the Suggestion home changes nothing here, and that is the point of deciding on origin: the
+rule never looks at what the request or its reply contains. **This app is the only caller with a
+provider to exclude**, and it is why the rule is where it is.
 
 A new build never activates mid-session — the worker does not call `skipWaiting`, so a Recording in
 flight or a Live Source is never yanked. It parks, `useAppUpdate` notices, and `UpdateBanner` offers
-the reload. `scripts/precache-shell.ts` is the build half: it walks `dist` and compiles the worker
-with that manifest defined in. It only runs on `build`; a dev server has no worker at all.
+the reload. The plugin only runs on `build`; a dev server has no worker at all.
 
 ### Error handling
 
@@ -183,24 +188,18 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   the shells. Deliberately still a hand-copy of GLITCH's (ADR 0014) — the filenames diverge
 - `src/hooks/use-webcam-state.ts` — `useWebcamState()`, `planEffects()`, `reducer()`: the Live
   Source's MediaStream lifecycle — deliberately still a hand-copy (ADR 0014)
-- Everything else shared comes from `@cyberdeck/deck-kit` (ADR 0014), across its five entrypoints:
+- Everything else shared comes from `@cyberdeck/deck-kit` (ADR 0014), across its entrypoints:
   `ui` (the primitives plus `EmptyStateHero`, `SourceImageDropZone`, `ErrorBoundary`, `TabStrip`,
   `ThemeControl`, `ICON_GLYPH_SIZE`, `TOUCH_TARGET_*`, and `ToastProvider` with the `useToastError` /
   `useToastInfo` / `useToastWarn` senders); `hooks` (`useToast` — the queue itself, which the
   Provider owns — and `useDialog`); `recording` (`useRecording`, `formatElapsedTime`, and the
   share-or-download a finished take goes out through); `utils` (`cn`, `loadImageFile`,
-  `shareOrDownloadCanvas`, `shareOrDownloadBlob`, `isTouchDevice`); `errors`
+  `shareOrDownloadCanvas`, `shareOrDownloadBlob`, `isTouchDevice`); `errors`; `pwa` (`useAppUpdate`,
+  `UpdateBanner`). The `precache-shell` build plugin ships beside them but is reached by relative
+  path from `vite.config.ts` rather than by package name — the reason is at that callsite (ADR 0027)
 
-**Installing and offline** (ADR 0027)
-- `src/pwa/policy.ts` — pure: `planShellFetch()` (the whole fetch rule, and where the AI Provider is
-  excluded by origin), `shellCacheName()`, `resolveShell()`, `SKIP_WAITING`
-- `src/pwa/service-worker.ts` — the worker. Not part of the app's module graph: it is compiled on its
-  own to `dist/sw.js`, against `tsconfig.worker.json` because `WebWorker` and `DOM` cannot share a
-  project
-- `src/pwa/use-app-update.ts` — `useAppUpdate()`: registration, and whether a build is parked behind
-  the running one
-- `scripts/precache-shell.ts` — the Vite plugin that walks `dist` and compiles the worker with that
-  manifest defined in. Hand-rolled rather than `vite-plugin-pwa`; the reason is at the top of the file
+**Installing and offline** (ADR 0027) — the machinery is the kit's; this app owns only these two
+- `vite.config.ts` — `precacheShell({ cachePrefix: 'ascii-shell-' })`
 - `public/manifest.webmanifest` — hand-written. The kit's roster guard pins its `theme_color` to the
   same token the `theme-color` meta carries, and checks every icon it names exists
 
@@ -238,14 +237,12 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   Suggestion's `apply` — the only control in the app that moves every ConversionSetting at once
 - `src/components/api-key-modal.tsx` — API key configuration
 - `src/components/about-modal.tsx` — About/info modal
-- `src/components/update-banner.tsx` — the one thing a parked new build may do to a running session:
-  say so, under the header, with the control that promotes it (ADR 0027). App-owned until #325 gives
-  it a second caller
 - `src/components/footer.tsx` — empty-state bottom chrome: the attribution links plus the About
   trigger, hidden once a Source loads. The 44px target sits on each control, not on the bar
-- `src/components/ui/` — the three primitives this program still owns: `badge`, `error-text`, and
-  `header-button` (the header's own control shape). Everything else — Button, Chip, Label, Modal,
-  Slider, TabStrip, ToggleGroup, Tooltip, Toast — comes from `@cyberdeck/deck-kit/ui`
+- `src/components/ui/` — the two primitives this program still owns: `badge` and `error-text`, both
+  single-caller. `header-button` left in #325: the kit's own `UpdateBanner` became its second caller,
+  which is the trigger ADR 0014 wrote for it. Everything else — Button, HeaderButton, Chip, Label,
+  Modal, Slider, TabStrip, ToggleGroup, Tooltip, Toast — comes from `@cyberdeck/deck-kit/ui`
 
 **ADRs**
 - `../../docs/adr/` — all architectural decisions (deck-wide, at the repo root)

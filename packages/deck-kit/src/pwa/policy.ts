@@ -1,6 +1,9 @@
 // The service worker's whole judgement, as functions over data. It is a module of its own because
 // `service-worker.ts` runs in a global scope no test has — the same pure/impure split the render
 // pipeline already draws (ADR 0005), one layer out of the app.
+//
+// In the kit rather than in a program because all four tell the same offline story, and the one
+// thing that differs between them is the string a cache is named with (ADR 0014, ADR 0027).
 
 /** One file of the built shell, as the build hands it over: a URL relative to the deploy root and
  *  a content hash. The hash is what makes a new build a new cache. */
@@ -25,8 +28,6 @@ export type Shell = {
   urls: ReadonlySet<string>
 }
 
-export const CACHE_PREFIX = 'ascii-shell-'
-
 /**
  * The one message the page and the worker exchange: the user's escape hatch out of a stale version.
  * It lives here rather than in either end because it is the protocol between them, and the page
@@ -42,10 +43,15 @@ export const SKIP_WAITING = 'cyberdeck:skip-waiting'
  * share a cache and nothing is re-downloaded, and any real change lands in a cache the previous
  * worker was never serving from.
  *
+ * `prefix` is the program's, and it is the only thing in this module that is: it names which caches
+ * on an origin are this program's to evict. Programs are deployed one per origin today, so nothing
+ * turns on it there — but a `vite preview` on a reused port is one origin holding two decks, and a
+ * prefix is what keeps that from being a program deleting a neighbour's shell.
+ *
  * FNV-1a, because a service worker cannot await `crypto.subtle` at module scope and the only
  * property needed here is that different manifests get different names.
  */
-export function shellCacheName(entries: readonly ShellEntry[]): string {
+export function shellCacheName(prefix: string, entries: readonly ShellEntry[]): string {
   let hash = 0x811c9dc5
   for (const { url, revision } of entries) {
     const line = `${url}@${revision}\n`
@@ -54,7 +60,7 @@ export function shellCacheName(entries: readonly ShellEntry[]): string {
       hash = Math.imul(hash, 0x01000193)
     }
   }
-  return `${CACHE_PREFIX}${(hash >>> 0).toString(16).padStart(8, '0')}`
+  return `${prefix}${(hash >>> 0).toString(16).padStart(8, '0')}`
 }
 
 /**
@@ -87,9 +93,14 @@ export function resolveShell(entries: readonly ShellEntry[], scope: string): She
  *
  * `null` means *say nothing*: the worker returns without calling `respondWith`, and the browser
  * does exactly what it would have done with no worker installed. That is the honest answer for
- * everything this program did not build, and it is the answer the AI Provider gets — the user's key
- * is theirs and the request goes straight to the provider (ADR 0003), so a reply served out of a
- * cache would be both wrong and alarming.
+ * everything this program did not build, and it is the answer ASCII//Convert's AI Provider gets —
+ * the user's key is theirs and the request goes straight to the provider (ADR 0003), so a reply
+ * served out of a cache would be both wrong and alarming.
+ *
+ * Three of the four programs make no network call at all, so for them the origin test never fires
+ * in anger. It is still the first thing asked, because "answer only what this build emitted" is one
+ * rule rather than four, and a program that grows a call later inherits the exclusion rather than
+ * having to remember it.
  */
 export function planShellFetch(intent: FetchIntent, shell: Shell, origin: string): string | null {
   let target: URL

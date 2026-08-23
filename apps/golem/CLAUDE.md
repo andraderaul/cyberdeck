@@ -111,3 +111,22 @@ table in `docs/ISA.md` and `src/golem/__fixtures__/PROVENANCE.md`.
 **Deck Kit is consumed, not extended.** Nothing is extracted into the kit from this app: per ADR
 0011 and 0014, duplication stays as signal until a second caller proves the seam, and a program
 this structurally different is the wrong place to guess at shared abstractions.
+
+## Installing and offline
+
+The policy and all its machinery are the kit's — read `packages/deck-kit/README.md` ("Making a
+program installable") and ADR 0027; nothing about it is described again here. This app's whole share
+of it is `public/manifest.webmanifest`, one line of `vite.config.ts`, and the two lines in `app.tsx`
+that render the bar.
+
+The two things that are this program's:
+
+**It is why the no-mid-session rule is written the way it is.** A live Machine, its Terminal, its
+Registers and a `run` at a chosen Clock are the most session state on the deck and none of it is
+persisted anywhere. A promoting worker would take all of it. Driven in a browser with a Machine
+actually running: the run carried on across a deploy, the two builds' caches both stayed alive, and
+the previous one was evicted only when the user clicked.
+
+**The Source is the one thing that outlives a session**, in `localStorage` under `golem:source`
+(`hooks/use-source-loading.ts`). Neither installing nor an outage touches it — a program written
+offline is still there on the next launch.

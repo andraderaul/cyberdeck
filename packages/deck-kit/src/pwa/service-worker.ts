@@ -1,20 +1,20 @@
-// ASCII//Convert's whole offline story, and deliberately the least clever worker that can tell it:
-// the shell is precached whole at install, served from that one cache, and nothing else is touched.
-// There is no origin to fall back to — the deck has no backend (ADR 0011) — so a runtime caching
-// strategy would be machinery guarding a case that cannot arise. See ADR 0027.
+// Every program on the deck tells the same offline story, and this is deliberately the least clever
+// worker that can tell it: the shell is precached whole at install, served from that one cache, and
+// nothing else is touched. There is no origin to fall back to — the deck has no backend (ADR 0011) —
+// so a runtime caching strategy would be machinery guarding a case that cannot arise. See ADR 0027.
 //
 // What is *absent* here is half the design: there is no `skipWaiting` on install. A new build
-// installs beside the running one and waits, so a Recording in flight or a Live Source mid-session
-// is never swapped out from under the user. The only thing that promotes it is the message below,
-// which the page sends when the user asks for it.
+// installs beside the running one and waits, so a Recording in flight, a Live Source, or a GOLEM
+// Machine halfway through a `run` is never swapped out from under the user. The only thing that
+// promotes it is the message below, which the page sends when the user asks for it.
 //
-// Not bundled with the app: `precacheShell()` in `vite.config.ts` builds this file on its own, into
-// `dist/sw.js`, with the manifest of everything the app build emitted defined in.
+// Not bundled with any app: `precacheShell()` in a program's `vite.config.ts` builds this one file
+// on its own, into that program's `dist/sw.js`, with the manifest of everything its build emitted
+// defined in.
 
 /// <reference lib="webworker" />
 
 import {
-  CACHE_PREFIX,
   planShellFetch,
   resolveShell,
   type ShellEntry,
@@ -27,8 +27,12 @@ declare const self: ServiceWorkerGlobalScope
 /** Replaced at build time with every file the app build emitted. */
 declare const __SHELL_MANIFEST__: ShellEntry[]
 
+/** Replaced at build time with the calling program's cache prefix — the one thing about this worker
+ *  that is not the same in all four. */
+declare const __SHELL_CACHE_PREFIX__: string
+
 const MANIFEST = __SHELL_MANIFEST__
-const CACHE = shellCacheName(MANIFEST)
+const CACHE = shellCacheName(__SHELL_CACHE_PREFIX__, MANIFEST)
 const SHELL = resolveShell(MANIFEST, self.registration.scope)
 
 self.addEventListener('install', (event) => {
@@ -48,7 +52,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const stale = (await caches.keys()).filter(
-        (name) => name.startsWith(CACHE_PREFIX) && name !== CACHE,
+        (name) => name.startsWith(__SHELL_CACHE_PREFIX__) && name !== CACHE,
       )
       await Promise.all(stale.map((name) => caches.delete(name)))
       // Safe despite the no-mid-session rule: without `skipWaiting` this only runs when the previous

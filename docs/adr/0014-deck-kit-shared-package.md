@@ -111,11 +111,20 @@ Recorded so a future review re-running the diff does not re-suggest these:
   a single caller (ASCII). One caller is a hypothetical seam; they rise into the kit when a second
   caller appears.
 
-  That trigger has since fired twice, recorded here so this list is not read as still-current:
-  `tooltip` rose when GLITCH gained Effect-level tooltips (ADR 0015), and `modal` rose when GLITCH
-  gained its own About modal — a verbatim move over the already-shared `use-dialog`. Both are the
-  predicted trigger firing, not new decisions. `badge`, `header-button` and `error-text` remain
-  single-caller.
+  That trigger has since fired three times, recorded here so this list is not read as still-current:
+  `tooltip` rose when GLITCH gained Effect-level tooltips (ADR 0015); `modal` rose when GLITCH gained
+  its own About modal — a verbatim move over the already-shared `use-dialog`; and `header-button`
+  rose when the kit itself gained `UpdateBanner` (ADR 0027), a bar four programs render whose one
+  control is that exact shape. All three are the predicted trigger firing, not new decisions.
+
+  The third is worth a sentence because the caller was the kit rather than an app, and that reads at
+  first like the package growing its own justification. It is not: the bar exists because four
+  programs need it, so the second caller is those four arriving at once. What it does rule out is the
+  shortcut — a shared component that *transcribes* an app primitive's classes rather than importing
+  it puts the seam in the worst place there is, one where a future edit to the original silently
+  stops reaching the copy.
+
+  `badge` and `error-text` remain single-caller.
 
 ## Supersedes / Superseded by
 

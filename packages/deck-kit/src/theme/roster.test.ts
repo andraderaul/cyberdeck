@@ -94,6 +94,19 @@ describe('an installed program is painted the Theme that paints first', () => {
   const themed = new Set(prePaintScripts().map(({ workspace }) => workspace))
   const installable = manifests().filter(({ workspace }) => themed.has(workspace))
 
+  // Every program installs (#325). The hub is absent because it is not a program but the deck's
+  // chrome (ADR 0025) — a page whose whole job is to send you somewhere else has nothing to run
+  // offline — and SPRAWL//Atlas is absent from *this* list rather than from the roster: it ships a
+  // manifest, and its colours are pinned in `apps/sprawl/scripts/social-card.test.mjs` instead.
+  it('is every program on the deck, and only the programs', () => {
+    expect(manifests().map(({ workspace }) => workspace)).toEqual([
+      'ascii',
+      'glitch',
+      'golem',
+      'sprawl',
+    ])
+  })
+
   it('is a set someone has to opt into, not an empty guard passing by default', () => {
     expect(installable.length).toBeGreaterThan(0)
   })

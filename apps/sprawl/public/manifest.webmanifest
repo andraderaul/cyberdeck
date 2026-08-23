@@ -1,0 +1,36 @@
+{
+  "id": "/",
+  "name": "SPRAWL//Atlas",
+  "short_name": "SPRAWL",
+  "description": "The world's connected capacity as light. It opens blown white; slide the scale coarser until continents come out of the glare. Nothing to upload.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "categories": ["graphics", "education", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

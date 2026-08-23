@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  CACHE_PREFIX,
   type FetchIntent,
   planShellFetch,
   resolveShell,
@@ -10,6 +9,7 @@ import {
 
 const ORIGIN = 'https://ascii-art-converter-tawny.vercel.app'
 const SCOPE = `${ORIGIN}/`
+const PREFIX = 'ascii-shell-'
 
 const MANIFEST: ShellEntry[] = [
   { url: 'index.html', revision: 'aaaa' },
@@ -27,18 +27,27 @@ function get(url: string, mode: FetchIntent['mode'] = 'cors'): FetchIntent {
 
 describe('shellCacheName', () => {
   it('is stable for the same manifest', () => {
-    expect(shellCacheName(MANIFEST)).toBe(shellCacheName([...MANIFEST]))
+    expect(shellCacheName(PREFIX, MANIFEST)).toBe(shellCacheName(PREFIX, [...MANIFEST]))
   })
 
   it('moves when any file’s contents move', () => {
     const rebuilt = MANIFEST.map((entry) =>
       entry.url === 'index.html' ? { ...entry, revision: 'zzzz' } : entry,
     )
-    expect(shellCacheName(rebuilt)).not.toBe(shellCacheName(MANIFEST))
+    expect(shellCacheName(PREFIX, rebuilt)).not.toBe(shellCacheName(PREFIX, MANIFEST))
   })
 
   it('carries the prefix the eviction sweep matches on', () => {
-    expect(shellCacheName(MANIFEST).startsWith(CACHE_PREFIX)).toBe(true)
+    expect(shellCacheName(PREFIX, MANIFEST).startsWith(PREFIX)).toBe(true)
+  })
+
+  // The eviction in `activate` is "delete every cache whose name starts with mine". Two programs
+  // that produced the same name from the same shell would each delete the other's on an origin
+  // they shared — which is what a `vite preview` on a reused port is.
+  it('gives two programs different names for the same shell', () => {
+    expect(shellCacheName('golem-shell-', MANIFEST)).not.toBe(
+      shellCacheName('sprawl-shell-', MANIFEST),
+    )
   })
 })
 

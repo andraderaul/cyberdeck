@@ -196,6 +196,17 @@ gratuitous divergence: ASCII resamples down to a `cols × rows` char grid, which
 whatever the Source's height. Here the sampled buffer *is* what `applyChain` walks, so a
 500×20000 Source would sail through a width-only cap and freeze the tab.
 
+### Installing and offline
+
+The policy and all its machinery are the kit's — read `packages/deck-kit/README.md` ("Making a
+program installable") and ADR 0027; nothing about it is described again here. This app's whole share
+of it is `public/manifest.webmanifest`, one line of `vite.config.ts`, and the two lines in `app.tsx`
+that render the bar.
+
+The one thing that is this program's: **a Live Source and a Recording are what the no-mid-session
+rule is protecting here.** A parked build must never yank a streaming camera or a take in flight,
+which is why the bar only ever offers.
+
 ### Error handling
 
 Operational errors (Export, Copy, Recording, Chain import) use the `AppError` plain-object shape
@@ -342,7 +353,13 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - Everything else shared comes from `@cyberdeck/deck-kit` (ADR 0014): `recording` (`useRecording`,
   `formatElapsedTime`), `ui` (the primitives plus `EmptyStateHero`, `ErrorBoundary`,
   the toast hooks), `utils` (`cn`, `shareOrDownloadCanvas`,
-  `shareOrDownloadBlob`, `isTouchDevice`), `errors`
+  `shareOrDownloadBlob`, `isTouchDevice`), `errors`, `pwa` (`useAppUpdate`, `UpdateBanner`) and the
+  `precache-shell` build plugin beside it (ADR 0027)
+
+**Installing and offline** (ADR 0027) — the machinery is the kit's; this app owns only these two
+- `vite.config.ts` — `precacheShell({ cachePrefix: 'glitch-shell-' })`
+- `public/manifest.webmanifest` — hand-written. The kit's roster guard pins its `theme_color` to the
+  same token the `theme-color` meta carries, and checks every icon it names exists
 
 **Components**
 - `src/components/glitch-canvas.tsx` — lifecycle coordinator: drives the render, and owns the

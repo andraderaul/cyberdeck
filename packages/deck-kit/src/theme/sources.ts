@@ -1,5 +1,6 @@
 // The guards' impure half (ADR 0024): it finds the repository and reads files, so that `audit.ts`
-// can stay text-in / findings-out. Only the guard tests import this.
+// can stay text-in / findings-out. Only the guard tests import this — the Theme roster's, and the
+// cache-prefix guard that reads every program's Vite config (ADR 0027).
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
@@ -12,7 +13,7 @@ const APPS_FROM_ROOT = 'apps'
  * workspace from its own package root, but nothing guarantees that, and a guard that silently
  * reads no files is worse than one that cannot start.
  */
-function repoRoot(): string {
+export function repoRoot(): string {
   let dir = process.cwd()
   while (true) {
     if (existsSync(join(dir, TOKENS_FROM_ROOT))) {
