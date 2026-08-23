@@ -126,4 +126,40 @@ describe('computeFrame', () => {
       expect(instructions[0].color).toBe('#0066ff')
     })
   })
+
+  // The quantizer itself is `palette.test.ts`'s subject; these hold the wiring — that computeFrame
+  // derives a palette from the grid in front of it and paints every cell out of it.
+  describe('adaptive color mode', () => {
+    it('paints each cell the colour its own corner of the grid has', () => {
+      const grid = [
+        [makeCell('X', 250, 10, 10), makeCell('X', 240, 20, 20)],
+        [makeCell('X', 10, 10, 250), makeCell('X', 20, 20, 240)],
+      ]
+      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'adaptive' })
+      expect(instructions.map((i) => i.color)).toEqual([
+        'rgb(245,15,15)',
+        'rgb(245,15,15)',
+        'rgb(15,15,245)',
+        'rgb(15,15,245)',
+      ])
+    })
+
+    // Two grids, because one can only show that a palette arrived — never that it came from here.
+    it('re-derives when the grid changes', () => {
+      const asRed = [[makeCell('X', 220, 40, 40)]]
+      const asBlue = [[makeCell('X', 40, 40, 220)]]
+      const colorOf = (grid: AsciiCell[][]) =>
+        computeFrame(grid, { resolution: 12, colorMode: 'adaptive' }).instructions[0].color
+      expect(colorOf(asRed)).toBe('rgb(220,40,40)')
+      expect(colorOf(asBlue)).toBe('rgb(40,40,220)')
+    })
+
+    // A blank paints nothing, so no cell's colour is ever read off it — but the instruction still
+    // has to carry a colour rather than an undefined.
+    it('falls back to the neutral gray for a cell no painting cell shares a bin with', () => {
+      const grid = [[makeCell(' ', 10, 20, 30)]]
+      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'adaptive' })
+      expect(instructions[0].color).toBe('#c8c8e0')
+    })
+  })
 })
