@@ -245,9 +245,10 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/glitch/pipeline.ts` — the eight Effects: `blockDisplacement()`, `pixelSort()`, `wave()`,
   `channelShift()`, `chromaticAberration()`, `halftone()`, `scanlines()`, `noise()` — see ADR 0005.
   Halftone is the one that is neither structural nor surface: it re-quantizes, which is why the
-  canonical order sits it on the seam between the two (`CONTEXT.md`). Wave closes the structural
-  group — the only Effect that moves the image as a whole, along a continuous function, and the
-  second caller of the shared `sampleBilinear` resampler
+  canonical order sits it on the seam between the two (`CONTEXT.md`). Wave is the first of the
+  structural group's *whole-image* Effects — the only one that moves the picture as a whole, along a
+  continuous function — sitting after the discrete ones and ahead of the per-channel ones, and it is
+  the second caller of the shared `sampleBilinear` resampler
 - `src/glitch/chain.ts` — the composable Effect Chain (ADR 0017): `Chain`, `Link`, `EffectType`,
   `EffectParams`, `EFFECT_REGISTRY` (type → pure fn + `DEFAULT_*`), `applyChain()` (the fold),
   `createLink()`, and the pure editing helpers `addLink()` / `removeLink()` / `duplicateLink()` /

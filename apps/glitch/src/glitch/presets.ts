@@ -331,10 +331,11 @@ export function randomizeChain(source: Rng): Chain {
 /**
  * Where each Effect sits in the canonical order — structural (they move pixels) before surface
  * (they lay texture over them), with Halftone on the seam between the two, being neither
- * (CONTEXT.md). Wave closes the structural group: it is the only one that moves the picture as a
- * whole, so it carries whatever the discrete Effects left behind along the bend rather than being
- * flattened back onto the frame's grid by a sort that runs after it. Only the ranks' order carries
- * meaning; the numbers themselves carry none.
+ * (CONTEXT.md). The structural run itself reads discrete → whole-image → per-channel, which is the
+ * slot Wave takes: first of the whole-image ones, after the discrete Effects so it carries what
+ * they left behind along the bend rather than being flattened back onto the frame's grid by a sort
+ * that runs after it, and ahead of the per-channel ones so their split rides on the bent picture.
+ * Only the ranks' order carries meaning; the numbers themselves carry none.
  *
  * A Record over `EffectType` rather than a hand-kept list, so a newly registered Effect fails to
  * compile here instead of quietly missing from the add palette — the one failure that leaves an

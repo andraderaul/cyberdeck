@@ -236,12 +236,17 @@ function sampleBilinear(
  */
 export function wave(pixels: PixelBuffer, params: WaveParams): PixelBuffer {
   const { width, height, data } = pixels
-  const out = new Uint8ClampedArray(data)
   const amplitude = clampUnit(params.amplitude)
   if (amplitude <= 0) {
-    return { data: out, width, height }
+    return { data: new Uint8ClampedArray(data), width, height }
   }
 
+  // Allocated empty, where the other Effects seed their output from a copy of the input. That copy
+  // is load-bearing for the ones that write *partially* — Channel Shift touches one channel,
+  // Halftone leaves alpha to ride through — but this loop writes all four channels of every pixel,
+  // so copying first would be one full buffer thrown away per frame, on the Live Source's ~15fps
+  // loop (ADR 0002).
+  const out = new Uint8ClampedArray(data.length)
   const horizontal = params.axis === 'horizontal'
   // Measured against the span the lines travel along, so a wide frame bends further sideways than a
   // narrow one does and the look survives the sampling cap's aspect ratio.
@@ -276,6 +281,14 @@ export function wave(pixels: PixelBuffer, params: WaveParams): PixelBuffer {
       // Alpha rides along with the other three, unlike every other Effect here: this one *moves* a
       // pixel rather than tinting it, and a pixel that travelled without its own transparency would
       // pick up whatever transparency happened to sit where it landed.
+      //
+      // Blending RGB and alpha independently is only correct because the channels arrive
+      // **non-premultiplied and opaque**: the shell's `getImageData` read hands the core a fully
+      // opaque buffer (render-frame.ts), so no sample ever straddles an alpha edge. Across one,
+      // non-premultiplied bilinear would bleed a transparent pixel's colour into a visible
+      // neighbour — the classic halo — and this would need to premultiply, blend, and divide back
+      // out. Nothing upstream can produce such an edge today; a Source that could would have to
+      // arrive here already premultiplied.
       for (let channel = 0; channel < 4; channel++) {
         out[target + channel] = sampleBilinear(data, width, height, sourceX, sourceY, channel)
       }

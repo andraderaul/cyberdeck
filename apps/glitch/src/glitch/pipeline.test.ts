@@ -1166,8 +1166,12 @@ describe('wave', () => {
   })
 
   it('displaces columns instead of rows on the vertical axis', () => {
-    // Square, so the two axes span the same distance and the crest lands on the same offset.
-    const pixels = traceable(CREST_WIDTH, CREST_WIDTH)
+    // Deliberately *not* square, and with the crest-sized span on the axis the pixels travel along
+    // (height here, where the horizontal cases put it on width). A square fixture would pass even
+    // if `farthest` measured the wrong axis or the offsets were indexed by y instead of x — the two
+    // spans would agree and hide the swap. At 40 wide, a width-measured `farthest` would be 4.8px
+    // rather than 12, and a y-indexed lookup would run off the end of the 40-entry offset table.
+    const pixels = traceable(40, CREST_WIDTH)
 
     const out = wave(pixels, { ...BEND, axis: 'vertical' })
 
@@ -1209,9 +1213,15 @@ describe('wave', () => {
     )
   })
 
-  it('carries a pixel\u2019s alpha along with it', () => {
+  it('carries a pixel’s alpha along with it', () => {
     // Wave *moves* a pixel where the other Effects tint one, so its transparency has to travel with
     // it — left behind, a displaced pixel would inherit whatever alpha sat where it landed.
+    //
+    // The varying alpha here is the fixture that makes that visible, and is **not** a claim that
+    // arbitrary alpha is supported: the shell only ever hands the core an opaque buffer, and the
+    // sampler blends non-premultiplied channels, which would halo across a real alpha edge (see
+    // `wave` in pipeline.ts). Alpha rises with x and the assertion reads a crest well inside the
+    // frame, so no sample it checks lands on such an edge.
     const pixels = buildPixels(
       CREST_WIDTH,
       8,

@@ -14,14 +14,17 @@ Uma lista **ordenada e editável** de Links, cada um uma instância de Effect �
 `Block Displacement → Pixel Sort → Wave → Channel Shift → Chromatic Aberration → Halftone →
 Scanlines → Noise`
 
-**Wave fecha o grupo dos estruturais**, logo depois do Pixel Sort e antes do Channel Shift. Ele
-também reorganiza pixels, então é estrutural — mas é o único que move a imagem **inteira** ao longo
-de uma função contínua, e por isso vem por último entre eles: assim carrega junto na curva o que os
-discretos deixaram (os rasgos do Block Displacement, os rastros do Pixel Sort), em vez de ter a
-curva achatada de volta na grade do quadro por um sort que roda depois — o Pixel Sort percorre as
-linhas do quadro, não as linhas entortadas. E vem antes do Channel Shift e do Chromatic Aberration
-para que a separação de canais ande sobre a imagem já entortada: uma lente franja o que chegou até
-ela, e chegou torto.
+**Wave é o primeiro dos estruturais de imagem inteira**, logo depois do Pixel Sort e à frente dos
+por-canal (Channel Shift e Chromatic Aberration). O grupo dos estruturais se divide em três: os
+**discretos**, que recortam e movem pedaços (Block Displacement, Pixel Sort); os de **imagem
+inteira**, que deslocam tudo junto ao longo de uma função contínua (Wave); e os **por canal**, que
+movem cada canal por si (Channel Shift, Chromatic Aberration).
+
+Wave vem depois dos discretos porque assim carrega junto na curva o que eles deixaram — os rasgos
+do Block Displacement, os rastros do Pixel Sort — em vez de ter a curva achatada de volta na grade
+do quadro por um sort que roda depois: o Pixel Sort percorre as linhas **do quadro**, não as linhas
+entortadas. E vem antes dos por-canal para que a separação de canais ande sobre a imagem já
+entortada: uma lente franja o que chegou até ela, e chegou torto.
 
 **Halftone fica na emenda entre os dois grupos**, e não dentro de nenhum deles: ele não reorganiza
 pixels nem sobrepõe textura — ele **re-quantiza**, jogando fora o detalhe de cada célula e
