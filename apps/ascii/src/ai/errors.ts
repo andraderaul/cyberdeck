@@ -17,8 +17,17 @@ export class NetworkError extends Error {
 }
 
 export class ParseError extends Error {
-  constructor() {
-    super('Unexpected response from AI Provider')
+  /**
+   * `detail` names what could not be read — never shown to the user, who did not write the reply
+   * and cannot fix it, so `AnalysisModal` words every parse failure the same way. It exists so a
+   * bug report can say *which* part of the contract drifted, which the modal's copy never can.
+   */
+  constructor(detail?: string) {
+    super(
+      detail
+        ? `Unexpected response from AI Provider: ${detail}`
+        : 'Unexpected response from AI Provider',
+    )
     this.name = 'ParseError'
   }
 }

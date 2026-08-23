@@ -1,6 +1,12 @@
 import { normalizeError } from '@cyberdeck/deck-kit/errors'
 import { useRecording } from '@cyberdeck/deck-kit/recording'
-import { EmptyStateHero, ErrorBoundary, ThemeControl, useToastError } from '@cyberdeck/deck-kit/ui'
+import {
+  EmptyStateHero,
+  ErrorBoundary,
+  ThemeControl,
+  useToastError,
+  useToastInfo,
+} from '@cyberdeck/deck-kit/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { analyzeCanvas, toAnalysisState } from './ai/analysis-service'
 import type { AnalysisState } from './ai/types'
@@ -24,6 +30,15 @@ type ActiveModal =
   | { kind: 'analysis'; state: AnalysisState }
   | null
 
+/**
+ * What an applied suggestion displaced — the look the user was standing on, and which Preset they
+ * were standing on it *from*, since the chips track that rather than derive it.
+ */
+interface RevertPoint {
+  settings: ConversionSettings
+  presetId: string | null
+}
+
 const DEFAULT_SETTINGS: ConversionSettings = {
   resolution: 12,
   brightness: 1.0,
@@ -37,6 +52,7 @@ const DEFAULT_SETTINGS: ConversionSettings = {
 export default function App() {
   const [settings, setSettings] = useState<ConversionSettings>(DEFAULT_SETTINGS)
   const [activePresetId, setActivePresetId] = useState<string | null>(null)
+  const [revertPoint, setRevertPoint] = useState<RevertPoint | null>(null)
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
   const [sourceVideo, setSourceVideo] = useState<HTMLVideoElement | null>(null)
   const [asciiRows, setAsciiRows] = useState<string[]>([])
@@ -46,6 +62,7 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const showError = useToastError()
+  const showInfo = useToastInfo()
   const { config: aiConfig, save: saveAiConfig, remove: removeAiConfig } = useAIConfig()
 
   const handleSaveAiConfig = useCallback(
@@ -118,14 +135,43 @@ export default function App() {
     }
   }, [webcamState.error, showError])
 
+  // The revert offer expires with the first edit of the user's own: it undoes *this* apply, and
+  // once they have tuned on top of the suggestion, restoring the snapshot would throw that work
+  // away under a word that promised the opposite.
   const patchSettings = useCallback((patch: Partial<ConversionSettings>) => {
     setSettings((prev) => ({ ...prev, ...patch }))
+    setRevertPoint(null)
   }, [])
 
   const handlePresetSelect = useCallback((preset: Preset) => {
     setSettings(preset.settings)
     setActivePresetId(preset.id)
+    setRevertPoint(null)
   }, [])
+
+  // Only ever from the modal's apply — nothing here runs when an Analysis arrives (issue #308: the
+  // settings never move on their own). The displaced look is kept so the move is one chip away
+  // from being undone, no re-upload involved.
+  const handleApplySuggestion = useCallback(
+    (suggestion: ConversionSettings) => {
+      setRevertPoint({ settings, presetId: activePresetId })
+      setSettings(suggestion)
+      // The suggestion is nobody's Preset: leaving the old chip selected would mark it merely
+      // modified, when what happened is that the user left it.
+      setActivePresetId(null)
+      showInfo('suggested conversion applied — revert from the presets tab')
+    },
+    [settings, activePresetId, showInfo],
+  )
+
+  const handleRevert = useCallback(() => {
+    if (!revertPoint) {
+      return
+    }
+    setSettings(revertPoint.settings)
+    setActivePresetId(revertPoint.presetId)
+    setRevertPoint(null)
+  }, [revertPoint])
 
   const handleImage = useCallback(
     (img: HTMLImageElement) => {
@@ -251,6 +297,7 @@ export default function App() {
           activePresetId={activePresetId}
           onPresetSelect={handlePresetSelect}
           onSettingsChange={patchSettings}
+          onRevertSuggestion={revertPoint ? handleRevert : undefined}
         />
       )}
 
@@ -274,6 +321,7 @@ export default function App() {
           state={activeModal.state}
           onClose={() => setActiveModal(null)}
           onRetry={activeModal.state.status === 'parse-error' ? handleAnalyze : undefined}
+          onApplySuggestion={handleApplySuggestion}
         />
       )}
 

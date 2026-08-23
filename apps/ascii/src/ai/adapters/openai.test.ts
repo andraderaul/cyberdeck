@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthError, NetworkError, ParseError, QuotaError } from '../errors'
+import { SUGGESTION_SKELETON } from '../suggestion'
 import { OpenAIAdapter } from './openai'
+import { ANALYZE_MAX_TOKENS } from './shared'
 
 const mockCreate = vi.fn()
 
@@ -14,6 +16,18 @@ function makeAdapter() {
   return new OpenAIAdapter('test-key')
 }
 
+// The suggestion rides the same reply as the prose now (issue #308), so what this adapter has to
+// carry across the wire is the whole object — a payload without it would prove only the old half.
+const SUGGESTION = {
+  charset: 'braille',
+  colorMode: 'neon',
+  edgeGlyphs: true,
+  dithering: 'bayer',
+  resolution: 10,
+  brightness: 1.15,
+  contrast: 1.4,
+}
+
 function successResponse(json: object) {
   return { choices: [{ message: { content: JSON.stringify(json) } }] }
 }
@@ -24,7 +38,7 @@ describe('OpenAIAdapter', () => {
   })
 
   it('returns parsed JSON on successful response', async () => {
-    const payload = { description: 'test', threatLevel: 'LOW', tags: ['a'] }
+    const payload = { description: 'test', threatLevel: 'LOW', tags: ['a'], suggestion: SUGGESTION }
     mockCreate.mockResolvedValueOnce(successResponse(payload))
 
     const result = await makeAdapter().analyze('base64data')
@@ -66,5 +80,17 @@ describe('OpenAIAdapter', () => {
     mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: 'not json' } }] })
 
     await expect(makeAdapter().analyze('base64data')).rejects.toBeInstanceOf(ParseError)
+  })
+
+  // The request half of the contract: every test above would pass on an adapter that never asked
+  // for a suggestion, and an ask that drifts from the reader is a reply dropped on arrival.
+  it('asks for the suggestion, with the shared token budget to fit it', async () => {
+    mockCreate.mockResolvedValueOnce(successResponse({ ok: true }))
+
+    await makeAdapter().analyze('base64data')
+
+    const [request] = mockCreate.mock.calls[0]
+    expect(request.max_tokens).toBe(ANALYZE_MAX_TOKENS)
+    expect(request.messages[0].content[1].text).toContain(SUGGESTION_SKELETON)
   })
 })

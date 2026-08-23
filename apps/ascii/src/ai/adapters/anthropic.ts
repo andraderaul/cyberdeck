@@ -1,6 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { AIProvider } from '../types'
-import { ANALYZE_TIMEOUT_MS, mapHttpError, PROMPT, parseJsonOrThrow } from './shared'
+import {
+  ANALYZE_MAX_TOKENS,
+  ANALYZE_TIMEOUT_MS,
+  mapHttpError,
+  PROMPT,
+  parseJsonOrThrow,
+} from './shared'
 
 export class AnthropicAdapter implements AIProvider {
   private client: Anthropic
@@ -16,7 +22,7 @@ export class AnthropicAdapter implements AIProvider {
       response = await this.client.messages.create(
         {
           model: 'claude-opus-4-7',
-          max_tokens: 256,
+          max_tokens: ANALYZE_MAX_TOKENS,
           messages: [
             {
               role: 'user',

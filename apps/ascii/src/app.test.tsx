@@ -28,10 +28,14 @@ vi.mock('@cyberdeck/deck-kit/recording', () => ({
   })),
 }))
 
+// Hoisted above the mock factory that closes over it — `vi.mock` runs before the module body.
+const { mockShowInfo } = vi.hoisted(() => ({ mockShowInfo: vi.fn() }))
+
 // EmptyStateHero now lives in the kit (ADR 0015); stub it here as the app's Source entry probe.
 vi.mock('@cyberdeck/deck-kit/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@cyberdeck/deck-kit/ui')>()),
   useToastError: vi.fn(() => vi.fn()),
+  useToastInfo: vi.fn(() => mockShowInfo),
   ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   EmptyStateHero: ({
@@ -52,12 +56,26 @@ vi.mock('@cyberdeck/deck-kit/ui', async (importOriginal) => ({
   ),
 }))
 
-vi.mock('./components/ascii-canvas', () => ({ default: () => <canvas /> }))
+// The ref is forwarded because Analyze reads the canvas off it — without it `handleAnalyze`
+// returns before it ever reaches a Provider.
+vi.mock('./components/ascii-canvas', () => ({
+  default: ({ canvasRef }: { canvasRef: React.RefObject<HTMLCanvasElement> }) => (
+    <canvas ref={canvasRef} />
+  ),
+}))
 
+vi.mock('./ai/analysis-service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./ai/analysis-service')>()),
+  analyzeCanvas: vi.fn(),
+}))
+
+import { analyzeCanvas } from './ai/analysis-service'
 import { useAIConfig } from './ai/use-ai-config'
+import type { ConversionSettings } from './ascii/types'
 import { useWebcamState } from './hooks/use-webcam-state'
 
 const mockUseAIConfig = vi.mocked(useAIConfig)
+const mockAnalyzeCanvas = vi.mocked(analyzeCanvas)
 const mockUseWebcamState = vi.mocked(useWebcamState)
 
 const mockAIConfig: AIConfig = {
@@ -227,5 +245,123 @@ describe('the empty-state footer', () => {
     render(<App />)
     fireEvent.click(screen.getByText('hero'))
     expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument()
+  })
+})
+
+describe('the Analysis suggestion', () => {
+  // Nothing in DEFAULT_SETTINGS, so applying it is visible on every axis the EDIT tab shows.
+  const SUGGESTION: ConversionSettings = {
+    charset: 'braille',
+    colorMode: 'neon',
+    edgeGlyphs: true,
+    dithering: 'bayer',
+    resolution: 10,
+    brightness: 1.15,
+    contrast: 1.4,
+  }
+
+  beforeEach(() => {
+    mockShowInfo.mockClear()
+    mockUseAIConfig.mockReturnValue({ config: mockAIConfig, save: vi.fn(), remove: vi.fn() })
+    mockAnalyzeCanvas.mockResolvedValue({
+      description: 'a lone figure',
+      threatLevel: 'HIGH',
+      tags: ['NOMAD'],
+      suggestion: SUGGESTION,
+    })
+  })
+
+  afterEach(() => {
+    mockAnalyzeCanvas.mockReset()
+    mockUseAIConfig.mockReturnValue({ config: null, save: vi.fn(), remove: vi.fn() })
+  })
+
+  async function analyze() {
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    openOut()
+    fireEvent.click(screen.getByRole('button', { name: /analyze/i }))
+    return screen.findByRole('button', { name: 'apply' })
+  }
+
+  function openCharsetTab() {
+    fireEvent.click(screen.getByRole('tab', { name: 'edit' }))
+  }
+
+  it('leaves the settings where they were until the user applies', async () => {
+    await analyze()
+    fireEvent.click(screen.getByRole('button', { name: 'close' }))
+
+    openCharsetTab()
+
+    expect(screen.getByRole('button', { name: 'sharp' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'braille' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('applies every suggested axis at once when asked', async () => {
+    const apply = await analyze()
+    fireEvent.click(apply)
+
+    openCharsetTab()
+    expect(screen.getByRole('button', { name: 'braille' })).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(screen.getByRole('button', { name: 'edge glyphs' }))
+    expect(screen.getByRole('button', { name: 'on' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('puts the displaced settings back from the presets tab, with no Source re-upload', async () => {
+    const apply = await analyze()
+    fireEvent.click(apply)
+
+    fireEvent.click(screen.getByRole('tab', { name: 'presets' }))
+    fireEvent.click(screen.getByRole('button', { name: 'revert suggestion' }))
+
+    openCharsetTab()
+    expect(screen.getByRole('button', { name: 'sharp' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('withdraws the revert offer once the user edits on top of the suggestion', async () => {
+    const apply = await analyze()
+    fireEvent.click(apply)
+
+    openCharsetTab()
+    fireEvent.click(screen.getByRole('button', { name: 'box' }))
+
+    fireEvent.click(screen.getByRole('tab', { name: 'presets' }))
+    expect(screen.queryByRole('button', { name: 'revert suggestion' })).not.toBeInTheDocument()
+  })
+
+  // The apply closes the modal, so the canvas is the only other feedback — and it can't say where
+  // the undo lives.
+  it('says what happened and where to undo it', async () => {
+    const apply = await analyze()
+    expect(mockShowInfo).not.toHaveBeenCalled()
+
+    fireEvent.click(apply)
+
+    expect(mockShowInfo).toHaveBeenCalledWith(expect.stringContaining('presets'))
+  })
+
+  it('keeps the prose when the suggestion was dropped, and offers no apply', async () => {
+    mockAnalyzeCanvas.mockResolvedValue({
+      description: 'a lone figure',
+      threatLevel: 'HIGH',
+      tags: ['NOMAD'],
+    })
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    openOut()
+    fireEvent.click(screen.getByRole('button', { name: /analyze/i }))
+
+    expect(await screen.findByText('a lone figure')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'apply' })).not.toBeInTheDocument()
+  })
+
+  it('offers no revert before anything has been applied', () => {
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+
+    fireEvent.click(screen.getByRole('tab', { name: 'presets' }))
+    expect(screen.queryByRole('button', { name: 'revert suggestion' })).not.toBeInTheDocument()
   })
 })

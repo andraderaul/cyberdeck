@@ -1,17 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthError, NetworkError, ParseError, QuotaError } from '../errors'
+import { SUGGESTION_SKELETON } from '../suggestion'
 import { GeminiAdapter } from './gemini'
+import { ANALYZE_MAX_TOKENS } from './shared'
 
 const mockGenerateContent = vi.fn()
+const mockGetGenerativeModel = vi.fn(() => ({ generateContent: mockGenerateContent }))
 
 vi.mock('@google/generative-ai', () => ({
   GoogleGenerativeAI: vi.fn().mockImplementation(() => ({
-    getGenerativeModel: vi.fn().mockReturnValue({ generateContent: mockGenerateContent }),
+    getGenerativeModel: mockGetGenerativeModel,
   })),
 }))
 
 function makeAdapter() {
   return new GeminiAdapter('test-key')
+}
+
+// The suggestion rides the same reply as the prose now (issue #308), so what this adapter has to
+// carry across the wire is the whole object — a payload without it would prove only the old half.
+const SUGGESTION = {
+  charset: 'braille',
+  colorMode: 'neon',
+  edgeGlyphs: true,
+  dithering: 'bayer',
+  resolution: 10,
+  brightness: 1.15,
+  contrast: 1.4,
 }
 
 function successResponse(text: string) {
@@ -21,10 +36,11 @@ function successResponse(text: string) {
 describe('GeminiAdapter', () => {
   beforeEach(() => {
     mockGenerateContent.mockReset()
+    mockGetGenerativeModel.mockClear()
   })
 
   it('returns parsed JSON on successful response', async () => {
-    const payload = { description: 'test', threatLevel: 'LOW', tags: ['a'] }
+    const payload = { description: 'test', threatLevel: 'LOW', tags: ['a'], suggestion: SUGGESTION }
     mockGenerateContent.mockResolvedValueOnce(successResponse(JSON.stringify(payload)))
 
     const result = await makeAdapter().analyze('base64data')
@@ -33,7 +49,12 @@ describe('GeminiAdapter', () => {
   })
 
   it('strips ```json markdown wrapper before parsing', async () => {
-    const payload = { description: 'test', threatLevel: 'HIGH', tags: ['b'] }
+    const payload = {
+      description: 'test',
+      threatLevel: 'HIGH',
+      tags: ['b'],
+      suggestion: SUGGESTION,
+    }
     const wrapped = `\`\`\`json\n${JSON.stringify(payload)}\n\`\`\``
     mockGenerateContent.mockResolvedValueOnce(successResponse(wrapped))
 
@@ -91,5 +112,18 @@ describe('GeminiAdapter', () => {
     mockGenerateContent.mockRejectedValueOnce({ status: 429, message: 'API_KEY_INVALID' })
 
     await expect(makeAdapter().analyze('base64data')).rejects.toBeInstanceOf(QuotaError)
+  })
+
+  // The request half of the contract: every test above would pass on an adapter that never asked
+  // for a suggestion, and an ask that drifts from the reader is a reply dropped on arrival.
+  it('asks for the suggestion, with the shared token budget to fit it', async () => {
+    mockGenerateContent.mockResolvedValueOnce(successResponse(JSON.stringify({ ok: true })))
+
+    await makeAdapter().analyze('base64data')
+
+    expect(mockGetGenerativeModel).toHaveBeenCalledWith(
+      expect.objectContaining({ generationConfig: { maxOutputTokens: ANALYZE_MAX_TOKENS } }),
+    )
+    expect(mockGenerateContent.mock.calls[0][0][1]).toContain(SUGGESTION_SKELETON)
   })
 })
