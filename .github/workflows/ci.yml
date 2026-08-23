@@ -46,6 +46,52 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  # Separate from Build on purpose, and for the same reason e2e is separate from Test: a build that
+  # breaks and a build that merely got fatter are unrelated failures, and one check name could not
+  # say which. Its own job also means the size report is a log a reviewer can open directly.
+  bundle:
+    name: Bundle budget
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+      # The delta is what makes the report useful in review — "this PR costs 4 kB" rather than "the
+      # bundle is 76 kB". It needs the base branch built too, so the base is checked out beside the
+      # head build and measured into a JSON the check below reads.
+      #
+      # `continue-on-error` because the delta is informational and the ceiling is not: a base that
+      # fails to build (or a first PR from a branch point that predates this script) must degrade to
+      # a report without a delta, never to a green check that measured nothing.
+      #
+      # `.bundle-base` sits inside the workspace because `actions/checkout` cannot place a checkout
+      # outside it. It is not a workspace of the root package — the globs are `apps/*` and
+      # `packages/*` — so the root `npm ci` above never sees it.
+      - name: Check out the base branch
+        if: ${{ github.event_name == 'pull_request' }}
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .bundle-base
+
+      - name: Measure the base branch
+        if: ${{ github.event_name == 'pull_request' }}
+        continue-on-error: true
+        working-directory: .bundle-base
+        run: |
+          npm ci
+          npm run build
+          node "$GITHUB_WORKSPACE/scripts/bundle-budget.mjs" --root . --emit "$RUNNER_TEMP/base-bundle.json"
+
+      - name: Check the ceilings
+        run: node scripts/bundle-budget.mjs --baseline "$RUNNER_TEMP/base-bundle.json"
+
   # Separate from Test on purpose: these two suites fail for unrelated reasons — a unit regression
   # against a component, or a built artifact that renders wrong while every unit test still passes
   # — and a single job would make the check name say nothing about which. The harness builds the

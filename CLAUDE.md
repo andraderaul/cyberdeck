@@ -76,6 +76,10 @@ npm run check:fix    # biome check . --write
 npm run lint         # biome lint .
 npm run format       # biome format . --write
 
+# after a build, on the .nvmrc Node: gzipped chunk sizes per app against the ceilings in
+# `bundle-budget.config.mjs`, whose header is the canonical account of the design.
+npm run bundle:budget
+
 npm run changeset    # add a changeset (see Releases)
 
 # the committed social assets — every program's favicon set and its 1200x630 card

@@ -26,10 +26,17 @@ npm run build               # build every app
 npm run test:run            # run every app's tests once
 npm run test:e2e            # smoke E2E against ASCII//Convert's built output (Playwright)
 npm run check               # Biome lint + format, repo-wide
+npm run bundle:budget       # gzipped size of every app's build, against its ceiling
 ```
 
 `test:e2e` builds the app and serves `dist` itself; the browser is a one-off
 `npx playwright install chromium`.
+
+`bundle:budget` reads the `dist/` a `npm run build` left behind, so run the build first — on the
+Node in `.nvmrc`, since zlib's deflate differs between majors and the ceilings were measured there
+(the script warns if it does not match). CI runs the same check on every PR and prints the delta
+against the base branch. The ceilings, and why there are two of them per app, are in
+[`bundle-budget.config.mjs`](./bundle-budget.config.mjs).
 
 Scope any app script with `--workspace @cyberdeck/ascii`.
 

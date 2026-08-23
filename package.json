@@ -19,6 +19,7 @@
     "test:run": "npm run test:run --workspaces --if-present",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "test:e2e": "playwright test",
+    "bundle:budget": "node scripts/bundle-budget.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "check": "biome check .",
     "check:fix": "biome check . --write",
