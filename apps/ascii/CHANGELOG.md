@@ -1,5 +1,62 @@
 ## [1.25.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.24.0...v1.25.0) (2026-07-16)
 
+## 1.31.0
+
+### Minor Changes
+
+- d97b7fd: Add the `adaptive` Color Mode: the palette is quantized from the Source itself, so the art comes back recoloured in its own colours rather than in a preset's. The colour cube is cut into a fixed 4×4×4 lattice and each cell is painted the mean of the bin it falls in — never the nearest of a ranked few, which would be a Voronoi over data-dependent means and would move the partition with the picture. Because the bin edges are constants, the palette is recomputed on every frame, a Live Source included: one held from a webcam's first frame would paint the whole session in the colours of one dark, warming-up frame. Preview, PNG Export, TXT Export and HTML Export all read the one grid, so they agree by construction.
+- 8a7b8a2: HTML Export: the result as coloured, selectable text.
+
+  PNG Export keeps the colour and destroys the text; TXT Export keeps the text and drops the colour.
+  The OUT tab now carries a third format that keeps both — a self-contained HTML document where every
+  cell is real text inside a `<pre>`, painted with the colour its Color Mode gave it. It embeds its
+  own font stack and fetches nothing, so a viewer opening it offline sees what the preview showed, and
+  the art selects and copies with its line breaks and column alignment intact.
+
+- beb3fc4: ASCII//Convert installs, and it runs with the network off. It always could — nothing here fetches
+  anything at runtime, and the conversion has only ever happened on your machine — but the browser was
+  never told to keep the bytes. Now it is: a web app manifest makes the program installable under its
+  own mark, and a service worker precaches the whole shell on the first visit, so the second one opens
+  and converts with no network at all. Installed, it opens standalone on the same near-black the page
+  paints.
+
+  A new version never takes over a session in progress. It installs quietly behind the one you are
+  using — a Recording in flight is never yanked — and runs the next time you open the program, or
+  right away if you take the offer that appears under the header. The AI Analysis call is left alone
+  entirely: it is not this deploy's, so the worker never touches it, and no reply of your provider's
+  is ever served from a cache.
+
+- bbab400: Dithering: a Bayer or Floyd–Steinberg pass over the sampled grid before the Charset buckets a cell, so a coarse Charset carries a gradient instead of banding it — pick it from the EDIT tab, `none` by default and unchanged from today.
+- 473aeb2: Edge Glyphs: where the local gradient reads as a contour, the cell takes a directional character instead of a brightness one — a shape axis beside the Charset's ramp, opt-in from the EDIT tab and off by default.
+- 5fa1e1b: A Charset can now be authored. The EDIT tab's charset panel ends in a field where you write your
+  own ramp, darkest to lightest, and the canvas follows every keystroke — the converter always
+  accepted any such string and only the UI withheld it. A ramp under two characters is refused with
+  the reason rather than applied, so the picture keeps the last Charset that read cleanly instead of
+  flickering through half-typed ones, and the ramp is indexed by glyph rather than by UTF-16 unit, so
+  a character past the BMP arrives whole in the preview and in all three Exports.
+- 337f442: The AI Analysis now proposes the ConversionSettings for the image it just described, on the same
+  round trip: charset, edge glyphs, color mode, resolution, brightness and contrast, laid out in the
+  scan modal with one `apply`. Nothing moves on its own — applying is the click, and what it displaced
+  comes back from a `revert` chip in the PRESETS tab until you start editing on top of it. A
+  suggestion naming a Charset or Color Mode that doesn't exist, or a number the sliders couldn't
+  reach, is refused rather than coerced — the scan still reports, it simply offers nothing.
+
+### Patch Changes
+
+- bf2b5e9: A tab, an install prompt and a shared link now show ASCII//Convert rather than the stock Vite mark
+  and a bare URL. The program has its own favicon (the `▓` density block, drawn so it survives 16px)
+  in the sizes a browser tab, an iOS home screen and an install prompt each ask for, a description
+  written from the reader's side, and an Open Graph / Twitter card whose picture is a frame of what
+  the program does: a lit sphere sampled onto the `.:-=+*#%@` Charset. `theme-color` matches the
+  Theme the pre-paint script paints, so the browser chrome no longer flashes a different colour.
+- b39f63d: The hidden sampling canvas (ADR 0001) is cleared before the Source is drawn into it. Canvas 2D's
+  `drawImage` composites source-over, so a Source carrying an alpha channel blended onto whatever the
+  previous conversion had left there, and the cells depended on how many renders came before rather
+  than on the ConversionSettings alone. An opaque Source could never drift this way, which is what
+  kept it hidden.
+- Updated dependencies [5df832a]
+  - @cyberdeck/deck-kit@0.6.0
+
 ## 1.30.5
 
 ### Patch Changes
