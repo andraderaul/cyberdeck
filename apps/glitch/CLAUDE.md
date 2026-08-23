@@ -242,13 +242,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   `MAX_BLOCK_SHIFT_RATIO`, `MAX_BLOCK_HEIGHT_RATIO`, `MIN_BLOCK_WIDTH_RATIO`,
   `ChromaticAberrationParams`, `DEFAULT_CHROMATIC_ABERRATION`,
   `MAX_CHROMATIC_ABERRATION_MAGNIFICATION`,
-<<<<<<< HEAD
-  `HalftoneParams`, `HalftoneTint`, `DEFAULT_HALFTONE`, `HALFTONE_MAX_DOT_RADIUS_RATIO`,
-  `WaveParams`, `WAVE_AXES` / `WaveAxis`, `DEFAULT_WAVE`, `MAX_WAVE_AMPLITUDE_RATIO`,
-=======
   `HalftoneParams`, `HALFTONE_TINTS` / `HalftoneTint`, `DEFAULT_HALFTONE`,
   `HALFTONE_MAX_DOT_RADIUS_RATIO`,
->>>>>>> 18cdbd1 (refactor(glitch): derive each choice union from the tuple that lists it)
+  `WaveParams`, `WAVE_AXES` / `WaveAxis`, `DEFAULT_WAVE`, `MAX_WAVE_AMPLITUDE_RATIO`,
   `DEFAULT_CHANNEL_SHIFT`,
   `CHANNEL_SHIFT_AMOUNT_RANGE`, `PIXEL_SORT_RUN_LENGTH_RANGE`, `HALFTONE_CELL_SIZE_RANGE`,
   `WAVE_WAVELENGTH_RANGE` (the
