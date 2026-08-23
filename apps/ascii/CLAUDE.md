@@ -101,9 +101,11 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/ascii/types.ts` — `ConversionSettings`, `ColorMode`, `Charset`, `CHARSET_MAPS`, `AsciiCell`
 - `src/ascii/converter.ts` — `convertImage()`, `getAsciiChar()`, luminosity math, and the two
   opt-in passes over the sampled grid (both pure, ADR 0005): the Dithering, then the Edge Glyph
-  (Sobel). That order is load-bearing and the file says why — a Dithering *manufactures* the
-  sharp neighbour differences Sobel hunts for, so the gradient reads the undithered luminance and
-  its stroke wins over whatever character the pattern chose
+  (Sobel). That order is load-bearing and the file says why — a Dithering *manufactures* the sharp
+  neighbour differences Sobel hunts for, so the gradient reads the undithered luminance and its
+  stroke wins over whatever character the pattern chose. Measured, it is `floyd` that would invent
+  contours (a flat field comes back with two dozen); `bayer`'s swing reaches only ~71 of the 255 the
+  threshold wants, so the rule is free for it today and stated for both anyway
 - `src/ascii/image-utils.ts` — `resizeImage()` (caps Source Image at 800px wide before sampling)
 - `src/ascii/renderer.ts` — `computeFrame()` (pure), `paintFrame()` (side effects) — see ADR 0005.
   `CANVAS_BACKGROUND` is the ground both the canvas and the HTML Export stand on: the user's art,

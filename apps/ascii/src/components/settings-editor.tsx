@@ -210,7 +210,7 @@ export default function SettingsEditor({ settings, onChange }: Props) {
       <ToolPanel
         label="dithering"
         tooltipId="tooltip-dithering"
-        tooltip="trades a hard bucket edge for a pattern, so few characters still carry a gradient"
+        tooltip="trades a hard bucket edge for a pattern, so few characters still carry a gradient — reads brighter, because the plain mapping rounds every cell down"
       >
         <ToggleGroup
           ariaLabel="dithering"

@@ -86,8 +86,11 @@ const FLOYD_DIFFUSION = [
  * been visited yet, and that dependence is exactly why the pass is a grid transform and not a
  * per-cell function the sampling loop could call.
  *
- * Diffusion stops at the fit region, never at the grid: a letterboxed Source would otherwise pour
- * its error into the void bands and lose it (ADR 0010).
+ * The pass is confined to the fit region, never the grid — the loop bounds keep the void bands from
+ * seeding it and the neighbour guard keeps its error from landing in them (ADR 0010). Neither half
+ * shows up on its own, because a void cell reads 0 and quantises with no error to pass on; together
+ * they are what makes a letterboxed Source dither exactly as the same Source does at full bleed,
+ * which is the property the tests hold.
  */
 function ditherLuma(
   luma: number[],
@@ -101,6 +104,13 @@ function ditherLuma(
   const out = luma.slice()
 
   if (dithering === 'bayer') {
+    // The tile's phase is taken from the absolute grid position, not from the fit region's origin,
+    // so a Source whose letterbox bands change width — a resize, a camera switch — lands on a
+    // different phase and its pattern shifts by a cell or two. Deliberate: phase relative to the
+    // region would instead move the pattern across the *picture* every time the bands moved, and
+    // an absolute tile is the one that stays put under the thing being drawn. It does mean bayer
+    // is the one Dithering whose output is not invariant to the letterbox, and a test says so.
+    //
     // The offset spans a whole bucket and is entirely *positive*, which reads like a brightening
     // and is really the correction for `charIndex` flooring: a cell three quarters of the way up
     // its bucket has to take the next character on twelve of the tile's sixteen turns for the
@@ -328,14 +338,22 @@ export function convertImage(
     return result
   }
 
-  // Dithering first, Edge Glyphs second — and the order is the whole point, because both passes
-  // read the same sampled grid and only one of them may see the other's work. Sobel asks whether
-  // neighbouring cells differ sharply, and Dithering's entire job is to *make* neighbouring cells
-  // differ, by a bucket, everywhere the picture is smooth. Feed a dithered grid to the gradient
-  // and a clear sky comes back stroked like chain-link: the pattern would read as contour, which
-  // is precisely what it is not. So the Edge Glyph pass keeps reading the undithered luminance,
-  // and where it finds a contour its stroke replaces whatever character the Dithering chose — the
-  // shape axis stays the outer one, as it was before this pass existed.
+  // Dithering first, Edge Glyphs second, and the gradient reads `luma` — the *undithered* grid —
+  // because both passes read the same sampled cells and only one of them may see the other's work.
+  // Sobel asks whether neighbouring cells differ sharply and a Dithering's whole job is to *make*
+  // neighbouring cells differ, by up to a bucket, everywhere the picture is smooth.
+  //
+  // How much that costs depends on the algorithm, and the honest answer is not the same for both.
+  // Bayer's tile is too small a swing to reach the magnitude threshold in any Charset — measured,
+  // the most it can drive the kernel to is ~71 of the 255 a contour needs, in `binary`, the
+  // coarsest ramp there is. Floyd–Steinberg is a different matter: its error runs along a row and
+  // accumulates, and fed to the gradient it turns a *flat* field into two dozen contours that are
+  // not in the Source at all. So the order is load-bearing for one of the two today and free for
+  // the other, and it is written down as the rule for both — the threshold is a tuned constant and
+  // bayer's headroom is not a guarantee anybody should have to re-derive.
+  //
+  // Where the gradient does find a contour, its stroke replaces whatever character the Dithering
+  // chose: the shape axis stays the outer one, as it was before this pass existed.
   if (dithering !== 'none') {
     const dithered = ditherLuma(luma, cols, region, charset, dithering)
     for (let row = offsetY; row < offsetY + dRows; row++) {

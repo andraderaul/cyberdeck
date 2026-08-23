@@ -64,6 +64,35 @@ describe('PRESETS', () => {
       expect(settingsMatch(base, { ...base, dithering: 'bayer' })).toBe(false)
     })
 
+    // settingsMatch compares field by field, so a ConversionSettings key nobody remembers to add
+    // to it is missed in silence — the Preset chip simply stays lit through an edit that changed
+    // the picture. That has now happened twice (edgeGlyphs, then dithering), which is twice more
+    // than a comparison should be allowed to fail quietly.
+    //
+    // The mapped type is the half that does the work: adding a key to ConversionSettings stops
+    // this file compiling until the key is given a different value here, and the loop then fails
+    // until settingsMatch actually compares it. There is no way to add a field and still ship a
+    // comparison that ignores it.
+    const A_DIFFERENT_VALUE: { [K in keyof ConversionSettings]: ConversionSettings[K] } = {
+      resolution: 18,
+      brightness: 1.75,
+      contrast: 2.5,
+      colorMode: 'neon',
+      charset: 'katakana',
+      edgeGlyphs: true,
+      dithering: 'floyd',
+    }
+
+    it('notices a difference in every field ConversionSettings has', () => {
+      const keys = Object.keys(A_DIFFERENT_VALUE) as (keyof ConversionSettings)[]
+
+      for (const key of keys) {
+        // Guards the table itself: a value equal to the base would make its row vacuous.
+        expect(A_DIFFERENT_VALUE[key]).not.toBe(base[key])
+        expect(settingsMatch(base, { ...base, [key]: A_DIFFERENT_VALUE[key] })).toBe(false)
+      }
+    })
+
     it('is not fooled by key-ordering differences that would confuse JSON.stringify', () => {
       const reordered = {
         contrast: base.contrast,
