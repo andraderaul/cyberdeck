@@ -73,7 +73,12 @@ describe('PRESETS', () => {
     // this file compiling until the key is given a different value here, and the loop then fails
     // until settingsMatch actually compares it. There is no way to add a field and still ship a
     // comparison that ignores it.
-    const A_DIFFERENT_VALUE: { [K in keyof ConversionSettings]: ConversionSettings[K] } = {
+    //
+    // `-?` is load-bearing, for the reason `SUGGESTION_FIELDS` carries it (#347): a homomorphic
+    // mapped type inherits optionality from its source, so the day an axis turns into
+    // `edgeGlyphs?: boolean` this map would accept the missing entry and the guarantee above would
+    // quietly stop holding.
+    const A_DIFFERENT_VALUE: { [K in keyof ConversionSettings]-?: ConversionSettings[K] } = {
       resolution: 18,
       brightness: 1.75,
       contrast: 2.5,

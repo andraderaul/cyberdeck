@@ -252,7 +252,7 @@ describe('SettingsEditor', () => {
       }
     })
 
-    it('single-color modes render a swatch with a solid background', () => {
+    it('a themed palette renders its one fixed colour as the swatch background', () => {
       renderEditor()
       focusTool('color mode')
 
@@ -262,7 +262,9 @@ describe('SettingsEditor', () => {
       expect(swatch.style.background || swatch.style.backgroundColor).toBeTruthy()
     })
 
-    it('gradient color modes render a swatch with a gradient background', () => {
+    // Named for the derivation, like the row itself: a gradient swatch is not what marks this row
+    // out — `original` and `adaptive` draw one too, from inside the non-dual row.
+    it('a dual mode renders its pair as a gradient swatch', () => {
       renderEditor()
       focusTool('color mode')
 
@@ -274,12 +276,14 @@ describe('SettingsEditor', () => {
       }
     })
 
-    it('original color mode renders a multicolor gradient swatch', () => {
+    // The two modes whose colours come out of the Source: their chips can only depict what the mode
+    // does, so each one's swatch is a hand-drawn gradient rather than the mode's own palette.
+    it.each(['original', 'adaptive'])('%s renders a multicolor gradient swatch', (mode) => {
       renderEditor()
       focusTool('color mode')
 
       const swatch = screen
-        .getByRole('button', { name: 'original' })
+        .getByRole('button', { name: mode })
         .querySelector('[data-swatch]') as HTMLElement
       expect(swatch.style.background).toContain('gradient')
     })

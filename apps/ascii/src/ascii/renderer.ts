@@ -1,4 +1,5 @@
 import { computeLuminosity } from './converter'
+import { paletteColor, quantizePalette } from './palette'
 import {
   type AsciiCell,
   type ColorMode,
@@ -39,9 +40,12 @@ export const DUAL_COLOR_MODES: Partial<Record<ColorMode, DualColorPair>> = {
   infrared: ['#ff4500', '#0066ff'],
 }
 
+/** What a mode with no fixed colour of its own falls back to — `bw`'s gray, spelled once. */
+const FALLBACK_COLOR = '#c8c8e0'
+
 /** Single accessor so the fallback gray lives in one place. */
 export function getModePalette(mode: ColorMode): string | DualColorPair {
-  return DUAL_COLOR_MODES[mode] ?? COLOR_MODE_COLORS[mode] ?? '#c8c8e0'
+  return DUAL_COLOR_MODES[mode] ?? COLOR_MODE_COLORS[mode] ?? FALLBACK_COLOR
 }
 
 /**
@@ -59,13 +63,20 @@ export function computeFrame(
   const instructions: RenderInstruction[] = []
   const asciiRows: string[] = []
 
+  // Both hoisted out of the cell loop: the Color Mode is one decision per frame, and this loop runs
+  // over every cell of every frame of a Live Source. `adaptive` reads the whole grid before the loop
+  // starts — the palette is the picture's own, so there is nothing per-cell to derive it from.
+  const palette = colorMode === 'adaptive' ? quantizePalette(cells) : null
+  const dualColors = DUAL_COLOR_MODES[colorMode]
+
   for (let row = 0; row < cells.length; row++) {
     let line = ''
     for (let col = 0; col < cells[row].length; col++) {
       const cell = cells[row][col]
-      const dualColors = DUAL_COLOR_MODES[colorMode]
       let color: string
-      if (dualColors) {
+      if (palette) {
+        color = paletteColor(palette, cell) ?? FALLBACK_COLOR
+      } else if (dualColors) {
         color =
           computeLuminosity(cell.r, cell.g, cell.b) >= DUAL_COLOR_LUM_THRESHOLD
             ? dualColors[0]
@@ -73,7 +84,7 @@ export function computeFrame(
       } else if (colorMode === 'original') {
         color = `rgb(${cell.r},${cell.g},${cell.b})`
       } else {
-        color = COLOR_MODE_COLORS[colorMode] ?? '#c8c8e0'
+        color = COLOR_MODE_COLORS[colorMode] ?? FALLBACK_COLOR
       }
       instructions.push({ char: cell.char, x: col * charW, y: row * charH, color })
       line += cell.char

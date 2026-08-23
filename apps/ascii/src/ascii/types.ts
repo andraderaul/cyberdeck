@@ -5,6 +5,7 @@ export const COLOR_MODES = [
   'sepia',
   'neon',
   'original',
+  'adaptive',
   'synthwave',
   'matrix-dual',
   'acid',

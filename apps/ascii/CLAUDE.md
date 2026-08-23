@@ -103,6 +103,7 @@ Use these terms precisely — avoid the listed alternatives:
 | **ConversionSettings** | All conversion params (charset, edgeGlyphs, dithering, colorMode, resolution, brightness, contrast) | options, settings |
 | **AsciiCell** | Atomic unit: one character + its original RGB | ProcessedPixel |
 | **Color Mode** | Colorization scheme applied during render | colorMode as domain term |
+| **Adaptive** | The one Color Mode that brings no colour of its own — a cell is painted the mean of the fixed lattice bin it is in, so the art comes back in its own colours; recomputed per frame, Live Source included | auto color, k-means, median cut, nearest-of-N |
 | **Resolution** | Chars-per-canvas (controlled by character size) | fontSize, granularity |
 | **Export** | Taking the result out (PNG, TXT or HTML) | download |
 | **HTML Export** | Self-contained document holding the characters *and* their colours as selectable text | SVG Export, web export |
@@ -141,6 +142,18 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   stroke wins over whatever character the pattern chose. Measured, it is `floyd` that would invent
   contours (a flat field comes back with two dozen); `bayer`'s swing reaches only ~71 of the 255 the
   threshold wants, so the rule is free for it today and stated for both anyway
+- `src/ascii/palette.ts` — `quantizePalette()`, `paletteColor()`: the `adaptive` Color Mode's
+  quantizer, pure over the AsciiCell grid (ADR 0005) and called only by `computeFrame()`. A cell is
+  painted the mean of the fixed 4×4×4 lattice bin it is *in*, never the nearest of a ranked few —
+  and that distinction is the file's whole subject, because the rejected shape reads like the same
+  idea. Nearest-of-six is a Voronoi over six data-dependent means, so the partition moves with the
+  picture after all; the measurement that killed it lives in `quantizePalette`'s own JSDoc and
+  `palette.test.ts` holds the reproduction. Constant bin edges are what make the palette safe to
+  recompute on **every frame** of a Live Source, which is the behaviour it chose over holding one
+  per Source; the price, named rather than hidden, is a posterisation of up to 64 colours
+  instead of a handful. Nothing in
+  this path may read a Theme token — a Color Mode paints the user's art (ADR 0013, ADR 0024), and
+  here every colour came out of the Source itself
 - `src/ascii/image-utils.ts` — `resizeImage()` (caps Source Image at 800px wide before sampling)
 - `src/ascii/renderer.ts` — `computeFrame()` (pure), `paintFrame()` (side effects) — see ADR 0005.
   `CANVAS_BACKGROUND` is the ground both the canvas and the HTML Export stand on: the user's art,

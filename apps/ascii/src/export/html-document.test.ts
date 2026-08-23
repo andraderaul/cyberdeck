@@ -184,7 +184,7 @@ describe('against TXT Export, over the same cropped grid', () => {
   const FULL = cellsOf(['        ', '        ', ' <&>"|/ ', ' \\-@#A  ', '        ', '        '])
   const REGION = computeContainFit(240, 100, 8, 6)
 
-  function exported(colorMode: 'original' | 'matrix') {
+  function exported(colorMode: 'original' | 'matrix' | 'adaptive') {
     const cropped = sliceToRegion(FULL, REGION)
     const { instructions, asciiRows } = computeFrame(cropped, {
       resolution: RESOLUTION,
@@ -223,5 +223,24 @@ describe('against TXT Export, over the same cropped grid', () => {
     expect(asciiRows).toHaveLength(REGION.dRows)
     expect(textOf(html).split('\n')).toHaveLength(REGION.dRows)
     expect(textOf(html).startsWith(' ')).toBe(true)
+  })
+
+  // The adaptive Color Mode is the one whose colours are not constants anywhere — they are derived
+  // from the very grid being exported — so nothing but a test over the whole chain says the
+  // document carries what the preview painted. The crop is the trap: quantizing the cropped grid
+  // must give the palette the full grid gave, which is what skipping blank cells buys (ADR 0010).
+  it('carries the colours the adaptive Color Mode derived from the grid itself', () => {
+    const { html } = exported('adaptive')
+    const cropped = sliceToRegion(FULL, REGION)
+    const painted = computeFrame(cropped, {
+      resolution: RESOLUTION,
+      colorMode: 'adaptive',
+    }).instructions.filter((instruction) => instruction.char !== ' ')
+
+    expect(painted.length).toBeGreaterThan(0)
+    for (const { color } of painted) {
+      expect(color).toMatch(/^rgb\(\d+,\d+,\d+\)$/)
+      expect(html).toContain(`color:${color}`)
+    }
   })
 })

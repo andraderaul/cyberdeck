@@ -41,9 +41,22 @@ function sampleChars(charset: Charset): string {
   return Array.from({ length: 5 }, (_, i) => chars[Math.round(i * step)]).join('')
 }
 
+/**
+ * The two Color Modes whose colours come out of the Source rather than out of a constant. Their
+ * chips can only depict what the mode *does* — `original` the whole spectrum it passes through,
+ * `adaptive` a handful of hard-edged bands, which is what a quantized palette looks like. Literal
+ * hexes and not tokens, exactly as every other swatch in this row: they stand for the user's art,
+ * which no Theme reaches (ADR 0013, ADR 0024).
+ */
+const DERIVED_SWATCHES: Partial<Record<ColorMode, string>> = {
+  original: 'linear-gradient(135deg, #ff0000 0%, #00ff00 50%, #0000ff 100%)',
+  adaptive: 'linear-gradient(135deg, #ede0d4 0 25%, #c98b5e 25% 50%, #5b7c8d 50% 75%, #2f3640 75%)',
+}
+
 function swatchStyle(colorMode: ColorMode): string {
-  if (colorMode === 'original') {
-    return 'linear-gradient(135deg, #ff0000 0%, #00ff00 50%, #0000ff 100%)'
+  const derived = DERIVED_SWATCHES[colorMode]
+  if (derived) {
+    return derived
   }
   const palette = getModePalette(colorMode)
   if (typeof palette === 'string') {
@@ -52,8 +65,11 @@ function swatchStyle(colorMode: ColorMode): string {
   return `linear-gradient(135deg, ${palette[0]} 0%, ${palette[1]} 100%)`
 }
 
-const SOLID_MODES = COLOR_MODES.filter((m) => !Array.isArray(getModePalette(m)))
-const GRADIENT_MODES = COLOR_MODES.filter((m) => Array.isArray(getModePalette(m)))
+// Named for the derivation, not for the look: the first row is every mode that is *not* a dual pair,
+// which is one fixed colour for five of them and neither fixed nor single for `original` and
+// `adaptive`. Calling it SOLID_MODES read as a promise the row has never kept.
+const NON_DUAL_MODES = COLOR_MODES.filter((m) => !Array.isArray(getModePalette(m)))
+const DUAL_MODES = COLOR_MODES.filter((m) => Array.isArray(getModePalette(m)))
 
 /**
  * Off/on as a two-option ToggleGroup rather than a bare switch: it is the spelling every other
@@ -230,11 +246,12 @@ export default function SettingsEditor({ settings, onChange }: Props) {
         tooltipId="tooltip-color-mode"
         tooltip="colorization scheme applied to rendered chars"
       >
-        {/* Solid and gradient modes stay two rows, as in the old panel: the split is the one
-            cue for what a mode does before you pick it. */}
+        {/* Two rows, as in the old panel: the dual modes read differently enough from the rest —
+            two colours split by luminosity — that the split is the one cue for what a mode does
+            before you pick it. */}
         <div className="flex flex-col gap-2xs">
-          {[SOLID_MODES, GRADIENT_MODES].map((modes, index) => (
-            <div key={index === 0 ? 'solid' : 'gradient'} className="flex gap-2xs overflow-x-auto">
+          {[NON_DUAL_MODES, DUAL_MODES].map((modes, index) => (
+            <div key={index === 0 ? 'single' : 'dual'} className="flex gap-2xs overflow-x-auto">
               {modes.map((mode) => (
                 <Chip
                   key={mode}
