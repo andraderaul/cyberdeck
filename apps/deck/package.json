@@ -2,7 +2,7 @@
   "name": "@cyberdeck/deck",
   "description": "The deck's chrome, not a program (ADR 0025): the front door that names what the deck runs, describes it, and sends you into it.",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
   "type": "module",
   "scripts": {
