@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { greyCtx } from './__fixtures__/source-ctx'
 import { readCustomCharset } from './charset'
 import { convertImage, getAsciiChar } from './converter'
 import type { AsciiCell, CharsetName, CustomCharset } from './types'
@@ -13,36 +14,9 @@ function authored(ramp: string): CustomCharset {
   return read.charset
 }
 
-// Minimal 2D-context stub: reports every pixel as opaque white so that any cell
-// touching the luminance pipeline resolves to a non-space glyph.
-function whiteCtx(cols: number, rows: number) {
-  return {
-    clearRect: vi.fn(),
-    drawImage: vi.fn(),
-    getImageData: vi.fn(() => ({ data: new Uint8ClampedArray(cols * rows * 4).fill(255) })),
-  } as unknown as CanvasRenderingContext2D
-}
-
-// A synthetic Source painted straight into the sampled grid: `grey(col, row)` is the level the
-// cell reads. Lets a test state an edge exactly — a hard line, a diagonal, a gentle ramp.
-function greyCtx(cols: number, rows: number, grey: (col: number, row: number) => number) {
-  const data = new Uint8ClampedArray(cols * rows * 4)
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const i = (row * cols + col) * 4
-      const level = grey(col, row)
-      data[i] = level
-      data[i + 1] = level
-      data[i + 2] = level
-      data[i + 3] = 255
-    }
-  }
-  return {
-    clearRect: vi.fn(),
-    drawImage: vi.fn(),
-    getImageData: vi.fn(() => ({ data })),
-  } as unknown as CanvasRenderingContext2D
-}
+// Every pixel opaque white, so any cell touching the luminance pipeline resolves to a non-space
+// glyph.
+const whiteCtx = (cols: number, rows: number) => greyCtx(cols, rows, () => 255)
 
 function charRows(cells: AsciiCell[][]): string[] {
   return cells.map((row) => row.map((cell) => cell.char).join(''))
