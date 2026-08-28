@@ -1,7 +1,9 @@
 import { Button, Chip } from '@cyberdeck/deck-kit/ui'
 import type { Preset } from '../ascii/presets'
 import { PRESETS, settingsMatch } from '../ascii/presets'
+import { THUMBNAIL_HEIGHT, THUMBNAIL_WIDTH } from '../ascii/thumbnail'
 import type { ConversionSettings } from '../ascii/types'
+import { usePresetThumbnails } from '../hooks/use-preset-thumbnails'
 
 interface Props {
   settings: ConversionSettings
@@ -9,6 +11,8 @@ interface Props {
   // the user standing on the Preset they started from, marked modified, and a look alone can't say
   // which Preset it was edited away from.
   activePresetId: string | null
+  /** What the chips depict this look *on* — the Source Image, or the Live Source frozen. */
+  source: HTMLImageElement | HTMLVideoElement | null
   onSelect: (preset: Preset) => void
   /**
    * Undoes the last applied Analysis suggestion, absent when there is nothing to undo. It lands in
@@ -21,9 +25,12 @@ interface Props {
 export default function PresetPicker({
   settings,
   activePresetId,
+  source,
   onSelect,
   onRevertSuggestion,
 }: Props) {
+  const thumbnails = usePresetThumbnails(source)
+
   // `min-w-0` on the fieldset: its default min-width is min-content, which would stop the chips
   // scrolling and spill them past the Strip's right edge instead.
   return (
@@ -53,22 +60,39 @@ export default function PresetPicker({
         {PRESETS.map((preset) => {
           const isActive = preset.id === activePresetId
           const isModified = isActive && !settingsMatch(settings, preset.settings)
+          const thumbnail = thumbnails[preset.id]
           return (
             <Chip
               key={preset.id}
               selected={isActive}
               onClick={() => onSelect(preset)}
-              className="shrink-0"
+              className="shrink-0 flex-col"
               // The asterisk carries "modified" visually, but it reaches a screen reader as one
               // character of punctuation — so the accessible name spells the state out instead.
+              // The thumbnail stays out of the name entirely (`alt=""`): it depicts the Preset
+              // rather than saying anything the word does not.
               aria-label={isModified ? `${preset.name} (modified)` : preset.name}
             >
-              {preset.name}
-              {isModified && (
-                <span aria-hidden="true" className="text-warning">
-                  *
-                </span>
+              {thumbnail && (
+                // No `image-rendering: pixelated` here, unlike the canvas: this one is drawn *down*
+                // from a larger render, and nearest-neighbour would sharpen the aliasing the
+                // supersample exists to spend.
+                <img
+                  src={thumbnail}
+                  alt=""
+                  width={THUMBNAIL_WIDTH}
+                  height={THUMBNAIL_HEIGHT}
+                  className="rounded-xs shrink-0"
+                />
               )}
+              <span className="flex items-center gap-2xs">
+                {preset.name}
+                {isModified && (
+                  <span aria-hidden="true" className="text-warning">
+                    *
+                  </span>
+                )}
+              </span>
             </Chip>
           )
         })}

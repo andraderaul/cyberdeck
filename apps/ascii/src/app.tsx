@@ -320,6 +320,9 @@ export default function App() {
           onStartRecording={startRecording}
           settings={settings}
           activePresetId={activePresetId}
+          // The Live Source wins when both are somehow set, matching `isLive` and the canvas: the
+          // chips must depict the Source being converted, not the one it replaced.
+          source={sourceVideo ?? sourceImage}
           onPresetSelect={handlePresetSelect}
           onSettingsChange={patchSettings}
           onRevertSuggestion={revertPoint ? handleRevert : undefined}

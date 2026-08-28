@@ -3,7 +3,7 @@ import { TOUCH_TARGET_HEIGHT, TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
 import { type RefObject, useEffect, useRef } from 'react'
 import { resizeImage } from '../ascii/image-utils'
-import { renderFrame } from '../ascii/render-frame'
+import { monoFontFamily, renderFrame } from '../ascii/render-frame'
 import type { RenderInstruction } from '../ascii/renderer'
 import type { ConversionSettings } from '../ascii/types'
 
@@ -62,9 +62,7 @@ export default function AsciiCanvas({
   useEffect(() => {
     onDimensionsChangeRef.current = onDimensionsChange
   })
-  const fontFamilyRef = useRef(
-    getComputedStyle(document.body).getPropertyValue('--font-mono').trim() || 'monospace',
-  )
+  const fontFamilyRef = useRef(monoFontFamily())
 
   useEffect(() => {
     const canvas = canvasRef.current
