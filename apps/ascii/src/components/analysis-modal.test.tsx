@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ConversionSettings } from '../ascii/types'
 import AnalysisModal from './analysis-modal'
@@ -132,6 +132,43 @@ describe('AnalysisModal', () => {
     expect(panel).toHaveTextContent('10px')
     expect(panel).toHaveTextContent('1.15')
     expect(panel).toHaveTextContent('1.40')
+  })
+
+  // #368: the decision is "these instead of what I have", and a paragraph makes the user pull the
+  // fields out of it before they can answer.
+  it('gives each proposed field a chip of its own', () => {
+    render(<AnalysisModal state={SUCCESS_STATE} onClose={vi.fn()} onApplySuggestion={vi.fn()} />)
+
+    const panel = screen.getByRole('region', { name: /suggested conversion/i })
+    const chips = within(panel).getAllByRole('listitem')
+
+    expect(chips).toHaveLength(Object.keys(SUGGESTION).length)
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      'charset: braille',
+      'edge glyphs: on',
+      'dithering: bayer',
+      'color mode: neon',
+      'resolution: 10px',
+      'brightness: 1.15',
+      'contrast: 1.40',
+    ])
+  })
+
+  // A Suggestion is ConversionSettings, so nothing in it can say status code or threat level — the
+  // Analysis above the panel carries a real threatLevel, but this panel is scoped below it.
+  it('backs every chip with a field the Suggestion carries', () => {
+    render(<AnalysisModal state={SUCCESS_STATE} onClose={vi.fn()} onApplySuggestion={vi.fn()} />)
+
+    const panel = screen.getByRole('region', { name: /suggested conversion/i })
+
+    expect(panel).not.toHaveTextContent(/status code/i)
+    expect(panel).not.toHaveTextContent(/threat/i)
+    // Every chip carries a value the payload actually holds, so none is standing on a field the
+    // Provider never sent.
+    const values = within(panel)
+      .getAllByRole('listitem')
+      .map((chip) => (chip.textContent ?? '').split(': ')[1])
+    expect(values).toEqual(['braille', 'on', 'bayer', 'neon', '10px', '1.15', '1.40'])
   })
 
   it('applies nothing until the user asks — rendering alone moves no settings', () => {

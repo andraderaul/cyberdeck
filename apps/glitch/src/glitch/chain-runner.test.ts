@@ -130,6 +130,25 @@ describe('createWorkerChainRunner', () => {
     runner.dispose()
   })
 
+  // The bypass, verified where it actually has to hold: across the thread boundary. The unit test
+  // of `applyChain` proves the fold skips a silenced Link; this proves the flag survives the job
+  // that carries the Chain over and is honoured by the side that runs it.
+  it('paints a bypassed Link as though it were not in the Chain', async () => {
+    const worker = fakeWorker()
+    const runner = runnerOver(worker)
+    const silenced: Chain = [
+      { ...createLink('noise', { amount: 0.9, tint: 'mono' }), bypassed: true },
+      ...CHAIN,
+    ]
+
+    const pending = runner.run(frame(), silenced, SEED)
+    worker.reply()
+
+    expect(worker.jobs[0].chain[0].bypassed).toBe(true)
+    expect((await pending)?.data).toEqual(applyChain(frame(), CHAIN, SEED).data)
+    runner.dispose()
+  })
+
   it('never lets a second frame reach the Worker while one is in flight', () => {
     const worker = fakeWorker()
     const runner = runnerOver(worker)

@@ -10,6 +10,7 @@ import {
   useToastError,
   useToastInfo,
 } from '@cyberdeck/deck-kit/ui'
+import { cn } from '@cyberdeck/deck-kit/utils'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import type { AnalysisState } from './ai/types'
 import { useAIConfig } from './ai/use-ai-config'
@@ -21,6 +22,7 @@ import AsciiCanvas from './components/ascii-canvas'
 import ControlStrip from './components/control-strip'
 import ScanPendingModal from './components/scan-pending-modal'
 import { outputFilename } from './export/output'
+import { HEADER_CONTROL_TYPE, HEADER_SUBTITLE, HEADER_WORDMARK } from './header-type'
 import { useWebcamState } from './hooks/use-webcam-state'
 
 // The rest of the AI surface, following the three provider adapters off the first-paint path
@@ -230,9 +232,11 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen">
       <header className="py-sm px-sm sm:px-lg border-b border-base flex items-center gap-sm shrink-0">
-        <span className="text-accent text-base font-bold tracking-wide">ASCII//CONVERT</span>
-        <span className="text-fg-faint text-xs hidden sm:block">—</span>
-        <span className="text-fg-muted text-xs hidden sm:block">image → ascii art</span>
+        <span className={cn(HEADER_WORDMARK, 'text-accent')}>ASCII//CONVERT</span>
+        <span className={cn(HEADER_SUBTITLE, 'text-fg-faint hidden sm:block')}>—</span>
+        <span className={cn(HEADER_SUBTITLE, 'text-fg-muted hidden sm:block')}>
+          image → ascii art
+        </span>
         <div className="ml-auto flex items-center gap-xs">
           <HeaderButton
             variant={aiConfig ? 'accent-text' : 'accent-fill'}
@@ -241,7 +245,7 @@ export default function App() {
             // The mark sits in its own element to be hidden, which makes it a flex item of the
             // button's own row — and flex drops the leading space of the text item beside it. The
             // gap is what puts that space back.
-            className="gap-2xs"
+            className={cn('gap-2xs', HEADER_CONTROL_TYPE)}
           >
             {/* Hollow to AI Analyze's filled ◈ — the deck's two AI surfaces read as one family.
                 Unhidden it would join the accessible name, which is what the old ⚿ did: a screen
@@ -316,6 +320,9 @@ export default function App() {
           onStartRecording={startRecording}
           settings={settings}
           activePresetId={activePresetId}
+          // The Live Source wins when both are somehow set, matching `isLive` and the canvas: the
+          // chips must depict the Source being converted, not the one it replaced.
+          source={sourceVideo ?? sourceImage}
           onPresetSelect={handlePresetSelect}
           onSettingsChange={patchSettings}
           onRevertSuggestion={revertPoint ? handleRevert : undefined}

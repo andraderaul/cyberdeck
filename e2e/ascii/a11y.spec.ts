@@ -127,7 +127,7 @@ test('the out tab is accessible and every control holds its target', A11Y, async
       '3.89:1',
     ),
     accentOnALitSurface(
-      `${OUT} > div:nth-of-type(3) > button:nth-of-type(1) "export png"`,
+      `${OUT} > div:nth-of-type(3) > div:nth-of-type(1) > button "export png"`,
       '4.23:1',
     ),
   ]

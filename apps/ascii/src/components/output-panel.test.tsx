@@ -201,6 +201,53 @@ describe('OutputPanel', () => {
     })
   })
 
+  // #369: the three Exports are not equal — each throws away a different half of the result, and
+  // the distinction had only ever been written down in CONTEXT.md's HTML Export entry.
+  describe('Export tradeoffs', () => {
+    it('says what each Export keeps and what it drops', () => {
+      renderPanel({ isLive: false })
+
+      expect(screen.getByText('color · no selectable text')).toBeInTheDocument()
+      expect(screen.getByText('selectable text · no color')).toBeInTheDocument()
+      expect(screen.getByText('both · opens offline')).toBeInTheDocument()
+    })
+
+    // Inline in the tab, not behind an EXPORT_TERMINAL: the copy is readable with no click spent,
+    // and the click that follows is still the Export itself.
+    it('reads the tradeoff before the choice, with no overlay in the way', () => {
+      renderPanel({ isLive: false })
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /export png/i })).toBeEnabled()
+    })
+
+    // A screen reader hears three equal buttons otherwise — the exact reading the layout fixes.
+    it('describes each export control with its own tradeoff', () => {
+      renderPanel({ isLive: false })
+
+      const pairs = [
+        [/export png/i, 'color · no selectable text'],
+        [/export txt/i, 'selectable text · no color'],
+        [/export html/i, 'both · opens offline'],
+      ] as const
+
+      for (const [label, tradeoff] of pairs) {
+        const describedBy = screen
+          .getByRole('button', { name: label })
+          .getAttribute('aria-describedby')
+        expect(describedBy).toBeTruthy()
+        expect(document.getElementById(describedBy as string)).toHaveTextContent(tradeoff)
+      }
+    })
+
+    it('carries no tradeoff copy for a Live Source', () => {
+      renderPanel({ isLive: true, canRecord: true })
+
+      expect(screen.queryByText(/no selectable text/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/opens offline/i)).not.toBeInTheDocument()
+    })
+  })
+
   // Scale is a PNG Export setting, so it rides with PNG Export and only appears for a Source Image.
   describe('PNG scale picker', () => {
     it('shows for a Source Image', () => {

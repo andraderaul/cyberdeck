@@ -228,9 +228,16 @@ export function presetById(id: string): Preset {
  */
 export const DEFAULT_PRESET: Preset = presetById('vaporwave')
 
-/** Whether two Links carry the same Effect with the same params — their ids are not part of it. */
+/**
+ * Whether two Links carry the same Effect with the same params **and the same bypass** — their ids
+ * are not part of it.
+ *
+ * Bypass counts because it decides what the Chain renders, and look-equality is about the render:
+ * silencing a Link marks the active Preset modified exactly as removing it would, and switching it
+ * back on restores the match, the same way a reversed reorder does.
+ */
 function linkMatch(a: Link, b: Link): boolean {
-  if (a.type !== b.type) {
+  if (a.type !== b.type || a.bypassed !== b.bypassed) {
     return false
   }
   const aParams = a.params as unknown as Record<string, unknown>
@@ -427,6 +434,12 @@ function jitterLink(source: Rng, link: Link): Link {
  * many, in what order (ADR 0017). That is the same rule the flat model applied to a Preset's
  * choices, raised to the level where it now matters most: bad structure sinks a look faster than a
  * bad number, so structural variety is curated as more Presets rather than assembled at random.
+ *
+ * **Every Link it deals out is audible**, and that is the same rule rather than a second one:
+ * bypass decides whether a Link contributes, which is structure by another name, so Randomize may
+ * no more silence a Link than drop one. It never *carries* a bypass in either, since it builds from
+ * a curated base and no Preset ships a silenced Link — the look on screen when Randomize is pressed
+ * is replaced whole, so nothing of the previous one's bypasses survives to be reasoned about.
  *
  * Pure: the randomness is injected, so a test can pin both the base and the perturbation (the same
  * reason `outputFilename` takes its timestamp). The app passes `Math.random`; the caller draws the

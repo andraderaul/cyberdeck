@@ -11,15 +11,15 @@ layout, the deck-wide comment convention, and the release ritual. Paths below ar
 Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80), Block Displacement with
 Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced panel (#84), Recording
 (#85) and Presets + Randomize (#86), plus Chromatic Aberration (#116) and the composable Effect
-Chain (ADR 0017, #125–#128), plus Halftone (#309), Wave (#310), the Chain as a file (#312)
-and the animated Seed (#311), plus the **Wipe** (#372). All eight Effects are live — Source Image *or* Live Source → the
-Chain → PNG Export / Capture / Copy / Recording — the pure-core / imperative-shell seam is
-established, and the render is deterministic in Chain + Seed, which is what lets a Live Source
-animate by advancing the Seed alone. The front door is the curated Presets plus Randomize; behind
-the EDIT tab the Chain is fully editable — reorder, add, remove, duplicate, the same Effect more
-than once. A Chain built by hand exports as JSON and comes back (**Chain JSON**, `CONTEXT.md`),
-which is the only way structural variety reaches the app from outside the roster. The v1 scope in
-`CONTEXT.md` is complete.
+Chain (ADR 0017, #125–#128), plus Halftone (#309), Wave (#310), the Chain as a file (#312),
+the animated Seed (#311), the per-Link bypass (#371) and the **Wipe** (#372). All eight Effects are
+live — Source Image *or* Live Source → the Chain → PNG Export / Capture / Copy / Recording — the
+pure-core / imperative-shell seam is established, and the render is deterministic in Chain + Seed,
+which is what lets a Live Source animate by advancing the Seed alone. The front door is the curated
+Presets plus Randomize; behind the EDIT tab the Chain is fully editable — reorder, add, remove,
+duplicate, bypass, the same Effect more than once. A Chain built by hand exports as JSON and comes
+back (**Chain JSON**, `CONTEXT.md`), which is the only way structural variety reaches the app from
+outside the roster. The v1 scope in `CONTEXT.md` is complete.
 
 Since #316 the Chain runs on a **Worker thread** — ADR 0002's upgrade path, taken here first on the
 deck. Nothing about the look changed; what changed is which thread computes it.
@@ -153,10 +153,10 @@ Three behaviours hang together, and all of them come from the Seed sitting *outs
   each position, with no "except the seed" exclusion for a later reader to innocently tidy away. It
   ignores each Link's `id`, which is plumbing rather than look: comparing it would mark every Preset
   modified the instant it was applied. So a Re-roll keeps the active Preset highlighted while a
-  slider edit, a reorder, an add, a remove or a duplicate marks it `(modified)` — the Editor tracks
-  `activePresetId` rather than deriving it, because a look alone can't say which Preset it was
-  edited away from, and `isPresetModified()` (editor-state.ts) is the one place `(modified)` is
-  derived; the picker only renders the answer.
+  slider edit, a reorder, an add, a remove, a duplicate or a bypass marks it `(modified)` — the
+  Editor tracks `activePresetId` rather than deriving it, because a look alone can't say which
+  Preset it was edited away from, and `isPresetModified()` (editor-state.ts) is the one place
+  `(modified)` is derived; the picker only renders the answer.
 - **A brought Chain is nobody's Preset.** Importing a Chain JSON clears `activePresetId` the same
   way Randomize does, and draws a fresh Seed the same way applying a Preset does — the file is a
   look, and a look never carries an arrangement or a provenance.
@@ -169,6 +169,17 @@ Three behaviours hang together, and all of them come from the Seed sitting *outs
   perturbation; the app passes `Math.random` and draws the Seed itself. Randomize clears the active
   Preset rather than marking its base modified: a jittered look is one the user discovered, not an
   edit they made.
+
+**Bypass is part of the look, so it moves with the look and only with the look** (#371, ADR 0017).
+A bypassed Link stays in the Chain with its params, its position and its slot against
+`MAX_CHAIN_LENGTH` — it is silenced, not absent, and the `N of 10 effects` region still counts it.
+Re-roll and the animated Seed move the arrangement, so a silenced Link rides through both; a Preset
+or a Randomize replaces the look outright and every Link that arrives is audible, because bypass
+decides whether a Link contributes and Randomize never invents structure. Two rules are easy to
+"tidy" wrongly: `applyChain` **skips a bypassed Link but still counts its occurrence**, so
+bypassing one Link cannot re-draw a later Link of the same type (removing renumbers — that
+difference is the point); and the Chain file **did not bump `CHAIN_FILE_VERSION`**, which stays 1
+because `decodeLink` ignores unknown keys and a bump would refuse every Chain already exported.
 
 ### Live Source
 
@@ -412,8 +423,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/glitch/chain.ts` — the composable Effect Chain (ADR 0017): `Chain`, `Link`, `EffectType`,
   `EffectParams`, `EFFECT_REGISTRY` (type → pure fn + `DEFAULT_*`), `applyChain()` (the fold),
   `createLink()`, and the pure editing helpers `addLink()` / `removeLink()` / `duplicateLink()` /
-  `moveLink()` plus `MAX_CHAIN_LENGTH`. Depends on `pipeline.ts` one-way: the Effects don't know
-  the Chain exists
+  `moveLink()` / `toggleBypass()` plus `MAX_CHAIN_LENGTH`. Depends on `pipeline.ts` one-way: the
+  Effects don't know the Chain exists
 - `src/glitch/chain-codec.ts` — the Chain as a file (**Chain JSON**, `CONTEXT.md`): `encodeChain()`,
   `decodeChain()`, `CHAIN_FILE_FORMAT`, `CHAIN_FILE_VERSION`, `ChainDecodeResult`. Pure both ways and
   never throws — a bad file comes back as a reason the shell words for a toast. `PARAM_DECODERS` is a
@@ -428,7 +439,7 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   `activePresetId` + `isSeedAnimated`, which persists across a Source change deliberately — the
   Editor holds no Source to clear it on), `EditorAction`, `editorReducer()` (the whole transition
   table — pure, all randomness arrives in the payload), `isPresetModified()` (the one place
-  `(modified)` is derived), `initialEditorState()`, `ChainActions` (the five Chain edits as one
+  `(modified)` is derived), `initialEditorState()`, `ChainActions` (the six Chain edits as one
   callback bundle) and `SeedControls` (Re-roll and animate, the arrangement's own bundle — kept
   apart from `ChainActions` because that separation *is* ADR 0017). Both are Editor vocabulary, so
   the panels import them from here

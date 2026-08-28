@@ -329,6 +329,17 @@ describe('chainMatch', () => {
     expect(chainMatch(DEFAULT_PRESET.chain.slice(0, -1), DEFAULT_PRESET.chain)).toBe(false)
   })
 
+  // Bypass decides what the Chain renders, so look-equality has to see it: silencing a Link marks
+  // the active Preset modified exactly as removing it would, and switching it back on restores
+  // the match on its own.
+  it('sees a bypassed Link as a different look', () => {
+    const silenced: Chain = DEFAULT_PRESET.chain.map((link, index) =>
+      index === 0 ? { ...link, bypassed: true } : link,
+    )
+
+    expect(chainMatch(silenced, DEFAULT_PRESET.chain)).toBe(false)
+  })
+
   it('sees a swapped Effect as a different look', () => {
     const swapped: Chain = [createLink('noise'), ...DEFAULT_PRESET.chain.slice(1)]
 
@@ -443,6 +454,17 @@ describe('randomizeChain', () => {
       expect(
         randomizeChain(basedOn('phosphor', draw)).some((link) => link.type === 'blockDisplacement'),
       ).toBe(false)
+    }
+  })
+
+  // Bypass is structure by another name — it decides whether a Link contributes — so the rule that
+  // keeps Randomize from inventing a Link keeps it from silencing one. Every look it deals out is
+  // audible in full.
+  it('never deals out a silenced Link', () => {
+    for (const draw of [0, NO_JITTER, 1]) {
+      for (const curated of PRESETS) {
+        expect(randomizeChain(basedOn(curated.id, draw)).some((link) => link.bypassed)).toBe(false)
+      }
     }
   })
 
