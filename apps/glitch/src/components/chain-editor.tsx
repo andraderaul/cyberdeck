@@ -359,7 +359,7 @@ type Focus = { kind: 'link'; id: string | null } | { kind: 'palette' }
 interface Props {
   chain: Chain
   actions: ChainActions
-  // Its own bundle rather than joining `actions`: those five edit the look, these two move the
+  // Its own bundle rather than joining `actions`: those six edit the look, these two move the
   // arrangement (editor-state.ts). Threading Re-roll as a Link patch would put the arrangement
   // inside the Chain by the back door, and animate is Re-roll once a frame, so it belongs here.
   seedControls: SeedControls
@@ -377,7 +377,7 @@ interface Props {
  * same Effect twice, and keying by type would collapse the repeats into one chip.
  */
 export default function ChainEditor({ chain, actions, seedControls, isLive }: Props) {
-  const { onLinkChange, onReorder, onAdd, onRemove, onDuplicate } = actions
+  const { onLinkChange, onReorder, onAdd, onRemove, onDuplicate, onToggleBypass } = actions
   const { isAnimated, onReroll, onToggleAnimation } = seedControls
   const isFull = chain.length >= MAX_CHAIN_LENGTH
   const [focus, setFocus] = useState<Focus>({ kind: 'link', id: null })
@@ -427,10 +427,28 @@ export default function ChainEditor({ chain, actions, seedControls, isLive }: Pr
                 id={`tooltip-${focusedLink.id}`}
                 content={EFFECT_TOOLTIPS[focusedLink.type]}
               />
-              {/* Duplicate and remove act on the focused Link, so they live with its params rather
-                  than on every chip — six chips each carrying two icon buttons would bury the
-                  Chain the row exists to show. */}
+              {/* Bypass, duplicate and remove act on the focused Link, so they live with its
+                  params rather than on every chip — six chips each carrying three icon buttons
+                  would bury the Chain the row exists to show. */}
               <div className="ml-auto flex items-center gap-2xs">
+                {/* First of the three, and beside the destructive one on purpose: it is the
+                    non-destructive answer to the question remove used to be the only way to ask. */}
+                <button
+                  type="button"
+                  onClick={() => onToggleBypass(focusedLink.id)}
+                  // A toggle with a fixed name and a pressed state, the way animate is: a label
+                  // that flipped to "un-bypass" would change the control's name under a screen
+                  // reader every time it was used, when what changed is whether it is engaged.
+                  aria-pressed={focusedLink.bypassed}
+                  aria-label={`bypass ${EFFECT_LABELS[focusedLink.type]}`}
+                  className={cn(
+                    'inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning',
+                    focusedLink.bypassed ? 'text-accent' : 'text-fg-muted hover:text-fg',
+                    ICON_GLYPH_SIZE,
+                  )}
+                >
+                  <span aria-hidden="true">⊘</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => onDuplicate(focusedLink.id)}
@@ -572,17 +590,32 @@ export default function ChainEditor({ chain, actions, seedControls, isLive }: Pr
               }}
               // Spells the position out: the visual order is the only other cue, and it is exactly
               // what a screen-reader user is trying to change.
-              aria-label={`${EFFECT_LABELS[link.type]}, position ${index + 1} of ${chain.length}`}
+              //
+              // Bypass lands in the same sentence rather than beside it as a symbol — the dashed
+              // border and the ⊘ are cues a screen reader never gets — and *before* the position,
+              // where it sits next to the Effect it qualifies and leaves the position at the end,
+              // which is where a user scanning the row expects to hear it.
+              aria-label={`${EFFECT_LABELS[link.type]}${link.bypassed ? ', bypassed' : ''}, position ${index + 1} of ${chain.length}`}
               aria-describedby="reorder-hint"
               // `touch-none` only while dragging: the row scrolls horizontally, and killing
               // touch-action outright would leave a finger unable to scroll past the chips it
               // starts on.
+              // A dashed border for a bypassed Link, and nothing dimmed or struck through: a
+              // half-faded chip is what the drag ghost already means here, and both of those read
+              // as "on its way out" when the point is that the Link is still in the Chain holding
+              // its slot. Dashes read as a break in the signal, which is what a bypass is. The
+              // colour is left alone in both states, so a bypassed chip stays distinguishable from
+              // a focused one (accent) and from an unfocused one (solid) without spending contrast.
               className={cn(
                 'shrink-0 cursor-grab',
+                link.bypassed && 'border-dashed',
                 draggingIndex !== null && 'touch-none',
                 draggingIndex === index && 'opacity-50',
               )}
             >
+              {/* The visible half of what the accessible name spells out — a screen reader gets the
+                  word, everyone else gets the mark, and neither is carrying it alone. */}
+              {link.bypassed && <span aria-hidden="true">⊘</span>}
               {EFFECT_LABELS[link.type]}
             </Chip>
           ))}

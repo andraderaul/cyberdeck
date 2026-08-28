@@ -54,7 +54,8 @@ export interface EffectParams {
 export type EffectType = keyof EffectParams
 
 /**
- * One Effect instance in the Chain: a type, the params that go with it, and an identity.
+ * One Effect instance in the Chain: a type, the params that go with it, whether it is bypassed, and
+ * an identity.
  *
  * A discriminated union rather than `{ type: EffectType; params: SomeUnion }`, so narrowing on
  * `type` gives the caller the matching params and a mismatched pair can't be constructed.
@@ -63,9 +64,15 @@ export type EffectType = keyof EffectParams
  * are no longer unique by type — two Pixel Sorts are a legal Chain — and `chainMatch` ignores it for
  * the same reason look-equality ignores the Seed. Comparing it would mark a Preset modified the
  * instant it was applied, since the copy in state would carry freshly minted ids.
+ *
+ * `bypassed` is the opposite: it **is** part of the look, because it decides what the Chain renders.
+ * ADR 0017 made presence the on/off and deferred a mute toggle to a fast-follow if power users
+ * reached for it; this is that fast-follow, and it does not take the on/off back — a bypassed Link
+ * is still *in* the Chain, holding its params, its position and its slot against
+ * `MAX_CHAIN_LENGTH`. It is silenced, not absent, which is the whole difference from removing it.
  */
 export type Link = {
-  [K in EffectType]: { id: string; type: K; params: EffectParams[K] }
+  [K in EffectType]: { id: string; type: K; params: EffectParams[K]; bypassed: boolean }
 }[EffectType]
 
 /**
@@ -130,6 +137,10 @@ export function createLink<K extends EffectType>(type: K, params?: EffectParams[
     id: `link-${linkCounter}`,
     type,
     params: params ?? EFFECT_REGISTRY[type].defaults,
+    // A minted Link always runs. Bypass is something a user does to a Link that is already in the
+    // Chain, so no caller can ask for one born silent — the toggle and the file are the only two
+    // ways in, and both act on a Link this made.
+    bypassed: false,
   } as Link
 }
 
@@ -190,8 +201,26 @@ export function duplicateLink(chain: Chain, id: string): Chain {
   const next = [...chain]
   // `as never` is `applyLink`'s correlated-union cast in another coat: type and params came off
   // the same Link, but TypeScript checks the pair independently.
-  next.splice(index + 1, 0, createLink(source.type, source.params as never))
+  //
+  // The copy carries the bypass across, because a duplicate is a copy of every field that matters
+  // to the look and bypass is now one of them. A copy that came back audible would be a Link the
+  // user never switched on, changing the render on a control whose whole promise is "another one of
+  // these".
+  const copy = createLink(source.type, source.params as never)
+  next.splice(index + 1, 0, { ...copy, bypassed: source.bypassed })
   return next
+}
+
+/**
+ * Flips whether the Link with `id` is bypassed — silenced but still in the Chain, keeping its
+ * params, its position and its slot against `MAX_CHAIN_LENGTH`.
+ *
+ * The answer to "what is this Link contributing", which used to cost the user the params they had
+ * tuned: removing was the only way to hear the Chain without it, and re-adding came back on
+ * defaults. An unknown id leaves the Chain alone, as `removeLink` does.
+ */
+export function toggleBypass(chain: Chain, id: string): Chain {
+  return chain.map((link) => (link.id === id ? { ...link, bypassed: !link.bypassed } : link))
 }
 
 /**
@@ -254,6 +283,13 @@ function applyLink(pixels: PixelBuffer, link: Link, seed: Seed): PixelBuffer {
  * pair always reproduces the same output while repeats of one Effect still get distinct
  * arrangements.
  *
+ * A bypassed Link is walked past rather than run — and **still counts its occurrence**. Bypass is an
+ * audition: the user is asking what one Link contributes, and the answer is only readable if that
+ * Link is the *only* difference between the two pictures. Skipping the count would renumber every
+ * later Link of the same type, so bypassing the first of two Block Displacements would also redraw
+ * the second's blocks — a toggle billed as non-destructive quietly rearranging a Link it never
+ * touched. That is exactly what separates bypass from removal, which does renumber (see `linkSeed`).
+ *
  * An empty Chain returns the input untouched, which is the honest identity for "no Effects" and
  * what makes removing the last Link in Slice 4 a no-op rather than an error.
  */
@@ -265,6 +301,9 @@ export function applyChain(pixels: PixelBuffer, chain: Chain, seed: Seed): Pixel
   return chain.reduce((buffer, link) => {
     const occurrence = seenOfType.get(link.type) ?? 0
     seenOfType.set(link.type, occurrence + 1)
+    if (link.bypassed) {
+      return buffer
+    }
     return applyLink(buffer, link, linkSeed(seed, occurrence))
   }, pixels)
 }

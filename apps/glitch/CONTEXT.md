@@ -34,7 +34,9 @@ eles rearranjaram) e antes dos de superfície (que depositam sua textura sobre o
 `applyChain` é uma função pura de **Chain** + **Seed** → saída. Não há nenhuma fonte de
 aleatoriedade oculta: toda aleatoriedade deriva do Seed, passado ao lado da Chain. Cada Link
 sorteia a partir da *ocorrência* do seu Effect na Chain, de modo que repetições recebem arranjos
-distintos e mover um Link não re-sorteia o arranjo dele.
+distintos e mover um Link não re-sorteia o arranjo dele. Um Link em **bypass** é pulado — mas
+**continua contando a ocorrência dele**, de modo que nenhum Link posterior do mesmo Effect muda de
+arranjo quando o vizinho é silenciado. É isso que separa o bypass da remoção, que renumera.
 
 ## Language
 
@@ -61,10 +63,25 @@ _Avoid_: stack (o modelo é uma **Chain**, não uma "stack" — ver ADR 0017); p
 fixa era o caso particular que a Chain substituiu); options, config, filters
 
 **Link**:
-Uma instância de Effect dentro da Chain: `{ type, params }` mais um `id` que existe só para a UI
-poder distinguir duas ocorrências do mesmo Effect. **Presença na Chain é o liga/desliga** — não há
-flag `enabled` nem zero codificado; um Effect está ligado porque o Link está lá.
+Uma instância de Effect dentro da Chain: `{ type, params, bypassed }` mais um `id` que existe só
+para a UI poder distinguir duas ocorrências do mesmo Effect. **Presença na Chain é o liga/desliga**
+— não há flag `enabled` nem zero codificado; um Effect está ligado porque o Link está lá. O
+**bypass** não desfaz isso: um Link em bypass continua *na* Chain, com os params, a posição e a
+vaga dele — é silenciado, não ausente.
 _Avoid_: step, node, camada
+
+**Bypass**:
+Silenciar um Link sem tirá-lo da Chain — a resposta a "o que este Link está fazendo?", que antes
+custava remover o Link e perder os params ajustados. O Link em bypass mantém params, posição e
+**conta contra o `MAX_CHAIN_LENGTH`**; `applyChain` pula ele mas conta a ocorrência dele (ver
+**Chain**). Faz parte do **look**, não do arranjo: o `chainMatch` enxerga o bypass, então
+silenciar um Link marca o Preset como `(modified)` e ligar de volta desfaz a marca. Por isso ele
+anda **junto com o look e só com ele** — atravessa o Re-roll e o Seed animado intacto (que só
+mexem no arranjo), e some quando o look inteiro é trocado por um Preset ou pelo Randomize, que
+nunca inventa estrutura (ADR 0017) e por isso também nunca silencia. Escrito na **Chain JSON** só
+quando é `true`; ausente significa Link tocando. **Solo** (ouvir só um Link) ficou de fora — é uma
+ideia própria, a ser discutida por si.
+_Avoid_: mute, disable, off, desligar (o desligado é a ausência do Link)
 
 **Seed**:
 O valor que semeia toda a pseudo-aleatoriedade da Chain — **o arranjo**, uma rolagem
@@ -101,7 +118,10 @@ termo canônico é Preset)
 **Chain JSON**:
 A Chain escrita como arquivo — **o look saindo do app e voltando**, o "Preset do usuário".
 Carrega **só a Chain**: nada de Seed (importar sorteia um arranjo novo, exatamente como aplicar um
-Preset) e nada de `id` (encanamento de UI, que o `chainMatch` já ignora pelo mesmo motivo).
+Preset) e nada de `id` (encanamento de UI, que o `chainMatch` já ignora pelo mesmo motivo). O
+**bypass** de um Link viaja no arquivo, e entrou **sem bumpar a versão do formato**: o leitor lê
+`type` e `params` e ignora as outras chaves, então arquivo antigo abre com a chave ausente — que é
+Link tocando — e arquivo novo aberto por build antigo perde só o silêncio.
 Importar **apaga a procedência** — é um look que o usuário trouxe, não um Preset editado. É o
 único caminho pelo qual **variedade estrutural** (quais Links, quantos, em que ordem) entra no app
 vinda de fora, já que o Randomize nunca inventa estrutura e só os Presets curados podiam

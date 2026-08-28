@@ -70,6 +70,7 @@ export function useEditorState() {
       onAdd: (effect) => dispatch({ type: 'ADD_LINK', effect }),
       onRemove: (id) => dispatch({ type: 'REMOVE_LINK', id }),
       onDuplicate: (id) => dispatch({ type: 'DUPLICATE_LINK', id }),
+      onToggleBypass: (id) => dispatch({ type: 'TOGGLE_BYPASS', id }),
     }),
     [],
   )

@@ -119,6 +119,31 @@ objection does not reach the occurrence scheme, whose stability is **derived** f
 stored beside it. The residual cost is narrower: two Links of the same type swap arrangements when
 reordered past each other, since it is their relative order that names them.
 
+**The deferred mute landed, as bypass (#371).** The Considered Alternatives above deferred a
+per-Link mute to "a fast-follow if power users reach for it"; the reach was the question *what is
+this Link contributing*, whose only answer was to remove the Link and lose the params it had been
+tuned to. A bypassed Link stays in the Chain with its params, its position and its slot against
+`MAX_CHAIN_LENGTH`. Three things about it are load-bearing and are not to be tidied:
+
+- **`applyChain` skips a bypassed Link but still counts its occurrence.** Bypass is an audition, so
+  the two pictures either side of the toggle must differ in that Link alone; skipping the count
+  would renumber every later Link of the same type and redraw arrangements the user never touched. Removal is the
+  operation that renumbers — that difference is the point, not an inconsistency.
+- **Bypass is part of the look, so `chainMatch` compares it** and a silenced Link marks the active
+  Preset `(modified)`, exactly as removing it would. It therefore rides through Re-roll and the
+  animated Seed untouched (those move the arrangement), and does not survive a Preset or a
+  Randomize, which replace the look outright. Randomize never *deals out* one either: bypass
+  decides whether a Link contributes, which is structure by another name, and this ADR's
+  structure-rides-through rule covers it unchanged.
+- **The Chain file did not bump `CHAIN_FILE_VERSION`.** `decodeChain` compares versions by exact
+  equality, so a bump would refuse every Chain already exported; `decodeLink` reads `type` and
+  `params` and ignores other keys, so an older file decodes with the key absent, which is a Link
+  that runs. `encodeChain` writes `bypassed` only when true, keeping an all-audible Chain
+  byte-identical to what the previous build wrote.
+
+**Solo** (hear only one Link) was held out of that work deliberately: it is a second, less-settled
+idea and is to be argued on its own.
+
 ## Questions / Future Work
 
 A future reader should read this ADR before "tidying" any of the load-bearing quirks — the

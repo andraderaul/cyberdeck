@@ -11,6 +11,7 @@ import {
   type Link,
   moveLink,
   removeLink,
+  toggleBypass,
 } from './chain'
 import { chainMatch, DEFAULT_PRESET, PRESETS, type Preset } from './presets'
 import type { Seed } from './types'
@@ -61,13 +62,14 @@ export type EditorAction =
   | { type: 'ADD_LINK'; effect: EffectType }
   | { type: 'REMOVE_LINK'; id: string }
   | { type: 'DUPLICATE_LINK'; id: string }
+  | { type: 'TOGGLE_BYPASS'; id: string }
 
 /**
- * The five Chain edits as callbacks, bundled: they only ever travel together — the Editor mints
+ * The six Chain edits as callbacks, bundled: they only ever travel together — the Editor mints
  * them as one set, ControlPanel and MobileControls forward them untouched — so they cross each
- * surface as one prop rather than five parallel ones.
+ * surface as one prop rather than six parallel ones.
  *
- * Editor vocabulary rather than panel vocabulary: this is the same five transitions the reducer
+ * Editor vocabulary rather than panel vocabulary: this is the same six transitions the reducer
  * holds, so it belongs beside them and the panel imports it, not the other way round.
  */
 export interface ChainActions {
@@ -76,10 +78,11 @@ export interface ChainActions {
   onAdd: (type: EffectType) => void
   onRemove: (id: string) => void
   onDuplicate: (id: string) => void
+  onToggleBypass: (id: string) => void
 }
 
 /**
- * The Seed's controls, bundled beside `ChainActions` and deliberately not inside it: those five
+ * The Seed's controls, bundled beside `ChainActions` and deliberately not inside it: those six
  * edit the look, these two move the arrangement. ADR 0017's separation is what the two bundles
  * are — a Seed control threaded into the Chain bundle would put the arrangement inside the look
  * by the back door, which is the same mistake as threading Re-roll as a Link patch.
@@ -123,7 +126,7 @@ export function initialEditorState(seed: Seed): EditorState {
  * - TOGGLE_SEED_ANIMATION and ADVANCE_SEED leave it alone for the same reason, and it is the
  *   whole reason animating is cheap: a Seed drawn per frame is a Re-roll per frame, and Re-roll
  *   was never an edit. `chainMatch` never sees either one.
- * - The five Chain edits move the look alone. An edited look still belongs to the Preset it
+ * - The six Chain edits move the look alone. An edited look still belongs to the Preset it
  *   started from — `isPresetModified` is what marks it, never a deselection — so none of these
  *   cases touch `activePresetId`, and `chainMatch` being order-sensitive means an edit undone
  *   (a param restored, a reorder reversed) restores the match on its own.
@@ -180,6 +183,10 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       return { ...state, chain: removeLink(state.chain, action.id) }
     case 'DUPLICATE_LINK':
       return { ...state, chain: duplicateLink(state.chain, action.id) }
+    case 'TOGGLE_BYPASS':
+      // A look edit like the five above it, not an arrangement one: what the Chain renders changed,
+      // so the active Preset is marked modified and switching the Link back on restores the match.
+      return { ...state, chain: toggleBypass(state.chain, action.id) }
   }
 }
 

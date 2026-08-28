@@ -6,7 +6,7 @@ import {
   initialEditorState,
   isPresetModified,
 } from './editor-state'
-import { DEFAULT_PRESET, presetById } from './presets'
+import { DEFAULT_PRESET, presetById, randomizeChain } from './presets'
 
 const SEED = 42
 const FRESH_SEED = 7
@@ -229,6 +229,16 @@ describe('Chain edits', () => {
     expect(state.chain[1].id).not.toBe(source.id)
   })
 
+  it('TOGGLE_BYPASS silences the Link with the given id and leaves it where it was', () => {
+    const before = openedEditor()
+    const target = before.chain[1]
+    const state = editorReducer(before, { type: 'TOGGLE_BYPASS', id: target.id })
+
+    expect(state.chain).toHaveLength(before.chain.length)
+    expect(state.chain[1]).toEqual({ ...target, bypassed: true })
+    expect(state.chain.filter((link) => link.bypassed)).toHaveLength(1)
+  })
+
   // The rule the module exists to concentrate: an edit moves the look and nothing else — the
   // Preset is marked modified via isPresetModified, never deselected, and the arrangement holds.
   it('no edit touches provenance or arrangement', () => {
@@ -239,6 +249,7 @@ describe('Chain edits', () => {
       { type: 'ADD_LINK', effect: 'pixelSort' },
       { type: 'REMOVE_LINK', id: before.chain[0].id },
       { type: 'DUPLICATE_LINK', id: before.chain[0].id },
+      { type: 'TOGGLE_BYPASS', id: before.chain[0].id },
     ]
 
     for (const edit of edits) {
@@ -246,6 +257,65 @@ describe('Chain edits', () => {
       expect(state.activePresetId).toBe(before.activePresetId)
       expect(state.seed).toBe(before.seed)
     }
+  })
+})
+
+/**
+ * The rule for bypass against the three transitions that don't edit a Link, decided here so no
+ * surface has to guess it: **bypass is part of the look, so it moves with the look and only with
+ * the look.**
+ *
+ * Re-roll draws an arrangement and never touches the Chain, so a silenced Link stays silenced
+ * however many times it is pressed — anything else would make a Seed control a look edit, which is
+ * the separation ADR 0017 rests on. Randomize and the Presets replace the look outright, and every
+ * Link in what they deal out is audible: bypass says whether a Link contributes, which is structure
+ * by another name, and ADR 0017 forbids Randomize from inventing structure. Carrying a bypass over
+ * from the look being replaced would be worse still — it would silence a Link of a Preset the user
+ * has never seen.
+ */
+describe('bypass against the arrangement and the front door', () => {
+  function withSecondLinkSilenced(): EditorState {
+    const before = openedEditor()
+    return editorReducer(before, { type: 'TOGGLE_BYPASS', id: before.chain[1].id })
+  }
+
+  it('rides through a Re-roll untouched', () => {
+    const rerolled = editorReducer(withSecondLinkSilenced(), {
+      type: 'REROLL',
+      seed: FRESH_SEED,
+    })
+
+    expect(rerolled.chain[1].bypassed).toBe(true)
+    expect(rerolled.seed).toBe(FRESH_SEED)
+  })
+
+  it('rides through the Seed advancing per frame untouched', () => {
+    const animating = editorReducer(withSecondLinkSilenced(), { type: 'TOGGLE_SEED_ANIMATION' })
+    const advanced = editorReducer(animating, { type: 'ADVANCE_SEED', seed: FRESH_SEED })
+
+    expect(advanced.chain[1].bypassed).toBe(true)
+  })
+
+  it('is gone after a Preset — a curated look carries no silence', () => {
+    const picked = editorReducer(withSecondLinkSilenced(), {
+      type: 'SELECT_PRESET',
+      preset: presetById('vhs'),
+      seed: FRESH_SEED,
+    })
+
+    expect(picked.chain.some((link) => link.bypassed)).toBe(false)
+  })
+
+  it('is gone after a Randomize, which never invents structure and never carries one over', () => {
+    const discovered = editorReducer(withSecondLinkSilenced(), {
+      type: 'RANDOMIZE',
+      // A fixed draw: every jitter lands on its base and the base is picked from the middle of
+      // the roster, so what comes back is a curated Chain and nothing about it is a coin toss.
+      chain: randomizeChain(() => 0.5),
+      seed: FRESH_SEED,
+    })
+
+    expect(discovered.chain.some((link) => link.bypassed)).toBe(false)
   })
 })
 
@@ -294,6 +364,18 @@ describe('isPresetModified', () => {
 
     const restored = editorReducer(moved, { type: 'MOVE_LINK', from: 1, to: 0 })
     expect(isPresetModified(restored)).toBe(false)
+  })
+
+  // Bypass changes what the Chain renders, so it is an edit like any other: the Preset is marked
+  // modified while a Link is silenced and the match comes back when it is switched on again.
+  it('turns true on a bypass and back false when the Link is switched on again', () => {
+    const before = openedEditor()
+    const target = before.chain[2]
+    const silenced = editorReducer(before, { type: 'TOGGLE_BYPASS', id: target.id })
+    expect(isPresetModified(silenced)).toBe(true)
+
+    const audible = editorReducer(silenced, { type: 'TOGGLE_BYPASS', id: target.id })
+    expect(isPresetModified(audible)).toBe(false)
   })
 
   it('stays false across a REROLL — a new arrangement is not a customisation', () => {

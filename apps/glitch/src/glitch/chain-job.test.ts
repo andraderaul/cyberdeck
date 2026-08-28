@@ -65,6 +65,24 @@ describe('runChainJob', () => {
     }
   })
 
+  // On the worker's own side of the boundary, and against the pixels rather than against a flag:
+  // a Chain with a silenced Link has to come back digest-identical to the same Chain without it.
+  it('runs a Chain with a bypassed Link as though the Link were not there', () => {
+    const audible = PRESETS[0].chain
+    const silenced = [{ ...createLink('halftone'), bypassed: true }, ...audible]
+
+    const { result } = runChainJob({
+      id: 1,
+      data: new Uint8ClampedArray(SOURCE.data),
+      width: SOURCE.width,
+      height: SOURCE.height,
+      chain: silenced,
+      seed: SEED,
+    })
+
+    expect(digest(result)).toBe(digest(applyChain(SOURCE, audible, SEED)))
+  })
+
   it('carries the job id back, so a result can be matched to the frame that asked for it', () => {
     const { result } = runChainJob({
       id: 42,

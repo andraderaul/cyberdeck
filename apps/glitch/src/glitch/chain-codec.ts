@@ -37,6 +37,13 @@ export const CHAIN_FILE_FORMAT = 'cyberdeck.glitch.chain'
  * Bumped only when an older reader could misread a newer file. A file from the future is refused
  * by name rather than read optimistically: half-understood params are a look the user did not
  * export.
+ *
+ * **Bypass did not bump it, on purpose.** `decodeChain` compares versions by exact equality, so a
+ * bump refuses every Chain file already exported — and there is nothing here for an older reader to
+ * misread: it reads `type` and `params` and ignores every other key, so a file written before bypass
+ * existed decodes with the key absent, which is a Link that runs. The compatibility goes both ways,
+ * which is the test of whether a bump was needed: a file *with* a bypass, opened by a build without
+ * it, loses only the silence — every param and every position survives.
  */
 export const CHAIN_FILE_VERSION = 1
 
@@ -196,6 +203,11 @@ const PARAM_DECODERS: { [K in EffectType]: (read: ParamReader) => EffectParams[K
  * because the Chain is the look and the Seed is the arrangement (ADR 0017): an exported look
  * carries no arrangement, exactly as a Preset doesn't.
  *
+ * `bypassed` is written **only when it is true**, which is the same rule the reader applies from
+ * the other side: absent means the Link runs. Writing `false` onto every Link would be noise in a
+ * file whose point is being read by hand, and would move every byte of a format that did not
+ * change — an all-audible Chain exports today exactly as it did before bypass existed.
+ *
  * Indented rather than compact. The file is meant to be opened, read and hand-edited — it is the
  * only way a user can write a look down.
  */
@@ -204,7 +216,9 @@ export function encodeChain(chain: Chain): string {
     {
       format: CHAIN_FILE_FORMAT,
       version: CHAIN_FILE_VERSION,
-      chain: chain.map(({ type, params }) => ({ type, params })),
+      chain: chain.map(({ type, params, bypassed }) =>
+        bypassed ? { type, params, bypassed } : { type, params },
+      ),
     },
     null,
     2,
@@ -235,6 +249,16 @@ function decodeLink(raw: unknown): { ok: true; link: Link } | { ok: false; reaso
   if (!isRecord(raw.params)) {
     return { ok: false, reason: `${type} is missing its params` }
   }
+  // Absent is the whole compatibility story (CHAIN_FILE_VERSION) — a file that predates bypass, or
+  // one a user wrote by hand for a Link they want heard, simply doesn't carry the key. Present and
+  // not a boolean is refused rather than read as truthy, for the reason an out-of-range param is:
+  // the file would import as a look nobody exported.
+  if (raw.bypassed !== undefined && typeof raw.bypassed !== 'boolean') {
+    return {
+      ok: false,
+      reason: `${type}.bypassed must be true or false (got ${show(raw.bypassed)})`,
+    }
+  }
 
   const read = createParamReader(type, raw.params)
   // The cast mirrors `applyLink` (chain.ts): the decoder and the type came off the same key, but
@@ -244,7 +268,10 @@ function decodeLink(raw: unknown): { ok: true; link: Link } | { ok: false; reaso
   if (read.failure !== null) {
     return { ok: false, reason: read.failure }
   }
-  return { ok: true, link: createLink(type, params as never) }
+  return {
+    ok: true,
+    link: { ...createLink(type, params as never), bypassed: raw.bypassed === true },
+  }
 }
 
 /**
