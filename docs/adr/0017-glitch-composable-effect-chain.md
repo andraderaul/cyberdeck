@@ -122,15 +122,13 @@ reordered past each other, since it is their relative order that names them.
 **The deferred mute landed, as bypass (#371).** The Considered Alternatives above deferred a
 per-Link mute to "a fast-follow if power users reach for it"; the reach was the question *what is
 this Link contributing*, whose only answer was to remove the Link and lose the params it had been
-tuned to. A
-bypassed Link stays in the Chain with its params, its position and its slot against
+tuned to. A bypassed Link stays in the Chain with its params, its position and its slot against
 `MAX_CHAIN_LENGTH`. Three things about it are load-bearing and are not to be tidied:
 
 - **`applyChain` skips a bypassed Link but still counts its occurrence.** Bypass is an audition, so
   the two pictures either side of the toggle must differ in that Link alone; skipping the count
-  would renumber every later Link of the same type and redraw arrangements the user never touched.
-  Removal
-  is the operation that renumbers — that difference is the point, not an inconsistency.
+  would renumber every later Link of the same type and redraw arrangements the user never touched. Removal is the
+  operation that renumbers — that difference is the point, not an inconsistency.
 - **Bypass is part of the look, so `chainMatch` compares it** and a silenced Link marks the active
   Preset `(modified)`, exactly as removing it would. It therefore rides through Re-roll and the
   animated Seed untouched (those move the arrangement), and does not survive a Preset or a
