@@ -99,7 +99,28 @@ Block Displacement e Noise. Os dez Presets carregam Noise, então todos animam a
 oito que também carregam Block Displacement animam os rasgos junto. O que o Seed não alimenta
 (Wave, Halftone, Scanlines, os por-canal) fica onde está — no DEGAUSS e no PHOSPHOR, os dois sem
 Block Displacement, o quadro inteiro permanece parado sob um grão que ferve.
+O Seed é **legível** — aparece em hex (`0x8f2c1a3b`) embaixo da linha da Chain, nunca sobre o
+canvas: um selo sobre a arte precisaria de uma caixa opaca para segurar o contraste, e essa caixa
+cai no resultado do usuário (ADR 0013).
 _Avoid_: random, rng
+
+**Step back**:
+Voltar ao Seed anterior — a saída de um Re-roll, que antes não tinha nenhuma. O Editor guarda os
+**últimos 8 arranjos que a sessão deixou para trás**, do mais novo para o mais velho, e cada
+pressionada anda um para trás. Não persiste entre recargas: uma rolagem só vale a pena ser
+recuperada enquanto o usuário ainda lembra de ter visto.
+**Só o Re-roll grava.** O Seed animado não: ele é um Re-roll por quadro pintado, e alguns segundos
+de animação enterrariam sob centenas de entradas exatamente as rolagens que o usuário pediu. Trocar
+de Preset, randomizar ou importar também não gravam — os três trocam o **look**, e o arranjo que
+deixam para trás pertencia a um look que já foi; o Re-roll é o único ato que segura o look parado e
+move só o arranjo.
+O que volta é um **Seed**, não um instantâneo: ele re-roda sob os ajustes **como estão agora**, então
+mexer num slider entre a rolagem e o step back muda a imagem que reaparece. É a escolha deliberada —
+uma entrada carregando Chain + params + Seed seria fiel, mas deixaria de ser histórico de Seed e
+viraria **undo de sessão**, que é outra feature e merece decisão própria.
+Ficou de fora a **lista de rolagens com miniatura**: reconhecer o arranjo é o que faria uma lista
+valer, e a miniatura não coube no teto de bundle do programa (medição no changeset de #373).
+_Avoid_: undo, histórico de sessão, desfazer
 
 **Preset**:
 Uma Chain nomeada — um **look** curado para render bonito num clique,

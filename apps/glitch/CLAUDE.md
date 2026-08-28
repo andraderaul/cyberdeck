@@ -12,7 +12,8 @@ Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80), Block D
 Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced panel (#84), Recording
 (#85) and Presets + Randomize (#86), plus Chromatic Aberration (#116) and the composable Effect
 Chain (ADR 0017, #125–#128), plus Halftone (#309), Wave (#310), the Chain as a file (#312),
-the animated Seed (#311), the per-Link bypass (#371) and the **Wipe** (#372). All eight Effects are
+the animated Seed (#311), the per-Link bypass (#371), the **Wipe** (#372) and the **step back** to
+the roll before this one (#373). All eight Effects are
 live — Source Image *or* Live Source → the Chain → PNG Export / Capture / Copy / Recording — the
 pure-core / imperative-shell seam is established, and the render is deterministic in Chain + Seed,
 which is what lets a Live Source animate by advancing the Seed alone. The front door is the curated

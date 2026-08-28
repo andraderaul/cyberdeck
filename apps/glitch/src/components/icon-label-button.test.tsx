@@ -13,6 +13,25 @@ describe('IconLabelButton', () => {
     expect(screen.queryByRole('button', { name: '⚄ randomize' })).not.toBeInTheDocument()
   })
 
+  // For a control with more to say than the two words that fit beside its glyph — the step-back
+  // control names the roll it returns to. The visible label is unchanged, so the two never disagree
+  // about what the control *does*, only about how much detail each carries.
+  it('takes an accessible name that says more than the visible label', () => {
+    render(
+      <IconLabelButton
+        variant="ghost"
+        glyph="↶"
+        label="step back"
+        name="step back to the previous roll, seed 0x000002c1"
+      />,
+    )
+
+    expect(
+      screen.getByRole('button', { name: 'step back to the previous roll, seed 0x000002c1' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('step back')).toBeInTheDocument()
+  })
+
   it('keeps the glyph out of the accessibility tree', () => {
     render(<IconLabelButton variant="secondary" glyph="⚄" label="randomize" />)
 

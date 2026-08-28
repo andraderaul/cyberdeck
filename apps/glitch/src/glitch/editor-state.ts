@@ -41,6 +41,30 @@ export interface EditorState {
   activePresetId: string | null
   seed: Seed
   isSeedAnimated: boolean
+  /**
+   * The rolls this session has left behind, newest first — what STEP_BACK walks. Only REROLL puts
+   * anything here (see the reducer), and it never outlives the tab: a roll is worth returning to
+   * while you can still remember seeing it.
+   */
+  seedHistory: readonly Seed[]
+}
+
+/**
+ * How many rolls back the session can reach.
+ *
+ * Small on purpose. This is a way out of "I nudged a slider and the good one is gone", not a
+ * session log — past a handful of rolls the user no longer remembers which one they wanted, and a
+ * list of Seeds cannot remind them (a thumbnail could, and does not fit; see the changeset).
+ */
+export const MAX_SEED_HISTORY = 8
+
+/**
+ * The Seed as something a person can read back and recognise: `0x8f2c1a3b`, never `-1893923781`.
+ * Unsigned and zero-padded so every roll is the same width and two of them can be told apart at a
+ * glance rather than by counting digits.
+ */
+export function formatSeed(seed: Seed): string {
+  return `0x${(seed >>> 0).toString(16).padStart(8, '0')}`
 }
 
 /**
@@ -55,6 +79,7 @@ export type EditorAction =
   | { type: 'RANDOMIZE'; chain: Chain; seed: Seed }
   | { type: 'IMPORT_CHAIN'; chain: Chain; seed: Seed }
   | { type: 'REROLL'; seed: Seed }
+  | { type: 'STEP_BACK' }
   | { type: 'TOGGLE_SEED_ANIMATION' }
   | { type: 'ADVANCE_SEED'; seed: Seed }
   | { type: 'PATCH_LINK'; id: string; params: Link['params'] }
@@ -89,11 +114,20 @@ export interface ChainActions {
  *
  * `isAnimated` rides along rather than travelling as a fourth parallel prop: a toggle's callback
  * and the state it reports are meaningless apart, and one control needs both to render.
+ *
+ * `seed` and `previous` ride along for the same reason: the step-back control has to name the roll
+ * it would return to, and reading the answer off one value is what stops the control saying one
+ * thing and doing another.
  */
 export interface SeedControls {
   isAnimated: boolean
   onReroll: () => void
   onToggleAnimation: () => void
+  /** The arrangement on screen, for the readout — the one thing about the Seed the user can hold. */
+  seed: Seed
+  /** The roll a step back would return to, or absent when this session has not rolled yet. */
+  previous: Seed | null
+  onStepBack: () => void
 }
 
 /**
@@ -109,6 +143,9 @@ export function initialEditorState(seed: Seed): EditorState {
     // The held Seed is the default the app has always had: the corruption stands still, and the
     // first thing a new user sees is a look rather than a look boiling.
     isSeedAnimated: false,
+    // Empty rather than holding the opening Seed: nothing has been left behind yet, and offering a
+    // step back to the arrangement already on screen would be a control that does nothing.
+    seedHistory: [],
   }
 }
 
@@ -122,7 +159,12 @@ export function initialEditorState(seed: Seed): EditorState {
  *   the user discovered, not an edit they made to the Preset it happened to start from.
  * - IMPORT_CHAIN clears provenance for the same reason, and draws its own arrangement as
  *   SELECT_PRESET does — the file is a look, and a look never carries an arrangement.
- * - REROLL leaves the active Preset alone: a new arrangement is not a customisation.
+ * - REROLL leaves the active Preset alone: a new arrangement is not a customisation. It is also
+ *   the only case that writes to `seedHistory` — see the case itself for why that matters.
+ * - STEP_BACK returns to a roll the session left behind. It is not undo: what comes back is a
+ *   **Seed**, so the look it re-runs under is the look as it stands now. Nudge a slider between
+ *   the roll and the step back and the picture is not the one that was on screen — which is the
+ *   deliberate shape, because an entry holding chain + params + seed would be session undo.
  * - TOGGLE_SEED_ANIMATION and ADVANCE_SEED leave it alone for the same reason, and it is the
  *   whole reason animating is cheap: a Seed drawn per frame is a Re-roll per frame, and Re-roll
  *   was never an edit. `chainMatch` never sees either one.
@@ -155,7 +197,22 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       // Seed is the Preset rule too — a file carries the look, never the arrangement (ADR 0017).
       return { ...state, chain: action.chain, activePresetId: null, seed: action.seed }
     case 'REROLL':
-      return { ...state, seed: action.seed }
+      // The **only** case that writes to the history, and the separation from ADVANCE_SEED below is
+      // what makes the history survivable: an animated Seed is a Re-roll per painted frame, so a few
+      // seconds of it would push a hundred entries and bury every roll the user actually asked for.
+      // The Seed pushed is the *outgoing* one — the arrangement being left behind is what a step
+      // back returns to; the incoming one is on screen and needs no way back to it.
+      return {
+        ...state,
+        seed: action.seed,
+        seedHistory: [state.seed, ...state.seedHistory].slice(0, MAX_SEED_HISTORY),
+      }
+    case 'STEP_BACK': {
+      const [previous, ...older] = state.seedHistory
+      // Nothing behind is not an error — the control is disabled there, and this is the same answer
+      // reached without trusting the control to be the only caller.
+      return previous === undefined ? state : { ...state, seed: previous, seedHistory: older }
+    }
     case 'TOGGLE_SEED_ANIMATION':
       // Switching off keeps the Seed the last frame drew rather than restoring an earlier one:
       // that Seed is a whole arrangement like any other, so the picture settles on what is

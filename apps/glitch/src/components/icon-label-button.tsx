@@ -4,6 +4,12 @@ import { cn } from '@cyberdeck/deck-kit/utils'
 type Props = Omit<React.ComponentProps<typeof Button>, 'children' | 'aria-label'> & {
   glyph: string
   label: string
+  /**
+   * The accessible name, where the control has more to say than the two words that fit beside its
+   * glyph — the step-back control names the roll it returns to, which no visible label has room
+   * for. Defaults to the label, so the two agree unless a caller deliberately parts them.
+   */
+  name?: string
 }
 
 /**
@@ -11,9 +17,9 @@ type Props = Omit<React.ComponentProps<typeof Button>, 'children' | 'aria-label'
  * thing, and takes its label back from `sm` up. The accessible name is the label at both sizes, so
  * neither the glyph nor the visible text is ever the only carrier of the name.
  */
-export default function IconLabelButton({ glyph, label, ...props }: Props) {
+export default function IconLabelButton({ glyph, label, name, ...props }: Props) {
   return (
-    <Button {...props} aria-label={label}>
+    <Button {...props} aria-label={name ?? label}>
       {/* The size goes on the span, never on the Button: its own font-size is an arbitrary property
           (`[font-size:var(--btn-secondary-size)]`), which tailwind-merge does not read as a
           conflict, so a `text-*` passed down would not reliably win. Below `sm` the glyph is alone
