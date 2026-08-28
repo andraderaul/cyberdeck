@@ -1,4 +1,4 @@
-import { TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
+import { TOUCH_TARGET_ICON, TOUCH_TARGET_OVERLAY } from '@cyberdeck/deck-kit/ui'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { createRef, type RefObject, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -118,6 +118,9 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.clearAllMocks()
+  // The Wipe's geometry test spies on the layout getters happy-dom answers 0 from, and a spy on a
+  // prototype outlives the test that installed it.
+  vi.restoreAllMocks()
   renderGlitchFrame.mockImplementation(() => Promise.resolve('painted'))
   runner = null
 })
@@ -459,6 +462,196 @@ describe('GlitchCanvas', () => {
     it('stands on its own opaque surface, like the rest of the overlay (ADR 0013)', () => {
       renderCanvas({ liveSource: liveSource(), onMirrorToggle: vi.fn() })
       expect(screen.getByRole('button', { name: /mirror/i }).className).toContain('bg-bg')
+    })
+  })
+
+  // The Wipe (#372). The claim the whole feature rests on is that the comparison is chrome: the
+  // Source half goes onto a canvas of its own and the divider is DOM, so the canvas PNG Export,
+  // Copy, Capture and Recording all read holds the Chain's result and nothing else.
+  describe('the Wipe', () => {
+    const sourceImage = { naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement
+
+    function lastFrame(): GlitchFrame {
+      const { calls } = renderGlitchFrame.mock
+      return calls[calls.length - 1][0] as GlitchFrame
+    }
+
+    function enableCompare() {
+      fireEvent.click(screen.getByRole('button', { name: 'enable compare' }))
+    }
+
+    it('is off until asked for, and costs the render nothing while it is', () => {
+      renderCanvas({ sourceImage })
+
+      expect(screen.queryByRole('slider')).toBeNull()
+      expect(lastFrame().compare).toBeNull()
+    })
+
+    // The criterion the issue calls the most visible when missed. Not "the divider is hidden during
+    // an export" — there is no canvas the divider could be on: the Source half is given a second
+    // canvas, and the one every output path reads is never handed to the Wipe at all.
+    it('never hands the Wipe the canvas the four output paths read', () => {
+      renderCanvas({ sourceImage })
+
+      enableCompare()
+
+      const frame = lastFrame()
+      expect(frame.compare).toBeTruthy()
+      expect(frame.compare).not.toBe(frame.canvas)
+    })
+
+    it('repaints the Source Image when the Wipe opens, which is its only chance to fill', () => {
+      renderCanvas({ sourceImage })
+      expect(renderGlitchFrame).toHaveBeenCalledTimes(1)
+
+      enableCompare()
+
+      expect(renderGlitchFrame).toHaveBeenCalledTimes(2)
+    })
+
+    // A Live Source reads the canvas per tick rather than closing over it, so the loop is never
+    // rebuilt for a toggle — and the Source half follows the feed without a second Chain pass.
+    it('follows a Live Source frame by frame', () => {
+      renderCanvas({ liveSource: liveSource() })
+      flushFrame(0)
+      expect(lastFrame().compare).toBeNull()
+
+      enableCompare()
+      flushFrame(LIVE_SOURCE_FRAME_INTERVAL_MS)
+
+      expect(lastFrame().compare).toBeTruthy()
+      expect(lastFrame().source).toBeTruthy()
+    })
+
+    it('gives the canvas back when the Wipe closes', () => {
+      renderCanvas({ sourceImage })
+      enableCompare()
+
+      fireEvent.click(screen.getByRole('button', { name: 'disable compare' }))
+
+      expect(lastFrame().compare).toBeNull()
+      expect(screen.queryByRole('slider')).toBeNull()
+    })
+
+    // A Wipe is a way of looking at *this* Source. Asserted on the component rather than left to
+    // App's empty state, which unmounts the canvas between Sources and would pass either way.
+    it('does not survive a Source change', () => {
+      const { rerender } = renderCanvas({ sourceImage })
+      enableCompare()
+      expect(screen.getByRole('slider')).toBeTruthy()
+
+      rerender(
+        <GlitchCanvas
+          sourceImage={{ naturalWidth: 20, naturalHeight: 30 } as HTMLImageElement}
+          liveSource={null}
+          chain={CHAIN}
+          seed={SEED}
+          canvasRef={createRef<HTMLCanvasElement>() as RefObject<HTMLCanvasElement>}
+          onClearSource={vi.fn()}
+        />,
+      )
+
+      expect(screen.queryByRole('slider')).toBeNull()
+    })
+
+    describe('the divider', () => {
+      it('is a slider that names itself and its position', () => {
+        renderCanvas({ sourceImage })
+        enableCompare()
+
+        const divider = screen.getByRole('slider', { name: 'wipe divider' })
+        expect(divider).toHaveAttribute('aria-valuenow', '50')
+        expect(divider).toHaveAttribute('aria-valuetext', '50% source, 50% chain')
+      })
+
+      it('walks with the arrow keys and parks on either edge of the picture', () => {
+        renderCanvas({ sourceImage })
+        enableCompare()
+        const divider = screen.getByRole('slider')
+
+        fireEvent.keyDown(divider, { key: 'ArrowRight' })
+        expect(divider).toHaveAttribute('aria-valuenow', '51')
+
+        fireEvent.keyDown(divider, { key: 'ArrowLeft' })
+        fireEvent.keyDown(divider, { key: 'ArrowLeft' })
+        expect(divider).toHaveAttribute('aria-valuenow', '49')
+
+        fireEvent.keyDown(divider, { key: 'End' })
+        expect(divider).toHaveAttribute('aria-valuenow', '100')
+
+        fireEvent.keyDown(divider, { key: 'Home' })
+        expect(divider).toHaveAttribute('aria-valuenow', '0')
+      })
+
+      // ADR 0010's fit region, and the criterion the letterbox bands exist to make sharp: a square
+      // Source in a 400x200 frame draws 200px wide with 100px of void either side, so a pointer at
+      // x=200 is the *middle of the picture* rather than half the element, and a pointer dragged
+      // out into a band pins to the picture's edge.
+      it('divides the picture, not the canvas element', () => {
+        vi.spyOn(HTMLDivElement.prototype, 'clientWidth', 'get').mockReturnValue(400)
+        vi.spyOn(HTMLDivElement.prototype, 'clientHeight', 'get').mockReturnValue(200)
+        vi.spyOn(HTMLDivElement.prototype, 'getBoundingClientRect').mockReturnValue({
+          left: 0,
+          top: 0,
+        } as DOMRect)
+
+        renderCanvas({ sourceImage })
+        enableCompare()
+        const divider = screen.getByRole('slider')
+
+        fireEvent.pointerDown(divider, { pointerId: 1 })
+        fireEvent.pointerMove(divider, { pointerId: 1, clientX: 200 })
+        expect(divider).toHaveAttribute('aria-valuenow', '50')
+
+        fireEvent.pointerMove(divider, { pointerId: 1, clientX: 250 })
+        expect(divider).toHaveAttribute('aria-valuenow', '75')
+
+        fireEvent.pointerMove(divider, { pointerId: 1, clientX: 20 })
+        expect(divider).toHaveAttribute('aria-valuenow', '0')
+
+        // Released, so what follows the pointer is nothing at all.
+        fireEvent.pointerUp(divider, { pointerId: 1 })
+        fireEvent.pointerMove(divider, { pointerId: 1, clientX: 300 })
+        expect(divider).toHaveAttribute('aria-valuenow', '0')
+      })
+
+      it('leaves a key it does not own to the page', () => {
+        renderCanvas({ sourceImage })
+        enableCompare()
+
+        const handled = fireEvent.keyDown(screen.getByRole('slider'), { key: 'Tab' })
+
+        expect(handled).toBe(true)
+        expect(screen.getByRole('slider')).toHaveAttribute('aria-valuenow', '50')
+      })
+
+      // ADR 0013, at the one control on this canvas that is guaranteed to sit in the middle of the
+      // artwork rather than in a corner of it.
+      it('stands the handle on its own opaque ground', () => {
+        renderCanvas({ sourceImage })
+        enableCompare()
+
+        expect(screen.getByRole('slider').className).toContain('bg-bg')
+      })
+
+      // 44x44 as an overlay, because the backdrop is the picture: growing the handle to the target
+      // would charge the artwork for its own control (`ui/touch-target.ts`).
+      it('buys the handle a 44px target without growing it', () => {
+        renderCanvas({ sourceImage })
+        enableCompare()
+        const divider = screen.getByRole('slider')
+
+        // Every class of the constant but its opening `relative`, which the handle's own
+        // `absolute` merges away on purpose — the kit documents that swap for exactly this case,
+        // a control that positions itself.
+        expect(divider.className.split(/\s+/)).toEqual(
+          expect.arrayContaining(
+            TOUCH_TARGET_OVERLAY.split(' ').filter((one) => one !== 'relative'),
+          ),
+        )
+        expect(divider.className).toContain('absolute')
+        expect(divider.className).toContain('w-[24px]')
+      })
     })
   })
 

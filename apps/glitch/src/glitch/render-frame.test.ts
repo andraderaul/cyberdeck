@@ -423,6 +423,103 @@ describe('renderGlitchFrame', () => {
   })
 })
 
+// The Wipe's Source half (#372). The divider itself is DOM chrome and never reaches this file —
+// what does is the one extra draw that puts the Source somewhere the user can see it, and the
+// invariant that it lands on a canvas none of the four output paths read.
+describe('renderGlitchFrame with the Wipe on', () => {
+  it('draws the sampled Source into the compare canvas at the sampled size', async () => {
+    const compareCtx = fakeContext()
+    const compare = fakeCanvas(compareCtx)
+    const hidden = fakeCanvas(fakeContext(new ImageData(100, 50)))
+
+    await renderFrame({
+      source: fakeSource(100, 50),
+      canvas: fakeCanvas(fakeContext()),
+      hidden: hidden,
+      chain: CHAIN,
+      seed: SEED,
+      compare: compare,
+    })
+
+    expect(compare.width).toBe(100)
+    expect(compare.height).toBe(50)
+    expect(compareCtx.drawImage).toHaveBeenCalledWith(hidden, 0, 0)
+  })
+
+  // The criterion the issue calls the most visible when missed: PNG Export, Copy, Capture and
+  // Recording all read `canvas`, so the Source half has to land somewhere else entirely.
+  it('leaves the visible canvas holding the Chain result alone', async () => {
+    const visibleCtx = fakeContext()
+    const compareCtx = fakeContext()
+
+    await renderFrame({
+      source: fakeSource(4, 4),
+      canvas: fakeCanvas(visibleCtx),
+      hidden: fakeCanvas(fakeContext(new ImageData(4, 4))),
+      chain: CHAIN,
+      seed: SEED,
+      compare: fakeCanvas(compareCtx),
+    })
+
+    expect(visibleCtx.drawImage).not.toHaveBeenCalled()
+    expect(visibleCtx.putImageData).toHaveBeenCalledOnce()
+    expect(compareCtx.putImageData).not.toHaveBeenCalled()
+  })
+
+  // "Without adding a second full pipeline pass per frame": the Source is taken off the sampling
+  // canvas, which already holds it at the point `applyChain` receives it. One sampling draw, one
+  // Chain, one extra blit of a bitmap that was already there.
+  it('takes the Source off the sampling canvas rather than sampling it twice', async () => {
+    const hiddenCtx = fakeContext(new ImageData(4, 4))
+    const run = vi.fn(() =>
+      Promise.resolve({ data: new Uint8ClampedArray(64), width: 4, height: 4 }),
+    )
+
+    await renderFrame({
+      source: fakeSource(4, 4),
+      canvas: fakeCanvas(fakeContext()),
+      hidden: fakeCanvas(hiddenCtx),
+      chain: CHAIN,
+      seed: SEED,
+      compare: fakeCanvas(fakeContext()),
+      runner: { run, dispose: () => {} } as unknown as ChainRunner,
+    })
+
+    expect(hiddenCtx.drawImage).toHaveBeenCalledOnce()
+    expect(hiddenCtx.getImageData).toHaveBeenCalledOnce()
+    expect(run).toHaveBeenCalledOnce()
+  })
+
+  // Mirror is a real pixel flip upstream of the Chain (ADR 0016), so the Source the Wipe shows is
+  // the flipped one — taking it off the sampling canvas is what makes that true without a second
+  // flip to keep in step.
+  it('shows the Source as the Chain received it, mirror included', async () => {
+    const hiddenCtx = fakeMirrorContext(new ImageData(100, 50))
+    const compareCtx = fakeContext()
+    const hidden = fakeCanvas(hiddenCtx)
+
+    await renderFrame({
+      source: fakeSource(100, 50),
+      canvas: fakeCanvas(fakeContext()),
+      hidden: hidden,
+      chain: CHAIN,
+      seed: SEED,
+      isMirrored: true,
+      compare: fakeCanvas(compareCtx),
+    })
+
+    expect(hiddenCtx.calls).toEqual([
+      'clearRect(0,0,100,50)',
+      'save',
+      'translate(100,0)',
+      'scale(-1,1)',
+      'drawImage',
+      'restore',
+    ])
+    expect(compareCtx.drawImage).toHaveBeenCalledWith(hidden, 0, 0)
+  })
+})
+
 // `applyChain` is pure in Chain + Seed, but the shell can still leak history: `drawImage`
 // composites source-over, so a Source with an alpha channel used to blend onto whatever the
 // hidden canvas still held from the render before it (#335, ADR 0001).

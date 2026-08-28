@@ -30,6 +30,13 @@ export interface GlitchFrame {
   chain: Chain
   seed: Seed
   isMirrored?: boolean
+  /**
+   * Where the Wipe's Source half goes, or absent while the Wipe is off.
+   *
+   * A canvas of its own, never `canvas`: the four output paths all read the visible canvas, so the
+   * comparison has to be painted somewhere none of them can reach.
+   */
+  compare?: HTMLCanvasElement | null
 }
 
 /**
@@ -54,6 +61,11 @@ export interface GlitchFrame {
  * Source to sample. Nothing here is stateful across calls, so the rAF loop re-entering it at
  * ~15fps with a fixed Seed repaints the same arrangement rather than boiling.
  *
+ * The **Wipe** (`components/wipe-divider.tsx`) is the one thing that leaves here on another canvas.
+ * Given `compare`, the shell blits the sampled Source onto it before the fold — the visible canvas
+ * still receives the Chain's result and nothing else, which is what keeps the comparison out of
+ * PNG Export, Copy, Capture and Recording by construction rather than by suppression.
+ *
  * The sampling happens before the runner is asked, even when the runner is busy and will drop the
  * frame. That is deliberate: a fresh sample replaces the one waiting its turn, so what eventually
  * runs is the newest frame rather than the oldest queued one (`chain-runner.ts`).
@@ -70,6 +82,7 @@ export async function renderGlitchFrame({
   chain,
   seed,
   isMirrored = false,
+  compare = null,
 }: GlitchFrame): Promise<GlitchFrameOutcome> {
   const ctx = canvas.getContext('2d')
   const hiddenCtx = hidden.getContext('2d')
@@ -99,6 +112,17 @@ export async function renderGlitchFrame({
     hiddenCtx.restore()
   } else {
     hiddenCtx.drawImage(source, 0, 0, w, h)
+  }
+
+  // The Wipe's Source half, blitted off the sampling canvas — the Source at exactly the point
+  // `applyChain` receives it, mirror included, so nothing here has to be kept in step with the
+  // flip. One extra draw of a bitmap that is already sitting there, never a second pass over the
+  // Chain, and while the Wipe is off it is a null check.
+  const compareCtx = compare?.getContext('2d')
+  if (compare && compareCtx) {
+    compare.width = w
+    compare.height = h
+    compareCtx.drawImage(hidden, 0, 0)
   }
 
   const imageData = hiddenCtx.getImageData(0, 0, w, h)

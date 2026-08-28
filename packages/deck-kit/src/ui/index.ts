@@ -22,6 +22,8 @@ export {
 } from './toast-provider'
 export { default as ToggleGroup } from './toggle-group'
 export { default as Tooltip } from './tooltip'
-// `TOUCH_TARGET_OVERLAY` stays module-local deliberately: its only caller is the kit's own Tooltip,
-// and ADR 0014's bar for crossing into the public surface is two real callers, not one.
-export { TOUCH_TARGET_HEIGHT, TOUCH_TARGET_ICON } from './touch-target'
+// `TOUCH_TARGET_OVERLAY` was module-local while the kit's own Tooltip was its only caller —
+// ADR 0014's bar is two real callers, not one. GLITCH//Studio's Wipe handle is the second: a
+// control standing alone on the user's artwork, drawing smaller than 44px in both axes, which is
+// exactly the shape that constant is for.
+export { TOUCH_TARGET_HEIGHT, TOUCH_TARGET_ICON, TOUCH_TARGET_OVERLAY } from './touch-target'

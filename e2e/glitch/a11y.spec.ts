@@ -89,6 +89,20 @@ for (const tab of ['presets', 'edit'] as const) {
   )
 }
 
+// The Wipe (#372) is the one control that sits in the *middle* of the artwork rather than in a
+// corner of it, so the ground guard has more to say about its handle than about anything else on
+// this canvas. Off by default, which is why it needs a sweep of its own — the tabs above open with
+// it closed and never reach it.
+test('the wipe is accessible and its handle holds its target', A11Y, async ({ page }) => {
+  await withASource(page)
+  await page.getByRole('button', { name: 'enable compare' }).click()
+  await expect(page.getByRole('slider', { name: 'wipe divider' })).toBeVisible()
+
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
+  await expectEveryMarkOnTheCanvasStandsOnItsOwnGround(page)
+})
+
 test('the out tab is accessible and every control holds its target', A11Y, async ({ page }) => {
   await withASource(page)
   await page.getByRole('tab', { name: 'out' }).click()

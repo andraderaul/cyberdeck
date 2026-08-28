@@ -1,11 +1,13 @@
 import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
 import { TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
-import { type MutableRefObject, type RefObject, useEffect, useRef } from 'react'
+import { type MutableRefObject, type RefObject, useEffect, useRef, useState } from 'react'
 import type { Chain } from '../glitch/chain'
 import { type ChainRunner, createChainRunner } from '../glitch/chain-runner'
+import { sourceDimensions } from '../glitch/image-utils'
 import { type GlitchFrame, renderGlitchFrame } from '../glitch/render-frame'
 import type { Seed } from '../glitch/types'
+import WipeDivider from './wipe-divider'
 
 /**
  * ~15fps — the rate a glitched feed reads at, and the rate `useRecording` captures at. The Chain
@@ -115,6 +117,20 @@ export default function GlitchCanvas({
     [],
   )
 
+  // The Wipe (#372), off until asked for. `compareRef` is null exactly while it is off, which is
+  // what the shell reads to decide whether the Source half costs anything at all — nothing about
+  // the render loop changes when nobody is comparing.
+  const [isWiping, setIsWiping] = useState(false)
+  const compareRef = useRef<HTMLCanvasElement>(null)
+  // A Wipe is a way of looking at *this* Source, so a new one arrives without it. App's flow
+  // already unmounts this canvas between Sources — its empty state is the only place a Source is
+  // chosen — and this makes the rule a property of the canvas rather than of that branch.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the Source is the trigger, not a value read
+  useEffect(() => {
+    setIsWiping(false)
+  }, [sourceImage, liveSource])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `isWiping` is not read in the body — it is read through `compareRef`, which only a re-run picks up. A Source Image paints once per change, so opening the Wipe has to *be* one of those changes or its Source half stays blank until the Chain moves.
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !sourceImage) {
@@ -129,6 +145,7 @@ export default function GlitchCanvas({
       chain,
       seed,
       isMirrored,
+      compare: compareRef.current,
     }
     const paint = async () => {
       // The re-ask is for **a Worker that died holding this frame's pixels**, and for nothing else.
@@ -146,7 +163,7 @@ export default function GlitchCanvas({
     return () => {
       superseded = true
     }
-  }, [sourceImage, chain, seed, isMirrored, canvasRef])
+  }, [sourceImage, chain, seed, isMirrored, canvasRef, isWiping])
 
   // rAF loop throttled to ~15fps — the Chain runs on a Worker (ADR 0002), so what happens on this
   // thread is the sampling and the paint. The Seed is held across frames by default: that's what
@@ -179,6 +196,9 @@ export default function GlitchCanvas({
           chain,
           seed,
           isMirrored,
+          // Read per tick rather than closed over: the loop then needs no rebuilding when the Wipe
+          // is toggled, and it is null the moment the divider unmounts.
+          compare: compareRef.current,
         }).then((outcome) => {
           // Same reason editor-state.ts refuses ADVANCE_SEED while the animation is off: the loop
           // and React's render are on different clocks, and a frame still in flight when the loop
@@ -198,6 +218,10 @@ export default function GlitchCanvas({
   }, [liveSource, chain, seed, isMirrored, canvasRef, onAdvanceSeed])
 
   const isLive = liveSource !== null
+  // Both Sources are never set at once (App's empty state is the only place one is chosen), so the
+  // Wipe can take whichever is there and lay the picture out on that Source's own aspect.
+  const source = liveSource ?? sourceImage
+  const sourceSize = source === null ? null : sourceDimensions(source)
 
   return (
     <div className="relative w-full h-full">
@@ -207,6 +231,15 @@ export default function GlitchCanvas({
         aria-label={isLive ? 'live glitched preview' : 'glitched preview'}
         className="w-full h-full block object-contain bg-bg [image-rendering:pixelated]"
       />
+      {/* Between the canvas and the overlay row on purpose: the Wipe paints over the artwork and
+          under the chrome, and its own layer takes no pointer events except at the handle. */}
+      {isWiping && sourceSize !== null && (
+        <WipeDivider
+          compareRef={compareRef}
+          sourceWidth={sourceSize.w}
+          sourceHeight={sourceSize.h}
+        />
+      )}
       <div className="absolute top-xs right-xs flex items-center gap-xs">
         {isLive && (
           <span
@@ -283,6 +316,24 @@ export default function GlitchCanvas({
             ⇄
           </button>
         )}
+        {/* "compare" rather than "wipe" on the chip, deliberately: the control next to it clears
+            the Source, and in that company "wipe" reads as erase. The mechanism keeps its name
+            (CONTEXT.md); the word the user presses says what pressing it does. */}
+        <button
+          type="button"
+          onClick={() => setIsWiping((current) => !current)}
+          aria-pressed={isWiping}
+          aria-label={isWiping ? 'disable compare' : 'enable compare'}
+          className={cn(
+            CANVAS_OVERLAY_CHROME,
+            TOUCH_TARGET_ICON,
+            isWiping
+              ? 'border border-accent text-accent cursor-pointer transition-colors duration-fast'
+              : CANVAS_OVERLAY_BUTTON_REST,
+          )}
+        >
+          ◧{!isTouchDevice && ' compare'}
+        </button>
         <button
           type="button"
           onClick={onClearSource}
