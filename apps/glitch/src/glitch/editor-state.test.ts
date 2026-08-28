@@ -3,10 +3,13 @@ import {
   type EditorAction,
   type EditorState,
   editorReducer,
+  formatSeed,
   initialEditorState,
   isPresetModified,
+  MAX_SEED_HISTORY,
 } from './editor-state'
 import { DEFAULT_PRESET, presetById, randomizeChain } from './presets'
+import type { Seed } from './types'
 
 const SEED = 42
 const FRESH_SEED = 7
@@ -92,6 +95,127 @@ describe('REROLL', () => {
     expect(state.seed).toBe(FRESH_SEED)
     expect(state.chain).toBe(before.chain)
     expect(state.activePresetId).toBe(before.activePresetId)
+  })
+})
+
+// The way back out of a Re-roll (#373): a good arrangement used to be unrecoverable the moment the
+// next roll landed. An entry is a **Seed**, never a snapshot — see the reducer's own note.
+describe('stepping back through the session’s rolls', () => {
+  function rolled(...seeds: readonly Seed[]): EditorState {
+    return seeds.reduce<EditorState>(
+      (state, seed) => editorReducer(state, { type: 'REROLL', seed }),
+      openedEditor(),
+    )
+  }
+
+  it('opens with nothing behind it — the arrangement on screen was never left', () => {
+    expect(openedEditor().seedHistory).toEqual([])
+  })
+
+  // The *outgoing* Seed, not the incoming one: what a step back returns to is the arrangement being
+  // left behind, and the one arriving is already on screen.
+  it('REROLL leaves the outgoing arrangement behind, newest first', () => {
+    expect(rolled(1, 2, 3).seedHistory).toEqual([2, 1, SEED])
+  })
+
+  it('STEP_BACK returns to the newest roll behind it and takes it off the history', () => {
+    const state = editorReducer(rolled(1, 2), { type: 'STEP_BACK' })
+
+    expect(state.seed).toBe(1)
+    expect(state.seedHistory).toEqual([SEED])
+  })
+
+  it('walks back one roll per press, all the way to the arrangement the session opened on', () => {
+    let state = rolled(1, 2, 3)
+    for (const _ of [0, 1, 2]) {
+      state = editorReducer(state, { type: 'STEP_BACK' })
+    }
+
+    expect(state.seed).toBe(SEED)
+    expect(state.seedHistory).toEqual([])
+  })
+
+  it('is a no-op with nothing behind it, so the control is not the only thing holding the rule', () => {
+    const opened = openedEditor()
+
+    expect(editorReducer(opened, { type: 'STEP_BACK' })).toBe(opened)
+  })
+
+  // The arrangement moves; the look and the provenance do not. Stepping back is Re-roll's inverse,
+  // and Re-roll was never an edit.
+  it('moves the arrangement alone', () => {
+    const before = rolled(1)
+    const state = editorReducer(before, { type: 'STEP_BACK' })
+
+    expect(state.chain).toBe(before.chain)
+    expect(state.activePresetId).toBe(before.activePresetId)
+    expect(isPresetModified(state)).toBe(false)
+  })
+
+  it(`keeps the last ${MAX_SEED_HISTORY} rolls and drops the oldest`, () => {
+    const rolls = Array.from({ length: MAX_SEED_HISTORY + 4 }, (_, index) => index + 1)
+    const state = rolled(...rolls)
+
+    expect(state.seedHistory).toHaveLength(MAX_SEED_HISTORY)
+    // Newest first, and the opening Seed has fallen off the far end.
+    expect(state.seedHistory[0]).toBe(rolls[rolls.length - 2])
+    expect(state.seedHistory).not.toContain(SEED)
+  })
+
+  // **The rule the whole feature rests on.** ADVANCE_SEED fires once per painted frame while the
+  // Seed animates, so a few seconds of it would push a hundred entries and bury every roll the user
+  // actually asked for. The reducer separates the two actions; this is what holds the separation.
+  it('never records an animated advance, however many frames go by', () => {
+    let state = editorReducer(rolled(1), { type: 'TOGGLE_SEED_ANIMATION' })
+    for (const seed of [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]) {
+      state = editorReducer(state, { type: 'ADVANCE_SEED', seed })
+    }
+
+    expect(state.seed).toBe(19)
+    expect(state.seedHistory).toEqual([SEED])
+  })
+
+  // Switching the animation off settles on the Seed the last frame drew, and a Re-roll from there
+  // leaves *that* arrangement behind — the one that was on screen, not the one before the animation.
+  it('leaves the arrangement the animation settled on behind, when the next Re-roll lands', () => {
+    const settled = editorReducer(
+      editorReducer(editorReducer(openedEditor(), { type: 'TOGGLE_SEED_ANIMATION' }), {
+        type: 'ADVANCE_SEED',
+        seed: 99,
+      }),
+      { type: 'TOGGLE_SEED_ANIMATION' },
+    )
+    const state = editorReducer(settled, { type: 'REROLL', seed: FRESH_SEED })
+
+    expect(state.seedHistory).toEqual([99])
+  })
+
+  // Only REROLL writes here. A Preset, a Randomize and an import each draw a fresh Seed too, but
+  // they change the **look** — the arrangement they leave behind belonged to a look that is gone,
+  // and Re-roll is the one act that holds the look still and moves the arrangement alone.
+  it.each<[string, EditorAction]>([
+    ['SELECT_PRESET', { type: 'SELECT_PRESET', preset: presetById('vhs'), seed: FRESH_SEED }],
+    ['RANDOMIZE', { type: 'RANDOMIZE', chain: presetById('vhs').chain, seed: FRESH_SEED }],
+    ['IMPORT_CHAIN', { type: 'IMPORT_CHAIN', chain: presetById('vhs').chain, seed: FRESH_SEED }],
+    ['TOGGLE_SEED_ANIMATION', { type: 'TOGGLE_SEED_ANIMATION' }],
+    ['ADD_LINK', { type: 'ADD_LINK', effect: 'noise' }],
+  ])('records nothing on %s', (_label, action) => {
+    const before = rolled(1)
+
+    expect(editorReducer(before, action).seedHistory).toBe(before.seedHistory)
+  })
+})
+
+describe('formatSeed', () => {
+  // An int32 does not read as an identifier; `0x8f2c1a3b` does. Unsigned and zero-padded so every
+  // roll is the same width and two of them can be told apart at a glance.
+  it.each([
+    [0, '0x00000000'],
+    [0x8f2, '0x000008f2'],
+    [-1, '0xffffffff'],
+    [-1892935109, '0x8f2c1a3b'],
+  ])('writes %d as %s', (seed, written) => {
+    expect(formatSeed(seed)).toBe(written)
   })
 })
 

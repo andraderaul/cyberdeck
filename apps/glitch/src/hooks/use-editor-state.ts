@@ -44,6 +44,12 @@ export function useEditorState() {
     dispatch({ type: 'REROLL', seed: createSeed() })
   }, [])
 
+  // No randomness to draw: a step back returns to a Seed the session already drew, which is the
+  // whole difference between it and Re-roll.
+  const stepBack = useCallback(() => {
+    dispatch({ type: 'STEP_BACK' })
+  }, [])
+
   const toggleSeedAnimation = useCallback(() => {
     dispatch({ type: 'TOGGLE_SEED_ANIMATION' })
   }, [])
@@ -59,8 +65,13 @@ export function useEditorState() {
       isAnimated: state.isSeedAnimated,
       onReroll: reroll,
       onToggleAnimation: toggleSeedAnimation,
+      seed: state.seed,
+      // The newest roll left behind, flattened to one value here rather than shipping the whole
+      // history to a control that can only reach the front of it.
+      previous: state.seedHistory[0] ?? null,
+      onStepBack: stepBack,
     }),
-    [state.isSeedAnimated, reroll, toggleSeedAnimation],
+    [state.isSeedAnimated, state.seed, state.seedHistory, reroll, toggleSeedAnimation, stepBack],
   )
 
   const chainActions: ChainActions = useMemo(

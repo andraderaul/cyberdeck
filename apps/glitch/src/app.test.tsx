@@ -758,6 +758,39 @@ describe('App', () => {
     expect(renderedChain).toHaveBeenLastCalledWith(before)
   })
 
+  // The way back out of a Re-roll (#373) — the whole point of the control is that the arrangement
+  // reaches the canvas again, not merely that the reducer holds it.
+  it('hands the canvas the previous arrangement back on a step back', () => {
+    renderWithEditOpen()
+    const before = renderedSeed.mock.lastCall?.[0]
+    fireEvent.click(screen.getByRole('button', { name: 're-roll' }))
+
+    fireEvent.click(screen.getByRole('button', { name: /^step back to the previous roll/ }))
+
+    expect(renderedSeed.mock.lastCall?.[0]).toBe(before)
+  })
+
+  // What comes back is a Seed, not a snapshot: the look it re-runs under is the look as it stands
+  // now. The alternative — an entry holding chain + params + seed — is session undo, and is not
+  // this feature (#373).
+  it('re-runs the returned roll under the look as it stands now', () => {
+    renderWithEditOpen()
+    fireEvent.click(screen.getByRole('button', { name: 're-roll' }))
+    focusLink('channel shift')
+    fireEvent.click(screen.getByRole('button', { name: 'green' }))
+    const edited = renderedChain.mock.lastCall?.[0]
+
+    fireEvent.click(screen.getByRole('button', { name: /^step back to the previous roll/ }))
+
+    expect(renderedChain).toHaveBeenLastCalledWith(edited)
+  })
+
+  it('offers no step back before the session has rolled', () => {
+    renderWithEditOpen()
+
+    expect(screen.getByRole('button', { name: 'step back — no earlier roll yet' })).toBeDisabled()
+  })
+
   // The other half of the user's own Preset: the look leaves the app as a file, beside the three
   // outputs that take the picture out.
   describe('exporting a Chain', () => {

@@ -8,7 +8,7 @@ import {
   type Link,
   MAX_CHAIN_LENGTH,
 } from '../glitch/chain'
-import type { ChainActions, SeedControls } from '../glitch/editor-state'
+import { type ChainActions, formatSeed, type SeedControls } from '../glitch/editor-state'
 import { EFFECT_ORDER } from '../glitch/presets'
 import {
   CHANNEL_NAMES,
@@ -378,7 +378,7 @@ interface Props {
  */
 export default function ChainEditor({ chain, actions, seedControls, isLive }: Props) {
   const { onLinkChange, onReorder, onAdd, onRemove, onDuplicate, onToggleBypass } = actions
-  const { isAnimated, onReroll, onToggleAnimation } = seedControls
+  const { isAnimated, onReroll, onToggleAnimation, seed, previous, onStepBack } = seedControls
   const isFull = chain.length >= MAX_CHAIN_LENGTH
   const [focus, setFocus] = useState<Focus>({ kind: 'link', id: null })
   // Which Link the pointer is carrying, once the press has cleared the tap threshold.
@@ -642,6 +642,26 @@ export default function ChainEditor({ chain, actions, seedControls, isLive }: Pr
           label="re-roll"
           className="shrink-0"
         />
+        {/* Immediately after Re-roll, because it is the way back out of one: a good arrangement is
+            otherwise unrecoverable the moment the next roll lands. Disabled rather than absent
+            before the session's first roll — a control that comes and goes reflows the row every
+            time, and the row is the one the user is pressing. */}
+        <IconLabelButton
+          variant="ghost"
+          onClick={onStepBack}
+          disabled={previous === null}
+          glyph="↶"
+          label="step back"
+          // The name says which roll, which no visible label has room for — and the hex is never
+          // the whole name, because "0x8f2c1a3b" announced alone says nothing about what pressing
+          // it does.
+          name={
+            previous === null
+              ? 'step back — no earlier roll yet'
+              : `step back to the previous roll, seed ${formatSeed(previous)}`
+          }
+          className="shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+        />
         {/* Beside Re-roll because it *is* Re-roll, once a frame — and the pressed state carries
             "still running" rather than the label changing, so the row doesn't reflow every time
             it is switched. */}
@@ -664,13 +684,21 @@ export default function ChainEditor({ chain, actions, seedControls, isLive }: Pr
         chain.
       </p>
 
-      {/* A live region, not a static hint: the message appears mid-interaction, and a user who just
-          hit the limit is the one who most needs to be told why the palette went quiet. */}
-      <p role="status" className="text-2xs text-fg-muted">
-        {isFull
-          ? `chain is full — ${MAX_CHAIN_LENGTH} effects max. remove one to add another.`
-          : `${chain.length} of ${MAX_CHAIN_LENGTH} effects`}
-      </p>
+      <div className="flex items-baseline justify-between gap-sm">
+        {/* A live region, not a static hint: the message appears mid-interaction, and a user who just
+            hit the limit is the one who most needs to be told why the palette went quiet. */}
+        <p role="status" className="text-2xs text-fg-muted">
+          {isFull
+            ? `chain is full — ${MAX_CHAIN_LENGTH} effects max. remove one to add another.`
+            : `${chain.length} of ${MAX_CHAIN_LENGTH} effects`}
+        </p>
+        {/* The arrangement, written down. It reads here rather than over the canvas on purpose: a
+            badge on the artwork would have to stand on an opaque box to hold its contrast, and that
+            box lands on the user's result (ADR 0013). Not a live region — it changes on every frame
+            of an animated Seed, and announcing that would talk over the user for as long as it
+            runs. */}
+        <span className="shrink-0 text-fg-muted">seed {formatSeed(seed)}</span>
+      </div>
     </div>
   )
 }

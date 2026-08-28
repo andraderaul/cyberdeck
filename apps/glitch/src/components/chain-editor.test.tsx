@@ -20,7 +20,7 @@ const GRAIN = createLink('noise', { amount: 0.25, tint: 'mono' })
  * name a chip announces, the state a toggle reports — and the wiring from the toggle to the canvas
  * is app.test.tsx's to prove.
  */
-function renderEditor(chain: Chain) {
+function renderEditor(chain: Chain, seed: Partial<SeedControls> = {}) {
   const actions: ChainActions = {
     onLinkChange: vi.fn(),
     onReorder: vi.fn(),
@@ -33,9 +33,13 @@ function renderEditor(chain: Chain) {
     isAnimated: false,
     onReroll: vi.fn(),
     onToggleAnimation: vi.fn(),
+    seed: 0x8f2c1a3b,
+    previous: null,
+    onStepBack: vi.fn(),
+    ...seed,
   }
   render(<ChainEditor chain={chain} actions={actions} seedControls={seedControls} isLive={false} />)
-  return actions
+  return { actions, seedControls }
 }
 
 /** The Link chips, in Chain order — each is both the selection control and the drag handle. */
@@ -97,7 +101,7 @@ describe('a bypassed Link in the editor', () => {
 
 describe('the bypass toggle', () => {
   it('acts on the focused Link', () => {
-    const actions = renderEditor([SORT, GRAIN])
+    const { actions } = renderEditor([SORT, GRAIN])
 
     fireEvent.click(screen.getByRole('button', { name: 'bypass pixel sort' }))
 
@@ -140,5 +144,67 @@ describe('the bypass toggle', () => {
 
     expect(screen.getByRole('button', { name: /^duplicate pixel sort/ })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'bypass pixel sort' })).toBeEnabled()
+  })
+})
+
+// The way back out of a Re-roll (#373). Not undo: what it returns to is a **Seed**, which re-runs
+// under the look as it stands now.
+describe('the step-back control', () => {
+  it('asks for the roll it names', () => {
+    const { seedControls } = renderEditor([SORT, GRAIN], { previous: 0x2c1 })
+
+    fireEvent.click(screen.getByRole('button', { name: /^step back to the previous roll/ }))
+
+    expect(seedControls.onStepBack).toHaveBeenCalledTimes(1)
+  })
+
+  // The hex alone would announce as a run of digits with nothing saying what pressing it does, so
+  // the name carries the act first and the roll second.
+  it('names the roll it would return to, in hex and never in hex alone', () => {
+    renderEditor([SORT, GRAIN], { previous: 0x2c1 })
+
+    expect(
+      screen.getByRole('button', { name: 'step back to the previous roll, seed 0x000002c1' }),
+    ).toBeInTheDocument()
+  })
+
+  // Disabled rather than absent: a control that appeared on the first Re-roll would reflow the row
+  // the user is pressing, and that row is the Chain.
+  it('is present but disabled before the session has rolled', () => {
+    renderEditor([SORT, GRAIN], { previous: null })
+
+    expect(screen.getByRole('button', { name: 'step back — no earlier roll yet' })).toBeDisabled()
+  })
+
+  it('holds a 44px target, as Re-roll beside it does', () => {
+    renderEditor([SORT, GRAIN], { previous: 0x2c1 })
+
+    expect(screen.getByRole('button', { name: /^step back/ })).toHaveClass('min-h-[44px]')
+  })
+})
+
+describe('the Seed readout', () => {
+  // An int32 does not read as an identifier and two of them cannot be told apart at a glance;
+  // `0x000008f2` can.
+  it('writes the arrangement in hex, zero-padded to a fixed width', () => {
+    renderEditor([SORT, GRAIN], { seed: 0x8f2 })
+
+    expect(screen.getByText('seed 0x000008f2')).toBeInTheDocument()
+  })
+
+  // A negative int32 is the ordinary case — `createSeed` draws across the whole range — and reading
+  // one back as `-0x…` would break the fixed width the comparison depends on.
+  it('reads a negative Seed as its unsigned hex', () => {
+    renderEditor([SORT, GRAIN], { seed: -1 })
+
+    expect(screen.getByText('seed 0xffffffff')).toBeInTheDocument()
+  })
+
+  // Not inside the live region beside it: an animated Seed changes this every painted frame, and
+  // announcing that would talk over the user for as long as the animation runs.
+  it('stays out of the live region', () => {
+    renderEditor([SORT, GRAIN], { seed: 0x8f2 })
+
+    expect(screen.getByRole('status')).not.toHaveTextContent('0x000008f2')
   })
 })
