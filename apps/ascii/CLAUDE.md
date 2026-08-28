@@ -255,7 +255,13 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/components/ascii-canvas.tsx` — lifecycle coordinator: drives static and rAF render paths.
   Carries the LIVE badge and the REC badge, which is also the Recording's stop control and its
   elapsed timer (ADR 0020). Unlike GLITCH's badge it needs no opaque background: `paintFrame()`
-  fills this canvas with `--void` first, so the overlay already sits on the audited pair (ADR 0013)
+  fills this canvas with `--void` first, so the overlay already sits on the audited pair (ADR 0013).
+  The Source-level acts live here too — `clear`, the Live Source's mirror and switch-camera, and the
+  way *into* the Live Source (#366), which is on the canvas and not in the Strip because the Strip
+  is how to convert rather than what to convert (ADR 0020). That last control is the one overlay
+  here that does bring a ground of its own: ADR 0013's standing constraint is on *new* overlays, and
+  the exemption above is an argument about the chrome that predates it. It costs nothing — every
+  Theme's `--bg` is within a few units of the `--void` the canvas is filled with
 - `src/components/control-strip.tsx` — the Control Strip (ADR 0020): the bottom-anchored control
   surface at both breakpoints and the program's whole control grammar — there is no aside and no
   sheet and no always-visible export bar behind it. A tab is

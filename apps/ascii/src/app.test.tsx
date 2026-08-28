@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AIConfig } from './ai/types'
 import App from './app'
@@ -59,8 +59,19 @@ vi.mock('@cyberdeck/deck-kit/ui', async (importOriginal) => ({
 // The ref is forwarded because Analyze reads the canvas off it — without it `handleAnalyze`
 // returns before it ever reaches a Provider.
 vi.mock('./components/ascii-canvas', () => ({
-  default: ({ canvasRef }: { canvasRef: React.RefObject<HTMLCanvasElement> }) => (
-    <canvas ref={canvasRef} />
+  default: ({
+    canvasRef,
+    onUseLiveSource,
+  }: {
+    canvasRef: React.RefObject<HTMLCanvasElement>
+    onUseLiveSource?: () => void
+  }) => (
+    <>
+      <canvas ref={canvasRef} />
+      <button type="button" onClick={onUseLiveSource}>
+        canvas-live-source
+      </button>
+    </>
   ),
 }))
 
@@ -69,6 +80,7 @@ vi.mock('./ai/analysis-service', async (importOriginal) => ({
   analyzeCanvas: vi.fn(),
 }))
 
+import { useRecording } from '@cyberdeck/deck-kit/recording'
 import { analyzeCanvas } from './ai/analysis-service'
 import { useAIConfig } from './ai/use-ai-config'
 import type { ConversionSettings } from './ascii/types'
@@ -77,6 +89,7 @@ import { useWebcamState } from './hooks/use-webcam-state'
 const mockUseAIConfig = vi.mocked(useAIConfig)
 const mockAnalyzeCanvas = vi.mocked(analyzeCanvas)
 const mockUseWebcamState = vi.mocked(useWebcamState)
+const mockUseRecording = vi.mocked(useRecording)
 
 const mockAIConfig: AIConfig = {
   provider: 'anthropic',
@@ -138,6 +151,80 @@ describe('EmptyStateHero webcam integration', () => {
 
     expect(switchMode).toHaveBeenCalledWith('webcam')
     expect(startWebcam).not.toHaveBeenCalled()
+  })
+})
+
+// #366: with a Source Image on the canvas the Live Source used to be three acts away, because the
+// hero was `switchMode`'s only caller and the hero is gone the moment a Source loads.
+describe('the Live Source, reached with a Source Image already loaded', () => {
+  const IDLE_WEBCAM = {
+    state: { mode: 'upload' as const, live: false, facingMode: 'user' as const, error: null },
+    startWebcam: vi.fn(),
+    stopWebcam: vi.fn(),
+    switchCamera: vi.fn(),
+    switchMode: vi.fn(),
+  }
+  const IDLE_RECORDING = {
+    isSupported: false,
+    isRecording: false,
+    elapsedSeconds: 0,
+    startRecording: vi.fn(),
+    stopRecording: vi.fn(),
+  }
+
+  afterEach(() => {
+    mockUseWebcamState.mockReturnValue({ ...IDLE_WEBCAM })
+    mockUseRecording.mockReturnValue({ ...IDLE_RECORDING })
+  })
+
+  it('asks for the switch in one act, from the canvas', () => {
+    const switchMode = vi.fn()
+    mockUseWebcamState.mockReturnValue({ ...IDLE_WEBCAM, switchMode })
+
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    fireEvent.click(screen.getByText('canvas-live-source'))
+
+    expect(switchMode).toHaveBeenCalledWith('webcam')
+  })
+
+  // The same rule `handleClearSource` keeps: a take belongs to the Source it was recording, so it
+  // ends before that Source is replaced rather than running on over the next one.
+  it('stops a running Recording before the Source changes', () => {
+    const stopRecording = vi.fn()
+    mockUseRecording.mockReturnValue({
+      ...IDLE_RECORDING,
+      isSupported: true,
+      isRecording: true,
+      stopRecording,
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    fireEvent.click(screen.getByText('canvas-live-source'))
+
+    expect(stopRecording).toHaveBeenCalledOnce()
+  })
+
+  // A refusal reaches the app as a null stream on the same callback a teardown uses. Clearing the
+  // Source Image there would take the canvas away under the toast that is about to explain why.
+  it('leaves the Source Image on the canvas when the camera is refused', () => {
+    let onVideoStream: (video: HTMLVideoElement | null) => void = () => {}
+    mockUseWebcamState.mockImplementation((handler) => {
+      onVideoStream = handler
+      return { ...IDLE_WEBCAM }
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    expect(screen.getByRole('tab', { name: 'out' })).toBeInTheDocument()
+
+    act(() => {
+      onVideoStream(null)
+    })
+
+    expect(screen.getByRole('tab', { name: 'out' })).toBeInTheDocument()
+    expect(screen.queryByText('hero')).not.toBeInTheDocument()
   })
 })
 
