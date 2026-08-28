@@ -18,13 +18,13 @@ interface Props {
 }
 
 /**
- * Every ConversionSetting, in the EDIT tab's own order — key order *is* row order, so one map is
+ * Every ConversionSetting, in the EDIT tab's own order — key order *is* chip order, so one map is
  * both the totality check and the layout. Keyed on `ConversionSettings` rather than hand-listed: a
- * new axis has to be given a row here before this compiles, so the panel cannot go on describing
+ * new axis has to be given a chip here before this compiles, so the panel cannot go on describing
  * all but one of them while `apply` moves every one. `-?` for the reason `SUGGESTION_FIELDS` needs
  * it (suggestion.ts).
  */
-const ROWS: {
+const CHIPS: {
   [K in keyof ConversionSettings]-?: {
     label: string
     show: (value: ConversionSettings[K]) => string
@@ -39,12 +39,20 @@ const ROWS: {
   contrast: { label: 'contrast', show: (v) => v.toFixed(2) },
 }
 
-const ROW_KEYS = Object.keys(ROWS) as (keyof ConversionSettings)[]
+const CHIP_KEYS = Object.keys(CHIPS) as (keyof ConversionSettings)[]
 
 /**
  * The scan's second half: the suggestion laid out to be read before it is spent, so what the chips
  * will look like afterwards is legible from here. Values only, no controls — this modal reports,
  * and the one thing it can do to the conversion is `apply`.
+ *
+ * One chip per proposed field rather than a paragraph (#368): the decision in front of the user is
+ * "these instead of what I have", and prose makes them extract the fields before they can answer
+ * it. A list, and only of what the payload carries — the mock this came from also drew a status
+ * code and a threat level over the chips, and neither is anywhere in a Suggestion.
+ *
+ * The chips are static by design, not Chips from the kit: a kit Chip is a button that announces
+ * `aria-pressed`, and nothing here is pressable. `apply` takes the whole suggestion or none of it.
  *
  * Applying closes the modal on purpose: the answer to "was that a good call" is the canvas, and it
  * is behind this panel.
@@ -64,19 +72,24 @@ function SuggestedConversion({
       className="flex flex-col gap-xs border-t border-base pt-md"
     >
       <span className="text-accent text-xs tracking-wider font-bold">◈ SUGGESTED CONVERSION</span>
-      <dl className="grid grid-cols-2 gap-x-md gap-y-2xs m-0 sm:grid-cols-3">
-        {ROW_KEYS.map((key) => (
-          <div key={key} className="flex flex-col">
-            <dt className="text-fg-subtle text-xs tracking-wide">{ROWS[key].label}</dt>
-            <dd className="text-fg text-xs m-0 lowercase">
-              {/* The row and the value came off one key, but TypeScript pairs them independently. */}
-              {(ROWS[key].show as (value: ConversionSettings[typeof key]) => string)(
+      <ul className="flex flex-wrap gap-2xs">
+        {CHIP_KEYS.map((key) => (
+          <li
+            key={key}
+            className="px-sm py-2xs rounded-xs border border-base bg-bg-elevated font-mono text-xs lowercase whitespace-nowrap"
+          >
+            {/* The space rides inside the label rather than in a gap: a chip is read as one string
+                ("charset: braille"), and a flex gap is not a word break to a screen reader. */}
+            <span className="text-fg-subtle tracking-wide">{`${CHIPS[key].label}: `}</span>
+            <span className="text-fg">
+              {/* The chip and the value came off one key, but TypeScript pairs them independently. */}
+              {(CHIPS[key].show as (value: ConversionSettings[typeof key]) => string)(
                 suggestion[key],
               )}
-            </dd>
-          </div>
+            </span>
+          </li>
         ))}
-      </dl>
+      </ul>
       <Button
         variant="primary"
         onClick={() => {
