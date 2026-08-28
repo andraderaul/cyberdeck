@@ -154,8 +154,8 @@ describe('AnalysisModal', () => {
     ])
   })
 
-  // The mock this came from drew a STATUS CODE / THREAT LEVEL banner over the chips. The payload
-  // carries neither, and a readout with no data behind it is worse than the prose it replaced.
+  // A Suggestion is ConversionSettings, so nothing in it can say status code or threat level — the
+  // Analysis above the panel carries a real threatLevel, but this panel is scoped below it.
   it('backs every chip with a field the Suggestion carries', () => {
     render(<AnalysisModal state={SUCCESS_STATE} onClose={vi.fn()} onApplySuggestion={vi.fn()} />)
 
