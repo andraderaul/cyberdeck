@@ -35,6 +35,8 @@ interface Props {
   onStartRecording?: () => void
   settings: ConversionSettings
   activePresetId: string | null
+  /** The loaded Source, for the PRESETS tab to draw each look on. */
+  source: HTMLImageElement | HTMLVideoElement | null
   onPresetSelect: (preset: Preset) => void
   onSettingsChange: (patch: Partial<ConversionSettings>) => void
   /** Present only while an applied suggestion still stands unedited — see `App`'s revert point. */
@@ -64,6 +66,7 @@ export default function ControlStrip({
   onStartRecording,
   settings,
   activePresetId,
+  source,
   onPresetSelect,
   onSettingsChange,
   onRevertSuggestion,
@@ -76,6 +79,7 @@ export default function ControlStrip({
             <PresetPicker
               settings={settings}
               activePresetId={activePresetId}
+              source={source}
               onSelect={onPresetSelect}
               onRevertSuggestion={onRevertSuggestion}
             />

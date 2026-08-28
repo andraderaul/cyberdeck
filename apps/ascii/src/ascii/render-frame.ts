@@ -20,6 +20,35 @@ function sourceDimensions(source: CanvasImageSource): { w: number; h: number } {
 }
 
 /**
+ * The char grid a canvas of this size holds at this Resolution — both floored, because a partial
+ * cell has no character to put in it.
+ *
+ * Exported rather than inlined because the Preset thumbnails need the *cost* of a conversion before
+ * they run seven of them, and a second copy of this arithmetic could drift into reporting a price
+ * the pipeline does not charge.
+ */
+export function gridSize(
+  width: number,
+  height: number,
+  resolution: number,
+): { cols: number; rows: number } {
+  return {
+    cols: Math.floor(width / (resolution * MONOSPACE_CHAR_WIDTH_RATIO)),
+    rows: Math.floor(height / resolution),
+  }
+}
+
+/**
+ * The mono stack `renderFrame` paints in, read off the deck's token.
+ *
+ * Both callers want the same one: the canvas, and the Preset thumbnails that advertise it. A
+ * thumbnail drawn in a different family would report glyph metrics the canvas does not have.
+ */
+export function monoFontFamily(): string {
+  return getComputedStyle(document.body).getPropertyValue('--font-mono').trim() || 'monospace'
+}
+
+/**
  * Mirror flips the Source on the sampling draw, *before* the pixels become cells (ADR 0016) —
  * not with a CSS transform on the visible canvas, which mirrored the preview alone and left both
  * Exports disagreeing with it. The character grid is genuinely mirrored, so every Export follows.
@@ -45,10 +74,7 @@ export function renderFrame(
   }
 
   const { resolution, brightness, contrast, charset, edgeGlyphs, dithering } = settings
-  const charW = resolution * MONOSPACE_CHAR_WIDTH_RATIO
-  const charH = resolution
-  const cols = Math.floor(canvasEl.width / charW)
-  const rows = Math.floor(canvasEl.height / charH)
+  const { cols, rows } = gridSize(canvasEl.width, canvasEl.height, resolution)
 
   if (cols < 1 || rows < 1) {
     return false

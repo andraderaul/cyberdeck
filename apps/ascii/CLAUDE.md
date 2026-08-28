@@ -189,6 +189,15 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   the char grid that keeps the Source's aspect, compared against the grid's *pixel* aspect because
   the monospace cell is ~0.6 wide × 1 tall (ADR 0010)
 - `src/ascii/presets.ts` — `PRESETS`, `Preset`, `settingsMatch()` (named ConversionSettings snapshots)
+- `src/ascii/thumbnail.ts` — `derivePresetThumbnails()`, `thumbnailGrid()`, `THUMBNAIL_WIDTH/HEIGHT`:
+  each Preset drawn on the loaded Source, so the front door is browsed by look and not by name. No
+  second conversion path and no adjusted look — it is `renderFrame()` over each Preset's own
+  snapshot, verbatim, which is what makes a thumbnail unable to disagree with the chip it sits in.
+  Cheap by the *box* rather than by shortcut: `thumbnailGrid` is the cell count, and the test holds
+  the whole row of seven under a single canvas frame. Renders at twice the box and is drawn down, so
+  a glyph keeps the size its Resolution gives it and the picture reads as the canvas seen small. A
+  Live Source is frozen into one still first — the loop runs at 15fps (ADR 0002), and seven extra
+  conversions a frame is not what a row of chips is worth
 
 **AI analysis**
 - `src/ai/types.ts` — `AIConfig`, `AIProviderName`, `AIProvider`, `Analysis`, `ThreatLevel`, `AnalysisState`
@@ -218,6 +227,13 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/export/output.ts` — `outputFilename()`, `OutputKind`, `planPngExport()`, `MAX_EXPORT_DIM`,
   `PngScale`: the pure naming and sizing decisions for Export & Capture, blob construction left to
   the shells. Deliberately still a hand-copy of GLITCH's (ADR 0014) — the filenames diverge
+- `src/hooks/use-preset-thumbnails.ts` — `usePresetThumbnails()`: the PRESETS row's pictures, derived
+  once per Source and never once per frame. The Source is the effect's only dependency, because a
+  Preset is a fixed snapshot and nothing the user tunes afterwards can change what a thumbnail
+  shows. A Source Image is remembered in a `WeakMap` keyed on the element — it is immutable for the
+  session (CONTEXT.md), so leaving the tab and coming back costs nothing; a Live Source deliberately
+  is not, since its scene is not the same twice and a cache would pin the row to the frame the
+  camera warmed up on
 - `src/hooks/use-webcam-state.ts` — `useWebcamState()`, `planEffects()`, `reducer()`: the Live
   Source's MediaStream lifecycle — deliberately still a hand-copy (ADR 0014)
 - Everything else shared comes from `@cyberdeck/deck-kit` (ADR 0014), across its entrypoints:
@@ -249,8 +265,11 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   Only the active panel is mounted, so one tab's controls are in the accessibility tree at a time. The shell is GLITCH's, ported rather than
   redesigned — whatever lands empty-diff is what crosses into deck-kit
 - `src/components/preset-picker.tsx` — the Strip's PRESETS tab: the Preset chips in a horizontally
-  scrollable row, the active one tracked rather than derived — an edit has to leave you standing on
-  the Preset you started from, marked modified. Carries the `revert` control for an applied Suggestion,
+  scrollable row, each one drawn as what it does to the loaded Source (`ascii/thumbnail.ts`), the
+  active one tracked rather than derived — an edit has to leave you standing on
+  the Preset you started from, marked modified. The picture is `alt=""` and adds nothing to the
+  accessible name: the modified state still reaches a screen reader as the word `(modified)` rather
+  than as the asterisk that carries it on screen. Carries the `revert` control for an applied Suggestion,
   ahead of the scrolling row: it restores a look, and looks are chosen here. A Button rather than a
   Chip, alone in a row of them — a Chip always announces `aria-pressed`, and this is a one-shot
   action with no toggle state to report
