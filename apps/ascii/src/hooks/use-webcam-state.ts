@@ -71,7 +71,11 @@ export function reducer(state: WebcamState, action: Action): WebcamState {
         error: null,
       }
     case 'WEBCAM_STOPPED':
-      return { ...state, live: false, facingMode: 'user' }
+      // Back to `upload` as well as `live: false`: a teardown leaves no Live Source, and a mode
+      // still reading `webcam` is what makes the next `switchMode('webcam')` a silent no-op — the
+      // Live Source unreachable for the rest of the session. Only `stopSource` dispatches this;
+      // the camera swap's `stopTracks` deliberately does not (see WebcamEffect).
+      return { ...state, mode: 'upload', live: false, facingMode: 'user' }
     case 'WEBCAM_ERROR':
       return {
         ...state,

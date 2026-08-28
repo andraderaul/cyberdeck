@@ -40,6 +40,17 @@ describe('WEBCAM_STOPPED', () => {
     expect(next.live).toBe(false)
     expect(next.facingMode).toBe('user')
   })
+
+  // A teardown leaves no Live Source, so the mode has to say so: `switchMode` refuses the mode it
+  // is already in, and a stale `webcam` is what would make the way back in a no-op.
+  it('returns the mode to upload, so the Live Source can be entered again', () => {
+    const state = { ...INITIAL_STATE, mode: 'webcam' as const, live: true }
+    const next = reducer(state, { type: 'WEBCAM_STOPPED' })
+    expect(next.mode).toBe('upload')
+    expect(planEffects(next, { kind: 'switchMode', next: 'webcam' })).toEqual([
+      { type: 'startStream', facing: 'user' },
+    ])
+  })
 })
 
 describe('WEBCAM_ERROR', () => {
@@ -140,5 +151,28 @@ describe('useWebcamState', () => {
 
     expect(mockTrack.stop).toHaveBeenCalled()
     expect(result.current.state.mode).toBe('upload')
+  })
+
+  // The Source is cleared with the canvas control, not by leaving `webcam` mode, so `stopWebcam` is
+  // the teardown the app actually reaches — and a second entry has to survive it (#366).
+  it('enters the Live Source again after a stopWebcam teardown', async () => {
+    const onVideoStream = vi.fn()
+    const { result } = renderHook(() => useWebcamState(onVideoStream))
+
+    await act(async () => {
+      await result.current.switchMode('webcam')
+    })
+    act(() => {
+      result.current.stopWebcam()
+    })
+
+    const getUserMedia = vi.mocked(navigator.mediaDevices.getUserMedia)
+    getUserMedia.mockClear()
+    await act(async () => {
+      await result.current.switchMode('webcam')
+    })
+
+    expect(getUserMedia).toHaveBeenCalledOnce()
+    expect(result.current.state.live).toBe(true)
   })
 })

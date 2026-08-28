@@ -23,6 +23,17 @@ const OVERLAY_BUTTON = cn(
 )
 const OVERLAY_BUTTON_REST = 'text-fg-muted border-base hover:text-fg hover:border-strong'
 
+/**
+ * The ground a *new* overlay stands on, which ADR 0013 asks for by name — the exemption above is an
+ * argument about the chrome that predates it, not a licence this file goes on spending.
+ *
+ * It costs nothing to honour here: every Theme's `--bg` is within a few units of the `--void`
+ * literal `paintFrame()` fills the canvas with (ADR 0024, `tokens.css`), so the chip reads exactly
+ * like the transparent `clear` beside it while holding the audited pair wherever a glyph lands under
+ * it.
+ */
+const OVERLAY_BUTTON_GROUND = 'bg-bg'
+
 interface Props {
   sourceImage: HTMLImageElement | null
   sourceVideo: HTMLVideoElement | null
@@ -35,6 +46,7 @@ interface Props {
   onStopRecording?: () => void
   isLive?: boolean
   onClearSource?: () => void
+  onUseLiveSource?: () => void
   onMirrorToggle?: () => void
   onSwitchCamera?: () => void | Promise<void>
   onDimensionsChange?: (w: number, h: number) => void
@@ -52,6 +64,7 @@ export default function AsciiCanvas({
   onStopRecording,
   isLive,
   onClearSource,
+  onUseLiveSource,
   onMirrorToggle,
   onSwitchCamera,
   onDimensionsChange,
@@ -218,6 +231,22 @@ export default function AsciiCanvas({
             className={cn(OVERLAY_BUTTON, OVERLAY_BUTTON_REST)}
           >
             ⇄
+          </button>
+        )}
+        {/* The Live Source's own way in, so switching to it from a loaded Source Image is one act
+            rather than clear → empty state → choose again (#366). Homed beside clear because both
+            act on the Source, which is what keeps it out of the Strip: that surface is about how to
+            convert, not what to convert (ADR 0020). Where mirror and switch-camera are the live
+            Source's tuning, this is the static one's — the same slot, the other state. */}
+        {!isLive && onUseLiveSource && (
+          <button
+            type="button"
+            onClick={onUseLiveSource}
+            title="use live source"
+            aria-label="use live source"
+            className={cn(OVERLAY_BUTTON, OVERLAY_BUTTON_REST, OVERLAY_BUTTON_GROUND)}
+          >
+            ◉ live source
           </button>
         )}
         {onClearSource && (

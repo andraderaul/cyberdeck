@@ -107,11 +107,15 @@ export default function App() {
   })
 
   const handleVideoStream = useCallback((video: HTMLVideoElement | null) => {
-    setSourceImage(null)
     setSourceVideo(video)
-    if (!video) {
-      setIsMirrored(false)
+    if (video) {
+      // The two Sources never convert at once, and the Source Image goes only once the stream is
+      // actually in hand. A refused or absent camera arrives here as `null` too, and clearing on
+      // that would take the image off the canvas under the very failure the toast is reporting.
+      setSourceImage(null)
+      return
     }
+    setIsMirrored(false)
   }, [])
 
   const handleFacingModeChange = useCallback((mirrored: boolean) => {
@@ -201,6 +205,18 @@ export default function App() {
     setAsciiRows([])
   }, [isRecording, stopRecording, stopWebcam])
 
+  // The one way into the Live Source, taken by the hero and by the canvas overlay alike (#366) —
+  // which is what keeps camera availability a single rule: neither caller gates on a camera it
+  // cannot see, both just ask, and a refusal comes back through `webcamState.error` as a toast
+  // (ADR 0006).
+  const handleUseLiveSource = useCallback(() => {
+    // A take belongs to the Source it was recording, exactly as `handleClearSource` has it.
+    if (isRecording) {
+      stopRecording()
+    }
+    void switchMode('webcam')
+  }, [isRecording, stopRecording, switchMode])
+
   const handleAnalyze = useCallback(async () => {
     const canvas = canvasRef.current
     if (!canvas || !aiConfig) {
@@ -286,6 +302,7 @@ export default function App() {
                   onStopRecording={stopRecording}
                   isLive={!!sourceVideo}
                   onClearSource={handleClearSource}
+                  onUseLiveSource={handleUseLiveSource}
                   onMirrorToggle={handleMirrorToggle}
                   onSwitchCamera={switchCamera}
                   onDimensionsChange={handleDimensionsChange}
@@ -293,7 +310,7 @@ export default function App() {
               ) : (
                 <EmptyStateHero
                   onImage={handleImage}
-                  onUseWebcam={() => void switchMode('webcam')}
+                  onUseWebcam={handleUseLiveSource}
                   tagline="it gets converted right here — nothing leaves your browser"
                 />
               )}

@@ -30,6 +30,7 @@ function Wrapper({
   isLive,
   isMirrored,
   onMirrorToggle,
+  onUseLiveSource,
   elapsedSeconds,
   onStopRecording,
 }: {
@@ -39,6 +40,7 @@ function Wrapper({
   isLive?: boolean
   isMirrored?: boolean
   onMirrorToggle?: () => void
+  onUseLiveSource?: () => void
   elapsedSeconds?: number
   onStopRecording?: () => void
 }) {
@@ -54,6 +56,7 @@ function Wrapper({
       isLive={isLive}
       isMirrored={isMirrored}
       onMirrorToggle={onMirrorToggle}
+      onUseLiveSource={onUseLiveSource}
       elapsedSeconds={elapsedSeconds}
       onStopRecording={onStopRecording}
     />
@@ -166,6 +169,54 @@ describe('AsciiCanvas', () => {
 
     fireEvent.click(btn)
     expect(onMirrorToggle).toHaveBeenCalledOnce()
+  })
+
+  // #366: with a Source Image on the canvas the Live Source used to be three acts away — clear,
+  // land on the empty state, choose it there. The two Sources are peers, so the switch is homed
+  // where the Source-level acts already are rather than in the Strip (ADR 0020).
+  describe('the way into the Live Source', () => {
+    it('offers the switch while a Source Image is what the canvas shows', () => {
+      render(<Wrapper isLive={false} onUseLiveSource={vi.fn()} />)
+
+      expect(screen.getByRole('button', { name: 'use live source' })).toBeInTheDocument()
+    })
+
+    it('is gone once the Live Source is the one converting', () => {
+      render(<Wrapper isLive={true} onUseLiveSource={vi.fn()} />)
+
+      expect(screen.queryByRole('button', { name: 'use live source' })).not.toBeInTheDocument()
+    })
+
+    it('asks for the switch when tapped', () => {
+      const onUseLiveSource = vi.fn()
+      render(<Wrapper isLive={false} onUseLiveSource={onUseLiveSource} />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'use live source' }))
+
+      expect(onUseLiveSource).toHaveBeenCalledOnce()
+    })
+
+    // Same bargain as the rest of the row: the target is overlaid so the chip on the artwork keeps
+    // the size it draws at. `ICON_GLYPH_SIZE` is explicitly not for chrome over the canvas.
+    it('buys its 44px as an overlay rather than by growing', () => {
+      render(<Wrapper isLive={false} onUseLiveSource={vi.fn()} />)
+      const button = screen.getByRole('button', { name: 'use live source' })
+
+      expect(button.className.split(/\s+/)).toEqual(
+        expect.arrayContaining(TOUCH_TARGET_ICON.split(' ')),
+      )
+      expect(button.className).toContain('py-2xs')
+    })
+
+    // ADR 0013's standing constraint on a *new* overlay: its backdrop is whatever the conversion
+    // painted, so it brings a ground of its own rather than borrowing the canvas'.
+    it('stands on its own ground', () => {
+      render(<Wrapper isLive={false} onUseLiveSource={vi.fn()} />)
+
+      expect(
+        screen.getByRole('button', { name: 'use live source' }).className.split(/\s+/),
+      ).toContain('bg-bg')
+    })
   })
 
   // ADR 0016: the flip happens on the sampled pixels, so the visible canvas must carry no
