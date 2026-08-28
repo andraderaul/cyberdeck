@@ -7,13 +7,20 @@ import {
   duplicateLink,
   EFFECT_REGISTRY,
   type EffectType,
+  type Link,
   MAX_CHAIN_LENGTH,
   moveLink,
   removeLink,
+  toggleBypass,
 } from './chain'
 import { blockDisplacement } from './pipeline'
 import { structuredBuffer } from './test-pixels'
 import type { BlockDisplacementParams, PixelBuffer, PixelSortParams } from './types'
+
+/** `link`, bypassed — the state the toggle leaves a Link in, so a fixture can start in it. */
+function silenced(link: Link): Link {
+  return { ...link, bypassed: true }
+}
 
 /** An arbitrary fixed Seed — every test that isn't about the Seed itself rolls this one. */
 const SEED = 4242
@@ -262,6 +269,37 @@ describe('moveLink', () => {
       bytesOf(applyChain(pixels, moveLink([SORT, SHIFT], 0, 1), SEED)),
     )
   })
+
+  it('walks past a bypassed Link', () => {
+    const pixels = structuredBuffer(16, 12)
+
+    const bypassed = applyChain(pixels, [silenced(SORT), SHIFT], SEED)
+
+    expect(bytesOf(bypassed)).toEqual(bytesOf(applyChain(pixels, [SHIFT], SEED)))
+  })
+
+  it('renders the Source untouched when every Link is bypassed', () => {
+    const pixels = structuredBuffer(16, 12)
+
+    const out = applyChain(pixels, [silenced(BLOCKS), silenced(SORT), silenced(GRAIN)], SEED)
+
+    expect(bytesOf(out)).toEqual(bytesOf(pixels))
+  })
+
+  // The rule that makes bypass an audition: a bypassed Link is skipped but still *counted*, so
+  // every later Link of its own type keeps the sub-seed it already had (`linkSeed`). Removing is
+  // the operation that renumbers — the contrast is the decision, which is why both are asserted
+  // here rather than one alone.
+  it('still counts a bypassed Link’s occurrence, where removing it renumbers', () => {
+    const pixels = structuredBuffer(24, 18)
+    const second = createLink('blockDisplacement', BLOCKS.params as BlockDisplacementParams)
+    const alone = bytesOf(applyChain(pixels, [second], SEED))
+
+    expect(bytesOf(applyChain(pixels, [silenced(BLOCKS), second], SEED))).not.toEqual(alone)
+    expect(bytesOf(applyChain(pixels, removeLink([BLOCKS, second], BLOCKS.id), SEED))).toEqual(
+      alone,
+    )
+  })
 })
 
 describe('addLink', () => {
@@ -359,6 +397,14 @@ describe('duplicateLink', () => {
     expect(copied[2].params).toEqual(SORT.params)
   })
 
+  // Bypass is part of the look now, so a copy carries it: a duplicate that came back audible would
+  // change the render on a control whose whole promise is "another one of these".
+  it('copies the bypass across', () => {
+    const copied = duplicateLink(toggleBypass(chain, SORT.id), SORT.id)
+
+    expect(copied[2].bypassed).toBe(true)
+  })
+
   it('gives the copy a fresh id', () => {
     // Every field that matters to the look is identical, so content-derived ids would collide and
     // React would reuse one row's state for the other.
@@ -439,5 +485,49 @@ describe('duplicateLink', () => {
     expect(bytesOf(applyChain(pixels, crossed, SEED))).not.toEqual(
       bytesOf(applyChain(pixels, [SORT], SEED)),
     )
+  })
+})
+
+describe('toggleBypass', () => {
+  const chain: Chain = [BLOCKS, SORT, GRAIN]
+
+  it('silences the Link asked for and leaves the others running', () => {
+    const toggled = toggleBypass(chain, SORT.id)
+
+    expect(toggled.map((link) => link.bypassed)).toEqual([false, true, false])
+  })
+
+  // The whole point of the affordance: removing was the only way to hear the Chain without a Link,
+  // and it cost the params the user had tuned. This is the assertion that says it doesn't.
+  it('keeps the Link’s params, its position and its id', () => {
+    const toggled = toggleBypass(chain, SORT.id)
+
+    expect(toggled[1]).toEqual({ ...SORT, bypassed: true })
+  })
+
+  it('switches back on, restoring the Link exactly', () => {
+    const silent = toggleBypass(chain, SORT.id)
+
+    expect(toggleBypass(silent, SORT.id)).toEqual(chain)
+  })
+
+  it('leaves the Chain alone for an unknown id', () => {
+    expect(toggleBypass(chain, 'no-such-link')).toEqual(chain)
+  })
+
+  it('never mutates the Chain it was given', () => {
+    toggleBypass(chain, SORT.id)
+
+    expect(chain.map((link) => link.bypassed)).toEqual([false, false, false])
+  })
+
+  // A bypassed Link is silenced, not absent: it holds its slot, so a Chain full of them still
+  // refuses to grow. Anything else would make bypass a way to smuggle an eleventh Link in.
+  it('leaves a bypassed Link counting against the cap', () => {
+    const full: Chain = Array.from({ length: MAX_CHAIN_LENGTH }, () => createLink('noise'))
+    const silent = full.reduce<Chain>((acc, link) => toggleBypass(acc, link.id), full)
+
+    expect(silent).toHaveLength(MAX_CHAIN_LENGTH)
+    expect(addLink(silent, 'noise')).toBe(silent)
   })
 })

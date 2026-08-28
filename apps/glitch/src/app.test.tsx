@@ -454,6 +454,65 @@ describe('App', () => {
       expect(lastChain().some((link) => link.type === 'scanlines')).toBe(false)
     })
 
+    // The affordance the Chain had no answer for: the only way to hear the look without a Link was
+    // to remove it, which cost the params the user had tuned.
+    it('silences the focused Link without taking it out of the Chain', () => {
+      renderWithEditOpen()
+      focusLink('scanlines')
+      const before = lastChain().find((link) => link.type === 'scanlines')
+
+      fireEvent.click(screen.getByRole('button', { name: 'bypass scanlines' }))
+
+      const after = lastChain().find((link) => link.type === 'scanlines')
+      expect(lastChain()).toHaveLength(6)
+      expect(after).toEqual({ ...before, bypassed: true })
+    })
+
+    it('switches a silenced Link back on from the same control', () => {
+      renderWithEditOpen()
+      focusLink('scanlines')
+
+      fireEvent.click(screen.getByRole('button', { name: 'bypass scanlines' }))
+      fireEvent.click(screen.getByRole('button', { name: 'bypass scanlines' }))
+
+      expect(lastChain().some((link) => link.bypassed)).toBe(false)
+    })
+
+    // Bypass is part of the look, so it moves with the look and only with the look: Re-roll draws
+    // an arrangement and leaves the Chain alone, while a Preset replaces the look outright and
+    // every Link a curated Chain carries is audible.
+    it('keeps a silenced Link silent across a Re-roll', () => {
+      renderWithEditOpen()
+      focusLink('scanlines')
+      fireEvent.click(screen.getByRole('button', { name: 'bypass scanlines' }))
+
+      fireEvent.click(screen.getByRole('button', { name: 're-roll' }))
+
+      expect(lastChain().find((link) => link.type === 'scanlines')?.bypassed).toBe(true)
+    })
+
+    it('hands back a wholly audible Chain when a Preset is applied', () => {
+      renderWithEditOpen()
+      focusLink('scanlines')
+      fireEvent.click(screen.getByRole('button', { name: 'bypass scanlines' }))
+      openPresets()
+
+      fireEvent.click(screen.getByRole('button', { name: 'VHS' }))
+
+      expect(lastChain().some((link) => link.bypassed)).toBe(false)
+    })
+
+    it('hands back a wholly audible Chain when Randomize is pressed', () => {
+      renderWithEditOpen()
+      focusLink('scanlines')
+      fireEvent.click(screen.getByRole('button', { name: 'bypass scanlines' }))
+      openPresets()
+
+      fireEvent.click(screen.getByRole('button', { name: 'randomize' }))
+
+      expect(lastChain().some((link) => link.bypassed)).toBe(false)
+    })
+
     it('duplicates the focused Link directly after itself', () => {
       renderWithEditOpen()
       focusLink('channel shift')
@@ -542,6 +601,13 @@ describe('App', () => {
         () => {
           focusLink('noise')
           fireEvent.click(screen.getByRole('button', { name: 'duplicate noise' }))
+        },
+      ],
+      [
+        'bypassing',
+        () => {
+          focusLink('scanlines')
+          fireEvent.click(screen.getByRole('button', { name: 'bypass scanlines' }))
         },
       ],
     ])('marks the active Preset modified after %s a Link', (_label, act) => {
