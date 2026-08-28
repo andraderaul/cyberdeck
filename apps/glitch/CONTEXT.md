@@ -145,6 +145,19 @@ novo como o Preset faz; Re-roll troca só o arranjo; editar a Chain preserva a p
 editado ainda pertence ao Preset de onde partiu, marcado modificado, nunca desmarcado.
 _Avoid_: session, workspace, app state
 
+**Wipe**:
+O divisor arrastável sobre o canvas: a **Source** de um lado, o resultado da **Chain** do outro, na
+mesma imagem em tela cheia — não dois painéis lado a lado, forma que foi recusada porque cobra
+metade da tela justamente da arte que existe para mostrar. Divide a **região do contain**
+(ADR 0010), nunca o elemento canvas: as barras de letterbox não são a imagem. É **chrome, nunca
+arte**, e por construção: a metade Source é pintada num canvas próprio e o divisor é DOM, então
+nenhuma das quatro saídas alcança — todas leem o canvas visível, que só recebe o resultado da
+Chain. Sai do mesmo canvas de amostragem que alimenta o `applyChain`, com espelho junto (ADR 0016)
+e sem uma segunda passada da Chain. Nasce desligado e não sobrevive a uma troca de Source — é um
+jeito de olhar *esta* Source. Na interface o botão diz **compare**, porque "wipe" ao lado de
+"clear source" se lê como apagar.
+_Avoid_: before/after, split view, painéis lado a lado, preview do original
+
 ## Effects
 
 | Effect | O que faz |
@@ -166,6 +179,9 @@ O resultado sai do app por quatro caminhos, todos reuso dos padrões do ASCII//C
 vídeo via `canvas.captureStream()` + `MediaRecorder`). Recording grava o canvas de saída —
 **não é datamosh** (manipulação de codec/frames), que fica para o v2.
 
+O **Wipe** não é uma quinta saída e é o contrário de uma: ele existe *sobre* o canvas e nunca
+dentro dele, justamente para que nenhum desses quatro caminhos possa levá-lo junto.
+
 Esses quatro tiram **a imagem**. A **Chain JSON** é a quinta saída e a única que não é a imagem:
 tira **o look**, para que uma Chain montada à mão possa ser guardada e compartilhada. Export mora
 na aba OUT ao lado dos outros; import mora na aba PRESETS, porque um look trazido se aplica como
@@ -177,6 +193,7 @@ um Preset (ADR 0020).
   Effects — 8 tipos, ordem, presença e repetição nas mãos do usuário (ADR 0017); presets-first
   (a lista curada, um já aplicado na abertura) + Randomize; Seed fixo com Re-roll, e **animado**
   (um Seed novo por frame) no Live Source; PNG Export +
-  Capture + Copy + Recording; export/import da Chain como JSON (**Chain JSON**).
+  Capture + Copy + Recording; export/import da Chain como JSON (**Chain JSON**); o **Wipe**
+  (comparar com a Source sobre o mesmo canvas).
 - **Fora (v2+):** datamosh real — **caminho de saída próprio**, só para Live Source, fora da Chain
   e fora do Recording (ADR 0026).

@@ -12,7 +12,7 @@ Tracer bullet (#77) plus Pixel Sort (#78), Scanlines (#79), Noise (#80), Block D
 Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced panel (#84), Recording
 (#85) and Presets + Randomize (#86), plus Chromatic Aberration (#116) and the composable Effect
 Chain (ADR 0017, #125–#128), plus Halftone (#309), Wave (#310), the Chain as a file (#312)
-and the animated Seed (#311). All eight Effects are live — Source Image *or* Live Source → the
+and the animated Seed (#311), plus the **Wipe** (#372). All eight Effects are live — Source Image *or* Live Source → the
 Chain → PNG Export / Capture / Copy / Recording — the pure-core / imperative-shell seam is
 established, and the render is deterministic in Chain + Seed, which is what lets a Live Source
 animate by advancing the Seed alone. The front door is the curated Presets plus Randomize; behind
@@ -242,6 +242,41 @@ another tab, and it is why OUT drops the start control while `isRecording` — o
 not offer two stops. On stop, `shareOrDownloadBlob` opens the native share sheet on mobile or downloads
 on desktop. Clearing the Source stops a running Recording first, since the camera is about to go.
 
+### The Wipe
+
+The Source on one side of a draggable divider, the Chain's result on the other, over the canvas at
+its full size (**Wipe**, `CONTEXT.md`). Two side-by-side panes were the other shape and the issue
+refused it: it charges half the viewport to the artwork it exists to show. This costs one line of
+chrome and moves no layout.
+
+**The divider is chrome, and by construction rather than by suppression.** All four output paths
+read the visible canvas — PNG Export and Copy through `toDataURL`/`toBlob`, Capture the same, and
+Recording through `captureStream` — so the rule is enforced by never writing to it: the Source half
+is blitted onto a **second canvas** stacked over the visible one, and the line and handle are
+elements. There is no code path that could put the comparison into a take, which is the difference
+between this and drawing the divider into the canvas and hiding it for each of the four.
+
+`renderGlitchFrame` takes an optional `compare` canvas and blits the **sampling canvas** onto it
+(`render-frame.ts`). That is the Source at exactly the point `applyChain` receives it — mirror
+included (ADR 0016), so nothing has to be kept in step with the flip — and it is one draw of a
+bitmap that was already there rather than a second pass over the Chain. A Live Source therefore
+wipes at the same ~15fps the Chain runs at, with one Chain per frame. While the Wipe is off,
+`compare` is `null` and the loop pays a null check.
+
+It divides the **fit region**, not the canvas element (ADR 0010): the canvas is `object-contain`,
+so the picture is centred and the letterbox bands are void the wipe has no business crossing. The
+Source canvas is `object-contain` too and so lands on the picture without being told where it is;
+what the measured region buys is the divider — the fraction a pointer reads, the clip's edge, and a
+line that spans the picture rather than the element (`wipe.ts`, pure and DOM-free).
+
+Off by default, and it does not survive a Source change — a Wipe is a way of looking at *this*
+Source. App's flow already unmounts the canvas between Sources, and `GlitchCanvas` resets on the
+Source anyway so the rule belongs to the canvas rather than to that branch.
+
+The chip says **compare**, not "wipe": it sits beside `clear source`, and in that company "wipe"
+reads as erase. The mechanism keeps its name in `CONTEXT.md`; the word the user presses says what
+pressing it does.
+
 ### Sampling cap
 
 `sampleDimensions()` scales the Source to fit inside 800×800 (aspect-preserving) before any pixel
@@ -318,7 +353,12 @@ component to one Theme and breaks the rest in that one corner.
 
 **Anything sitting on the canvas must bring its own background** — ADR 0013, and a standing
 constraint on any overlay added later, not just the ones there now (`CANVAS_OVERLAY_CHROME` in
-`glitch-canvas.tsx`: the LIVE / REC badges and the clear control). ADR 0009's ratios are all
+`glitch-canvas.tsx`: the LIVE / REC badges and the clear control). The Wipe's handle is the newest
+one and the sharpest case — it is the only control that sits in the *middle* of the artwork rather
+than in a corner of it, so it carries its own `bg-bg` and its divider line travels inside an opaque
+sheath. It buys its 44x44 as a `TOUCH_TARGET_OVERLAY` for the same reason the row does: chrome over
+the canvas stays at its drawn size, and `ICON_GLYPH_SIZE` is never used over a canvas at all (root
+`CLAUDE.md`). ADR 0009's ratios are all
 token-on-token, and this is the one surface in the app where the backdrop isn't a token at all: it's
 the user's artwork, and the Chain can paint any color under a chip. Translucency can't fix that —
 no alpha survives an arbitrary backdrop — so the chips stand on an opaque `bg-bg` and hold the
@@ -432,7 +472,15 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   told to advance, never why, so the animation's on/off is the caller withholding the callback.
   Carries the LIVE badge and the REC badge, which is also the
   Recording's stop control and its elapsed timer — the canvas is the one surface every tab shows,
-  so that is where a stop reachable from anywhere has to live (ADR 0020)
+  so that is where a stop reachable from anywhere has to live (ADR 0020). Owns the Wipe's on/off and
+  the compare canvas it hands the shell — null exactly while the Wipe is off
+- `src/components/wipe-divider.tsx` — the Wipe's chrome: the second canvas the Source half is
+  blitted onto, the divider line, and the handle — a `role="slider"` with the arrow keys, an
+  accessible name and a value. Measures the fit region (ADR 0010) off its own box, so the wipe
+  divides the picture rather than the canvas element
+- `src/components/wipe.ts` — the Wipe's geometry, pure and DOM-free the way `chain-drag.ts` is:
+  `computeFitRegion()`, `fractionAt()`, `wipeKeyMove()`, `WIPE_INITIAL` / `WIPE_STEP` /
+  `WIPE_PAGE_STEP`
 - `src/components/control-strip.tsx` — the Control Strip (ADR 0020): the bottom-anchored control
   surface at both breakpoints and the program's whole control grammar — there is no aside, no sheet
   and no always-visible export bar behind it. PRESETS → EDIT → OUT is the session read left to
