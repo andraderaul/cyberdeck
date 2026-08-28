@@ -1,5 +1,76 @@
 ## [1.25.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.24.0...v1.25.0) (2026-07-16)
 
+## 1.33.0
+
+### Minor Changes
+
+- 22134d4: Show each Preset as what it does to the Source that is loaded, so the PRESETS tab is browsed by look
+  rather than by name. `Demoscene`, `Silkscreen`, `Core Dump` and `Blueprint` are good names and not
+  one of them says what will appear — so the front door was a browsing loop: pick, look, pick again.
+
+  Every chip now carries a small conversion of the loaded Source in that Preset's own Charset, Color
+  Mode, Dithering and Edge Glyph setting. It is the ordinary pipeline at a fraction of the cells, not a
+  second one, and the settings it converts with are the Preset's own snapshot untouched — so a
+  thumbnail cannot advertise a look the chip does not apply. The picture is rendered at twice the box
+  it is drawn in and scaled down, which is what makes it the canvas seen small rather than a canvas
+  configured differently: every glyph keeps the size the Preset's Resolution gives it.
+
+  A Source Image is converted once and remembered for the session — it is immutable, so its seven
+  thumbnails are too — and a Live Source is frozen into a single still rather than re-derived at 15fps,
+  so all seven chips advertise one instant and the loop pays nothing.
+
+- 0183214: Say what each Export costs, under the control that charges it. The OUT tab offered `export png`,
+  `export txt` and `export html` as three equal buttons, and they are not equal: each one throws away
+  a different half of the result, and nothing on screen said which half before the click.
+
+  The distinction was never missing, only misfiled — `CONTEXT.md`'s **HTML Export** entry has stated
+  it plainly for as long as that Export has existed ("o **PNG Export** guarda a cor e destrói o texto,
+  o **TXT Export** guarda o texto e larga a cor"), and the sentence had simply never left the
+  glossary. It now reads under the buttons: PNG keeps the colour and hands back nothing selectable,
+  TXT keeps selectable text and drops the colour, HTML keeps both and opens with no network.
+
+  Inline in the tab rather than behind an export terminal. A modal would charge one click to read what
+  fits under a button and a second to act, so the one-click path to each Export survives untouched —
+  and the copy is carried to a screen reader on `aria-describedby`, which otherwise still heard three
+  identical buttons. The PNG scale chips keep their place above the row, and the Live Source's Capture
+  and Record are unchanged.
+
+### Patch Changes
+
+- c4aef50: Lay the Suggestion out as one chip per proposed field. The decision the panel puts in front of the
+  user is "do I want these instead of what I have", and until now the proposed ConversionSettings sat
+  in a label-over-value grid that had to be read column by column before that question could be
+  answered. Each axis now stands on its own — `charset: braille`, `dithering: bayer`,
+  `color mode: neon` — as a wrapping list of static chips, so the apply is taken against a visible
+  inventory rather than a paragraph.
+
+  The chips are the same seven the panel always drew, off the same map keyed on `ConversionSettings`
+  itself: nothing was added that the payload does not carry. The mock this came from also drew a
+  `STATUS CODE / THREAT LEVEL` band over the reading, and the Providers return neither — a readout
+  with no data behind it is worse than the prose it would replace, so it is not here.
+
+  Nothing about applying moved. The settings still never travel on their own, `apply` still takes the
+  whole suggestion or none of it, and the `revert` in the PRESETS tab still expires on the user's
+  first edit of their own.
+
+- 1f20586: The header reads as the deck's display type.
+
+  The wordmark sat at a body size in the body face, so the one line that names the program read like
+  the copy underneath it. It, its `image → ascii art` subtitle and the header's controls now take
+  `--font-display` at the tracking the deck's uppercase readouts use, and the subtitle joins the
+  wordmark in uppercase. From `sm` up the wordmark also climbs one step, to 18px.
+
+  Presentational only. Behaviour, layout and the control set are unchanged, the labels stay lowercase
+  on the controls, the 44x44 targets are untouched, and no accessible name moves. The palette is
+  deliberately untouched too — a lighter accent is an eighth Theme under ADR 0024 and a decision of
+  its own.
+
+  Below `sm` the header keeps the tracking it already shipped: it is one row carrying the wordmark
+  and both controls there, and 0.18em across them is ~30px that row does not have at 320px.
+
+- Updated dependencies [3f1a48f]
+  - @cyberdeck/deck-kit@0.7.1
+
 ## 1.32.0
 
 ### Minor Changes
