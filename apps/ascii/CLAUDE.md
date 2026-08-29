@@ -194,10 +194,10 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   second conversion path and no adjusted look — it is `renderFrame()` over each Preset's own
   snapshot, verbatim, which is what makes a thumbnail unable to disagree with the chip it sits in.
   Cheap by the *box* rather than by shortcut: `thumbnailGrid` is the cell count, and the test holds
-  the whole row of seven under a single canvas frame. Renders at twice the box and is drawn down, so
+  the whole row under a single canvas frame. Renders at twice the box and is drawn down, so
   a glyph keeps the size its Resolution gives it and the picture reads as the canvas seen small. A
-  Live Source is frozen into one still first — the loop runs at 15fps (ADR 0002), and seven extra
-  conversions a frame is not what a row of chips is worth
+  Live Source is frozen into one still first — the loop runs at 15fps (ADR 0002), and one extra
+  conversion per Preset per frame is not what a row of chips is worth
 
 **AI analysis**
 - `src/ai/types.ts` — `AIConfig`, `AIProviderName`, `AIProvider`, `Analysis`, `ThreatLevel`, `AnalysisState`

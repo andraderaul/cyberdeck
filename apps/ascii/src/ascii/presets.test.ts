@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { greyCtx, sourceCtx } from './__fixtures__/source-ctx'
 import { convertImage } from './converter'
 import { PRESETS, settingsMatch } from './presets'
-import { computeFrame } from './renderer'
+import { computeFrame, DUAL_COLOR_MODES } from './renderer'
 import type { ConversionSettings } from './types'
 import { CHARSET_MAPS, COLOR_MODES } from './types'
 
@@ -20,8 +20,8 @@ function presetById(id: string) {
 }
 
 describe('PRESETS', () => {
-  it('has 7 entries', () => {
-    expect(PRESETS).toHaveLength(7)
+  it('has 10 entries', () => {
+    expect(PRESETS).toHaveLength(10)
   })
 
   it('each preset has a unique id', () => {
@@ -278,6 +278,101 @@ describe('PRESETS', () => {
 
       expect(painting(settings)).toBeGreaterThan(0)
       expect(painting({ ...settings, brightness: 1.0 })).toBe(0)
+    })
+  })
+
+  // The three curated for what the roster still could not reach (#386): the `floyd` Dithering no
+  // entry spent, and the two Color Modes that stylize nothing.
+  //
+  // Same rule as the block above — each test moves one curated value and asserts what that costs,
+  // rather than restating the snapshot. The shared trap these three found is worth naming once: a
+  // dual Color Mode's cut reads the cell's *own* RGB, so brightness and contrast cannot move it by
+  // a single cell. What they can do is blank a cell, and a cell that draws nothing paints no
+  // colour — which is how a pair silently becomes a single colour.
+  describe('the looks curated for the axes the front door could not reach', () => {
+    const GRID = 24
+
+    const convert = (ctx: CanvasRenderingContext2D, settings: ConversionSettings) =>
+      convertImage(ctx, {} as CanvasImageSource, GRID, GRID, settings)
+
+    const glyphsIn = (cells: ReturnType<typeof convert>) =>
+      new Set(cells.flat().map((cell) => cell.char))
+
+    const inkIn = (cells: ReturnType<typeof convert>) =>
+      cells.flat().filter((cell) => cell.char !== ' ').length
+
+    /** The colours a look actually *paints* — a blank cell is excluded, which is the whole point. */
+    const inkColours = (ctx: CanvasRenderingContext2D, settings: ConversionSettings) =>
+      new Set(
+        computeFrame(convert(ctx, settings), settings)
+          .instructions.filter((instruction) => instruction.char !== ' ')
+          .map((instruction) => instruction.color),
+      )
+
+    it('Thermal keeps the cold half of the infrared pair at the contrast it is curated to', () => {
+      const { settings } = presetById('thermal')
+      const [hot, cold] = DUAL_COLOR_MODES.infrared ?? []
+      // Two flat bands, one either side of the 0.5 cut. Level 80 is a shadow the look still draws
+      // a character for; drive the contrast two steps further and the same band falls into
+      // `sharp`'s opening space, so the frame comes back in one colour with the cut untouched.
+      const bands = () => greyCtx(GRID, GRID, (_col, row) => (row < GRID / 2 ? 80 : 160))
+
+      expect(inkColours(bands(), settings)).toEqual(new Set([hot, cold]))
+      expect(inkColours(bands(), { ...settings, contrast: 2.2 })).toEqual(new Set([hot]))
+    })
+
+    it('Duotone dithers the glyph without touching the colour the cell had already taken', () => {
+      const { settings } = presetById('duotone')
+      // Flat either side of `acid`'s cut, so undithered each band floors onto a single glyph and
+      // the Dithering is the only thing that can spend a second one. The colours are identical
+      // across that change, which is the independence the look is built on: the diffusion moves
+      // the glyph index, the dual mode reads RGB the diffusion never wrote to.
+      const bands = () => greyCtx(GRID, GRID, (_col, row) => (row < GRID / 2 ? 110 : 150))
+      const undithered: ConversionSettings = { ...settings, dithering: 'none' }
+
+      expect(glyphsIn(convert(bands(), undithered)).size).toBe(2)
+      expect(glyphsIn(convert(bands(), settings)).size).toBeGreaterThan(2)
+      expect(inkColours(bands(), settings)).toEqual(inkColours(bands(), undithered))
+      expect(inkColours(bands(), settings).size).toBe(2)
+    })
+
+    it("Duotone's contrast is what keeps a flat near-black field out of the diffusion", () => {
+      const { settings } = presetById('duotone')
+      // `floyd` measures a cell's error against its bucket's *floor*, so the error is one-sided and
+      // always handed forward: a field sitting just above black walks itself over the first
+      // boundary and a graphic's dead ground comes back speckled. The contrast clamps that field to
+      // a true zero, where there is no error left to spend — and 1.0 is a value at which there is.
+      const nearBlack = () => greyCtx(GRID, GRID, () => 8)
+
+      expect(inkIn(convert(nearBlack(), settings))).toBe(0)
+      expect(inkIn(convert(nearBlack(), { ...settings, contrast: 1.0 }))).toBeGreaterThan(0)
+    })
+
+    it('Truecolor paints the exact RGB its neighbour would answer with a bin mean', () => {
+      const { settings } = presetById('truecolor')
+      // The colour Silkscreen's test uses, so the two are directly comparable: there the assertion
+      // is that each channel lands *near* the Source's, because `adaptive` answers with a lattice
+      // bin's mean. Here it is the Source's own value, exactly.
+      const teal: [number, number, number] = [17, 153, 142]
+
+      expect(
+        inkColours(
+          sourceCtx(GRID, GRID, () => teal),
+          settings,
+        ),
+      ).toEqual(new Set([`rgb(${teal[0]},${teal[1]},${teal[2]})`]))
+    })
+
+    it("Truecolor's contrast leaves a Source's own black at black under the brightness lift", () => {
+      const { settings } = presetById('truecolor')
+      // The canvas ground as a flat field. At contrast 1 it maps to level 0 whatever the brightness
+      // is, so it takes the Charset's opening space and paints nothing; under 1 the whole field
+      // lifts off zero and every cell inks — near-black dots over what should be clean ground.
+      // That is the ceiling the look's brightness is chosen under, not a slider left alone.
+      const ground = () => greyCtx(GRID, GRID, () => 10)
+
+      expect(inkIn(convert(ground(), settings))).toBe(0)
+      expect(inkIn(convert(ground(), { ...settings, contrast: 0.95 }))).toBe(GRID * GRID)
     })
   })
 })
