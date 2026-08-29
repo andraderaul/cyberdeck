@@ -52,9 +52,13 @@ describe('thumbnailGrid', () => {
       return sum + cols * rows
     }, 0)
 
-    // A modest 1000x600 canvas at the coarsest Preset on the roster is already ~5000 cells, and a
-    // Live Source runs one of those every 15th of a second (ADR 0002). The whole row of seven costs
-    // less than that single frame — which is the "cheap by construction" claim, held as a number.
+    // A modest 1000x600 canvas at the coarsest Preset on the roster is already ~6900 cells, and a
+    // Live Source runs one of those every 15th of a second (ADR 0002). The whole row costs less
+    // than that single frame — which is the "cheap by construction" claim, held as a number.
+    //
+    // It is a budget as much as a fact: the row's cost grows with the roster, and fastest at the
+    // fine end, where one entry buys four times the cells a coarse one does. Ten Presets spend most
+    // of the frame — the next fine look is the one that has to answer for it.
     const oneCanvasFrame = gridSize(1000, 600, 12)
     expect(total).toBeLessThan(oneCanvasFrame.cols * oneCanvasFrame.rows)
   })
@@ -100,7 +104,7 @@ describe('derivePresetThumbnails', () => {
     expect(canvas.width / canvas.height).toBeCloseTo(THUMBNAIL_WIDTH / THUMBNAIL_HEIGHT)
   })
 
-  it('takes one snapshot of a Live Source, so all seven read the same instant', () => {
+  it('takes one snapshot of a Live Source, so every Preset reads the same instant', () => {
     const video = makeVideo(640, 480)
 
     derivePresetThumbnails(video)

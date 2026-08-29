@@ -26,7 +26,7 @@ export const THUMBNAIL_HEIGHT = 60
 const THUMBNAIL_SUPERSAMPLE = 2
 
 /**
- * The cell grid one thumbnail converts at. The row's whole cost is this, seven times over —
+ * The cell grid one thumbnail converts at. The row's whole cost is this, once per Preset —
  * `thumbnail.test.ts` holds it against a single canvas frame.
  */
 export function thumbnailGrid(resolution: number): { cols: number; rows: number } {
@@ -38,14 +38,14 @@ export function thumbnailGrid(resolution: number): { cols: number; rows: number 
 }
 
 /**
- * The still the seven conversions read. A Source Image travels through the same `resizeImage` the
+ * The still every conversion reads. A Source Image travels through the same `resizeImage` the
  * canvas samples it through, so both see one picture; a Live Source is frozen into a canvas of its
- * own here, and that freeze is the point — the loop runs at 15fps (ADR 0002), and seven extra
- * conversions per frame is not what a row of chips is worth. It also keeps the seven honest with
- * each other: they advertise one instant rather than seven consecutive ones.
+ * own here, and that freeze is the point — the loop runs at 15fps (ADR 0002), and one extra
+ * conversion per Preset per frame is not what a row of chips is worth. It also keeps the chips
+ * honest with each other: they advertise one instant rather than a run of consecutive ones.
  *
  * Returns `null` when there is nothing to read yet — a Live Source reports width 0 until its first
- * frame decodes, and a blank still would come back as seven empty chips.
+ * frame decodes, and a blank still would come back as a row of empty chips.
  */
 function snapshotSource(source: HTMLImageElement | HTMLVideoElement): CanvasImageSource | null {
   if (!(source instanceof HTMLVideoElement)) {
@@ -83,9 +83,9 @@ export function derivePresetThumbnails(
     return {}
   }
 
-  // One pair of canvases for all seven: `paintFrame` fills the visible one before it draws a glyph,
-  // so no Preset can leave anything behind for the next, and `renderFrame` resizes the hidden
-  // sampling one itself.
+  // One pair of canvases for the whole row: `paintFrame` fills the visible one before it draws a
+  // glyph, so no Preset can leave anything behind for the next, and `renderFrame` resizes the
+  // hidden sampling one itself.
   const canvas = document.createElement('canvas')
   canvas.width = THUMBNAIL_WIDTH * THUMBNAIL_SUPERSAMPLE
   canvas.height = THUMBNAIL_HEIGHT * THUMBNAIL_SUPERSAMPLE

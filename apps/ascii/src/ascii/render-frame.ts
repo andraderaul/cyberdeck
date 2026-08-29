@@ -24,7 +24,7 @@ function sourceDimensions(source: CanvasImageSource): { w: number; h: number } {
  * cell has no character to put in it.
  *
  * Exported rather than inlined because the Preset thumbnails need the *cost* of a conversion before
- * they run seven of them, and a second copy of this arithmetic could drift into reporting a price
+ * they run one per Preset, and a second copy of this arithmetic could drift into reporting a price
  * the pipeline does not charge.
  */
 export function gridSize(
