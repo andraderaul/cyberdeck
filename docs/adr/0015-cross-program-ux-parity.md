@@ -103,6 +103,9 @@ and Randomize otherwise blur.
 - ADR 0014 — The Deck Kit — first extracted shared package.
 - ADR 0016 — GLITCH gains mirror — in the pixel pipeline, not in CSS.
 - ADR 0020 — Control Strip — a bottom tabbed surface becomes the single control grammar.
+- ADR 0028 — GLITCH's Preset thumbnails are pre-rendered on a fixed plate, where ASCII draws on the
+  user's Source — a later non-convergence, recorded under this ADR's discipline rather than against
+  it.
 
 ## Supersedes / Superseded by
 

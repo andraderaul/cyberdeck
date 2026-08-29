@@ -92,6 +92,10 @@ npm run changeset    # add a changeset (see Releases)
 npm run social:assets            # every workspace under apps/, the hub included
 npm run social:assets -- golem   # one; needs Node 22+ and `npx playwright install chromium`
 
+# GLITCH//Studio's reference plate — the committed 800x500 picture its Preset thumbnails are
+# rendered over (ADR 0028). A build-time *input*, never shipped; same Node 22+ / Chromium needs.
+npm run glitch:plate
+
 # scoping to one app
 npm run test --workspace @cyberdeck/ascii
 npx vitest run src/ascii/renderer.test.ts   # from within apps/ascii
