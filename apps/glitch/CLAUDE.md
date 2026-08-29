@@ -171,6 +171,21 @@ Three behaviours hang together, and all of them come from the Seed sitting *outs
   Preset rather than marking its base modified: a jittered look is one the user discovered, not an
   edit they made.
 
+**Each chip carries a picture of its look, and it was rendered at build time** (#385, ADR 0028).
+`npm run glitch:thumbnails` runs every Preset's Chain over the committed reference plate at the full
+800px the canvas samples at, shrinks only the *result* into the 96x60 chip, and writes ten lossy
+WebPs into `public/presets/`. Rendering straight into the chip would be 80x cheaper and wrong: five
+of the eight Effects measure in absolute pixels, so at 8.3x down `wavelength 140` comes back a shear
+and `amount 14` a blatant split — the gentle end of a roster ordered gentlest-first would read as
+the loud end. The render uses one fixed committed Seed, never the editor's live one, because a
+Preset carries no arrangement and one Seed across the ten is what makes them comparable.
+
+Two consequences to know before touching anything here. **Re-curating a Preset makes ten committed
+images lie**, so `scripts/preset-thumbnails.test.mjs` pins a hash over the Chains, the plate and the
+render's numbers, and fails with the command to re-run. And **the thumbnail is not the user's own
+picture** — that is the real cost of the divergence from ASCII//Convert, recorded in ADR 0028 and
+not to be "fixed" by a parity review.
+
 **Bypass is part of the look, so it moves with the look and only with the look** (#371, ADR 0017).
 A bypassed Link stays in the Chain with its params, its position and its slot against
 `MAX_CHAIN_LENGTH` — it is silenced, not absent, and the `N of 10 effects` region still counts it.

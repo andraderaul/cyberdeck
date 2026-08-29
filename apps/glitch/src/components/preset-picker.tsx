@@ -1,5 +1,6 @@
 import { Chip } from '@cyberdeck/deck-kit/ui'
 import type { Chain } from '../glitch/chain'
+import { presetThumbnailUrl, THUMBNAIL_HEIGHT, THUMBNAIL_WIDTH } from '../glitch/preset-thumbnails'
 import type { Preset } from '../glitch/presets'
 import { PRESETS } from '../glitch/presets'
 import IconLabelButton from './icon-label-button'
@@ -44,17 +45,31 @@ export default function PresetPicker({
               key={preset.id}
               selected={isActive}
               onClick={() => onSelect(preset)}
-              className="shrink-0"
+              className="shrink-0 flex-col"
               // The asterisk carries "modified" visually, but it reaches a screen reader as one
               // character of punctuation — so the accessible name spells the state out instead.
+              // The thumbnail stays out of the name entirely (`alt=""`): it depicts the Preset
+              // rather than saying anything the word does not.
               aria-label={showModified ? `${preset.name} (modified)` : preset.name}
             >
-              {preset.name}
-              {showModified && (
-                <span aria-hidden="true" className="text-warning">
-                  *
-                </span>
-              )}
+              {/* Pre-rendered over the reference plate at build time, never on the user's own
+                  Source (ADR 0028). The `width`/`height` are the box; the file is twice it, and
+                  drawing it down is what keeps the cells and the raster crisp on a 2x screen. */}
+              <img
+                src={presetThumbnailUrl(preset.id)}
+                alt=""
+                width={THUMBNAIL_WIDTH}
+                height={THUMBNAIL_HEIGHT}
+                className="rounded-xs shrink-0"
+              />
+              <span className="flex items-center gap-2xs">
+                {preset.name}
+                {showModified && (
+                  <span aria-hidden="true" className="text-warning">
+                    *
+                  </span>
+                )}
+              </span>
             </Chip>
           )
         })}

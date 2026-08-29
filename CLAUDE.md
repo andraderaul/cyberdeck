@@ -96,6 +96,10 @@ npm run social:assets -- golem   # one; needs Node 22+ and `npx playwright insta
 # rendered over (ADR 0028). A build-time *input*, never shipped; same Node 22+ / Chromium needs.
 npm run glitch:plate
 
+# the ten committed Preset thumbnails, each Chain run over that plate at full scale and the result
+# shrunk to the chip (ADR 0028). Re-run it whenever a Preset or the plate changes — a test says so.
+npm run glitch:thumbnails
+
 # scoping to one app
 npm run test --workspace @cyberdeck/ascii
 npx vitest run src/ascii/renderer.test.ts   # from within apps/ascii

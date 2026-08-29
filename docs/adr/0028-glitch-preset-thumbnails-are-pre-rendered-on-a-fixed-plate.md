@@ -163,10 +163,58 @@ thumbnail will therefore show a dot screen with almost no visible raster, which 
 Preset does at 800px. Nudging either number is a re-curation of a look, not a fix to a plate, and is
 left to whoever wants to make that call.
 
+### The thumbnails (#385)
+
+`npm run glitch:thumbnails` renders them: esbuild bundles the app's own `applyChain` and `PRESETS`,
+Chromium runs each Chain over the plate at 800x500, and only the *result* is drawn down into the
+chip. Nothing is re-implemented — the images come out of the same fold the running program uses,
+which is the only way a thumbnail can be trusted to depict what the chip applies. The shell is
+`scripts/glitch-preset-thumbnails.mjs`; the numbers it renders at — box, scale, Seed, quality — are
+pure and live in `scripts/glitch/preset-thumbnails.mjs`, so the generator and the drift guard read
+one copy.
+
+**The Seed is fixed and committed** (`THUMBNAIL_SEED`). A Preset carries no arrangement, so a
+thumbnail has to be shown some roll; one roll across the roster is what makes the ten comparable to
+each other, and committing it is what makes them reproducible. Which Seed is arbitrary and meant to
+stay so — a Seed curated for flattering blocks would advertise a roll nobody receives.
+
+**They ship from `public/`, not through Vite.** Vite's default `assetsInlineLimit` would inline a
+3 KB WebP into the entry chunk as base64, and the entry chunk is the one row of this program's
+budget with no room (74.76 of 75.00 KB). Committed under `apps/glitch/public/presets/` and named
+root-absolutely from the Preset's id, they cost the entry chunk nothing — the whole runtime surface
+is `presetThumbnailUrl`, one template string.
+
+**Weight, stated rather than enjoyed in silence.** `scripts/bundle-budget.mjs` classifies anything
+that is not `.js` or `.css` as `other` and reports it unbudgeted, and a file in `public/` never
+reaches `assets/` at all, so these ten are outside the budget by design. They are **38,754 bytes for
+the row**, 2,616–5,366 each, at 192x120 (2x the chip) and WebP quality 0.5. The quality was driven
+by looking: over the row, 0.8 costs 60 KB, 0.7 costs 48 KB, 0.5 costs 39 KB and 0.3 costs 29 KB, and
+SIGNAL LOSS — the noisiest look on the roster — has its static smoothed flat by the codec at 0.3,
+which is this feature's own failure mode arriving through the encoder instead of through the render
+scale. None of it is on the first paint: the Control Strip mounts only once a Source is open, so
+the chips are fetched alongside the user's first render rather than ahead of it.
+
+**They are precached** (ADR 0027). `.webp` joined `SHELL_EXTENSIONS` in the kit's precache plugin —
+the deck's first emitted image that is part of the interface rather than a favicon or a link-preview
+card. Offline, a row of broken chips would be the one surface a casual creator is asked to choose a
+look from.
+
+**The drift guard is `apps/glitch/scripts/preset-thumbnails.test.mjs`.** It recomputes a SHA-256
+over the Chains (by id, sorted, Link ids and display names excluded — none of them changes a pixel),
+the plate's bytes, and the render's four numbers, and compares it against the stamp the generator
+committed beside itself. It also walks the directory against `PRESETS` so a curated look with no
+image and a renamed one's orphan both fail, and checks the committed bytes are really a RIFF/WEBP
+container rather than a PNG under a WebP name, which is what `toDataURL` silently returns for a type
+a browser cannot encode.
+
 ## Questions / Future Work
 
-- **Issue #385** renders the ten thumbnails from this plate. They are output and should be lossy
-  WebP; the input rule above does not apply to them.
+- **The two Halftone Presets read dark.** Measured over the full-scale render, PHOSPHOR and
+  BILLBOARD come back at mean luminance 0.106 and 0.111 against ~0.28 for the other eight, because
+  Halftone scales dot area with luminance and the plate is a night scene. Two of ten chips are
+  therefore noticeably darker in a row whose job is telling looks apart. It is not corrected in the
+  thumbnail path and must not be: brightening the output would make the chip advertise something the
+  Preset does not do. The lever is the plate's own brightness, which is a design call on the plate.
 - **Whether the plate ever gains a second variant** — a portrait cut, a brighter cut — is open, and
   the answer should stay no while one plate exercises every Effect. Ten thumbnails comparable to
   each other is the property a second plate would spend.

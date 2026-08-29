@@ -33,6 +33,7 @@
     "changeset": "changeset",
     "social:assets": "node scripts/social-assets.mjs",
     "glitch:plate": "node scripts/glitch-reference-plate.mjs",
+    "glitch:thumbnails": "node scripts/glitch-preset-thumbnails.mjs",
     "version": "changeset version && npm install --package-lock-only",
     "release": "changeset tag"
   },

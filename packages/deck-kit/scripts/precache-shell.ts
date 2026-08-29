@@ -32,8 +32,16 @@ function workerSource(): string {
  *  point of the guard below and a wrong path in it wastes the guard. */
 const THIS_FILE = 'packages/deck-kit/scripts/precache-shell.ts'
 
-/** What a browser asks this program for while it is running. */
-const SHELL_EXTENSIONS = ['.html', '.css', '.js', '.svg', '.png', '.webmanifest']
+/**
+ * What a browser asks this program for while it is running.
+ *
+ * `.webp` joined the set for GLITCH//Studio's Preset thumbnails (ADR 0028) — ten pictures the
+ * PRESETS panel draws the moment a Source opens the Control Strip. They are the deck's first
+ * emitted image that is *part of the interface* rather than a favicon or a link-preview card, and
+ * that is the whole reason they are precached: offline, a row of broken chips would be the one
+ * surface a casual creator is asked to choose a look from.
+ */
+const SHELL_EXTENSIONS = ['.html', '.css', '.js', '.svg', '.png', '.webmanifest', '.webp']
 
 /**
  * Emitted files the running program never fetches, so precaching them would only cost the install
