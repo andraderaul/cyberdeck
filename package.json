@@ -32,6 +32,7 @@
     "lint:fix": "biome lint . --write",
     "changeset": "changeset",
     "social:assets": "node scripts/social-assets.mjs",
+    "glitch:plate": "node scripts/glitch-reference-plate.mjs",
     "version": "changeset version && npm install --package-lock-only",
     "release": "changeset tag"
   },
