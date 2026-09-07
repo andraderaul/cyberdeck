@@ -13,10 +13,10 @@ As decisões arquiteturais de todo o deck vivem em [`docs/adr/`](./docs/adr/). A
 template padrão em [`docs/adr/TEMPLATE.md`](./docs/adr/TEMPLATE.md) — uma decisão por arquivo, em
 inglês.
 
-O que o deck **recusou** — proposta que ele olhou e disse não, com o motivo, e com a ADR nomeada
-sempre que o motivo *é* uma ADR — vive em [`.out-of-scope/`](./.out-of-scope/README.md). Não é ADR
-(recusa quase nunca decide nada novo, ela aplica uma ADR que já existe) nem `CONTEXT.md` (que
-descreve o que o deck é, não o que ele deixou de virar). Primeira entrada:
+O que o deck **recusou** — uma proposta que ele olhou e rejeitou, com o motivo, e com a ADR nomeada
+sempre que o motivo *é* uma ADR — vive em [`.out-of-scope/`](./.out-of-scope/). Não é ADR (recusa
+quase nunca decide nada novo, ela aplica uma ADR que já existe) nem `CONTEXT.md` (que descreve o que
+o deck é, não o que ele deixou de virar). Primeira entrada:
 [os mocks do Stitch](./.out-of-scope/stitch-mocks.md).
 
 ## Contexts

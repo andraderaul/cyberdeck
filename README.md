@@ -67,6 +67,7 @@ apps/sprawl        SPRAWL//Atlas
 packages/deck-kit  the shared shell every program builds on
 scripts/           repo-wide build-time tooling (the social cards and icon sets)
 docs/adr           architectural decisions, deck-wide
+.out-of-scope/     what the deck was offered and refused, and why
 CONTEXT-MAP.md     how the programs relate
 ```
 
