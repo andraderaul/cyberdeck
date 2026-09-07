@@ -58,7 +58,11 @@ inglês.
   `EmptyStateHero` e `Tooltip` cruzaram numa segunda leva (ADR 0015). A linguagem visual deixou de
   ser uma paleta só e virou um conjunto nomeado de **Themes** — sete: `ice`, `construct`, `chiba`,
   `kuang`, `ougou`, `solitude`, `onyx` — com um contrato de contraste que todo Theme precisa cumprir
-  (ADR 0024). O roster com o caráter de cada um está no `CONTEXT.md` do Deck Kit.
+  (ADR 0024). O roster com o caráter de cada um está no `CONTEXT.md` do Deck Kit. A mesma doutrina
+  — nomear o papel, não a medida — vale pra régua de espaço: as duas réguas de tamanho (`--gap-*` e
+  `--sp-*`, 14 nomes, 8 deles sem nenhum uso) viram cinco papéis, `--space-tight / item / group /
+  stack / section`, e a verruga do `xs` 4px contra o `2xs` 6px fecha junto. **Decidido na ADR 0030,
+  executado na #399** — até lá o código ainda fala as duas réguas antigas.
 
 ## Relationships
 
