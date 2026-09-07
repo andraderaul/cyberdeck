@@ -7,6 +7,7 @@ import { type ChainRunner, createChainRunner } from '../glitch/chain-runner'
 import { sourceDimensions } from '../glitch/image-utils'
 import { type GlitchFrame, renderGlitchFrame } from '../glitch/render-frame'
 import type { Seed } from '../glitch/types'
+import type { MoshState } from '../hooks/use-datamosh'
 import WipeDivider from './wipe-divider'
 
 /**
@@ -67,6 +68,11 @@ interface Props {
   isRecording?: boolean
   elapsedSeconds?: number
   onStopRecording?: () => void
+  // Datamosh's own pair (ADR 0026), deliberately not folded into the Recording ones: the two paths
+  // can be told apart on the badge because they are two paths, not one with a flag.
+  moshState?: MoshState
+  moshSeconds?: number
+  onStopMosh?: () => void
   isMirrored?: boolean
   onMirrorToggle?: () => void
   onSwitchCamera?: () => void | Promise<void>
@@ -91,6 +97,9 @@ export default function GlitchCanvas({
   isRecording,
   elapsedSeconds = 0,
   onStopRecording,
+  moshState = 'idle',
+  moshSeconds = 0,
+  onStopMosh,
   isMirrored = false,
   onMirrorToggle,
   onSwitchCamera,
@@ -283,6 +292,44 @@ export default function GlitchCanvas({
             </span>
             <span>{formatElapsedTime(elapsedSeconds)}</span>
             <span aria-hidden="true">⏹</span>
+          </button>
+        )}
+        {/* The same badge-is-the-stop grammar as REC (ADR 0020) — a mosh is performed while the
+            user keeps working in the other tabs. The render phase has nothing left to stop: the
+            take is already encoded, and it plays back for as long as it ran. */}
+        {moshState !== 'idle' && (
+          <button
+            type="button"
+            data-testid="mosh-indicator"
+            onClick={onStopMosh}
+            disabled={moshState === 'rendering'}
+            aria-label={
+              moshState === 'rendering'
+                ? 'rendering the mosh'
+                : `stop moshing — ${formatElapsedTime(moshSeconds)} elapsed`
+            }
+            className={cn(
+              CANVAS_OVERLAY_CHROME,
+              TOUCH_TARGET_ICON,
+              'flex items-center gap-2xs text-accent border border-accent',
+              // No hover surface, unlike REC's: `accent` clears AA-small on `bg` and only the
+              // non-text floor on `bg-elevated` (3.90:1 in `ice`), and this badge carries the timer
+              // as small text. The accent chips beside it — mirror and compare, when active — hold
+              // the same line for the same reason.
+              moshState === 'rendering' ? 'cursor-default' : 'cursor-pointer',
+            )}
+          >
+            <span className="motion-safe:animate-pulse" aria-hidden="true">
+              ◈
+            </span>
+            {moshState === 'rendering' ? (
+              <span>MOSH</span>
+            ) : (
+              <>
+                <span>{formatElapsedTime(moshSeconds)}</span>
+                <span aria-hidden="true">⏹</span>
+              </>
+            )}
           </button>
         )}
         {/* Live source-tuning chrome, homed beside clear (ADR 0015): same family as clear — it acts

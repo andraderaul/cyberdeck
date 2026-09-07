@@ -1,8 +1,8 @@
-// Pure naming decisions for PNG Export, Capture, Recording and the exported Chain. Blob
+// Pure naming decisions for PNG Export, Capture, Recording, datamosh and the exported Chain. Blob
 // construction stays in the shells.
 
 /** Domain terms (CONTEXT.md). */
-export type OutputKind = 'png-export' | 'capture' | 'recording' | 'chain'
+export type OutputKind = 'png-export' | 'capture' | 'recording' | 'datamosh' | 'chain'
 
 /**
  * A Recording's container isn't known until MediaRecorder picks one, so the extension is injected
@@ -14,7 +14,10 @@ export type OutputKind = 'png-export' | 'capture' | 'recording' | 'chain'
  * would leave the browser to sort it out as "glitch-recording (1).webm".
  */
 export function outputFilename(kind: 'png-export' | 'capture' | 'chain'): string
-export function outputFilename(kind: 'recording', opts: { timestamp: number; ext: string }): string
+export function outputFilename(
+  kind: 'recording' | 'datamosh',
+  opts: { timestamp: number; ext: string },
+): string
 export function outputFilename(
   kind: OutputKind,
   opts: { timestamp?: number; ext?: string } = {},
@@ -31,5 +34,8 @@ export function outputFilename(
       return 'glitch-chain.json'
     case 'recording':
       return `glitch-recording-${opts.timestamp}.${opts.ext}`
+    // Stamped for the same reason a Recording is, doubly so: a mosh costs the take and the render
+    case 'datamosh':
+      return `glitch-datamosh-${opts.timestamp}.${opts.ext}`
   }
 }

@@ -258,7 +258,7 @@ take is minutes of someone's performance, and a second one must not collide and 
 to disambiguate with " (1)".
 
 Like Capture, it records the **output canvas** the Chain already painted — it is *not* datamosh
-(`CONTEXT.md`), and it never touches the rAF loop. The capture rate matches that loop's ~15fps
+(`CONTEXT.md`, and see the section below for what is), and it never touches the rAF loop. The capture rate matches that loop's ~15fps
 (ADR 0002); a higher rate would only duplicate frames.
 
 The Record control is hidden entirely where `MediaRecorder` + `captureStream` are unsupported — no
@@ -268,6 +268,51 @@ the canvas REC badge. That split is what lets a take keep running while the user
 another tab, and it is why OUT drops the start control while `isRecording` — one running take must
 not offer two stops. On stop, `shareOrDownloadBlob` opens the native share sheet on mobile or downloads
 on desktop. Clearing the Source stops a running Recording first, since the camera is about to go.
+
+### Datamosh
+
+The fifth output path and the only one that doesn't hand back the canvas (ADR 0026). `export/mosh.ts`
+holds it: `moshPlan` is the whole of the pure part — chunk types in, decode order out — and the two
+functions around it own the codec.
+
+What it does, in order: `startMoshCapture` encodes the visible canvas at 15fps through a scratch
+canvas (VP8, one key chunk a second), keeping only the encoded chunks — a take's worth of decoded
+frames would cost gigabytes where the chunks cost kilobytes a second. On stop, `moshPlan` **drops every second key chunk** and
+**repeats every fourth surviving delta**. The keys it lets through are the reset: reconstruction
+error only accumulates, and the Chain's own per-frame Noise is maximal entropy for an inter-frame
+codec, so dropping all of them decayed the picture to flat noise within seconds and never brought it
+back. Melt, snap, melt — the cadence was driven on the real surface, not picked. `playMosh`
+feeds that order to a `VideoDecoder` one chunk per frame interval, painting onto the same scratch
+canvas.
+
+**Why that is the real thing and not an imitation:** `VideoDecoder`'s `[[key chunk required]]` is
+cleared only by a validated key chunk, and nothing validates that a *delta* follows its real
+predecessor — so dropping keys and feeding the deltas on is in-contract, and the smear is the
+decoder's own reconstruction error. It decodes with `hardwareAcceleration: 'prefer-software'` from
+the start, not as a retry: every sequence handed to it is malformed on purpose, and hardware decoders
+reject what software ones survive.
+
+**The file comes from Recording's primitive.** `useDatamosh` holds a `useRecording` of its own over
+the scratch canvas, so the moshed playback is re-recorded rather than muxed — ADR 0026 weighed that
+against hand-rolling WebM and took the reuse. Three consequences worth knowing: the render phase
+lasts as long as the take did, output is pinned to Recording's ~15fps, and the mosh control needs
+`MediaRecorder` *as well as* WebCodecs. That is a real second requirement, not Record's floor
+restated.
+
+**Two absences in one tab, for two different reasons** (ADR 0007 twice): Record hides without
+`MediaRecorder`, mosh without WebCodecs — Chrome/Edge 94+, Safari 16.4+, Firefox 130+ desktop, never
+Firefox Android. Live Source only, like Record: a Source Image has no frames, and moshing one frame
+would be the pixel imitation the ADR exists to refuse.
+
+Start in OUT, stop on the canvas badge — REC's split (ADR 0020), with one difference: the badge stops
+the *capture*, and while the mosh renders it is disabled, because the frames are already encoded and
+there is nothing left to cut short. Clearing the Source stops a capturing mosh and lets a rendering
+one finish, since playback runs off the scratch canvas and no longer needs the camera.
+
+**It is not reproducible, and that is scoped deliberately.** Determinism is a property of the Chain,
+not of the app: photons and the browser's rate control both differ run to run. Re-roll changes the
+arrangement, never a mosh. Nothing downstream reads this path, which is the whole reason the
+nondeterminism is tolerable here and would not be inside a Link.
 
 ### The Wipe
 
@@ -474,6 +519,11 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/errors/app-error.ts` — `Errors`: this app's error factories over the kit's `AppError` /
   `createError` (`@cyberdeck/deck-kit/errors`)
 - `src/export/output.ts` — `outputFilename()`, `OutputKind`
+- `src/export/mosh.ts` — the datamosh path (ADR 0026): `moshPlan()` (the pure mangle — chunk types
+  in, decode order out), `isDatamoshSupported()`, `startMoshCapture()` / `MoshTake` and `playMosh()`
+  (the codec halves), `ChunkType`
+- `src/hooks/use-datamosh.ts` — `useDatamosh()`, `MoshState`: the three-phase shell over that —
+  capture, render, idle — holding a `useRecording` of its own for the file
 - `src/hooks/use-editor-state.ts` — `useEditorState()`: the Editor's thin React half — wraps
   `useReducer`, draws the randomness at dispatch time, exposes the named transitions plus the
   `ChainActions` bundle

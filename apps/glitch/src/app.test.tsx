@@ -60,6 +60,8 @@ vi.mock('./components/glitch-canvas', () => ({
     onClearSource,
     isRecording,
     onStopRecording,
+    moshState,
+    onStopMosh,
     isMirrored,
     onMirrorToggle,
     onAdvanceSeed,
@@ -70,6 +72,8 @@ vi.mock('./components/glitch-canvas', () => ({
     onClearSource?: () => void
     isRecording?: boolean
     onStopRecording?: () => void
+    moshState?: 'idle' | 'capturing' | 'rendering'
+    onStopMosh?: () => void
     isMirrored?: boolean
     onMirrorToggle?: () => void
     onAdvanceSeed?: () => void
@@ -84,6 +88,12 @@ vi.mock('./components/glitch-canvas', () => ({
         {isRecording && (
           <button type="button" onClick={onStopRecording}>
             REC
+          </button>
+        )}
+        {/* Same probe for the mosh badge, which is the other thing the canvas carries a stop for. */}
+        {moshState !== 'idle' && (
+          <button type="button" onClick={onStopMosh}>
+            MOSH
           </button>
         )}
         {liveSource && <span>{isMirrored ? 'mirrored' : 'not mirrored'}</span>}
@@ -122,6 +132,24 @@ const shareOrDownloadBlob = vi.hoisted(() => vi.fn())
 vi.mock('@cyberdeck/deck-kit/utils', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@cyberdeck/deck-kit/utils')>()),
   shareOrDownloadBlob,
+}))
+
+// Datamosh's own probe. It has to stand in even for the tests that never touch it: the real hook
+// holds a `useRecording` of its own (ADR 0026's re-record route), which would otherwise land on the
+// recording mock above and make the two paths indistinguishable here.
+const datamosh = vi.hoisted(() => ({
+  isSupported: true,
+  state: 'idle' as 'idle' | 'capturing' | 'rendering',
+  elapsedSeconds: 0,
+  startMosh: vi.fn(),
+  stopMosh: vi.fn(),
+}))
+const datamoshOnError = vi.hoisted(() => vi.fn())
+vi.mock('./hooks/use-datamosh', () => ({
+  useDatamosh: (_ref: unknown, opts?: { onError?: (reason: 'start' | 'export') => void }) => {
+    datamoshOnError(opts?.onError)
+    return datamosh
+  },
 }))
 
 vi.mock('@cyberdeck/deck-kit/recording', () => ({
@@ -1564,6 +1592,124 @@ describe('App', () => {
         })
 
         expect(recording.stopRecording).not.toHaveBeenCalled()
+      })
+    })
+
+    // ADR 0026: its own output path, beside Recording. What this covers is that the app wires it
+    // like one — the mangle itself is pure and lives in export/mosh.test.ts.
+    describe('datamosh', () => {
+      async function goLive() {
+        render(<App />)
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'use webcam' }))
+        })
+        openOut()
+      }
+
+      afterEach(() => {
+        datamosh.isSupported = true
+        datamosh.state = 'idle'
+      })
+
+      it('offers the mosh while the Live Source runs', async () => {
+        await goLive()
+
+        expect(screen.getByRole('button', { name: /mosh/ })).toBeInTheDocument()
+      })
+
+      // A Source Image has no frames, and a mosh over one frame is the pixel imitation ADR 0026
+      // exists to refuse — so the control is absent rather than offered and disappointing.
+      it('does not offer the mosh for a Source Image', () => {
+        render(<App />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'upload' }))
+        openOut()
+
+        expect(screen.queryByRole('button', { name: /mosh/ })).not.toBeInTheDocument()
+      })
+
+      // The deck's second support floor (ADR 0007's shape, WebCodecs' reasons): absence, not a
+      // disabled control — and not the same absence as Record's.
+      it('hides the mosh on a browser without WebCodecs', async () => {
+        datamosh.isSupported = false
+
+        await goLive()
+
+        expect(screen.queryByRole('button', { name: /mosh/ })).not.toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /record/ })).toBeInTheDocument()
+      })
+
+      it('starts a mosh on the control', async () => {
+        await goLive()
+
+        fireEvent.click(screen.getByRole('button', { name: /mosh/ }))
+
+        expect(datamosh.startMosh).toHaveBeenCalledOnce()
+      })
+
+      it('stops a running mosh from any tab through the canvas badge', async () => {
+        datamosh.state = 'capturing'
+        await goLive()
+
+        openPresets()
+        fireEvent.click(screen.getByRole('button', { name: 'MOSH' }))
+
+        expect(datamosh.stopMosh).toHaveBeenCalledOnce()
+      })
+
+      it('drops the start control while a mosh runs', async () => {
+        datamosh.state = 'capturing'
+
+        await goLive()
+
+        expect(screen.queryByRole('button', { name: /mosh/ })).not.toBeInTheDocument()
+      })
+
+      it('stops a capturing mosh when the Source is cleared', async () => {
+        datamosh.state = 'capturing'
+        await goLive()
+
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'clear' }))
+        })
+
+        expect(datamosh.stopMosh).toHaveBeenCalledOnce()
+      })
+
+      // The render phase has its frames already encoded and plays them back off a scratch canvas,
+      // so the camera going away costs it nothing — cutting it short would throw the mosh away.
+      it('lets a rendering mosh finish when the Source is cleared', async () => {
+        datamosh.state = 'rendering'
+        await goLive()
+
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'clear' }))
+        })
+
+        expect(datamosh.stopMosh).not.toHaveBeenCalled()
+      })
+
+      // ADR 0006 again, in this path's own words: a mosh that produced nothing can be retried.
+      it("words a mosh 'start' failure into a retryable toast", async () => {
+        await goLive()
+        const onError = datamoshOnError.mock.lastCall?.[0]
+
+        act(() => {
+          onError?.('start')
+        })
+
+        expect(toastError).toHaveBeenCalledWith(Errors.datamoshFailed().message)
+      })
+
+      it("words a mosh 'export' failure without inviting a retry", async () => {
+        await goLive()
+        const onError = datamoshOnError.mock.lastCall?.[0]
+
+        act(() => {
+          onError?.('export')
+        })
+
+        expect(toastError).toHaveBeenCalledWith(Errors.datamoshExportFailed().message)
       })
     })
 

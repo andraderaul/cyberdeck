@@ -15,12 +15,19 @@ interface Props {
   canRecord?: boolean
   isRecording?: boolean
   onStartRecording?: () => void
+  canDatamosh?: boolean
+  isMoshing?: boolean
+  onStartMosh?: () => void
 }
 
 /**
  * The Control Strip's OUT tab: takes the result out. Capture, PNG Export, Copy and Recording are
  * the same act on a different Source or destination — the canvas *is* the output every way, so each
  * only reads the pixels already painted and never touches the rAF loop that painted them.
+ *
+ * Datamosh is the one picture output that isn't that act: it re-encodes those pixels and mangles the
+ * compressed stream, so what comes back is the codec's reconstruction error rather than the canvas
+ * (ADR 0026). It still never touches the loop.
  *
  * The Chain export is the one output here that isn't the picture: it takes the *look* out, so a
  * Chain built by hand can be kept and shared where only the curated Presets could carry structure
@@ -38,6 +45,9 @@ export default function OutputPanel({
   canRecord,
   isRecording,
   onStartRecording,
+  canDatamosh,
+  isMoshing,
+  onStartMosh,
 }: Props) {
   const toastError = useToastError()
   const toastInfo = useToastInfo()
@@ -104,6 +114,15 @@ export default function OutputPanel({
       {isLive && canRecord && !isRecording && (
         <Button variant="record" onClick={onStartRecording} className="flex-1 sm:flex-none">
           ⏺ record
+        </Button>
+      )}
+      {/* Its own output path, beside Recording rather than a mode of it (ADR 0026) — and gated the
+          same way for two reasons of its own: a Source Image has no frames to mosh, and where
+          WebCodecs is missing the control is absent rather than disabled. Start here, stop on the
+          canvas badge, like a take. */}
+      {isLive && canDatamosh && !isMoshing && (
+        <Button variant="record" onClick={onStartMosh} className="flex-1 sm:flex-none">
+          ◈ mosh
         </Button>
       )}
     </div>

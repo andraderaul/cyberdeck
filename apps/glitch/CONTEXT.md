@@ -214,16 +214,27 @@ _Avoid_: before/after, split view, painéis lado a lado, preview do original
 
 ## Saída
 
-O resultado sai do app por quatro caminhos, todos reuso dos padrões do ASCII//Convert:
+O resultado sai do app por cinco caminhos, quatro deles reuso dos padrões do ASCII//Convert:
 **PNG Export** (imagem estática), **Capture** (um frame da webcam glitchada como PNG),
 **Copy** (PNG para a área de transferência) e **Recording** (grava a webcam glitchada como
 vídeo via `canvas.captureStream()` + `MediaRecorder`). Recording grava o canvas de saída —
-**não é datamosh** (manipulação de codec/frames), que fica para o v2.
+**não é datamosh**, que é o quinto caminho e o único que não lê o canvas pronto.
 
-O **Wipe** não é uma quinta saída e é o contrário de uma: ele existe *sobre* o canvas e nunca
-dentro dele, justamente para que nenhum desses quatro caminhos possa levá-lo junto.
+O **Datamosh** manipula o *fluxo comprimido* (ADR 0026): reencoda com WebCodecs os frames que a
+Chain já pintou, **remove um key chunk sim, outro não** — o decoder segue pintando a imagem
+que já tem, e os que passam são o reset que a traz de volta — e **repete deltas**, de modo que os vetores de movimento de um instante caem sobre os
+pixels de outro. O artefato é o erro de reconstrução do próprio codec, não uma imitação sobre
+pixels. É **caminho próprio**: fica fora da Chain (que continua o fold puro do ADR 0017) e fora do
+Recording (cujo contrato não muda). Só para **Live Source** — uma Source Image não tem frames, e o
+controle simplesmente não existe lá. O arquivo sai regravando o canvas do playback pelo Recording,
+o que também torna `MediaRecorder` um requisito seu. **O determinismo é da Chain, não do app:** um
+mosh não se repete — nem os fótons nem o rate-control do encoder do browser se repetem — e o
+Re-roll muda o arranjo, nunca um mosh.
 
-Esses quatro tiram **a imagem**. A **Chain JSON** é a quinta saída e a única que não é a imagem:
+O **Wipe** não é uma sexta saída e é o contrário de uma: ele existe *sobre* o canvas e nunca
+dentro dele, justamente para que nenhum desses caminhos possa levá-lo junto.
+
+Esses cinco tiram **a imagem**. A **Chain JSON** é a sexta saída e a única que não é a imagem:
 tira **o look**, para que uma Chain montada à mão possa ser guardada e compartilhada. Export mora
 na aba OUT ao lado dos outros; import mora na aba PRESETS, porque um look trazido se aplica como
 um Preset (ADR 0020).
@@ -234,7 +245,8 @@ um Preset (ADR 0020).
   Effects — 8 tipos, ordem, presença e repetição nas mãos do usuário (ADR 0017); presets-first
   (a lista curada, um já aplicado na abertura) + Randomize; Seed fixo com Re-roll, e **animado**
   (um Seed novo por frame) no Live Source; PNG Export +
-  Capture + Copy + Recording; export/import da Chain como JSON (**Chain JSON**); o **Wipe**
-  (comparar com a Source sobre o mesmo canvas).
-- **Fora (v2+):** datamosh real — **caminho de saída próprio**, só para Live Source, fora da Chain
-  e fora do Recording (ADR 0026).
+  Capture + Copy + Recording; o **Datamosh** (caminho de saída próprio, só para Live Source, fora
+  da Chain e fora do Recording — ADR 0026); export/import da Chain como JSON (**Chain JSON**); o
+  **Wipe** (comparar com a Source sobre o mesmo canvas).
+- **Fora (v2+):** parametrizar o mosh (de quantos em quantos key chunks, profundidade da
+  repetição) — o ADR 0026 deixa em aberto, e onde quer que esses botões morem não é na Chain.

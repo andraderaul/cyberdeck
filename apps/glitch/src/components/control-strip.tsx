@@ -27,6 +27,9 @@ interface Props {
   canRecord: boolean
   isRecording: boolean
   onStartRecording: () => void
+  canDatamosh: boolean
+  isMoshing: boolean
+  onStartMosh: () => void
   chain: Chain
   activePresetId: string | null
   isModified: boolean
@@ -51,6 +54,9 @@ export default function ControlStrip({
   canRecord,
   isRecording,
   onStartRecording,
+  canDatamosh,
+  isMoshing,
+  onStartMosh,
   chain,
   activePresetId,
   isModified,
@@ -89,6 +95,9 @@ export default function ControlStrip({
               canRecord={canRecord}
               isRecording={isRecording}
               onStartRecording={onStartRecording}
+              canDatamosh={canDatamosh}
+              isMoshing={isMoshing}
+              onStartMosh={onStartMosh}
             />
           )}
         </>

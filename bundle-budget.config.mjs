@@ -45,11 +45,18 @@
 // decision about lazy-loading the data. This ceiling is what forces that conversation at the moment
 // it is due, rather than after the number has quietly doubled.
 
+// GLITCH//Studio's `entry` went 75 → 77 for **datamosh** (ADR 0026, #321): its own output path, so
+// its own encoder, decoder, chunk mangle, hook and two controls. Measured 74.83 → 76.13, so the path
+// costs 1.30 kB gzipped and the old ceiling had almost no headroom left to absorb it. Deliberately
+// *not* code-split, even though nothing runs until a mosh is asked for: a dynamic import would buy
+// that 1.30 kB back at the price of a second chunk, an async seam in the hook and a second ceiling
+// to keep. The split is worth having when a chunk is an SDK, not when it is a kilobyte.
+
 /** Gzipped kB (1 kB = 1000 B), matching what Vite prints at the end of a build. */
 export const BUNDLE_BUDGET = {
   ascii: { entry: 76, lazy: 68 },
   deck: { entry: 60, lazy: 0 },
-  glitch: { entry: 75, lazy: 2.6 },
+  glitch: { entry: 77, lazy: 2.6 },
   golem: { entry: 79, lazy: 0 },
   sprawl: { entry: 115, lazy: 0 },
 }
