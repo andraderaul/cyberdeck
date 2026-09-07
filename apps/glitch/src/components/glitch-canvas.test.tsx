@@ -397,6 +397,43 @@ describe('GlitchCanvas', () => {
     expect(screen.queryByTestId('rec-indicator')).toBeNull()
   })
 
+  // The mosh badge is REC's grammar a second time (ADR 0026 borrows ADR 0020's split), with one
+  // difference: the render phase has nothing left to stop.
+  describe('the MOSH badge as the stop control', () => {
+    it('is absent while nothing is moshing', () => {
+      renderCanvas({ liveSource: liveSource() })
+
+      expect(screen.queryByTestId('mosh-indicator')).toBeNull()
+    })
+
+    it('stops the capture when tapped, and names the time elapsed', () => {
+      const onStopMosh = vi.fn()
+      renderCanvas({
+        liveSource: liveSource(),
+        moshState: 'capturing',
+        moshSeconds: 75,
+        onStopMosh,
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'stop moshing — 1:15 elapsed' }))
+
+      expect(onStopMosh).toHaveBeenCalledOnce()
+    })
+
+    // The frames are already encoded by then: there is no take left to cut short, only a render to
+    // wait out. A live-looking stop that did nothing would be the lie.
+    it('offers no stop while the mosh renders', () => {
+      const onStopMosh = vi.fn()
+      renderCanvas({ liveSource: liveSource(), moshState: 'rendering', onStopMosh })
+
+      const badge = screen.getByRole('button', { name: 'rendering the mosh' })
+      fireEvent.click(badge)
+
+      expect(badge).toBeDisabled()
+      expect(onStopMosh).not.toHaveBeenCalled()
+    })
+  })
+
   // The overlay stands on the user's artwork (ADR 0013), so the targets reach 44px through a
   // height overlay while the chips keep the size they always drew at. Width is real, because the
   // icon-only ones are ~27px across on touch and no height overlay fixes that.

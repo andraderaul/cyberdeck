@@ -13,6 +13,7 @@ import ControlStrip from './components/control-strip'
 import GlitchCanvas from './components/glitch-canvas'
 import { Errors } from './errors/app-error'
 import { outputFilename } from './export/output'
+import { useDatamosh } from './hooks/use-datamosh'
 import { useEditorState } from './hooks/use-editor-state'
 import { useWebcamState } from './hooks/use-webcam-state'
 
@@ -80,6 +81,24 @@ export default function App() {
       ),
     filename: (ext) => outputFilename('recording', { timestamp: Date.now(), ext }),
   })
+  // Beside Recording, never inside it (ADR 0026): its own path, its own support floor and its own
+  // wording. The same neutral reasons come back — a mosh that never produced a file can be retried,
+  // a finished one that failed to hand off cannot.
+  const {
+    isSupported: canDatamosh,
+    state: moshState,
+    elapsedSeconds: moshSeconds,
+    startMosh,
+    stopMosh,
+  } = useDatamosh(canvasRef, {
+    onError: (reason) =>
+      showError(
+        reason === 'start'
+          ? Errors.datamoshFailed().message
+          : Errors.datamoshExportFailed().message,
+      ),
+    filename: (ext) => outputFilename('datamosh', { timestamp: Date.now(), ext }),
+  })
 
   useEffect(() => {
     if (webcam.error) {
@@ -99,9 +118,14 @@ export default function App() {
     if (isRecording) {
       stopRecording()
     }
+    // Only a capture needs stopping: a mosh already rendering has its frames encoded and plays them
+    // back off a scratch canvas, so the camera going away costs it nothing.
+    if (moshState === 'capturing') {
+      void stopMosh()
+    }
     setSourceImage(null)
     void switchMode('image')
-  }, [isRecording, stopRecording, switchMode])
+  }, [isRecording, stopRecording, moshState, stopMosh, switchMode])
 
   const isLive = liveSource !== null
   const hasSource = sourceImage !== null || isLive
@@ -142,6 +166,9 @@ export default function App() {
                   isRecording={isRecording}
                   elapsedSeconds={elapsedSeconds}
                   onStopRecording={stopRecording}
+                  moshState={moshState}
+                  moshSeconds={moshSeconds}
+                  onStopMosh={() => void stopMosh()}
                   isMirrored={isMirrored}
                   onMirrorToggle={handleMirrorToggle}
                   onSwitchCamera={switchCamera}
@@ -171,6 +198,9 @@ export default function App() {
           canRecord={canRecord}
           isRecording={isRecording}
           onStartRecording={startRecording}
+          canDatamosh={canDatamosh}
+          isMoshing={moshState !== 'idle'}
+          onStartMosh={startMosh}
           chain={chain}
           activePresetId={activePresetId}
           isModified={isModified}

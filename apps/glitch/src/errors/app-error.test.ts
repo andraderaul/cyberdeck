@@ -22,4 +22,11 @@ describe('Errors', () => {
   it('recordingExportFailed does not invite a retry', () => {
     expect(Errors.recordingExportFailed().message).not.toContain('try again')
   })
+
+  // Datamosh is its own path (ADR 0026), so it words its own failures — same retry asymmetry.
+  it('the datamosh pair keeps that asymmetry, in its own words', () => {
+    expect(Errors.datamoshFailed().message).toContain('try again')
+    expect(Errors.datamoshExportFailed().message).not.toContain('try again')
+    expect(Errors.datamoshFailed().type).not.toBe(Errors.recordingFailed().type)
+  })
 })

@@ -24,6 +24,14 @@ describe('outputFilename', () => {
     )
   })
 
+  // Its own name, not a Recording's: the two are different output paths (ADR 0026), and a session
+  // that produced both must not leave the user guessing which file is which.
+  it('names a datamosh apart from a Recording', () => {
+    expect(outputFilename('datamosh', { timestamp: 1750000000000, ext: 'webm' })).toBe(
+      'glitch-datamosh-1750000000000.webm',
+    )
+  })
+
   // Unlike a Capture, a take can't be casually redone — two of them must not land on one name and
   // leave the browser to disambiguate with " (1)".
   it('gives two Recordings from one session distinct names', () => {
