@@ -33,23 +33,49 @@ export function usePresetThumbnails(
       return
     }
 
+    // Async because the conversion runs through a FrameRunner now (ADR 0002) — on the synchronous
+    // one, so the whole row still settles in a single task, but the seam is a promise either way.
+    let cancelled = false
+    let stopWaiting: (() => void) | undefined
+
     const remembered = source instanceof HTMLImageElement ? derivedForImage.get(source) : undefined
-    const derived = remembered ?? derivePresetThumbnails(source)
-    setThumbnails(derived)
-    if (source instanceof HTMLImageElement && Object.keys(derived).length > 0) {
-      derivedForImage.set(source, derived)
+    const settle = (derived: Record<string, string>) => {
+      if (cancelled) {
+        return
+      }
+      setThumbnails(derived)
+      if (source instanceof HTMLImageElement && Object.keys(derived).length > 0) {
+        derivedForImage.set(source, derived)
+      }
+
+      // A Live Source the camera has decoded no frame for yet has nothing to snapshot, and the
+      // derivation says so by handing back nothing rather than a row of blank chips — so wait for
+      // `loadeddata`, the event that promises there is now a frame to read, and ask again. Asking
+      // first costs nothing: the refusal lands before any conversion runs.
+      if (!(source instanceof HTMLVideoElement) || Object.keys(derived).length > 0) {
+        return
+      }
+      const onFirstFrame = () => {
+        void derivePresetThumbnails(source).then((again) => {
+          if (!cancelled) {
+            setThumbnails(again)
+          }
+        })
+      }
+      source.addEventListener('loadeddata', onFirstFrame, { once: true })
+      stopWaiting = () => source.removeEventListener('loadeddata', onFirstFrame)
     }
 
-    // A Live Source the camera has decoded no frame for yet has nothing to snapshot, and the
-    // derivation says so by handing back nothing rather than a row of blank chips — so wait for
-    // `loadeddata`, the event that promises there is now a frame to read, and ask again. Asking
-    // first costs nothing: the refusal lands before any conversion runs.
-    if (!(source instanceof HTMLVideoElement) || Object.keys(derived).length > 0) {
-      return
+    if (remembered) {
+      settle(remembered)
+    } else {
+      void derivePresetThumbnails(source).then(settle)
     }
-    const onFirstFrame = () => setThumbnails(derivePresetThumbnails(source))
-    source.addEventListener('loadeddata', onFirstFrame, { once: true })
-    return () => source.removeEventListener('loadeddata', onFirstFrame)
+
+    return () => {
+      cancelled = true
+      stopWaiting?.()
+    }
   }, [source])
 
   return thumbnails

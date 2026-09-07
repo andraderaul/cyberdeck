@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted (amended in #316 — GLITCH//Studio took the Worker upgrade path; see Implementation Notes)
+Accepted (amended in #316 and #326 — both programs have now taken the Worker upgrade path; see
+Implementation Notes)
 
 ## Context
 
@@ -38,8 +39,8 @@ eye does not perceive a difference above ~10fps for ASCII art. The implementatio
 
 **Negative:**
 - All conversion CPU runs on the UI thread, so very high resolutions or slow hardware can jank. The
-  upgrade path (Web Worker) is recorded below. **GLITCH//Studio has taken it (#316);
-  ASCII//Convert has not** — see the amendment.
+  upgrade path (Web Worker) is recorded below. **Both programs have now taken it** — GLITCH//Studio
+  in #316, ASCII//Convert in #326 — and they took it at two different seams; see the amendments.
 
 ## Related ADRs
 
@@ -124,9 +125,44 @@ was `0` until now; it is fetched when a Source is opened, never at first paint, 
 the precached shell (ADR 0027) — a running program fetches it, and an offline user who could not
 would silently drop to the slow path.
 
-### ASCII//Convert has not taken it
+### Amendment (#326) — ASCII//Convert took it, at a different seam
 
 Its per-frame work is not one function but a pure conversion, a pure `computeFrame`, and a
 `paintFrame` that draws a glyph per cell straight onto the canvas. Only the first two could cross
-without `OffscreenCanvas`, and the paint is a real share of its frame — so the port is a different
-decision there, not the same one applied twice. `ascii-canvas.tsx` still carries the pointer here.
+without `OffscreenCanvas`, and that is exactly what crossed: **`convertImage()` and `computeFrame()`
+now run on a dedicated Worker** (`src/ascii/frame-worker.ts`, `frame-job.ts`, `frame-runner.ts`),
+while `paintFrame()` stays on the main thread and remains the only function writing to the visible
+canvas (ADR 0005). The Worker returns `RenderInstruction[]` and `asciiRows`; the shell paints.
+
+So the seam is not GLITCH's applied twice. There, one pure function is the whole per-frame cost and
+the shell's remaining work is a `putImageData`. Here the shell keeps a real share of the frame — a
+`fillText` per cell — and what it hands over is the part that has no DOM in it. The three rules
+above carry across unchanged (drop, never queue; a synchronous fallback always; a Source Image asks
+once more when a dying Worker took its pixels), because they are properties of the *runner*, not of
+what it runs: `frame-runner.ts` is `chain-runner.ts`'s shape, deliberately, so the deck has one
+answer to backpressure rather than two.
+
+Two things are this program's own:
+
+- **The sampling draw stays here, and had to be split out to do so.** `convertImage()` used to take
+  the sampling context and do its own `drawImage` + `getImageData`; that half is now
+  `sampleSource()`, on the main thread with the hidden canvas ADR 0001 gave it, and the Mirror still
+  rides on that draw ahead of everything (ADR 0016) — so the preview, the PNG, the TXT and the HTML
+  keep agreeing by construction, and nothing past the boundary can tell a flipped frame from an
+  unflipped one. What crosses is the buffer it returns.
+- **Only the inbound leg transfers.** The sampled pixels go by transfer, and they are the one large
+  value in the message. What comes back cannot: `RenderInstruction[]` is an array of objects and
+  `asciiRows` an array of strings, and neither is a Transferable. So the return leg is a structured
+  clone, and `frame-job.ts` says so rather than inventing a typed-array encoding of glyphs and CSS
+  colours to make the two legs look symmetric.
+
+The PRESETS row is the one caller that deliberately asks for the *synchronous* runner: it converts
+ten Presets in a burst over one canvas, and the single waiting slot would drop nine of them.
+
+`frame-job.test.ts` pins all three Exports for all ten Presets by digest, recorded from `main`
+before the port — the assertion the whole change had to answer to. The pure core is unit-tested
+directly, with no Worker in the room, exactly as before.
+
+The cost is the same one GLITCH paid: a second copy of the two stages in the build (2.47 kB gzipped,
+`bundle-budget.config.mjs`), fetched when a Source is opened and part of the precached shell
+(ADR 0027).

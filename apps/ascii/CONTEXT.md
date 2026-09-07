@@ -4,10 +4,13 @@ Ferramenta client-side que converte uma imagem estática num canvas de arte ASCI
 
 ## Pipeline
 
-1. **Convert** — `convertImage()`: lê os pixels da imagem e produz uma grade de **AsciiCell**
-2. **Orchestrate** — `renderFrame()`: calcula `cols × rows`, chama Convert, Compute e Paint em sequência; retorna `false` se o canvas for pequeno demais para caber um caractere
-3. **Compute** — `computeFrame()`: percorre a grade de **AsciiCell** e produz instruções de renderização com posição e cor — puro, sem DOM
-4. **Paint** — `paintFrame()`: único ponto de escrita no canvas visível
+1. **Sample** — `sampleSource()`: desenha a Source no canvas escondido (ADR 0001) e lê os pixels. Único ponto de DOM antes da pintura, e onde o Mirror acontece (ADR 0016)
+2. **Convert** — `convertImage()`: lê esses pixels e produz uma grade de **AsciiCell**
+3. **Orchestrate** — `renderFrame()`: calcula `cols × rows`, chama Sample, entrega Convert e Compute a um **FrameRunner**, e chama Paint com o que voltar; responde `painted` / `dropped` / `skipped`
+4. **Compute** — `computeFrame()`: percorre a grade de **AsciiCell** e produz instruções de renderização com posição e cor — puro, sem DOM
+5. **Paint** — `paintFrame()`: único ponto de escrita no canvas visível
+
+Convert e Compute são os dois estágios puros, e desde a ADR 0002 eles rodam **fora da main thread**: o FrameRunner os executa num Worker onde houver um, e na própria thread onde não houver. Sample e Paint ficam aqui — o canvas escondido e o canvas visível são objetos do DOM. O que atravessa a fronteira são pixels de ida e instruções de volta.
 
 ## Language
 

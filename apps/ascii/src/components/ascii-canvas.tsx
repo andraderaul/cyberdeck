@@ -1,13 +1,26 @@
 import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
 import { TOUCH_TARGET_HEIGHT, TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
-import { type RefObject, useEffect, useRef } from 'react'
+import { type MutableRefObject, type RefObject, useEffect, useRef } from 'react'
+import { type AsciiFrameRunner, createFrameRunner } from '../ascii/frame-runner'
 import { resizeImage } from '../ascii/image-utils'
 import { monoFontFamily, renderFrame } from '../ascii/render-frame'
 import type { RenderInstruction } from '../ascii/renderer'
 import type { ConversionSettings } from '../ascii/types'
 
 const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
+
+/**
+ * The canvas' own FrameRunner, built the first time a render asks for one.
+ *
+ * Lazy rather than eager, and a plain function over the ref rather than a hook: a runner built
+ * during render would leave a Worker behind on the pass StrictMode throws away, and one built in an
+ * effect would not exist yet for the render that effect is running for.
+ */
+function frameRunner(ref: MutableRefObject<AsciiFrameRunner | null>): AsciiFrameRunner {
+  ref.current ??= createFrameRunner()
+  return ref.current
+}
 
 /**
  * Shared shape for the overlay's source-tuning buttons (mirror, switch-camera, clear). No bg-bg
@@ -71,6 +84,17 @@ export default function AsciiCanvas({
 }: Props) {
   const hiddenRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
   const renderStaticRef = useRef<(() => void) | null>(null)
+  // One runner per canvas, built on first use rather than in an effect: both render paths below
+  // reach for it, and under StrictMode a runner built during render would leave a Worker behind on
+  // the discarded pass. Torn down on unmount, where the Worker's thread actually goes away.
+  const runnerRef = useRef<AsciiFrameRunner | null>(null)
+  useEffect(
+    () => () => {
+      runnerRef.current?.dispose()
+      runnerRef.current = null
+    },
+    [],
+  )
   const onDimensionsChangeRef = useRef(onDimensionsChange)
   useEffect(() => {
     onDimensionsChangeRef.current = onDimensionsChange
@@ -83,23 +107,42 @@ export default function AsciiCanvas({
       renderStaticRef.current = null
       return
     }
-    const fn = () =>
+    let superseded = false
+    const convert = () =>
       renderFrame(
         resizeImage(sourceImage),
         canvas,
         hiddenRef.current,
         settings,
         fontFamilyRef.current,
+        frameRunner(runnerRef),
         onConverted,
         isMirrored,
       )
-    renderStaticRef.current = fn
-    fn()
+    const paint = async () => {
+      // The re-ask is for **a Worker that died holding this frame's pixels**, and for nothing else.
+      // Backpressure cannot reach it: the only thing that drops the newest Source Image render is a
+      // newer one, and React runs this effect's cleanup before that newer render is ever submitted,
+      // so `superseded` is already true by the time the drop lands. What is left is the runner
+      // falling back — the pixels were transferred and left with the Worker, and a still image has
+      // no next frame to correct that with. Asking once more is enough, because by then the runner
+      // *is* the synchronous core and cannot drop.
+      if ((await convert()) === 'dropped' && !superseded) {
+        await convert()
+      }
+    }
+    renderStaticRef.current = () => void paint()
+    void paint()
+    return () => {
+      superseded = true
+    }
   }, [sourceImage, settings, onConverted, canvasRef, isMirrored])
 
-  // rAF loop throttled to ~15fps — see ADR 0002 for the Web Worker upgrade path, which
-  // GLITCH//Studio has taken and this program has not: `paintFrame` draws a glyph per cell straight
-  // onto the canvas, so only the two pure stages ahead of it could cross without OffscreenCanvas.
+  // rAF loop throttled to ~15fps. The two pure stages run on a Worker now (ADR 0002), so what this
+  // throttles is how often the main thread samples a frame and hands it over; `paintFrame` is what
+  // is left here, and it stays here because it is the one point that writes to the visible canvas
+  // (ADR 0005). A frame the runner drops is corrected by the next tick, which is why nothing here
+  // reads the outcome.
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !sourceVideo) {
@@ -117,12 +160,13 @@ export default function AsciiCanvas({
       }
       lastTime = now
       if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
-        renderFrame(
+        void renderFrame(
           video,
           canvas,
           hiddenRef.current,
           settings,
           fontFamilyRef.current,
+          frameRunner(runnerRef),
           undefined,
           isMirrored,
         )

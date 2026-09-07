@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { greyCtx, sourceCtx } from './__fixtures__/source-ctx'
+import { greyPixels, sourcePixels } from './__fixtures__/source-pixels'
 import { convertImage } from './converter'
 import { PRESETS, settingsMatch } from './presets'
 import { computeFrame, DUAL_COLOR_MODES } from './renderer'
@@ -190,8 +190,8 @@ describe('PRESETS', () => {
     // The opening of `circles`, where a sparse ramp leaves its shading: blank, dot, small ring.
     const SPARSE_END = CHARSET_MAPS.circles.slice(0, 3)
 
-    const convert = (ctx: CanvasRenderingContext2D, settings: ConversionSettings) =>
-      convertImage(ctx, {} as CanvasImageSource, GRID, GRID, settings)
+    const convert = (pixels: Uint8ClampedArray, settings: ConversionSettings) =>
+      convertImage(pixels, GRID, GRID, settings)
 
     const glyphsIn = (cells: ReturnType<typeof convert>) =>
       new Set(cells.flat().map((cell) => cell.char))
@@ -205,7 +205,7 @@ describe('PRESETS', () => {
       // contrast the app offers, so it would pass on a look whose curation never reached the axis
       // at all. This one is the shading of an actual Source, and it crosses only once Blueprint's
       // contrast has stretched it.
-      const contour = () => greyCtx(GRID, GRID, (col) => (col < GRID / 2 ? 90 : 150))
+      const contour = () => greyPixels(GRID, GRID, (col) => (col < GRID / 2 ? 90 : 150))
 
       // The vertical stroke specifically — the glyph a vertical contour's tangent resolves to.
       expect(glyphsIn(convert(contour(), settings))).toContain('|')
@@ -229,7 +229,7 @@ describe('PRESETS', () => {
       // fields deliberately: with no gradient to follow, nothing but the Dithering can tell them
       // apart, and undithered all three come back as the same empty frame — which is the flooring
       // this look exists to answer, rather than a bucket edge one level happens to sit on.
-      const flat = (level: number) => greyCtx(GRID, GRID, () => level)
+      const flat = (level: number) => greyPixels(GRID, GRID, () => level)
       const inkAt = (level: number, s: ConversionSettings) => inkIn(convert(flat(level), s))
       const undithered: ConversionSettings = { ...settings, dithering: 'none' }
 
@@ -247,7 +247,7 @@ describe('PRESETS', () => {
       // A colour that appears in no palette this app ships, so a match cannot be a coincidence.
       const teal: [number, number, number] = [17, 153, 142]
       const cells = convert(
-        sourceCtx(GRID, GRID, () => teal),
+        sourcePixels(GRID, GRID, () => teal),
         settings,
       )
       const { instructions } = computeFrame(cells, settings)
@@ -273,7 +273,7 @@ describe('PRESETS', () => {
     // asserting only that Silkscreen paints something would pass at any brightness at all.
     it("Silkscreen's brightness pulls a shadow level out of the Charset's blank bucket", () => {
       const { settings } = presetById('silkscreen')
-      const shadow = () => greyCtx(GRID, GRID, () => 60)
+      const shadow = () => greyPixels(GRID, GRID, () => 60)
       const painting = (s: ConversionSettings) => inkIn(convert(shadow(), s))
 
       expect(painting(settings)).toBeGreaterThan(0)
@@ -292,8 +292,8 @@ describe('PRESETS', () => {
   describe('the looks curated for the axes the front door could not reach', () => {
     const GRID = 24
 
-    const convert = (ctx: CanvasRenderingContext2D, settings: ConversionSettings) =>
-      convertImage(ctx, {} as CanvasImageSource, GRID, GRID, settings)
+    const convert = (pixels: Uint8ClampedArray, settings: ConversionSettings) =>
+      convertImage(pixels, GRID, GRID, settings)
 
     const glyphsIn = (cells: ReturnType<typeof convert>) =>
       new Set(cells.flat().map((cell) => cell.char))
@@ -302,9 +302,9 @@ describe('PRESETS', () => {
       cells.flat().filter((cell) => cell.char !== ' ').length
 
     /** The colours a look actually *paints* — a blank cell is excluded, which is the whole point. */
-    const inkColours = (ctx: CanvasRenderingContext2D, settings: ConversionSettings) =>
+    const inkColours = (pixels: Uint8ClampedArray, settings: ConversionSettings) =>
       new Set(
-        computeFrame(convert(ctx, settings), settings)
+        computeFrame(convert(pixels, settings), settings)
           .instructions.filter((instruction) => instruction.char !== ' ')
           .map((instruction) => instruction.color),
       )
@@ -315,7 +315,7 @@ describe('PRESETS', () => {
       // Two flat bands, one either side of the 0.5 cut. Level 80 is a shadow the look still draws
       // a character for; drive the contrast two steps further and the same band falls into
       // `sharp`'s opening space, so the frame comes back in one colour with the cut untouched.
-      const bands = () => greyCtx(GRID, GRID, (_col, row) => (row < GRID / 2 ? 80 : 160))
+      const bands = () => greyPixels(GRID, GRID, (_col, row) => (row < GRID / 2 ? 80 : 160))
 
       expect(inkColours(bands(), settings)).toEqual(new Set([hot, cold]))
       expect(inkColours(bands(), { ...settings, contrast: 2.2 })).toEqual(new Set([hot]))
@@ -327,7 +327,7 @@ describe('PRESETS', () => {
       // the Dithering is the only thing that can spend a second one. The colours are identical
       // across that change, which is the independence the look is built on: the diffusion moves
       // the glyph index, the dual mode reads RGB the diffusion never wrote to.
-      const bands = () => greyCtx(GRID, GRID, (_col, row) => (row < GRID / 2 ? 110 : 150))
+      const bands = () => greyPixels(GRID, GRID, (_col, row) => (row < GRID / 2 ? 110 : 150))
       const undithered: ConversionSettings = { ...settings, dithering: 'none' }
 
       expect(glyphsIn(convert(bands(), undithered)).size).toBe(2)
@@ -342,7 +342,7 @@ describe('PRESETS', () => {
       // always handed forward: a field sitting just above black walks itself over the first
       // boundary and a graphic's dead ground comes back speckled. The contrast clamps that field to
       // a true zero, where there is no error left to spend — and 1.0 is a value at which there is.
-      const nearBlack = () => greyCtx(GRID, GRID, () => 8)
+      const nearBlack = () => greyPixels(GRID, GRID, () => 8)
 
       expect(inkIn(convert(nearBlack(), settings))).toBe(0)
       expect(inkIn(convert(nearBlack(), { ...settings, contrast: 1.0 }))).toBeGreaterThan(0)
@@ -357,7 +357,7 @@ describe('PRESETS', () => {
 
       expect(
         inkColours(
-          sourceCtx(GRID, GRID, () => teal),
+          sourcePixels(GRID, GRID, () => teal),
           settings,
         ),
       ).toEqual(new Set([`rgb(${teal[0]},${teal[1]},${teal[2]})`]))
@@ -369,7 +369,7 @@ describe('PRESETS', () => {
       // is, so it takes the Charset's opening space and paints nothing; under 1 the whole field
       // lifts off zero and every cell inks — near-black dots over what should be clean ground.
       // That is the ceiling the look's brightness is chosen under, not a slider left alone.
-      const ground = () => greyCtx(GRID, GRID, () => 10)
+      const ground = () => greyPixels(GRID, GRID, () => 10)
 
       expect(inkIn(convert(ground(), settings))).toBe(0)
       expect(inkIn(convert(ground(), { ...settings, contrast: 0.95 }))).toBe(GRID * GRID)

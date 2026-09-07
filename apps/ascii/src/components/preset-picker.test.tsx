@@ -9,7 +9,7 @@ import PresetPicker from './preset-picker'
 // here it stands in for one — what this file holds is what the row does with what comes back.
 vi.mock('../ascii/thumbnail', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../ascii/thumbnail')>()),
-  derivePresetThumbnails: vi.fn(() =>
+  derivePresetThumbnails: vi.fn(async () =>
     Object.fromEntries(PRESETS.map((preset) => [preset.id, `data:image/png;base64,${preset.id}`])),
   ),
 }))
@@ -36,6 +36,12 @@ function renderPicker(props: Partial<React.ComponentProps<typeof PresetPicker>> 
     />,
   )
   return { onSelect, ...view }
+}
+
+// The derivation runs through a FrameRunner now (ADR 0002), so the row's pictures land a microtask
+// after the render that asked for them rather than inside it.
+async function flushThumbnails(): Promise<void> {
+  await act(async () => {})
 }
 
 beforeEach(() => {
@@ -112,8 +118,9 @@ describe('PresetPicker', () => {
     expect(btn.textContent).not.toContain('*')
   })
 
-  it('draws each preset on the loaded Source', () => {
+  it('draws each preset on the loaded Source', async () => {
     renderPicker({ source: makeSourceImage() })
+    await flushThumbnails()
 
     for (const preset of PRESETS) {
       const chip = screen.getByRole('button', { name: preset.name })
@@ -121,7 +128,7 @@ describe('PresetPicker', () => {
     }
   })
 
-  it('leaves the accessible name to the word — the picture is not part of it', () => {
+  it('leaves the accessible name to the word — the picture is not part of it', async () => {
     const activePreset = PRESETS[0]
     const diverged: ConversionSettings = { ...activePreset.settings, brightness: 1.9 }
     renderPicker({
@@ -129,14 +136,16 @@ describe('PresetPicker', () => {
       activePresetId: activePreset.id,
       source: makeSourceImage(),
     })
+    await flushThumbnails()
 
     const chip = screen.getByRole('button', { name: `${activePreset.name} (modified)` })
     expect(chip.querySelector('img')).toHaveAttribute('alt', '')
   })
 
-  it('falls back to the name alone when the pipeline derived nothing', () => {
-    deriveMock.mockReturnValueOnce({})
+  it('falls back to the name alone when the pipeline derived nothing', async () => {
+    deriveMock.mockResolvedValueOnce({})
     renderPicker({ source: makeSourceImage() })
+    await flushThumbnails()
 
     expect(document.querySelectorAll('img')).toHaveLength(0)
     for (const preset of PRESETS) {
@@ -160,12 +169,14 @@ describe('PresetPicker', () => {
     expect(deriveMock).toHaveBeenCalledOnce()
   })
 
-  it('remembers a Source Image across the tab being left and come back to', () => {
+  it('remembers a Source Image across the tab being left and come back to', async () => {
     const source = makeSourceImage()
     const { unmount } = renderPicker({ source })
+    await flushThumbnails()
     unmount()
 
     renderPicker({ source })
+    await flushThumbnails()
 
     // A Source Image is immutable for the session, so the second visit is the first one's answer.
     expect(deriveMock).toHaveBeenCalledOnce()
@@ -187,16 +198,16 @@ describe('PresetPicker', () => {
     expect(deriveMock).toHaveBeenCalledTimes(2)
   })
 
-  it('answers a Live Source with no frame yet by waiting for one', () => {
+  it('answers a Live Source with no frame yet by waiting for one', async () => {
     // What the derivation hands back for a Live Source that has decoded nothing to snapshot.
-    deriveMock.mockReturnValueOnce({})
+    deriveMock.mockResolvedValueOnce({})
     const video = document.createElement('video')
     renderPicker({ source: video })
+    await flushThumbnails()
     expect(document.querySelectorAll('img')).toHaveLength(0)
 
-    act(() => {
-      video.dispatchEvent(new Event('loadeddata'))
-    })
+    video.dispatchEvent(new Event('loadeddata'))
+    await flushThumbnails()
 
     expect(document.querySelectorAll('img')).toHaveLength(PRESETS.length)
     // Twice over the whole take — not once for each of the 15 frames a second the loop draws.

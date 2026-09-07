@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildHtmlDocument } from '../export/html-document'
 import { readCustomCharset } from './charset'
+import { createSyncFrameRunner } from './frame-runner'
 import { renderFrame } from './render-frame'
 import type { RenderInstruction } from './renderer'
 import type { ConversionSettings, CustomCharset } from './types'
@@ -50,6 +51,9 @@ function makeCtxMock(canvas: HTMLCanvasElement) {
 }
 
 describe('renderFrame', () => {
+  // The synchronous runner, so these tests stay about the shell — the sampling, the crop and the
+  // paint — with the real pure core behind it and no Worker in the room (ADR 0002).
+  const runner = createSyncFrameRunner()
   let canvasEl: HTMLCanvasElement
   let hiddenEl: HTMLCanvasElement
   let ctxMock: ReturnType<typeof makeCtxMock>
@@ -68,15 +72,23 @@ describe('renderFrame', () => {
     )
   })
 
-  it('returns true and calls onConverted when rendering succeeds', () => {
+  it('reports painted and calls onConverted when rendering succeeds', async () => {
     const onConverted = vi.fn()
-    const result = renderFrame(canvasEl, canvasEl, hiddenEl, SETTINGS, 'monospace', onConverted)
+    const result = await renderFrame(
+      canvasEl,
+      canvasEl,
+      hiddenEl,
+      SETTINGS,
+      'monospace',
+      runner,
+      onConverted,
+    )
 
-    expect(result).toBe(true)
+    expect(result).toBe('painted')
     expect(onConverted).toHaveBeenCalledOnce()
   })
 
-  it('crops onConverted rows to the fit region (TXT trimmed, no letterbox padding)', () => {
+  it('crops onConverted rows to the fit region (TXT trimmed, no letterbox padding)', async () => {
     // 200x200 canvas, resolution 10 → charW 6, charH 10 → cols 33, rows 20.
     // A tall 100x400 source (aspect 0.25) is pillarboxed: dCols 8, dRows 20.
     canvasEl.width = 200
@@ -90,7 +102,7 @@ describe('renderFrame', () => {
     const source = makeCanvas(100, 400)
     const onConverted = vi.fn()
 
-    renderFrame(source, canvasEl, hiddenEl, SETTINGS, 'monospace', onConverted)
+    await renderFrame(source, canvasEl, hiddenEl, SETTINGS, 'monospace', runner, onConverted)
 
     const emitted = onConverted.mock.calls[0][0] as string[]
     expect(emitted).toHaveLength(20)
@@ -99,7 +111,7 @@ describe('renderFrame', () => {
     }
   })
 
-  it('crops the onConverted instructions to the same region, rebased on its own origin', () => {
+  it('crops the onConverted instructions to the same region, rebased on its own origin', async () => {
     // Same 200x200 canvas and pillarboxed 100x400 source as above: 8 cols x 20 rows kept.
     canvasEl.width = 200
     canvasEl.height = 200
@@ -109,7 +121,15 @@ describe('renderFrame', () => {
 
     const onConverted = vi.fn()
 
-    renderFrame(makeCanvas(100, 400), canvasEl, hiddenEl, SETTINGS, 'monospace', onConverted)
+    await renderFrame(
+      makeCanvas(100, 400),
+      canvasEl,
+      hiddenEl,
+      SETTINGS,
+      'monospace',
+      runner,
+      onConverted,
+    )
 
     const instructions = onConverted.mock.calls[0][1] as RenderInstruction[]
     expect(instructions).toHaveLength(8 * 20)
@@ -119,7 +139,7 @@ describe('renderFrame', () => {
     expect(instructions[8]).toMatchObject({ x: 0, y: 10 })
   })
 
-  it('carries an authored Charset into every Export, astral glyphs whole', () => {
+  it('carries an authored Charset into every Export, astral glyphs whole', async () => {
     // The stub reports an all-zero (black) grid, so every cell takes the ramp's darkest glyph —
     // the one a UTF-16 index would hand back as half a surrogate pair. PNG Export is the painted
     // canvas, so `fillText` is where it is observable; the two text Exports read `onConverted`.
@@ -131,12 +151,13 @@ describe('renderFrame', () => {
     const charset = authored('🌑🌕')
     const onConverted = vi.fn()
 
-    renderFrame(
+    await renderFrame(
       makeCanvas(100, 400),
       canvasEl,
       hiddenEl,
       { ...SETTINGS, charset },
       'monospace',
+      runner,
       onConverted,
     )
 
@@ -153,12 +174,12 @@ describe('renderFrame', () => {
     expect(html).toContain('🌑'.repeat(8))
   })
 
-  it('returns true without onConverted when callback is omitted', () => {
-    const result = renderFrame(canvasEl, canvasEl, hiddenEl, SETTINGS, 'monospace')
-    expect(result).toBe(true)
+  it('reports painted without onConverted when the callback is omitted', async () => {
+    const result = await renderFrame(canvasEl, canvasEl, hiddenEl, SETTINGS, 'monospace', runner)
+    expect(result).toBe('painted')
   })
 
-  it('returns false when canvas is too small to fit any character column', () => {
+  it('reports skipped when the canvas is too small to fit any character column', async () => {
     // resolution=10, charW=6 — a 5px wide canvas produces cols=0
     const tinyCanvas = makeCanvas(5, 100)
     vi.spyOn(tinyCanvas, 'getContext').mockReturnValue(
@@ -166,13 +187,21 @@ describe('renderFrame', () => {
     )
 
     const onConverted = vi.fn()
-    const result = renderFrame(tinyCanvas, tinyCanvas, hiddenEl, SETTINGS, 'monospace', onConverted)
+    const result = await renderFrame(
+      tinyCanvas,
+      tinyCanvas,
+      hiddenEl,
+      SETTINGS,
+      'monospace',
+      runner,
+      onConverted,
+    )
 
-    expect(result).toBe(false)
+    expect(result).toBe('skipped')
     expect(onConverted).not.toHaveBeenCalled()
   })
 
-  it('returns false when canvas is too small to fit any character row', () => {
+  it('reports skipped when the canvas is too small to fit any character row', async () => {
     // resolution=10, charH=10 — a 9px tall canvas produces rows=0
     const tinyCanvas = makeCanvas(200, 9)
     vi.spyOn(tinyCanvas, 'getContext').mockReturnValue(
@@ -180,26 +209,34 @@ describe('renderFrame', () => {
     )
 
     const onConverted = vi.fn()
-    const result = renderFrame(tinyCanvas, tinyCanvas, hiddenEl, SETTINGS, 'monospace', onConverted)
+    const result = await renderFrame(
+      tinyCanvas,
+      tinyCanvas,
+      hiddenEl,
+      SETTINGS,
+      'monospace',
+      runner,
+      onConverted,
+    )
 
-    expect(result).toBe(false)
+    expect(result).toBe('skipped')
     expect(onConverted).not.toHaveBeenCalled()
   })
 
-  it('leaves the sampling draw untransformed when not mirrored', () => {
-    renderFrame(canvasEl, canvasEl, hiddenEl, SETTINGS, 'monospace')
+  it('leaves the sampling draw untransformed when not mirrored', async () => {
+    await renderFrame(canvasEl, canvasEl, hiddenEl, SETTINGS, 'monospace', runner)
 
     expect(hiddenCtxMock.scale).not.toHaveBeenCalled()
   })
 
-  it('flips the pixels on the sampling canvas when mirrored', () => {
-    renderFrame(canvasEl, canvasEl, hiddenEl, SETTINGS, 'monospace', undefined, true)
+  it('flips the pixels on the sampling canvas when mirrored', async () => {
+    await renderFrame(canvasEl, canvasEl, hiddenEl, SETTINGS, 'monospace', runner, undefined, true)
 
     expect(hiddenCtxMock.scale).toHaveBeenCalledWith(-1, 1)
     expect(hiddenCtxMock.restore).toHaveBeenCalledOnce()
   })
 
-  it('mirrors the rows handed to onConverted, so TXT Export matches the preview', () => {
+  it('mirrors the rows handed to onConverted, so TXT Export matches the preview', async () => {
     // 33 cols x 20 rows; the left half of the grid is white and the right half black,
     // so a real flip has to show up as reversed characters, not just a transform call.
     canvasEl.width = 200
@@ -210,7 +247,7 @@ describe('renderFrame', () => {
 
     // Stands in for a real 2D context: the sampled pixels come out flipped only because
     // renderFrame asked for scale(-1, 1), so the assertion below exercises the actual call.
-    const emitted = (mirrored: boolean) => {
+    const emitted = async (mirrored: boolean) => {
       let flipped = false
       hiddenCtxMock.scale = vi.fn((x: number) => {
         flipped = x === -1
@@ -231,27 +268,28 @@ describe('renderFrame', () => {
       const onConverted = vi.fn()
       // 99x100 matches the grid's pixel aspect exactly, so the fit region is the whole
       // grid — no letterbox crop to make "reversed" ambiguous.
-      renderFrame(
+      await renderFrame(
         makeCanvas(99, 100),
         canvasEl,
         hiddenEl,
         SETTINGS,
         'monospace',
+        runner,
         onConverted,
         mirrored,
       )
       return onConverted.mock.calls[0][0] as string[]
     }
 
-    const plain = emitted(false)
-    const flipped = emitted(true)
+    const plain = await emitted(false)
+    const flipped = await emitted(true)
     expect(flipped).toEqual(plain.map((line) => [...line].reverse().join('')))
   })
 
   // Edge Glyphs land in the AsciiCell grid, so there is one place to prove they reach every
   // consumer: the rows handed to TXT Export and the characters painted for the preview and the
   // PNG come out of the same conversion.
-  it('carries Edge Glyphs into both the painted canvas and the TXT rows', () => {
+  it('carries Edge Glyphs into both the painted canvas and the TXT rows', async () => {
     canvasEl.width = 200
     canvasEl.height = 200
     const cols = 33
@@ -274,12 +312,13 @@ describe('renderFrame', () => {
 
     const onConverted = vi.fn()
     // 99x100 matches the grid's pixel aspect, so the contour is the only thing in the grid.
-    renderFrame(
+    await renderFrame(
       makeCanvas(99, 100),
       canvasEl,
       hiddenEl,
       { ...SETTINGS, edgeGlyphs: true },
       'monospace',
+      runner,
       onConverted,
     )
 
@@ -290,7 +329,7 @@ describe('renderFrame', () => {
 
   // Same seam as Edge Glyphs above: the Dithering lands in the AsciiCell grid, so proving it
   // reaches the TXT rows and the painted characters proves it reaches every Export.
-  it('carries the Dithering into both the painted canvas and the TXT rows', () => {
+  it('carries the Dithering into both the painted canvas and the TXT rows', async () => {
     canvasEl.width = 200
     canvasEl.height = 200
     // 96 sits between two `blocks` buckets: undithered the whole field floors to a single `░`.
@@ -299,12 +338,13 @@ describe('renderFrame', () => {
     })) as unknown as typeof hiddenCtxMock.getImageData
 
     const onConverted = vi.fn()
-    renderFrame(
+    await renderFrame(
       makeCanvas(99, 100),
       canvasEl,
       hiddenEl,
       { ...SETTINGS, charset: 'blocks', dithering: 'bayer' },
       'monospace',
+      runner,
       onConverted,
     )
 
@@ -313,10 +353,10 @@ describe('renderFrame', () => {
     expect(ctxMock.fillText).toHaveBeenCalledWith('▒', expect.any(Number), expect.any(Number))
   })
 
-  it('returns false when 2d context is unavailable', () => {
+  it('reports skipped when the 2d context is unavailable', async () => {
     vi.spyOn(canvasEl, 'getContext').mockReturnValue(null)
 
-    const result = renderFrame(canvasEl, canvasEl, hiddenEl, SETTINGS, 'monospace')
-    expect(result).toBe(false)
+    const result = await renderFrame(canvasEl, canvasEl, hiddenEl, SETTINGS, 'monospace', runner)
+    expect(result).toBe('skipped')
   })
 })

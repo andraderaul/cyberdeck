@@ -256,7 +256,7 @@ describe('AsciiCanvas', () => {
     const liveCalls = vi.mocked(renderFrame).mock.calls.filter(([source]) => source === video)
     expect(liveCalls.length).toBeGreaterThan(0)
     for (const call of liveCalls) {
-      expect(call[5]).toBeUndefined()
+      expect(call[6]).toBeUndefined()
     }
 
     vi.unstubAllGlobals()

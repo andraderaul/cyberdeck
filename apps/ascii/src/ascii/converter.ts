@@ -253,36 +253,26 @@ function edgeGlyphAt(
 }
 
 /**
- * @param options.edgeGlyphs Opt-in second axis: where the local gradient is strong, the cell takes
- *   a directional glyph instead of its luminosity one. Off is the shape of every conversion that
- *   predates it, and `ConversionSettings` is the one place that default is written down.
- * @param options.dithering Trades a bucket boundary for a pattern before the Charset buckets a
- *   cell, so a coarse Charset carries a gradient instead of banding it. `none` is the conversion
- *   that predates the pass, character for character.
- * @param region Contain-fit sub-region the Source is drawn into; cells outside it are void.
- *   Defaults to a full-grid fill. See ADR 0010.
+ * The sampling draw, and the whole of what this module does to the DOM — the pixels a conversion
+ * reads, taken off the hidden canvas (ADR 0001).
+ *
+ * It stays on the main thread while `convertImage` runs on a Worker (ADR 0002): the sampling canvas
+ * is a DOM object, and so is every Source that can be drawn from. What crosses the thread boundary
+ * is the buffer this hands back.
+ *
  * @param isMirrored Flips the Source on this sampling draw, *before* any pixel is read into a
  *   cell (ADR 0016) — so the preview, the PNG and the TXT rows all carry the same flip. The
  *   transform is about the fit region, which keeps a letterboxed Source inside its own bands.
  */
-export function convertImage(
+export function sampleSource(
   ctx: CanvasRenderingContext2D,
   img: CanvasImageSource,
   cols: number,
   rows: number,
-  options: {
-    brightness: number
-    contrast: number
-    charset: Charset
-    edgeGlyphs: boolean
-    dithering: Dithering
-  },
   region: FitRegion = { offsetX: 0, offsetY: 0, dCols: cols, dRows: rows },
   isMirrored = false,
-): AsciiCell[][] {
-  const { brightness, contrast, charset, edgeGlyphs, dithering } = options
+): Uint8ClampedArray {
   const { offsetX, offsetY, dCols, dRows } = region
-  const glyphs = charsetGlyphs(charset)
 
   // The sampling canvas (ADR 0001) outlives a single conversion and drawImage composites
   // source-over, so a Source with an alpha channel would blend onto whatever the previous render
@@ -304,7 +294,40 @@ export function convertImage(
   } else {
     ctx.drawImage(img, offsetX, offsetY, dCols, dRows)
   }
-  const data = ctx.getImageData(0, 0, cols, rows).data
+  return ctx.getImageData(0, 0, cols, rows).data
+}
+
+/**
+ * The Convert stage: sampled pixels in, an AsciiCell grid out. Pure, no DOM (ADR 0005) — which is
+ * what lets it run on a Worker (ADR 0002) without the sampling canvas going with it.
+ *
+ * @param data RGBA of the `cols × rows` sampled grid, as `sampleSource` read it off the hidden
+ *   canvas. Row-major, four bytes a cell.
+ * @param options.edgeGlyphs Opt-in second axis: where the local gradient is strong, the cell takes
+ *   a directional glyph instead of its luminosity one. Off is the shape of every conversion that
+ *   predates it, and `ConversionSettings` is the one place that default is written down.
+ * @param options.dithering Trades a bucket boundary for a pattern before the Charset buckets a
+ *   cell, so a coarse Charset carries a gradient instead of banding it. `none` is the conversion
+ *   that predates the pass, character for character.
+ * @param region Contain-fit sub-region the Source was drawn into; cells outside it are void.
+ *   Defaults to a full-grid fill. See ADR 0010.
+ */
+export function convertImage(
+  data: Uint8ClampedArray,
+  cols: number,
+  rows: number,
+  options: {
+    brightness: number
+    contrast: number
+    charset: Charset
+    edgeGlyphs: boolean
+    dithering: Dithering
+  },
+  region: FitRegion = { offsetX: 0, offsetY: 0, dCols: cols, dRows: rows },
+): AsciiCell[][] {
+  const { brightness, contrast, charset, edgeGlyphs, dithering } = options
+  const { offsetX, offsetY, dCols, dRows } = region
+  const glyphs = charsetGlyphs(charset)
 
   const result: AsciiCell[][] = []
   // Both passes below read more than the cell in front of them — the gradient a whole
