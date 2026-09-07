@@ -3,17 +3,18 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ConversionSettings } from '../ascii/types'
-import { CHARSET_MAPS, COLOR_MODES } from '../ascii/types'
-import SettingsEditor from './settings-editor'
+import { CHARSET_MAPS, COLOR_MODES, DEFAULT_SETTINGS } from '../ascii/types'
+import SettingsEditor, { resetPatch, TOOL_KEYS } from './settings-editor'
 
-const DEFAULT_SETTINGS: ConversionSettings = {
-  resolution: 12,
-  colorMode: 'matrix',
-  charset: 'classic',
-  brightness: 1.0,
-  contrast: 1.0,
-  edgeGlyphs: false,
-  dithering: 'none',
+/** Every axis off its default at once — the look a scoped reset has something to do in. */
+const ALL_DISPLACED: ConversionSettings = {
+  resolution: 20,
+  colorMode: 'neon',
+  charset: 'braille',
+  brightness: 1.6,
+  contrast: 1.8,
+  edgeGlyphs: true,
+  dithering: 'bayer',
 }
 
 function renderEditor(onChange = vi.fn()) {
@@ -86,7 +87,7 @@ describe('SettingsEditor', () => {
     const { onChange } = renderEditor()
     focusTool('resolution')
 
-    fireEvent.change(screen.getByLabelText(/resolution/i), { target: { value: '16' } })
+    fireEvent.change(screen.getByLabelText('resolution'), { target: { value: '16' } })
 
     expect(onChange).toHaveBeenCalledWith({ resolution: 16 })
   })
@@ -95,7 +96,7 @@ describe('SettingsEditor', () => {
     const { onChange } = renderEditor()
     focusTool('brightness')
 
-    fireEvent.change(screen.getByLabelText(/brightness/i), { target: { value: '1.5' } })
+    fireEvent.change(screen.getByLabelText('brightness'), { target: { value: '1.5' } })
 
     expect(onChange).toHaveBeenCalledWith({ brightness: 1.5 })
   })
@@ -104,7 +105,7 @@ describe('SettingsEditor', () => {
     const { onChange } = renderEditor()
     focusTool('contrast')
 
-    fireEvent.change(screen.getByLabelText(/contrast/i), { target: { value: '2.0' } })
+    fireEvent.change(screen.getByLabelText('contrast'), { target: { value: '2.0' } })
 
     expect(onChange).toHaveBeenCalledWith({ contrast: 2 })
   })
@@ -374,6 +375,71 @@ describe('SettingsEditor', () => {
         .getByRole('button', { name: mode })
         .querySelector('[data-swatch]') as HTMLElement
       expect(swatch.style.background).toContain('gradient')
+    })
+  })
+
+  describe('Scoped reset', () => {
+    // The map is what a reset *means*, so it is held here rather than trusted to the ids it happens
+    // to match today: a key two tools claimed would reset twice, and an orphan key would be an axis
+    // no ↺ can reach.
+    it('claims every ConversionSettings key for exactly one tool', () => {
+      const claimed = Object.values(TOOL_KEYS).flat()
+
+      expect([...claimed].sort()).toEqual(Object.keys(DEFAULT_SETTINGS).sort())
+    })
+
+    it('patches only the keys that are actually off their default', () => {
+      const settings: ConversionSettings = { ...DEFAULT_SETTINGS, brightness: 1.6 }
+
+      expect(resetPatch(settings, ['brightness', 'contrast'])).toEqual({
+        brightness: DEFAULT_SETTINGS.brightness,
+      })
+      expect(resetPatch(DEFAULT_SETTINGS, ['brightness', 'contrast'])).toEqual({})
+    })
+
+    // Driven off a look where *every* axis is displaced, so what each ↺ patches is exactly its own
+    // scope: a sibling — and the active Preset, which App tracks off this same patch — is untouched
+    // by construction rather than by a second assertion.
+    const TOOL_CASES: [string, keyof ConversionSettings][] = [
+      ['charset', 'charset'],
+      ['edge glyphs', 'edgeGlyphs'],
+      ['dithering', 'dithering'],
+      ['color mode', 'colorMode'],
+      ['resolution', 'resolution'],
+      ['brightness', 'brightness'],
+      ['contrast', 'contrast'],
+    ]
+
+    it.each(TOOL_CASES)('restores the %s tool and nothing else', async (label, key) => {
+      const user = userEvent.setup()
+      const onChange = vi.fn()
+      render(<SettingsEditor settings={ALL_DISPLACED} onChange={onChange} />)
+      focusTool(label)
+
+      await user.click(screen.getByRole('button', { name: `reset ${label}` }))
+
+      expect(onChange).toHaveBeenCalledWith({ [key]: DEFAULT_SETTINGS[key] })
+    })
+
+    it('restores an authored Charset to the curated default, refusal and all', async () => {
+      const user = userEvent.setup()
+      const { field } = renderControlled()
+
+      fireEvent.change(field, { target: { value: ' .@' } })
+      fireEvent.change(field, { target: { value: '@' } })
+      await user.click(screen.getByRole('button', { name: 'reset charset' }))
+
+      expect(field).toHaveValue('')
+      expect(screen.queryByText(/2 characters or more/)).not.toBeInTheDocument()
+    })
+
+    // Disabled rather than absent: the control keeps its place in the row, so nothing reflows the
+    // moment a tool comes back to its default.
+    it('disables the reset while the tool is already at its default', () => {
+      renderEditor()
+      focusTool('color mode')
+
+      expect(screen.getByRole('button', { name: /^reset color mode — unavailable/ })).toBeDisabled()
     })
   })
 })

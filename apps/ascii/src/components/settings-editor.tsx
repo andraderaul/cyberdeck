@@ -1,4 +1,4 @@
-import { Chip, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
+import { Chip, ICON_GLYPH_SIZE, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import { useState } from 'react'
 import { charsetGlyphs, charsetRamp, isCustomCharset, readCustomCharset } from '../ascii/charset'
@@ -8,6 +8,7 @@ import {
   BRIGHTNESS_RANGE,
   COLOR_MODES,
   CONTRAST_RANGE,
+  DEFAULT_SETTINGS,
   DITHERINGS,
   RESOLUTION_RANGE,
 } from '../ascii/types'
@@ -113,6 +114,83 @@ const TOOLS = [
 type ToolId = (typeof TOOLS)[number]['id']
 
 /**
+ * Which ConversionSettings each tool owns — the scope its `↺` restores. Spelled out rather than
+ * read off the ids it happens to match today: the partition is what a scoped reset *means*, so a
+ * key claimed twice or left orphaned is a defect a test can name (`settings-editor.test.tsx`), and
+ * a tool that grows a second axis says so here instead of renaming anything.
+ */
+export const TOOL_KEYS: Record<ToolId, readonly (keyof ConversionSettings)[]> = {
+  charset: ['charset'],
+  edgeGlyphs: ['edgeGlyphs'],
+  dithering: ['dithering'],
+  colorMode: ['colorMode'],
+  resolution: ['resolution'],
+  brightness: ['brightness'],
+  contrast: ['contrast'],
+}
+
+/**
+ * The patch that returns `keys` to `DEFAULT_SETTINGS` — carrying only the ones actually off it, so
+ * an empty patch *is* "this scope is already at its default" and a control has one question to ask
+ * rather than two.
+ */
+export function resetPatch(
+  settings: ConversionSettings,
+  keys: readonly (keyof ConversionSettings)[],
+): Partial<ConversionSettings> {
+  const patch: Partial<ConversionSettings> = {}
+  for (const key of keys) {
+    if (settings[key] !== DEFAULT_SETTINGS[key]) {
+      // Assign rather than index: TS can't see that the key and the value come off the same key.
+      Object.assign(patch, { [key]: DEFAULT_SETTINGS[key] })
+    }
+  }
+  return patch
+}
+
+// GLITCH's Link actions, in the place this editor's panels put theirs — a 44x44 target the glyph
+// fills at ICON_GLYPH_SIZE, which the Strip can afford because it is anchored under the canvas
+// rather than over it (ADR 0013, ADR 0020).
+const RESET_CONTROL = cn(
+  'ml-auto inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm',
+  'text-fg-muted hover:text-fg disabled:opacity-40 disabled:hover:text-fg-muted',
+  'focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning',
+  ICON_GLYPH_SIZE,
+)
+
+/**
+ * One tool's `↺`, disabled while its scope is already at its default rather than hidden: the
+ * control keeps its place, so a tool coming back to its default doesn't reflow the panel under the
+ * pointer that just put it there.
+ */
+function ResetTool({
+  label,
+  patch,
+  onReset,
+}: {
+  label: string
+  patch: Partial<ConversionSettings>
+  onReset: (patch: Partial<ConversionSettings>) => void
+}) {
+  const atDefault = Object.keys(patch).length === 0
+  return (
+    <button
+      type="button"
+      onClick={() => onReset(patch)}
+      disabled={atDefault}
+      // Spells out *why* it is unavailable, the way GLITCH's duplicate does: a disabled control
+      // with no explanation reads as a bug rather than as an answer.
+      aria-label={
+        atDefault ? `reset ${label} — unavailable, already at its default` : `reset ${label}`
+      }
+      className={RESET_CONTROL}
+    >
+      <span aria-hidden="true">↺</span>
+    </button>
+  )
+}
+
+/**
  * The three sliders are siblings: at `sm` the panel shows the whole group side by side rather than
  * only the focused one (adaptive density, ADR 0020). Charset and Color Mode are groups of one —
  * their own chip grids already fill the panel.
@@ -144,11 +222,13 @@ function ToolPanel({
   label,
   tooltipId,
   tooltip,
+  reset,
   children,
 }: {
   label: string
   tooltipId: string
   tooltip: string
+  reset: React.ReactNode
   children: React.ReactNode
 }) {
   return (
@@ -159,6 +239,9 @@ function ToolPanel({
       <legend className="w-full mb-2xs flex items-center gap-2xs">
         <Label>{label}</Label>
         <Tooltip id={tooltipId} content={tooltip} />
+        {/* The tool's own reset, on the rule that names the tool — the scope is what the heading
+            above it already says. GLITCH puts the focused Link's actions in the same place. */}
+        {reset}
       </legend>
       {children}
     </fieldset>
@@ -195,6 +278,19 @@ export default function SettingsEditor({ settings, onChange }: Props) {
     }
   }
 
+  // A Charset reset is the chips' own gesture by another route — it takes the authored ramp out of
+  // ConversionSettings, so a refusal still standing has nothing left to refuse against.
+  const applyReset = (patch: Partial<ConversionSettings>) => {
+    if (patch.charset !== undefined) {
+      setRefusal(null)
+    }
+    onChange(patch)
+  }
+
+  const resetControl = (tool: ToolId, label: string) => (
+    <ResetTool label={label} patch={resetPatch(settings, TOOL_KEYS[tool])} onReset={applyReset} />
+  )
+
   // A slider outside the focused group is hidden rather than unmounted, which is what lets one
   // markup tree serve both densities: `hidden` takes it out of the accessibility tree too, so a
   // mobile user reaches exactly the one control in focus. `data-tool` is what the tests read —
@@ -213,6 +309,7 @@ export default function SettingsEditor({ settings, onChange }: Props) {
         label="charset"
         tooltipId="tooltip-charset"
         tooltip="symbol set mapping luminosity to a character"
+        reset={resetControl('charset', 'charset')}
       >
         <div className="flex gap-md overflow-x-auto">
           {CHARSET_CATEGORIES.map(({ label, charsets }) => (
@@ -269,6 +366,7 @@ export default function SettingsEditor({ settings, onChange }: Props) {
         label="edge glyphs"
         tooltipId="tooltip-edge-glyphs"
         tooltip="strong contours take a directional glyph instead of a brightness one"
+        reset={resetControl('edgeGlyphs', 'edge glyphs')}
       >
         <ToggleGroup
           ariaLabel="edge glyphs"
@@ -283,6 +381,7 @@ export default function SettingsEditor({ settings, onChange }: Props) {
         label="dithering"
         tooltipId="tooltip-dithering"
         tooltip="trades a hard bucket edge for a pattern, so few characters still carry a gradient — reads brighter, because the plain mapping rounds every cell down"
+        reset={resetControl('dithering', 'dithering')}
       >
         <ToggleGroup
           ariaLabel="dithering"
@@ -298,6 +397,7 @@ export default function SettingsEditor({ settings, onChange }: Props) {
         label="color mode"
         tooltipId="tooltip-color-mode"
         tooltip="colorization scheme applied to rendered chars"
+        reset={resetControl('colorMode', 'color mode')}
       >
         {/* Two rows, as in the old panel: the dual modes read differently enough from the rest —
             two colours split by luminosity — that the split is the one cue for what a mode does
@@ -336,59 +436,68 @@ export default function SettingsEditor({ settings, onChange }: Props) {
 
         <div className="grid gap-sm sm:grid-flow-col sm:auto-cols-fr sm:gap-md sm:items-end">
           <div data-tool="resolution" className={sliderVisibility('resolution')}>
-            <Slider
-              label="resolution"
-              value={settings.resolution}
-              min={RESOLUTION_RANGE.min}
-              max={RESOLUTION_RANGE.max}
-              step={RESOLUTION_RANGE.step}
-              onChange={(resolution) => onChange({ resolution })}
-              format={(v) => `${v}px`}
-              defaultValue={12}
-              tooltip={
-                <Tooltip
-                  id="tooltip-resolution"
-                  content="chars per canvas — smaller value = more detail"
-                />
-              }
-              tooltipId="tooltip-resolution"
-            />
+            <div className="grid grid-cols-[1fr_auto] items-end gap-2xs">
+              <Slider
+                label="resolution"
+                value={settings.resolution}
+                min={RESOLUTION_RANGE.min}
+                max={RESOLUTION_RANGE.max}
+                step={RESOLUTION_RANGE.step}
+                onChange={(resolution) => onChange({ resolution })}
+                format={(v) => `${v}px`}
+                defaultValue={DEFAULT_SETTINGS.resolution}
+                tooltip={
+                  <Tooltip
+                    id="tooltip-resolution"
+                    content="chars per canvas — smaller value = more detail"
+                  />
+                }
+                tooltipId="tooltip-resolution"
+              />
+              {resetControl('resolution', 'resolution')}
+            </div>
           </div>
           <div data-tool="brightness" className={sliderVisibility('brightness')}>
-            <Slider
-              label="brightness"
-              value={settings.brightness}
-              min={BRIGHTNESS_RANGE.min}
-              max={BRIGHTNESS_RANGE.max}
-              step={BRIGHTNESS_RANGE.step}
-              onChange={(brightness) => onChange({ brightness })}
-              defaultValue={1.0}
-              tooltip={
-                <Tooltip
-                  id="tooltip-brightness"
-                  content="amplifies pixel brightness before conversion"
-                />
-              }
-              tooltipId="tooltip-brightness"
-            />
+            <div className="grid grid-cols-[1fr_auto] items-end gap-2xs">
+              <Slider
+                label="brightness"
+                value={settings.brightness}
+                min={BRIGHTNESS_RANGE.min}
+                max={BRIGHTNESS_RANGE.max}
+                step={BRIGHTNESS_RANGE.step}
+                onChange={(brightness) => onChange({ brightness })}
+                defaultValue={DEFAULT_SETTINGS.brightness}
+                tooltip={
+                  <Tooltip
+                    id="tooltip-brightness"
+                    content="amplifies pixel brightness before conversion"
+                  />
+                }
+                tooltipId="tooltip-brightness"
+              />
+              {resetControl('brightness', 'brightness')}
+            </div>
           </div>
           <div data-tool="contrast" className={sliderVisibility('contrast')}>
-            <Slider
-              label="contrast"
-              value={settings.contrast}
-              min={CONTRAST_RANGE.min}
-              max={CONTRAST_RANGE.max}
-              step={CONTRAST_RANGE.step}
-              onChange={(contrast) => onChange({ contrast })}
-              defaultValue={1.0}
-              tooltip={
-                <Tooltip
-                  id="tooltip-contrast"
-                  content="sharpens the dark-to-light range before conversion"
-                />
-              }
-              tooltipId="tooltip-contrast"
-            />
+            <div className="grid grid-cols-[1fr_auto] items-end gap-2xs">
+              <Slider
+                label="contrast"
+                value={settings.contrast}
+                min={CONTRAST_RANGE.min}
+                max={CONTRAST_RANGE.max}
+                step={CONTRAST_RANGE.step}
+                onChange={(contrast) => onChange({ contrast })}
+                defaultValue={DEFAULT_SETTINGS.contrast}
+                tooltip={
+                  <Tooltip
+                    id="tooltip-contrast"
+                    content="sharpens the dark-to-light range before conversion"
+                  />
+                }
+                tooltipId="tooltip-contrast"
+              />
+              {resetControl('contrast', 'contrast')}
+            </div>
           </div>
         </div>
       </div>
