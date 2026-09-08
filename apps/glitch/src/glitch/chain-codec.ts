@@ -40,10 +40,10 @@ export const CHAIN_FILE_FORMAT = 'cyberdeck.glitch.chain'
  *
  * **Bypass did not bump it, on purpose.** `decodeChain` compares versions by exact equality, so a
  * bump refuses every Chain file already exported — and there is nothing here for an older reader to
- * misread: it reads `type` and `params` and ignores every other key, so a file written before bypass
- * existed decodes with the key absent, which is a Link that runs. The compatibility goes both ways,
- * which is the test of whether a bump was needed: a file *with* a bypass, opened by a build without
- * it, loses only the silence — every param and every position survives.
+ * misread: it reads `type`, `params` and `bypassed`, ignoring every other key, so a file written
+ * before bypass existed decodes with the key absent, which is a Link that runs. The compatibility
+ * goes both ways, which is the test of whether a bump was needed: a file *with* a bypass, opened by
+ * a build without it, loses only the silence — every param and every position survives.
  */
 export const CHAIN_FILE_VERSION = 1
 
