@@ -13,7 +13,8 @@ Seed / Re-roll (#81), Live Source + Capture (#82), Copy (#83), the advanced pane
 (#85) and Presets + Randomize (#86), plus Chromatic Aberration (#116) and the composable Effect
 Chain (ADR 0017, #125–#128), plus Halftone (#309), Wave (#310), the Chain as a file (#312),
 the animated Seed (#311), the per-Link bypass (#371), the **Wipe** (#372) and the **step back** to
-the roll before this one (#373). All eight Effects are
+the roll before this one (#373), and the **per-Link reset** (#397 — ADR 0015's parity with
+ASCII//Convert's own, #393). All eight Effects are
 live — Source Image *or* Live Source → the Chain → PNG Export / Capture / Copy / Recording — the
 pure-core / imperative-shell seam is established, and the render is deterministic in Chain + Seed,
 which is what lets a Live Source animate by advancing the Seed alone. The front door is the curated
@@ -571,10 +572,13 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   left→right in processing order, each chip both the selection control and the drag handle (drag, or
   left/right arrows when focused). The focused Link's params fill the panel above the row —
   stacked on mobile, one grid row of equal columns at `sm` (adaptive density, ADR 0020) — with
-  duplicate and remove as actions on that panel. The registry-driven add palette shares the panel
-  slot with the params, and the Seed's controls sit outside the row (`SeedControls`, their own
-  bundle — the Seed is not part of the look): Re-roll, and **animate** beside it for a Live
-  Source, since it is Re-roll once a frame and belongs where Re-roll is rather than in OUT
+  reset, bypass, duplicate and remove as actions on that panel — the `↺` leads them, reading
+  `EFFECT_REGISTRY[type].defaults` so there is no second table of defaults to keep in step, and
+  disabling itself with the reason in its name once the Link is home. The registry-driven add
+  palette shares the panel slot with the params, and the Seed's controls sit outside the row
+  (`SeedControls`, their own bundle — the Seed is not part of the look): Re-roll, and **animate**
+  beside it for a Live Source, since it is Re-roll once a frame and belongs where Re-roll is
+  rather than in OUT
 
 - `src/components/import-chain-button.tsx` — the PRESETS panel's import control: the impure half of
   importing (reading the file, wording the refusal). What a Chain file *is* stays in `chain-codec.ts`
