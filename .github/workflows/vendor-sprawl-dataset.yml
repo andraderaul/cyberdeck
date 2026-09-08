@@ -42,5 +42,11 @@ jobs:
             `dataset-YYYY-MM.json` and its generated `snapshot.ts` pointer. The measure is
             **connected capacity**, never traffic. Review the per-point diff and merge to move the
             world under the map.
+
+            The Accessibility check will be red on this PR by design: `THE_PIECES_OWN_INK` in
+            `e2e/sprawl/a11y.spec.ts` names each city label and the dataset line one node at a
+            time (ADR 0021), so a moved label set is meant to stop here and be looked at. Read the
+            guard's own report — it names both the labels that appeared and the acceptances that
+            went stale — and update that list in this PR. Do not merge it red.
           labels: |
             needs-triage
