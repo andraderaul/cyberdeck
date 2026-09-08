@@ -172,8 +172,9 @@ export function resetPatch(
  * row already in the legend, ours was derived without it, and a 44px-tall legend takes the color
  * mode panel to 144px — so switching to a shorter tool would reflow the Strip by the whole
  * difference, which is exactly what that reserve exists to prevent. The overlay buys the height and
- * leaves the width real, so it cannot reach the target of the `Tooltip` beside it in the same
- * legend, which buys its own the same way for the same reason.
+ * leaves the width real, so this target ends at the control's own edges. The `Tooltip` earlier in
+ * the same legend does grow sideways — `TOUCH_TARGET_OVERLAY` is 44x44 centred in both axes — so
+ * what keeps the two apart is the `ml-auto` holding this one at the far end of the rule.
  */
 const RESET_CONTROL = cn(
   'ml-auto rounded-sm',
@@ -304,6 +305,7 @@ export default function SettingsEditor({ settings, onChange }: Props) {
 
   const resetControl = (tool: ToolId, label: string) => {
     const patch = resetPatch(settings, TOOL_KEYS[tool])
+    const moves = Object.keys(patch).length > 0
     // The Charset has a second way of being off its default that ConversionSettings cannot see: a
     // refused ramp stands in the field rather than in the settings, so the patch is empty while the
     // panel still shows the refusal. Without this the `↺` would announce "already at its default"
@@ -312,14 +314,19 @@ export default function SettingsEditor({ settings, onChange }: Props) {
     return (
       <ResetTool
         label={label}
-        atDefault={Object.keys(patch).length === 0 && !refused}
+        atDefault={!moves && !refused}
         // A Charset reset is the chips' own gesture by another route — it takes the authored ramp
         // out of ConversionSettings, so a refusal still standing has nothing left to refuse against.
+        // That refusal is also the only way to press this with nothing to patch, and an empty patch
+        // must not reach App: any patch reads there as an edit of the user's own and withdraws the
+        // Suggestion's revert offer, which no setting moved to deserve (`app.test.tsx`).
         onReset={() => {
           if (tool === 'charset') {
             setRefusal(null)
           }
-          onChange(patch)
+          if (moves) {
+            onChange(patch)
+          }
         }}
       />
     )

@@ -84,6 +84,7 @@ import { useRecording } from '@cyberdeck/deck-kit/recording'
 import { analyzeCanvas } from './ai/analysis-service'
 import { useAIConfig } from './ai/use-ai-config'
 import type { ConversionSettings } from './ascii/types'
+import { DEFAULT_SETTINGS } from './ascii/types'
 import { useWebcamState } from './hooks/use-webcam-state'
 
 const mockUseAIConfig = vi.mocked(useAIConfig)
@@ -405,6 +406,29 @@ describe('the Analysis suggestion', () => {
 
     openCharsetTab()
     expect(screen.getByRole('button', { name: 'sharp' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  // The offer expires with the user's first edit of their own — so a control that moves nothing is
+  // not one. The scoped `↺` is the only way to press an edit that patches nothing: a refused ramp
+  // stands in the field rather than in ConversionSettings, so over the default Charset it is live
+  // with an empty patch, and App reads any patch at all as the edit that ends the offer.
+  it('keeps the revert offer through a reset that moves no setting', async () => {
+    mockAnalyzeCanvas.mockResolvedValue({
+      description: 'a lone figure',
+      threatLevel: 'HIGH',
+      tags: ['NOMAD'],
+      suggestion: { ...SUGGESTION, charset: DEFAULT_SETTINGS.charset },
+    })
+    const apply = await analyze()
+    fireEvent.click(apply)
+
+    openCharsetTab()
+    fireEvent.change(screen.getByLabelText('custom charset'), { target: { value: '@' } })
+    fireEvent.click(screen.getByRole('button', { name: 'reset charset' }))
+    expect(screen.queryByText(/2 characters or more/)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'presets' }))
+    expect(screen.getByRole('button', { name: 'revert suggestion' })).toBeInTheDocument()
   })
 
   it('withdraws the revert offer once the user edits on top of the suggestion', async () => {
