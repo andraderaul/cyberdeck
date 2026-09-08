@@ -62,10 +62,10 @@ const THE_PIECES_OWN_INK: Accepted[] = [
     'NOVOSIBIRSK',
     'TSUEN WAN',
     'DUBLIN',
-    'FORTALEZA',
+    'SEATTLE',
   ].map((city, at) => thePiecesOwnInk(`${LABELS} > span:nth-of-type(${at + 1}) "${city}"`)),
   thePiecesOwnInk(
-    'div#root > div:nth-of-type(1) > main > p "as of 2026-08 · PeeringDB connected capacity"',
+    'div#root > div:nth-of-type(1) > main > p "as of 2026-09 · PeeringDB connected capacity"',
   ),
 ]
 

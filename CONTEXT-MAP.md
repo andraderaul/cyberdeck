@@ -13,6 +13,12 @@ As decisões arquiteturais de todo o deck vivem em [`docs/adr/`](./docs/adr/). A
 template padrão em [`docs/adr/TEMPLATE.md`](./docs/adr/TEMPLATE.md) — uma decisão por arquivo, em
 inglês.
 
+O que o deck **recusou** — uma proposta que ele olhou e rejeitou, com o motivo, e com a ADR nomeada
+sempre que o motivo *é* uma ADR — vive em [`.out-of-scope/`](./.out-of-scope/). Não é ADR (recusa
+quase nunca decide nada novo, ela aplica uma ADR que já existe) nem `CONTEXT.md` (que descreve o que
+o deck é, não o que ele deixou de virar). Primeira entrada:
+[os mocks do Stitch](./.out-of-scope/stitch-mocks.md).
+
 ## Contexts
 
 - [CYBERDECK — o hub](./apps/deck/CONTEXT.md) (`apps/deck`) — a porta de entrada do deck: nomeia os
@@ -64,7 +70,11 @@ inglês.
   group / stack / section`, e a verruga do `xs` 4px contra o `2xs` 6px fecha junto — não colapsando
   os dois valores, mas dando a eles a regra que faltava: `hairline` é chrome medido contra a imagem
   do usuário (ADR 0013, ADR 0021), `tight` é chrome medido contra si mesmo. **Decidido na ADR 0030,
-  executado na #399** — até lá o código ainda fala as duas réguas antigas.
+  executado na #399** — até lá o código ainda fala as duas réguas antigas. A camada de **som**
+  (ADR 0029) — um listener em `pointerdown`, um sample e o mute deck-wide — vai morar aqui, mas
+  **não nasce aqui**: nasce em `apps/ascii` com um caller só (#398) e cruza a costura inteira quando
+  os outros três chegam (#400), que é a rota que o `UpdateBanner` percorreu (ADR 0027). A régua da
+  ADR 0014 continua sendo diff vazio **medido**, não afirmado.
 
 ## Relationships
 
@@ -139,6 +149,18 @@ inglês.
   mesmo controle (ADR 0025). E é ele que torna visível uma coisa que a ADR 0024 pôde supor: a
   seleção persiste **por origem** porque "nenhum programa linka pro outro" — o hub é exatamente o
   que linka. Escolher `chiba` na porta e abrir o ASCII em `ice` é consequência registrada, não bug.
+- **O deck faz som, e é opt-out** — um listener global em `pointerdown` (não um handler por
+  controle) toca um sample na *descida* do dedo, antes do mouseup e antes do re-render; audível no
+  primeiro carregamento, com o mute persistido à mão (ADR 0029). O mute é **uma** decisão pro deck
+  inteiro, sob uma chave sem nome de programa (`cyberdeck:sound`, `'on' | 'off'`) — o que é
+  compartilhado é o nome da chave e o default, uma convenção num módulo só, e não estado em
+  runtime: nenhum deploy fica acoplado (ADR 0011, ADR 0012). Ela persiste **por origem** pelo mesmo
+  motivo que o Theme, e herda a mesma lacuna registrada na ADR 0025 em vez de abrir uma segunda.
+  SPRAWL//Atlas fica **fora por decisão registrada**, na mesma régua que o tirou dos Themes: som de
+  mobília do deck por cima de uma peça é o deck falando em cima da obra (ADR 0021, ADR 0024). O hub
+  entra — a cerca da ADR 0025 não é atingida, porque um mute é preferência de como o deck se
+  apresenta, não maquinaria de retenção. E **som nunca é o único canal de um feedback**: tudo que
+  toca já muda algo visível, e é isso que permite calar a camada sem o deck perder informação.
 - **Color Mode (ASCII) ≠ Theme (deck)** — os dois são "o esquema de cores", e o ASCII é o único
   programa onde os dois controles ficam à vista. Color Mode pinta a arte do usuário; Theme pinta a
   casca. Nenhum Theme do roster se chama `matrix` ou `neon` porque esses dois já são Color Modes —

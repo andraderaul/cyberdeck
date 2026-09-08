@@ -72,6 +72,21 @@ export interface ConversionSettings {
   dithering: Dithering
 }
 
+/**
+ * The look the program opens on, and the one a scoped reset restores a tool to — beside the
+ * interface for the ranges' reason below, since App and the EDIT tab's `↺` are two readers of it
+ * and a default only one of them knows is not a default.
+ */
+export const DEFAULT_SETTINGS: ConversionSettings = {
+  resolution: 12,
+  brightness: 1.0,
+  contrast: 1.0,
+  colorMode: 'matrix',
+  charset: 'sharp',
+  edgeGlyphs: false,
+  dithering: 'none',
+}
+
 // The bounds of each numeric ConversionSetting, beside the interface they belong to rather than in
 // the editor that happens to draw them: the sliders and the Analysis suggestion reader are two
 // readers of one range, and a suggestion the sliders couldn't have produced is not a look this
