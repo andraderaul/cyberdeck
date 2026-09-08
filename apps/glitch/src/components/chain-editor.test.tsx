@@ -19,7 +19,12 @@ function silenced(link: Link): Link {
 
 const SORT = createLink('pixelSort', { direction: 'horizontal', threshold: 0.4, runLength: 30 })
 
-const GRAIN = createLink('noise', { amount: 0.25, tint: 'mono' })
+/** A second Pixel Sort, told apart from `SORT` by its params alone — a Chain may hold both. */
+const LOUD_SORT = createLink('pixelSort', { direction: 'vertical', threshold: 0.8, runLength: 90 })
+
+// Left on the registered defaults on purpose — the reset's disabled case is about a Link that *is*
+// home, not about literals that happen to match today's DEFAULT_NOISE.
+const GRAIN = createLink('noise')
 
 /**
  * The editor with the Chain it is given, and every action stubbed.
@@ -56,6 +61,10 @@ function renderEditor(chain: Chain, seed: Partial<SeedControls> = {}) {
  * What the `↺` must *not* do — remove the Link, reorder the Chain, reach a neighbour (ADR 0017) —
  * is a property of the Chain that comes back, so a spy on the call going out cannot see it. Returns
  * a live handle on the current Chain.
+ *
+ * **All six Chain actions reach the reducer**, not just the one the `↺` is supposed to use: a stub
+ * on the other five would swallow the very calls these tests exist to rule out, and every assertion
+ * would still pass.
  */
 function renderWired(initial: Chain) {
   const state = { chain: initial }
@@ -73,11 +82,11 @@ function renderWired(initial: Chain) {
         chain={editor.chain}
         actions={{
           onLinkChange: (id, params) => dispatch({ type: 'PATCH_LINK', id, params }),
-          onReorder: vi.fn(),
-          onAdd: vi.fn(),
-          onRemove: vi.fn(),
-          onDuplicate: vi.fn(),
-          onToggleBypass: vi.fn(),
+          onReorder: (from, to) => dispatch({ type: 'MOVE_LINK', from, to }),
+          onAdd: (effect) => dispatch({ type: 'ADD_LINK', effect }),
+          onRemove: (id) => dispatch({ type: 'REMOVE_LINK', id }),
+          onDuplicate: (id) => dispatch({ type: 'DUPLICATE_LINK', id }),
+          onToggleBypass: (id) => dispatch({ type: 'TOGGLE_BYPASS', id }),
         }}
         seedControls={{
           isAnimated: false,
@@ -225,6 +234,31 @@ describe('the Link reset', () => {
     expect(state.chain[0].bypassed).toBe(true)
     expect(state.chain[1]).toBe(neighbour)
     expect(names()).toEqual(['pixel sort, bypassed, position 1 of 2', 'noise, position 2 of 2'])
+  })
+
+  // A Chain may hold the same Effect twice (`chain.ts`), which is the sharpest form of "reaches
+  // only the Link it names": both Links answer to `pixel sort`, and `PATCH_LINK` maps by id.
+  it('reaches only the Link it names when the Chain holds that Effect twice', () => {
+    const state = renderWired([SORT, LOUD_SORT])
+
+    fireEvent.click(linkChips()[1])
+    fireEvent.click(screen.getByRole('button', { name: 'reset pixel sort' }))
+
+    expect(state.chain[0].params).toEqual(SORT.params)
+    expect(state.chain[1].params).toEqual(EFFECT_REGISTRY.pixelSort.defaults)
+  })
+
+  // Everything else here resets `chain[0]`, where "the focused Link" and "the first Link" are the
+  // same Link and a control that reached for the wrong one would go unnoticed.
+  it('resets the focused Link wherever it sits in the Chain', () => {
+    const state = renderWired([GRAIN, SORT])
+    const untouched = state.chain[0]
+
+    fireEvent.click(linkChips()[1])
+    fireEvent.click(screen.getByRole('button', { name: 'reset pixel sort' }))
+
+    expect(state.chain[1].params).toEqual(EFFECT_REGISTRY.pixelSort.defaults)
+    expect(state.chain[0]).toBe(untouched)
   })
 
   // Disabled rather than gone, saying why — the answer duplicate gives beside it, and the one

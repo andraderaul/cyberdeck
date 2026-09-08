@@ -574,10 +574,11 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   stacked on mobile, one grid row of equal columns at `sm` (adaptive density, ADR 0020) — with
   reset, bypass, duplicate and remove as actions on that panel — the `↺` leads them, reading
   `EFFECT_REGISTRY[type].defaults` so there is no second table of defaults to keep in step, and
-  disabling itself with the reason in its name once the Link is home. The registry-driven add palette shares the panel
-  slot with the params, and the Seed's controls sit outside the row (`SeedControls`, their own
-  bundle — the Seed is not part of the look): Re-roll, and **animate** beside it for a Live
-  Source, since it is Re-roll once a frame and belongs where Re-roll is rather than in OUT
+  disabling itself with the reason in its name once the Link is home. The registry-driven add
+  palette shares the panel slot with the params, and the Seed's controls sit outside the row
+  (`SeedControls`, their own bundle — the Seed is not part of the look): Re-roll, and **animate**
+  beside it for a Live Source, since it is Re-roll once a frame and belongs where Re-roll is
+  rather than in OUT
 
 - `src/components/import-chain-button.tsx` — the PRESETS panel's import control: the impure half of
   importing (reading the file, wording the refusal). What a Chain file *is* stays in `chain-codec.ts`
