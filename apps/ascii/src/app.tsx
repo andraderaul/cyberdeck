@@ -25,6 +25,7 @@ import ScanPendingModal from './components/scan-pending-modal'
 import { outputFilename } from './export/output'
 import { HEADER_CONTROL_TYPE, HEADER_SUBTITLE, HEADER_WORDMARK } from './header-type'
 import { useWebcamState } from './hooks/use-webcam-state'
+import SoundControl from './sound/sound-control'
 
 // The rest of the AI surface, following the three provider adapters off the first-paint path
 // (#357). The surface is optional and off by default — ADR 0003 keeps the key on the user's own
@@ -269,6 +270,9 @@ export default function App() {
               a Color Mode changes what the conversion paints. They are neighbours here, so the
               Theme names deliberately avoid `matrix` and `neon` (ADR 0024). */}
           <ThemeControl />
+          {/* Deck chrome too, and beside the Theme for the same reason: both are the deck
+              describing itself, and ADR 0029 wants one slot to learn (ADR 0015). */}
+          <SoundControl />
         </div>
       </header>
 
