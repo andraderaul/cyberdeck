@@ -64,7 +64,13 @@ o deck é, não o que ele deixou de virar). Primeira entrada:
   `EmptyStateHero` e `Tooltip` cruzaram numa segunda leva (ADR 0015). A linguagem visual deixou de
   ser uma paleta só e virou um conjunto nomeado de **Themes** — sete: `ice`, `construct`, `chiba`,
   `kuang`, `ougou`, `solitude`, `onyx` — com um contrato de contraste que todo Theme precisa cumprir
-  (ADR 0024). O roster com o caráter de cada um está no `CONTEXT.md` do Deck Kit. A camada de **som**
+  (ADR 0024). O roster com o caráter de cada um está no `CONTEXT.md` do Deck Kit. A mesma doutrina
+  — nomear o papel, não a medida — vale pra régua de espaço: as duas réguas de tamanho (`--gap-*` e
+  `--sp-*`, 14 nomes, 6 deles sem nenhum uso) viram seis papéis, `--space-hairline / tight / item /
+  group / stack / section`, e a verruga do `xs` 4px contra o `2xs` 6px fecha junto — não colapsando
+  os dois valores, mas dando a eles a regra que faltava: `hairline` é chrome medido contra a imagem
+  do usuário (ADR 0013, ADR 0021), `tight` é chrome medido contra si mesmo. **Decidido na ADR 0030,
+  executado na #399** — até lá o código ainda fala as duas réguas antigas. A camada de **som**
   (ADR 0029) — um listener em `pointerdown`, um sample e o mute deck-wide — vai morar aqui, mas
   **não nasce aqui**: nasce em `apps/ascii` com um caller só (#398) e cruza a costura inteira quando
   os outros três chegam (#400), que é a rota que o `UpdateBanner` percorreu (ADR 0027). A régua da
