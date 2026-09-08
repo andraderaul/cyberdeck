@@ -17,6 +17,7 @@ import { useAIConfig } from './ai/use-ai-config'
 import type { Preset } from './ascii/presets'
 import type { RenderInstruction } from './ascii/renderer'
 import type { ConversionSettings } from './ascii/types'
+import { DEFAULT_SETTINGS } from './ascii/types'
 import AboutModal from './components/about-modal'
 import AsciiCanvas from './components/ascii-canvas'
 import ControlStrip from './components/control-strip'
@@ -46,16 +47,6 @@ type ActiveModal =
 interface RevertPoint {
   settings: ConversionSettings
   presetId: string | null
-}
-
-const DEFAULT_SETTINGS: ConversionSettings = {
-  resolution: 12,
-  brightness: 1.0,
-  contrast: 1.0,
-  colorMode: 'matrix',
-  charset: 'sharp',
-  edgeGlyphs: false,
-  dithering: 'none',
 }
 
 export default function App() {

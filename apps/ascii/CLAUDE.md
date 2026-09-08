@@ -148,8 +148,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 **ASCII core**
 - `src/ascii/types.ts` — `ConversionSettings`, `ColorMode`, `Charset` (`CharsetName` derived from
   `CHARSETS`, plus the `custom:`-tagged `CustomCharset` an authored ramp wears),
-  `DITHERINGS`, `CHARSET_MAPS`, `AsciiCell`, and the numeric ranges the sliders and the Suggestion
-  reader share
+  `DITHERINGS`, `CHARSET_MAPS`, `AsciiCell`, `DEFAULT_SETTINGS` (the look App opens on and the one
+  a scoped reset restores to — two readers, so it lives beside the interface rather than in either),
+  and the numeric ranges the sliders and the Suggestion reader share
 - `src/ascii/charset.ts` — `charsetGlyphs()`, `charsetRamp()`, `isCustomCharset()`,
   `readCustomCharset()`: a Charset resolved to the glyphs a cell draws, and the boundary an
   authored ramp crosses to become one. Two things live here and only here. The split is **by code
@@ -282,7 +283,12 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/components/settings-editor.tsx` — the Strip's EDIT tab: every ConversionSettings control as
   a row of tool chips, the focused tool's control in the panel above. The three sliders are
   siblings, so at `sm` the whole group reads at once while mobile focuses one (adaptive density);
-  the off-density ones are `hidden`, which keeps them out of the accessibility tree too
+  the off-density ones are `hidden`, which keeps them out of the accessibility tree too. Each tool
+  carries its own `↺` on the rule that names it: `TOOL_KEYS` is the tool→keys partition a reset is
+  scoped by — explicit rather than derived from the ids, and held by a test that every
+  ConversionSettings key is claimed exactly once — and `resetPatch()` is the patch that returns a
+  scope to `DEFAULT_SETTINGS`, carrying only the keys actually off it so an empty patch *is* "already
+  at its default". Both are exported: a second, wider reset would be one more caller of the same two
 - `src/components/output-panel.tsx` — the Strip's OUT tab: one surface for every way the result
   leaves, gated by Source — PNG/TXT/HTML Export for a Source Image, Capture/Record for a Live Source,
   AI Analysis for both. It carries the Record *start* only: stopping is the canvas REC badge, so a
