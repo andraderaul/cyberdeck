@@ -39,8 +39,10 @@ interface Props {
   source: HTMLImageElement | HTMLVideoElement | null
   onPresetSelect: (preset: Preset) => void
   onSettingsChange: (patch: Partial<ConversionSettings>) => void
-  /** Present only while an applied suggestion still stands unedited — see `App`'s revert point. */
-  onRevertSuggestion?: () => void
+  /** Returns every axis to `DEFAULT_SETTINGS` and clears the active Preset. */
+  onReset: () => void
+  /** Present only while a whole-look replacement still stands unedited — see `App`'s revert point. */
+  onRevert?: () => void
 }
 
 /**
@@ -69,7 +71,8 @@ export default function ControlStrip({
   source,
   onPresetSelect,
   onSettingsChange,
-  onRevertSuggestion,
+  onReset,
+  onRevert,
 }: Props) {
   return (
     <TabStrip tabs={TABS} ariaLabel="controls">
@@ -81,7 +84,8 @@ export default function ControlStrip({
               activePresetId={activePresetId}
               source={source}
               onSelect={onPresetSelect}
-              onRevertSuggestion={onRevertSuggestion}
+              onReset={onReset}
+              onRevert={onRevert}
             />
           )}
           {activeTab === 'edit' && (

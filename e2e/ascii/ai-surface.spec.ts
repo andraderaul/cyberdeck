@@ -143,7 +143,7 @@ test('the scan surface arrives on Analyze, and the Suggestion still applies', as
   )
 
   await page.getByRole('tab', { name: 'presets' }).click()
-  await page.getByRole('button', { name: 'revert suggestion' }).click()
+  await page.getByRole('button', { name: 'revert to the previous look' }).click()
   await page.getByRole('tab', { name: 'edit' }).click()
   await expect(page.getByRole('button', { name: 'sharp' })).toHaveAttribute('aria-pressed', 'true')
 })

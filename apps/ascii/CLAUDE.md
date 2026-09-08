@@ -276,10 +276,15 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   active one tracked rather than derived — an edit has to leave you standing on
   the Preset you started from, marked modified. The picture is `alt=""` and adds nothing to the
   accessible name: the modified state still reaches a screen reader as the word `(modified)` rather
-  than as the asterisk that carries it on screen. Carries the `revert` control for an applied Suggestion,
-  ahead of the scrolling row: it restores a look, and looks are chosen here. A Button rather than a
-  Chip, alone in a row of them — a Chip always announces `aria-pressed`, and this is a one-shot
-  action with no toggle state to report
+  than as the asterisk that carries it on screen. Carries the two look-level acts ahead of the
+  scrolling row, because a look is what each of them moves and looks are chosen here: the global
+  `↺ defaults` — which returns every axis to `DEFAULT_SETTINGS` *and* clears the active Preset, the
+  half no EDIT control may reach, which is why the Strip's single grammar (ADR 0020) puts it in this
+  tab rather than as an eighth reset in EDIT — and the `revert` that undoes whichever of them last
+  ran. It reuses the EDIT tab's `resetPatch()` over every `DEFAULT_SETTINGS` key for its
+  already-at-default state, and disables rather than hides for #393's reason. Both are a Button
+  rather than a Chip, alone in a row of them — a Chip always announces `aria-pressed`, and these
+  are one-shot actions with no toggle state to report
 - `src/components/settings-editor.tsx` — the Strip's EDIT tab: every ConversionSettings control as
   a row of tool chips, the focused tool's control in the panel above. The three sliders are
   siblings, so at `sm` the whole group reads at once while mobile focuses one (adaptive density);

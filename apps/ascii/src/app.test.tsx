@@ -83,6 +83,7 @@ vi.mock('./ai/analysis-service', async (importOriginal) => ({
 import { useRecording } from '@cyberdeck/deck-kit/recording'
 import { analyzeCanvas } from './ai/analysis-service'
 import { useAIConfig } from './ai/use-ai-config'
+import { PRESETS } from './ascii/presets'
 import type { ConversionSettings } from './ascii/types'
 import { DEFAULT_SETTINGS } from './ascii/types'
 import { useWebcamState } from './hooks/use-webcam-state'
@@ -402,7 +403,7 @@ describe('the Analysis suggestion', () => {
     fireEvent.click(apply)
 
     fireEvent.click(screen.getByRole('tab', { name: 'presets' }))
-    fireEvent.click(screen.getByRole('button', { name: 'revert suggestion' }))
+    fireEvent.click(screen.getByRole('button', { name: 'revert to the previous look' }))
 
     openCharsetTab()
     expect(screen.getByRole('button', { name: 'sharp' })).toHaveAttribute('aria-pressed', 'true')
@@ -439,7 +440,9 @@ describe('the Analysis suggestion', () => {
     fireEvent.click(screen.getByRole('button', { name: 'box' }))
 
     fireEvent.click(screen.getByRole('tab', { name: 'presets' }))
-    expect(screen.queryByRole('button', { name: 'revert suggestion' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'revert to the previous look' }),
+    ).not.toBeInTheDocument()
   })
 
   // The apply closes the modal, so the canvas is the only other feedback — and it can't say where
@@ -473,6 +476,110 @@ describe('the Analysis suggestion', () => {
     fireEvent.click(screen.getByText('hero'))
 
     fireEvent.click(screen.getByRole('tab', { name: 'presets' }))
-    expect(screen.queryByRole('button', { name: 'revert suggestion' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'revert to the previous look' }),
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe('the reset to defaults', () => {
+  beforeEach(() => {
+    mockShowInfo.mockClear()
+  })
+
+  function openPresets() {
+    fireEvent.click(screen.getByRole('tab', { name: 'presets' }))
+  }
+
+  function openEdit() {
+    fireEvent.click(screen.getByRole('tab', { name: 'edit' }))
+  }
+
+  // A Source and a look that is nobody's default: `box` is a Charset no Preset and no default names.
+  function loadAndDiverge() {
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    openEdit()
+    fireEvent.click(screen.getByRole('button', { name: 'box' }))
+  }
+
+  it('returns every axis to DEFAULT_SETTINGS', () => {
+    loadAndDiverge()
+
+    openPresets()
+    fireEvent.click(screen.getByRole('button', { name: 'reset to defaults' }))
+
+    openEdit()
+    expect(screen.getByRole('button', { name: 'sharp' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'box' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('leaves the active Preset behind rather than marking it modified', () => {
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    openPresets()
+    const preset = PRESETS[0]
+    fireEvent.click(screen.getByRole('button', { name: preset.name }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'reset to defaults' }))
+
+    expect(screen.getByRole('button', { name: preset.name })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+
+  it('leaves the loaded Source converting — only the conversion moves', () => {
+    loadAndDiverge()
+
+    openPresets()
+    fireEvent.click(screen.getByRole('button', { name: 'reset to defaults' }))
+
+    // The canvas stub only renders while App holds a Source, and the Strip only with one.
+    expect(document.querySelector('canvas')).toBeInTheDocument()
+    expect(screen.getByRole('tablist', { name: 'controls' })).toBeInTheDocument()
+  })
+
+  it('is undone by the revert control it raises, with no confirmation asked first', () => {
+    loadAndDiverge()
+
+    openPresets()
+    fireEvent.click(screen.getByRole('button', { name: 'reset to defaults' }))
+    fireEvent.click(screen.getByRole('button', { name: 'revert to the previous look' }))
+
+    openEdit()
+    expect(screen.getByRole('button', { name: 'box' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('withdraws that revert offer once the user edits on top of the reset', () => {
+    loadAndDiverge()
+
+    openPresets()
+    fireEvent.click(screen.getByRole('button', { name: 'reset to defaults' }))
+
+    openEdit()
+    fireEvent.click(screen.getByRole('button', { name: 'blocks' }))
+
+    openPresets()
+    expect(
+      screen.queryByRole('button', { name: 'revert to the previous look' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('says what happened and where to undo it', () => {
+    loadAndDiverge()
+
+    openPresets()
+    fireEvent.click(screen.getByRole('button', { name: 'reset to defaults' }))
+
+    expect(mockShowInfo).toHaveBeenCalledWith(expect.stringContaining('presets'))
+  })
+
+  it('is unavailable on the look the program opens on', () => {
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+
+    openPresets()
+    expect(screen.getByRole('button', { name: /reset to defaults — unavailable/ })).toBeDisabled()
   })
 })
