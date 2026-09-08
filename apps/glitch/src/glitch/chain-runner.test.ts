@@ -5,6 +5,13 @@ import { createChainRunner, createSyncChainRunner, createWorkerChainRunner } fro
 import { structuredBuffer } from './test-pixels'
 import type { PixelBuffer, Seed } from './types'
 
+// The real Chain still runs — this only makes it something a single test can make throw, which is
+// the one way to reach the fallback's own failure path.
+vi.mock('./chain-job', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./chain-job')>()
+  return { ...actual, runChainJob: vi.fn(actual.runChainJob) }
+})
+
 const CHAIN: Chain = [createLink('channelShift', { channel: 'r', amount: 1 })]
 
 const SEED: Seed = 1234
@@ -274,6 +281,26 @@ describe('createWorkerChainRunner', () => {
       worker.die()
 
       expect(await inFlight).toBeNull()
+    })
+
+    // The fallback answers the waiting frame by *running* the Chain, right here inside the `error`
+    // listener. A throw out of that used to escape before the promise was settled — and with both
+    // slots already emptied, nothing left could ever settle it: `renderGlitchFrame` never returns
+    // and the canvas never paints. The error is still surfaced; it just no longer strands a frame.
+    it('settles the waiting frame even when the fallback Chain throws', async () => {
+      const worker = fakeWorker()
+      const runner = runnerOver(worker)
+
+      void runner.run(frame(), CHAIN, SEED)
+      const waiting = runner.run(frame(), CHAIN, SEED)
+      vi.mocked(runChainJob).mockImplementationOnce(() => {
+        throw new Error('chain failed')
+      })
+
+      expect(() => {
+        worker.die()
+      }).toThrow('chain failed')
+      await expect(waiting).resolves.toBeNull()
     })
   })
 })

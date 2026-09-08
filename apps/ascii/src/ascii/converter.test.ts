@@ -373,35 +373,35 @@ describe('convertImage Edge Glyphs', () => {
   } as const
 
   it('marks a hard vertical contour with the vertical stroke', () => {
-    const ctx = greyPixels(7, 7, (col) => (col < 3 ? 0 : 255))
+    const pixels = greyPixels(7, 7, (col) => (col < 3 ? 0 : 255))
 
-    const cells = convertImage(ctx, 7, 7, { ...options, edgeGlyphs: true })
+    const cells = convertImage(pixels, 7, 7, { ...options, edgeGlyphs: true })
 
     expect(cells[3][2].char).toBe('|')
     expect(cells[3][3].char).toBe('|')
   })
 
   it('marks a hard horizontal contour with the horizontal stroke', () => {
-    const ctx = greyPixels(7, 7, (_col, row) => (row < 3 ? 0 : 255))
+    const pixels = greyPixels(7, 7, (_col, row) => (row < 3 ? 0 : 255))
 
-    const cells = convertImage(ctx, 7, 7, { ...options, edgeGlyphs: true })
+    const cells = convertImage(pixels, 7, 7, { ...options, edgeGlyphs: true })
 
     expect(cells[2][3].char).toBe('-')
     expect(cells[3][3].char).toBe('-')
   })
 
   it('follows a top-left to bottom-right diagonal with the matching stroke', () => {
-    const ctx = greyPixels(7, 7, (col, row) => (col > row ? 255 : 0))
+    const pixels = greyPixels(7, 7, (col, row) => (col > row ? 255 : 0))
 
-    const cells = convertImage(ctx, 7, 7, { ...options, edgeGlyphs: true })
+    const cells = convertImage(pixels, 7, 7, { ...options, edgeGlyphs: true })
 
     expect(cells[3][3].char).toBe('\\')
   })
 
   it('follows a bottom-left to top-right diagonal with the matching stroke', () => {
-    const ctx = greyPixels(7, 7, (col, row) => (col + row > 6 ? 255 : 0))
+    const pixels = greyPixels(7, 7, (col, row) => (col + row > 6 ? 255 : 0))
 
-    const cells = convertImage(ctx, 7, 7, { ...options, edgeGlyphs: true })
+    const cells = convertImage(pixels, 7, 7, { ...options, edgeGlyphs: true })
 
     expect(cells[3][3].char).toBe('/')
   })
@@ -420,9 +420,9 @@ describe('convertImage Edge Glyphs', () => {
   // screen, which is the `|` the eye actually sees. The bin boundary is what the test holds: drop
   // the correction and the whole diagonal band shifts steep.
   it('reads the angle in the rendered picture, not in the sampled grid', () => {
-    const ctx = greyPixels(5, 5, (col, row) => 40 * col + 23 * row)
+    const pixels = greyPixels(5, 5, (col, row) => 40 * col + 23 * row)
 
-    const cells = convertImage(ctx, 5, 5, { ...options, edgeGlyphs: true })
+    const cells = convertImage(pixels, 5, 5, { ...options, edgeGlyphs: true })
 
     expect(cells[2][2].char).toBe('|')
   })
@@ -450,11 +450,11 @@ describe('convertImage Edge Glyphs', () => {
   })
 
   it('keeps flat interiors on the luminosity mapping while contours take a stroke', () => {
-    const ctx = greyPixels(9, 9, (col, row) =>
+    const pixels = greyPixels(9, 9, (col, row) =>
       col >= 3 && col <= 5 && row >= 3 && row <= 5 ? 255 : 0,
     )
 
-    const cells = convertImage(ctx, 9, 9, { ...options, edgeGlyphs: true })
+    const cells = convertImage(pixels, 9, 9, { ...options, edgeGlyphs: true })
 
     // The block's middle sees no gradient at all, so it keeps the Charset's brightest glyph.
     expect(cells[4][4].char).toBe(getAsciiChar(255, 'classic'))
@@ -464,9 +464,9 @@ describe('convertImage Edge Glyphs', () => {
 
   it('never reads across the fit region, so the letterbox band is not a contour', () => {
     const region = { offsetX: 2, offsetY: 0, dCols: 5, dRows: 7 }
-    const ctx = greyPixels(9, 7, () => 255)
+    const pixels = greyPixels(9, 7, () => 255)
 
-    const cells = convertImage(ctx, 9, 7, { ...options, edgeGlyphs: true }, region)
+    const cells = convertImage(pixels, 9, 7, { ...options, edgeGlyphs: true }, region)
 
     expect(cells[3][2].char).toBe(getAsciiChar(255, 'classic'))
     expect(cells[3][6].char).toBe(getAsciiChar(255, 'classic'))
@@ -720,9 +720,9 @@ describe('convertImage Dithering', () => {
       'bayer',
       'floyd',
     ] as const)('leaves the letterbox bands void under %s', (dithering) => {
-      const ctx = greyPixels(9, 7, () => BETWEEN_BUCKETS)
+      const pixels = greyPixels(9, 7, () => BETWEEN_BUCKETS)
 
-      const cells = convertImage(ctx, 9, 7, { ...options, dithering }, region)
+      const cells = convertImage(pixels, 9, 7, { ...options, dithering }, region)
 
       for (const row of charRows(cells)) {
         expect(row.slice(0, 2)).toBe('  ')

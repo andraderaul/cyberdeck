@@ -14,6 +14,19 @@ import { derivePresetThumbnails } from '../ascii/thumbnail'
 const derivedForImage = new WeakMap<HTMLImageElement, Record<string, string>>()
 
 /**
+ * The derivation, with a failed one answered the way a refused Preset already is: left out, so the
+ * chip reads as the name it was before this feature existed (`thumbnail.ts`).
+ *
+ * Deliberately not the canvas' ErrorBoundary — the Control Strip is that boundary's *sibling* in
+ * `app.tsx`, so a re-throw from here takes the whole program down over a row of decorations. And
+ * deliberately not ADR 0006's toast: those are operational errors, acts the user just took and can
+ * take again. Nobody asked for these, and the row already has an honest way to say it has none.
+ */
+function derive(source: HTMLImageElement | HTMLVideoElement): Promise<Record<string, string>> {
+  return derivePresetThumbnails(source).catch(() => ({}))
+}
+
+/**
  * The PRESETS row's thumbnails — derived once per Source, never once per frame.
  *
  * The Source is the effect's only dependency, and there is nothing else it could be: a Preset is a
@@ -56,7 +69,7 @@ export function usePresetThumbnails(
         return
       }
       const onFirstFrame = () => {
-        void derivePresetThumbnails(source).then((again) => {
+        void derive(source).then((again) => {
           if (!cancelled) {
             setThumbnails(again)
           }
@@ -69,7 +82,7 @@ export function usePresetThumbnails(
     if (remembered) {
       settle(remembered)
     } else {
-      void derivePresetThumbnails(source).then(settle)
+      void derive(source).then(settle)
     }
 
     return () => {

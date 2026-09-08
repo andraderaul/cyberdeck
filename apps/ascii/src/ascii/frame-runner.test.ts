@@ -9,6 +9,13 @@ import {
 import { createFrameRunner, createSyncFrameRunner, createWorkerFrameRunner } from './frame-runner'
 import { PRESETS } from './presets'
 
+// The real conversion still runs — this only makes it something a single test can make throw, which
+// is the one way to reach the fallback's own failure path.
+vi.mock('./frame-job', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./frame-job')>()
+  return { ...actual, runFrameJob: vi.fn(actual.runFrameJob) }
+})
+
 const COLS = 8
 const ROWS = 5
 const SETTINGS = PRESETS[0].settings
@@ -221,6 +228,26 @@ describe('createWorkerFrameRunner', () => {
       worker.die()
 
       expect(await lost).toBeNull()
+    })
+
+    // The fallback answers the waiting frame by *running* it, right here inside the `error`
+    // listener. A throw out of that used to escape before the promise was settled — and with both
+    // slots already emptied, nothing left could ever settle it: `renderFrame` never returns and the
+    // canvas never paints. The error is still surfaced; it just no longer strands a frame.
+    it('settles the waiting frame even when the fallback conversion throws', async () => {
+      const worker = fakeWorker()
+      const runner = runnerOver(worker)
+
+      void runner.run(request())
+      const waiting = runner.run(request())
+      vi.mocked(runFrameJob).mockImplementationOnce(() => {
+        throw new Error('conversion failed')
+      })
+
+      expect(() => {
+        worker.die()
+      }).toThrow('conversion failed')
+      await expect(waiting).resolves.toBeNull()
     })
   })
 })

@@ -166,3 +166,34 @@ directly, with no Worker in the room, exactly as before.
 The cost is the same one GLITCH paid: a second copy of the two stages in the build (2.47 kB gzipped,
 `bundle-budget.config.mjs`), fetched when a Source is opened and part of the precached shell
 (ADR 0027).
+
+**The paint is asynchronous here too, and this program has more surface for it.** PNG Export,
+Capture, Recording and AI Analysis are reads of the visible canvas, so #316's paragraph applies to
+them word for word. TXT and HTML Export are the part GLITCH has no counterpart for: they never touch
+the canvas, they read `asciiRows` and the `RenderInstruction[]` that `onConverted` hands `App` — and
+that callback now fires a Worker round trip after the settings change rather than inside the same
+commit. So the same window is reached by a second route: a slider moved and TXT Export hit in the
+same breath writes the grid from before the edit. The verdict is #316's, for #316's reasons — a
+valid render of settings the user held a moment earlier, never a torn or half-converted one,
+self-corrected by the next Export, and fixing it means threading a render concern through
+components that have no other reason to know one exists. What the window costs is *when*, never
+*what*: the drop rule keeps the newest frame, so the grid those two Exports eventually read is
+always the one the Editor holds.
+
+**The return leg is a structured clone, and it was measured rather than assumed.** `computeFrame`
+emits one instruction per cell, blanks included, so the count is the grid and not a property of the
+picture. Measured in headless Chromium on Apple silicon (medians of 40; the main thread's share is
+`structuredClone` minus a `MessageChannel.postMessage`, which serializes synchronously and does not
+deserialize): at **24,000 cells** — a ~1600×900 canvas at Resolution 10 — the clone costs **~4.5 ms**
+of main-thread time per frame, against **0.7 ms** for the two stages that left on the default Preset
+and **2.5 ms** with Edge Glyphs, `floyd` and `adaptive` all on. At **150,000 cells** — the same
+canvas at Resolution 4 — it is **~32 ms** against **3.4 ms** and **16 ms**. The frame budget is 66 ms.
+
+Read honestly, that says the port did not buy a smaller main-thread bill at every setting; at the
+coarse Resolutions the program mostly runs at, the clone costs more than the conversion it replaced.
+What it buys is that the conversion no longer *blocks* — the main thread is free while it runs, and
+the burst it pays for on the way back is one deserialize rather than a whole pipeline. The output is
+unchanged either way, which is why this is recorded rather than reverted. If it is ever reported as
+jank, the shape of the fix is the encoding `frame-job.ts` declined: char codes in a `Uint16Array`,
+colours packed into a `Uint32Array`, x and y dropped entirely since both are derivable from the
+index and `cols` — three Transferables instead of an array of objects.

@@ -1,7 +1,14 @@
 import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
 import { TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
-import { type MutableRefObject, type RefObject, useEffect, useRef, useState } from 'react'
+import {
+  type MutableRefObject,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import type { Chain } from '../glitch/chain'
 import { type ChainRunner, createChainRunner } from '../glitch/chain-runner'
 import { sourceDimensions } from '../glitch/image-utils'
@@ -126,6 +133,22 @@ export default function GlitchCanvas({
     [],
   )
 
+  // A render that fails belongs to the ErrorBoundary in `app.tsx`, whose fallback — "render failed
+  // — try a different image or adjust settings" — is written for exactly this and nothing else.
+  // Deliberately not ADR 0006's toast: that mechanism is for *operational* errors (an Export, a
+  // Capture, a storage write), acts the user just took with the program otherwise intact and a next
+  // attempt available. A render failure is not one of those — the canvas is the whole surface, and
+  // a toast over a frozen picture leaves nothing to do.
+  //
+  // Since ADR 0002 the render is a promise, so a throw no longer leaves the effect on its own and
+  // the boundary never sees it. Re-throwing it from the next render is what puts it back in reach.
+  const [renderError, setRenderError] = useState<unknown>(null)
+  // Wrapped in an updater because an `Error` is fine as state but a thrown *function* would be read
+  // as one — the setter cannot tell them apart.
+  const surfaceRenderError = useCallback((err: unknown) => {
+    setRenderError(() => err)
+  }, [])
+
   // The Wipe (#372), off until asked for. `compareRef` is null exactly while it is off, which is
   // what the shell reads to decide whether the Source half costs anything at all — nothing about
   // the render loop changes when nobody is comparing.
@@ -168,11 +191,11 @@ export default function GlitchCanvas({
         await renderGlitchFrame(frame)
       }
     }
-    void paint()
+    paint().catch(surfaceRenderError)
     return () => {
       superseded = true
     }
-  }, [sourceImage, chain, seed, isMirrored, canvasRef, isWiping])
+  }, [sourceImage, chain, seed, isMirrored, canvasRef, isWiping, surfaceRenderError])
 
   // rAF loop throttled to ~15fps — the Chain runs on a Worker (ADR 0002), so what happens on this
   // thread is the sampling and the paint. The Seed is held across frames by default: that's what
@@ -197,7 +220,7 @@ export default function GlitchCanvas({
       }
       lastFrameTime.current = now
       if (video.readyState >= HAVE_ENOUGH_DATA) {
-        void renderGlitchFrame({
+        renderGlitchFrame({
           source: video,
           canvas,
           hidden: hiddenRef.current,
@@ -208,14 +231,16 @@ export default function GlitchCanvas({
           // Read per tick rather than closed over: the loop then needs no rebuilding when the Wipe
           // is toggled, and it is null the moment the divider unmounts.
           compare: compareRef.current,
-        }).then((outcome) => {
-          // Same reason editor-state.ts refuses ADVANCE_SEED while the animation is off: the loop
-          // and React's render are on different clocks, and a frame still in flight when the loop
-          // is torn down must not move the arrangement afterwards.
-          if (outcome === 'painted' && !stopped) {
-            onAdvanceSeed?.()
-          }
         })
+          .then((outcome) => {
+            // Same reason editor-state.ts refuses ADVANCE_SEED while the animation is off: the loop
+            // and React's render are on different clocks, and a frame still in flight when the loop
+            // is torn down must not move the arrangement afterwards.
+            if (outcome === 'painted' && !stopped) {
+              onAdvanceSeed?.()
+            }
+          })
+          .catch(surfaceRenderError)
       }
     }
 
@@ -224,13 +249,18 @@ export default function GlitchCanvas({
       stopped = true
       cancelAnimationFrame(rafId)
     }
-  }, [liveSource, chain, seed, isMirrored, canvasRef, onAdvanceSeed])
+  }, [liveSource, chain, seed, isMirrored, canvasRef, onAdvanceSeed, surfaceRenderError])
 
   const isLive = liveSource !== null
   // Both Sources are never set at once (App's empty state is the only place one is chosen), so the
   // Wipe can take whichever is there and lay the picture out on that Source's own aspect.
   const source = liveSource ?? sourceImage
   const sourceSize = source === null ? null : sourceDimensions(source)
+
+  // After every hook, so the throw never changes how many ran.
+  if (renderError) {
+    throw renderError
+  }
 
   return (
     <div className="relative w-full h-full">

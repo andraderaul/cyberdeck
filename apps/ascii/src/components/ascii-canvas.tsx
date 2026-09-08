@@ -1,7 +1,14 @@
 import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
 import { TOUCH_TARGET_HEIGHT, TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
-import { type MutableRefObject, type RefObject, useEffect, useRef } from 'react'
+import {
+  type MutableRefObject,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { type AsciiFrameRunner, createFrameRunner } from '../ascii/frame-runner'
 import { resizeImage } from '../ascii/image-utils'
 import { monoFontFamily, renderFrame } from '../ascii/render-frame'
@@ -101,6 +108,22 @@ export default function AsciiCanvas({
   })
   const fontFamilyRef = useRef(monoFontFamily())
 
+  // A render that fails belongs to the ErrorBoundary in `app.tsx`, whose fallback — "render failed
+  // — try a different image or adjust settings" — is written for exactly this and nothing else.
+  // Deliberately not ADR 0006's toast: that mechanism is for *operational* errors (an Export, a
+  // Capture, a storage write), acts the user just took with the program otherwise intact and a next
+  // attempt available. A render failure is not one of those — the canvas is the whole surface, and
+  // a toast over a frozen picture leaves nothing to do.
+  //
+  // Since ADR 0002 the render is a promise, so a throw no longer leaves the effect on its own and
+  // the boundary never sees it. Re-throwing it from the next render is what puts it back in reach.
+  const [renderError, setRenderError] = useState<unknown>(null)
+  // Wrapped in an updater because an `Error` is fine as state but a thrown *function* would be read
+  // as one — the setter cannot tell them apart.
+  const surfaceRenderError = useCallback((err: unknown) => {
+    setRenderError(() => err)
+  }, [])
+
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !sourceImage) {
@@ -131,12 +154,15 @@ export default function AsciiCanvas({
         await convert()
       }
     }
-    renderStaticRef.current = () => void paint()
-    void paint()
+    const run = () => {
+      paint().catch(surfaceRenderError)
+    }
+    renderStaticRef.current = run
+    run()
     return () => {
       superseded = true
     }
-  }, [sourceImage, settings, onConverted, canvasRef, isMirrored])
+  }, [sourceImage, settings, onConverted, canvasRef, isMirrored, surfaceRenderError])
 
   // rAF loop throttled to ~15fps. The two pure stages run on a Worker now (ADR 0002), so what this
   // throttles is how often the main thread samples a frame and hands it over; `paintFrame` is what
@@ -160,7 +186,7 @@ export default function AsciiCanvas({
       }
       lastTime = now
       if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
-        void renderFrame(
+        renderFrame(
           video,
           canvas,
           hiddenRef.current,
@@ -169,13 +195,13 @@ export default function AsciiCanvas({
           frameRunner(runnerRef),
           undefined,
           isMirrored,
-        )
+        ).catch(surfaceRenderError)
       }
     }
 
     rafId = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafId)
-  }, [sourceVideo, settings, canvasRef, isMirrored])
+  }, [sourceVideo, settings, canvasRef, isMirrored, surfaceRenderError])
 
   // Sync canvas pixel buffer to display size — eliminates CSS scaling distortion
   useEffect(() => {
@@ -210,6 +236,11 @@ export default function AsciiCanvas({
       }
     }
   }, [canvasRef])
+
+  // After every hook, so the throw never changes how many ran.
+  if (renderError) {
+    throw renderError
+  }
 
   return (
     <div className="relative w-full h-full">

@@ -153,6 +153,20 @@ describe('PresetPicker', () => {
     }
   })
 
+  // Same answer as an empty derivation, and for the same reason: the chip reads as the name it was
+  // before this feature existed. Not the canvas' ErrorBoundary — the Strip is that boundary's
+  // sibling, so a re-throw here would take the whole program down over a row of decorations.
+  it('falls back to the name alone when the derivation throws', async () => {
+    deriveMock.mockRejectedValueOnce(new Error('no 2D context'))
+    renderPicker({ source: makeSourceImage() })
+    await flushThumbnails()
+
+    expect(document.querySelectorAll('img')).toHaveLength(0)
+    for (const preset of PRESETS) {
+      expect(screen.getByRole('button', { name: preset.name })).toBeInTheDocument()
+    }
+  })
+
   it('derives once per Source, not once per render', () => {
     const source = makeSourceImage()
     const { rerender } = renderPicker({ source })

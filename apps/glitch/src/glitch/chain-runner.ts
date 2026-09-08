@@ -94,7 +94,16 @@ export function createWorkerChainRunner(worker: Worker): ChainRunner {
     waiting = null
     lost?.settle(null)
     if (stranded) {
-      stranded.settle(answerWaiting(stranded))
+      // `answerWaiting` runs the Chain on the fallback path, and a throw out of it would leave this
+      // promise unsettled for good — `inFlight` and `waiting` are already null, so nothing left can
+      // answer it, and the paragraph above would be a lie. `finally` is what keeps the promise of
+      // it. The error still escapes to the caller; it just no longer takes a frame with it.
+      let answer: PixelBuffer | null = null
+      try {
+        answer = answerWaiting(stranded)
+      } finally {
+        stranded.settle(answer)
+      }
     }
   }
 
