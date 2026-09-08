@@ -21,9 +21,16 @@ const derivedForImage = new WeakMap<HTMLImageElement, Record<string, string>>()
  * `app.tsx`, so a re-throw from here takes the whole program down over a row of decorations. And
  * deliberately not ADR 0006's toast: those are operational errors, acts the user just took and can
  * take again. Nobody asked for these, and the row already has an honest way to say it has none.
+ *
+ * Quiet in the UI is not the same as quiet everywhere, though: a real bug in `thumbnail.ts` would
+ * read as "the chips never got pictures" for good, so the console is what keeps it diagnosable.
  */
 function derive(source: HTMLImageElement | HTMLVideoElement): Promise<Record<string, string>> {
-  return derivePresetThumbnails(source).catch(() => ({}))
+  return derivePresetThumbnails(source).catch((err: unknown) => {
+    // biome-ignore lint/suspicious/noConsole: the only trace a row that stays nameless leaves
+    console.error('[ascii] PRESETS thumbnails could not be derived', err)
+    return {}
+  })
 }
 
 /**

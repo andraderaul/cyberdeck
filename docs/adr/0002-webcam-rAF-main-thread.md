@@ -189,11 +189,16 @@ of main-thread time per frame, against **0.7 ms** for the two stages that left o
 and **2.5 ms** with Edge Glyphs, `floyd` and `adaptive` all on. At **150,000 cells** — the same
 canvas at Resolution 4 — it is **~32 ms** against **3.4 ms** and **16 ms**. The frame budget is 66 ms.
 
-Read honestly, that says the port did not buy a smaller main-thread bill at every setting; at the
-coarse Resolutions the program mostly runs at, the clone costs more than the conversion it replaced.
-What it buys is that the conversion no longer *blocks* — the main thread is free while it runs, and
-the burst it pays for on the way back is one deserialize rather than a whole pipeline. The output is
-unchanged either way, which is why this is recorded rather than reverted. If it is ever reported as
-jank, the shape of the fix is the encoding `frame-job.ts` declined: char codes in a `Uint16Array`,
-colours packed into a `Uint32Array`, x and y dropped entirely since both are derivable from the
-index and `cols` — three Transferables instead of an array of objects.
+Read honestly, there is no crossover in the measured range. At **both** grids the clone costs more
+main-thread time than the two stages that left, and the margin grows with the grid rather than
+closing: +2.0 to +3.8 ms at 24,000 cells, +16 to +28.6 ms at 150,000. At the fine end the blocking
+burst is *larger* than the pipeline it replaced — ~32 ms against 16 ms, of a 66 ms budget — so a
+Live Source at Resolution 4 may well be slower than it was before the port, not merely differently
+shaped.
+
+What the port does buy is that the conversion itself is off this thread and what is left on it is
+one deserialize rather than a whole pipeline. The output is unchanged either way, which is why this
+is recorded rather than reverted — and it is why the encoding `frame-job.ts` declined is the next
+move rather than a contingency: char codes in a `Uint16Array`, colours packed into a `Uint32Array`,
+x and y dropped entirely since both are derivable from the index and `cols` — three Transferables
+instead of an array of objects, which takes the return leg's cost away rather than trimming it.

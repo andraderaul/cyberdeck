@@ -18,6 +18,24 @@ import type { ConversionSettings } from '../ascii/types'
 const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
 
 /**
+ * What a failed *live* frame gets instead of the ErrorBoundary — logged, and then the loop ticks
+ * on. GLITCH//Studio's canvas answers the same way for the same reasons.
+ *
+ * The loop already treats a lost frame as something the next tick corrects (the drop rule), and a
+ * failed one is in that class: there is a fresh frame ~66 ms behind it. Routing it to the boundary
+ * instead would trade a transient failure for a permanent one — `ErrorBoundary` has no reset path,
+ * so it replaces the canvas *and the overlay standing on it* for good, and that overlay carries
+ * `clear`, mirror, switch-camera and the Recording **stop** control. A live render that fails once
+ * must not be what takes the stop button away from a recording in progress; the fallback's advice
+ * ("try a different image or adjust settings") is also advice it can never act on, because the
+ * child never re-mounts. A Source Image has no next tick, so its path keeps the boundary.
+ */
+function reportLiveFrameFailure(err: unknown): void {
+  // biome-ignore lint/suspicious/noConsole: the only trace a frame the loop rides out leaves
+  console.error('[ascii] live frame failed', err)
+}
+
+/**
  * The canvas' own FrameRunner, built the first time a render asks for one.
  *
  * Lazy rather than eager, and a plain function over the ref rather than a hook: a runner built
@@ -108,8 +126,10 @@ export default function AsciiCanvas({
   })
   const fontFamilyRef = useRef(monoFontFamily())
 
-  // A render that fails belongs to the ErrorBoundary in `app.tsx`, whose fallback — "render failed
-  // — try a different image or adjust settings" — is written for exactly this and nothing else.
+  // A **Source Image** render that fails belongs to the ErrorBoundary in `app.tsx`, whose fallback
+  // — "render failed — try a different image or adjust settings" — is written for exactly this and
+  // nothing else. Only the Source Image: the fallback's advice is act-on-able because there is no
+  // next frame coming, and the live loop's answer is `reportLiveFrameFailure` above instead.
   // Deliberately not ADR 0006's toast: that mechanism is for *operational* errors (an Export, a
   // Capture, a storage write), acts the user just took with the program otherwise intact and a next
   // attempt available. A render failure is not one of those — the canvas is the whole surface, and
@@ -168,7 +188,8 @@ export default function AsciiCanvas({
   // throttles is how often the main thread samples a frame and hands it over; `paintFrame` is what
   // is left here, and it stays here because it is the one point that writes to the visible canvas
   // (ADR 0005). A frame the runner drops is corrected by the next tick, which is why nothing here
-  // reads the outcome.
+  // reads the outcome — and a frame that *fails* is corrected the same way, which is why it goes to
+  // `reportLiveFrameFailure` rather than to the boundary the Source Image path uses.
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !sourceVideo) {
@@ -195,13 +216,13 @@ export default function AsciiCanvas({
           frameRunner(runnerRef),
           undefined,
           isMirrored,
-        ).catch(surfaceRenderError)
+        ).catch(reportLiveFrameFailure)
       }
     }
 
     rafId = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafId)
-  }, [sourceVideo, settings, canvasRef, isMirrored, surfaceRenderError])
+  }, [sourceVideo, settings, canvasRef, isMirrored])
 
   // Sync canvas pixel buffer to display size — eliminates CSS scaling distortion
   useEffect(() => {

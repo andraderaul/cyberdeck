@@ -25,6 +25,24 @@ import WipeDivider from './wipe-divider'
 export const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
 
 /**
+ * What a failed *live* frame gets instead of the ErrorBoundary — logged, and then the loop ticks
+ * on. ASCII//Convert's canvas answers the same way for the same reasons.
+ *
+ * The loop already treats a lost frame as something the next tick corrects (the drop rule), and a
+ * failed one is in that class: there is a fresh frame ~66 ms behind it. Routing it to the boundary
+ * instead would trade a transient failure for a permanent one — `ErrorBoundary` has no reset path,
+ * so it replaces the canvas *and the overlay standing on it* for good, and that overlay carries
+ * `clear`, mirror, switch-camera and the Recording **stop** control. A live render that fails once
+ * must not be what takes the stop button away from a recording in progress; the fallback's advice
+ * ("try a different image or adjust settings") is also advice it can never act on, because the
+ * child never re-mounts. A Source Image has no next tick, so its path keeps the boundary.
+ */
+function reportLiveFrameFailure(err: unknown): void {
+  // biome-ignore lint/suspicious/noConsole: the only trace a frame the loop rides out leaves
+  console.error('[glitch] live frame failed', err)
+}
+
+/**
  * Chrome shared by everything sitting on top of the canvas — see ADR 0013. `bg-bg` is the
  * load-bearing part: the canvas *is* the user's artwork, so a transparent chip takes its contrast
  * from whatever the Chain just painted (hot pink on a bright feed measures 1.57:1). Standing on
@@ -133,8 +151,10 @@ export default function GlitchCanvas({
     [],
   )
 
-  // A render that fails belongs to the ErrorBoundary in `app.tsx`, whose fallback — "render failed
-  // — try a different image or adjust settings" — is written for exactly this and nothing else.
+  // A **Source Image** render that fails belongs to the ErrorBoundary in `app.tsx`, whose fallback
+  // — "render failed — try a different image or adjust settings" — is written for exactly this and
+  // nothing else. Only the Source Image: the fallback's advice is act-on-able because there is no
+  // next frame coming, and the live loop's answer is `reportLiveFrameFailure` above instead.
   // Deliberately not ADR 0006's toast: that mechanism is for *operational* errors (an Export, a
   // Capture, a storage write), acts the user just took with the program otherwise intact and a next
   // attempt available. A render failure is not one of those — the canvas is the whole surface, and
@@ -202,7 +222,8 @@ export default function GlitchCanvas({
   // keeps the corruption pattern from boiling. `onAdvanceSeed` is what makes the boiling a choice —
   // the loop asks for the next arrangement once a frame has actually been painted, so the Seed
   // advances per *painted* frame rather than per rAF tick, and a frame the runner dropped moves
-  // nothing.
+  // nothing. A frame that *fails* is in the same class — hence `reportLiveFrameFailure` rather than
+  // the boundary the Source Image path uses.
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !liveSource) {
@@ -240,7 +261,7 @@ export default function GlitchCanvas({
               onAdvanceSeed?.()
             }
           })
-          .catch(surfaceRenderError)
+          .catch(reportLiveFrameFailure)
       }
     }
 
@@ -249,7 +270,7 @@ export default function GlitchCanvas({
       stopped = true
       cancelAnimationFrame(rafId)
     }
-  }, [liveSource, chain, seed, isMirrored, canvasRef, onAdvanceSeed, surfaceRenderError])
+  }, [liveSource, chain, seed, isMirrored, canvasRef, onAdvanceSeed])
 
   const isLive = liveSource !== null
   // Both Sources are never set at once (App's empty state is the only place one is chosen), so the

@@ -107,8 +107,11 @@ export function createWorkerFrameRunner(worker: Worker): AsciiFrameRunner {
       // `answerWaiting` runs a real conversion on the fallback path, and a throw out of it would
       // leave this promise unsettled for good — `inFlight` and `waiting` are already null, so
       // nothing left can answer it, and the paragraph above would be a lie. `finally` is what keeps
-      // the promise of it. The error still escapes to the caller; it just no longer takes a frame
-      // with it.
+      // the promise of it. The error still propagates; it just no longer takes a frame with it —
+      // and it propagates to the *global* handler rather than to a caller, because the only path
+      // that can throw here is `fallBack`, which the browser calls from the Worker's `error`
+      // listener. There is no caller on that stack to catch it, which is what makes settling the
+      // frame the whole job.
       let answer: AsciiFrameResult | null = null
       try {
         answer = answerWaiting(stranded)
