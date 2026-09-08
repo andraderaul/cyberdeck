@@ -60,8 +60,10 @@ inglês.
   `kuang`, `ougou`, `solitude`, `onyx` — com um contrato de contraste que todo Theme precisa cumprir
   (ADR 0024). O roster com o caráter de cada um está no `CONTEXT.md` do Deck Kit. A mesma doutrina
   — nomear o papel, não a medida — vale pra régua de espaço: as duas réguas de tamanho (`--gap-*` e
-  `--sp-*`, 14 nomes, 8 deles sem nenhum uso) viram cinco papéis, `--space-tight / item / group /
-  stack / section`, e a verruga do `xs` 4px contra o `2xs` 6px fecha junto. **Decidido na ADR 0030,
+  `--sp-*`, 14 nomes, 6 deles sem nenhum uso) viram seis papéis, `--space-hairline / tight / item /
+  group / stack / section`, e a verruga do `xs` 4px contra o `2xs` 6px fecha junto — não colapsando
+  os dois valores, mas dando a eles a regra que faltava: `hairline` é chrome medido contra a imagem
+  do usuário (ADR 0013, ADR 0021), `tight` é chrome medido contra si mesmo. **Decidido na ADR 0030,
   executado na #399** — até lá o código ainda fala as duas réguas antigas.
 
 ## Relationships
