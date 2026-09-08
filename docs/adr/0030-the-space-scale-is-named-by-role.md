@@ -25,11 +25,11 @@ saying which one a contributor wants.
 and only the step tells them apart. The scale guard carries a hand-written `SECTION_ONLY_GAPS`
 list for exactly this, which is a guard paying rent for a distinction the design never needed.
 
-**Most of the vocabulary is dead.** Counting every spacing utility across `apps/` and `packages/`,
-excluding tests and the token/preset/guard files themselves, the two rulers spend **14 names on
-212 callsites and 6 distinct live values**:
+**Most of the vocabulary is dead.** Counting every exact `utility-step` pair across `apps/` and
+`packages/`, excluding tests and the token/preset/guard files themselves, the two rulers spend
+**14 names on 212 occurrences and 6 distinct live values**:
 
-| token | px | callsites | token | px | callsites |
+| token | px | occurrences | token | px | occurrences |
 |---|---|---|---|---|---|
 | `--gap-2xs` | 6 | **58** | `--gap-3xl` | 64 | **0** |
 | `--gap-xs` | 4 | **43** | `--sp-xs` | 16 | **2** |
@@ -38,6 +38,12 @@ excluding tests and the token/preset/guard files themselves, the two rulers spen
 | `--gap-lg` | 24 | **12** | `--sp-lg` | 96 | **0** |
 | `--gap-xl` | 32 | **3** | `--sp-xl` | 128 | **0** |
 | `--gap-2xl` | 48 | **0** | `--sp-2xl` | 160 | **0** |
+
+**Occurrences, not classes — three of the 212 are neither.** Two are the `var(--gap-md)` pair in
+`packages/deck-kit/src/ui/toast-provider.tsx:38`, and one is prose: a comment at
+`packages/deck-kit/src/ui/toast.tsx:58` naming `` `p-sm` ``. So **209 classes + 2 `var()`
+references + 1 comment mention = 212**. The Decision table below counts *classes*; the split
+matters because the guard sees all 212 and only 209 of them are a class rewrite.
 
 Six of the fourteen names have never been used. The macro ruler's only two live steps are
 `p-sp-xs` at 16px and `py-sp-sm` at 32px — pixel-identical to `--gap-md` and `--gap-xl`, which the
@@ -52,18 +58,19 @@ ruler is not a second register. It is four dead names, two duplicates and one tr
 |---|---|---|---|
 | `--space-hairline` | 4 | the 16 `--gap-xs` classes that sit over the canvas | 16 |
 | `--space-tight` | 6 | `--gap-2xs` (58) **and** the other 26 `--gap-xs` | 84 |
-| `--space-item` | 8 | `--gap-sm` | 73 |
-| `--space-group` | 16 | `--gap-md` + `--sp-xs` | 21 |
+| `--space-item` | 8 | `--gap-sm` (73 occurrences, 1 of them prose) | 72 |
+| `--space-group` | 16 | `--gap-md` (19 occurrences, 2 of them `var()`) + `--sp-xs` | 19 |
 | `--space-stack` | 24 | `--gap-lg` | 12 |
 | `--space-section` | 32 | `--gap-xl` + `--sp-sm` | 5 |
 
-211 of the 212. The one left over is `group-hover:translate-x-xs`, and it is not a spacing
+208 of the 209 classes. The one left over is `group-hover:translate-x-xs`, and it is not a spacing
 relationship at all — see *the vocabulary governs the between-element utilities* below.
 
-They name relationships, not magnitudes: *hairline* is chrome measured against the user's picture,
-*tight* is chrome measured against itself, *item* is between siblings in a cluster, *group* is
-between clusters in a panel, *stack* is between blocks in a column, *section* is between regions of
-a page. The Tailwind keys follow — `gap-tight`, `px-item`, `py-section`.
+They name relationships, not magnitudes: *hairline* sizes an overlay's footprint over the user's
+picture, *tight* is chrome measured against its own opaque background, *item* is between siblings
+in a cluster, *group* is between clusters in a panel, *stack* is between blocks in a column,
+*section* is between regions of a page. The Tailwind keys follow — `gap-tight`, `px-item`,
+`py-section`.
 
 **The rename is clean. There is no alias window.** Both spellings living side by side is exactly
 how the deck arrived here: ADR 0024 found that when the preset exposes two vocabularies at once,
@@ -71,14 +78,26 @@ the shorter one keeps winning and the promotion never finishes. A window would l
 `gap-item` both valid and the guard unable to object to either.
 
 **4px survives as `--space-hairline`, and the rule that separates it from `tight` is one line:
-hairline is chrome measured against the user's picture; tight is chrome measured against itself.**
+hairline is any measurement that sizes an overlay's footprint over the user's picture — its inset
+from the canvas edge and the gaps inside the overlay row alike; tight is chrome measured against its
+own opaque background.**
+
+*Footprint*, not "what sits on the other side of the gap" — the second reading is the one that
+re-opens the defect. Four of the sixteen hairline classes are the `gap-xs` **between two chips** on
+an overlay row (`ascii-canvas.tsx:173`, `glitch-canvas.tsx:252`, `export-controls.tsx:48`,
+`scale-reader.tsx:20`): chrome against chrome, which a rule about what abuts the gap sends straight
+to `tight`. They are 4px because widening them widens the strip laid over the picture, which is the
+same charge as widening the inset. The rule cuts the other way one level in: the `px-sm` and
+`py-2xs` *inside* each chip are measured against the chip's own ground, which ADR 0013 says the chip
+owns, so they promote to `item` and `tight` like any panel padding — exactly what they do today.
+
 That is the rule `xs` against `2xs` could never state, and stating it is the whole difference. The
 wart was never *two values 2px apart* — it was two values 2px apart with **nothing** to send a
 contributor to one rather than the other, so the only thing left to read was the size names, and
 those read backwards. Six role names where there were two size names is therefore not the same
 situation with more entries: every one of the six answers a question about the callsite, and the
-one that used to have no answer now has the sharpest one on the list. Reach for `hairline` only
-when the thing on the other side of the gap is the user's artwork.
+one that used to have no answer now has the sharpest one on the list. Reach for `hairline` only when
+widening the measurement would cover more of the picture.
 
 **Collapsing 4px into 6px would have charged the picture for its own controls.** Sixteen of the 43
 `--gap-xs` classes are canvas overlays — the LIVE/REC cluster in ASCII//Convert and
@@ -104,8 +123,14 @@ them and the size names never had to:
   `apps/deck/src/components/program-card.tsx:36` is a *hover travel distance*, and no reading of
   any of the six describes it — calling it `translate-x-tight` would be the same misuse of a role
   name the ADR is trying to stop, one namespace over, and quietly turning it into 6px is a 50%
-  change to a motion. It becomes `translate-x-[4px]`: an arbitrary value, which is already the
-  deck's idiom for a one-off measurement (`min-h-[44px]`).
+  change to a motion. It becomes **`translate-x-1`** — Tailwind's own numeric step, which resolves
+  to `0.25rem`, exactly the 4px it has today. Root `CLAUDE.md` blesses two escapes from the named
+  scale, "Tailwind's own numeric steps (`gap-4`, `p-0.5`) and arbitrary values (`min-h-[44px]`)",
+  and they are not interchangeable here. `1` is a key of `defaultTheme.spacing` — one of the four
+  sources the guard's completeness test derives its `defined` set from — so the value stays inside a
+  scale something still reads. `translate-x-[4px]` leaves every scale and every guard, and was
+  rejected for that: an arbitrary value earns its place only when no scale expresses the number,
+  which is what `min-h-[44px]` is (a WCAG target size) and what 4px is not.
 
 The guard keeps banning retired steps across all of these utilities — that is what stops `gap-sm`
 creeping back — but the ADR does not claim `section` means anything as a `translate-y`.
@@ -126,7 +151,7 @@ role* to the kit, deliberately, which is the review this ruler should have been 
 ## Considered Alternatives
 
 - **Rename only the inverted pair** (`--gap-hair` 4px beside `--gap-tight` 6px).
-  - *Pros:* the smallest possible diff; touches 101 callsites instead of 212.
+  - *Pros:* the smallest possible diff; touches 101 occurrences instead of 212.
   - *Cons:* leaves two rulers, six dead names and the `p-sp-3xl` trap standing, and keeps two
     tokens 2px apart with no rule separating them — `hair` against `tight` is still two sizes.
   - *Rejected because:* it renames the symptom. What separates 4px from 6px is a rule about what
@@ -161,9 +186,11 @@ role* to the kit, deliberately, which is the review this ruler should have been 
 - **Flipping the scale guard from a deny list to an allow list** over the spacing utilities.
   - *Pros:* strictly stronger; rejects the old names and future typos with one rule and no list to
     maintain.
-  - *Cons:* measured against the real sources, it fires on prose — `bottom-anchored`,
-    `left-to-right`, `top-level`, `top-to-bottom.` all match `utility-<word>` inside comments and
-    strings.
+  - *Cons:* measured against the files `colourBearingSources()` actually walks, it fires on prose —
+    `bottom-anchored`, `left-to-right`, `right-hand`, `top-to-bottom.` all match `utility-<word>`
+    inside comments and strings. (The walker reads every `.ts`/`.tsx`/`.css` under `apps/*/src` and
+    `packages/deck-kit/src`, test files included, minus three exempt paths — which is why
+    `right-hand`, in `apps/glitch/src/glitch/pipeline.test.ts`, counts.)
   - *Rejected because:* a guard that cries wolf stops being read, which is the reason the deny
     list exists in the first place (`theme/audit.ts`).
 
@@ -181,11 +208,13 @@ role* to the kit, deliberately, which is the review this ruler should have been 
   ADR 0013 and ADR 0021 in the class name rather than in a comment they might not read.
 
 **Negative:**
-- A one-off promotion of 212 callsites across all five workspaces plus the kit — behaviour-zero
-  except for one deliberate change, and wide. Like ADR 0024's promotion it must ship alone.
-- 26 classes move from 4px to 6px. Individually invisible, collectively a real change to the
-  tightest panel chrome on the deck, and the reason the promotion needs a visual pass rather than
-  only a green build. The 16 that sit over a canvas do not move.
+- A one-off promotion of 212 occurrences — 209 classes, two `var()` references and one comment —
+  across all five workspaces plus the kit, behaviour-zero except for one deliberate change, and
+  wide. Like ADR 0024's promotion it must ship alone.
+- 26 classes move from 4px to 6px. Twenty-two of them are individually invisible; collectively they
+  are a real change to the tightest panel chrome on the deck, and the other four are not invisible
+  at all (they are enumerated under *#399's acceptance criteria*). That is the reason the promotion
+  needs a visual pass rather than only a green build. The 16 that sit over a canvas do not move.
 - Six roles is one more than the ruler strictly needs, and the sixth is the one a contributor is
   most likely to reach for by mistake, because `hairline` reads like "a bit tighter than tight". The
   name is only worth its place while the rule beside it is read.
@@ -229,7 +258,7 @@ Executed by issue #399, not here. The order is: kit first, then the four program
 3. `packages/deck-kit/src/ui/toast-provider.tsx:38` — the only raw token reference outside
    `tokens.css`: `var(--gap-md)` twice, both to `var(--space-group)`. (Only — literally true, and
    exactly the phrasing that hid step 2.)
-4. The 212 class callsites, per the mapping table above. Three groups are not a mechanical
+4. The 209 class callsites, per the mapping table above. Four groups are not a mechanical
    step-for-step rename:
    - the 16 hairline classes, on six lines: `apps/ascii/src/components/ascii-canvas.tsx:173`,
      `apps/glitch/src/components/glitch-canvas.tsx:252`,
@@ -240,19 +269,31 @@ Executed by issue #399, not here. The order is: kit first, then the four program
      *spacing-utility* `-xs` becomes `-tight`. `text-xs` and `rounded-xs` are other scales and do
      not move at all — this is a per-utility rewrite, never a search-and-replace on `-xs`.
    - `apps/deck/src/components/program-card.tsx:36` — `group-hover:translate-x-xs` →
-     `group-hover:translate-x-[4px]`, not a role name.
+     `group-hover:translate-x-1`, not a role name.
    - `apps/deck/src/app.tsx` carries all four `sp-*` uses: `py-sp-xs`/`mt-sp-xs` →
      `py-group`/`mt-group`, `sm:py-sp-sm`/`sm:mt-sp-sm` → `sm:py-section`/`sm:mt-section`.
+   - **the ban fires outside `className` too, and none of it is a class rewrite.** The guard reads
+     lines, not JSX: once `sm` is banned under the spacing utilities, the literal `` `p-sm` `` in
+     `packages/deck-kit/src/ui/toast.tsx:58`'s comment fails the build, as do eight test assertions
+     that name an old class as a string (`ascii-canvas.test.tsx:106` and `:208`,
+     `glitch-canvas.test.tsx:450`, `basemap-toggle.test.tsx:44`, `export-controls.test.tsx:32`,
+     `modal.test.tsx:218`, `source-image-drop-zone.test.tsx:95`, `toast.test.tsx:75` — the guard
+     scans test files). Loud rather than silent, and each fix is one word; the trap is that a
+     reader following "the 209 class callsites" literally does not go looking for them.
 5. The documentation that describes the old ruler and goes stale the moment it ships:
    - `CLAUDE.md` — the scale table's `spacing` and `sp-*` rows become one role row, and the wart
      paragraph is deleted rather than rewritten. It is closed, not amended.
    - `CLAUDE.md:151-152` — "the two spacing rows do **not** share ends: `gap-3xl` is real and
      `p-sp-3xl` is not". There is one row after this, so the sentence describes nothing.
-   - `packages/deck-kit/CONTEXT.md:62-64` — the *Guarda de escala* paragraph, on why `sp-*` is
-     banned step by step rather than by prefix and on the `p-sp-2xl` / `p-sp-3xl` trap. Both the
-     reason and the trap go with the scale.
+   - `packages/deck-kit/CONTEXT.md:61-63` — inside the *Guarda de escala* paragraph, the one
+     sentence on why `sp-*` is banned step by step rather than by prefix and on the `p-sp-2xl` /
+     `p-sp-3xl` trap. Both the reason and the trap go with the scale. It is 61-63 and not 62-64:
+     the sentence *starts* mid-line 61, and line 64 opens the next one — "dimensão (`w`, `max-w`)
+     ficam de fora de propósito" — which stays true and must survive.
    - `CONTEXT-MAP.md:62-67` — the space-ruler sentence still ends "até lá o código ainda fala as
-     duas réguas antigas", which stops being true here.
+     duas réguas antigas", which stops being true here. Its one-line gloss of the rule
+     ("`hairline` é chrome medido contra a imagem do usuário … `tight` é chrome medido contra si
+     mesmo") is the *pre-rework* wording and is restated to footprint, not merely dated.
 
 **The scale guard** (`packages/deck-kit/src/theme/audit.ts`) changes shape, and rejecting the old
 names is the point of the change — a rename nothing objects to creeps back one callsite at a time.
@@ -270,13 +311,18 @@ names is the point of the change — a rename nothing objects to creeps back one
 - Exact `utility-step` pair matching stays (`findBannedClasses`), for the prose reason recorded
   under Considered Alternatives.
 - **`findUndefinedScales` changes signature, not only its data.** Today `audit.ts:307` exports one
-  flat `UNDEFINED_SCALE_NAMES` and `:375` takes it as `names = UNDEFINED_SCALE_NAMES` — a default
+  flat `UNDEFINED_SCALE_NAMES` and `:377` takes it as `names = UNDEFINED_SCALE_NAMES` — a default
   the 12 fixture assertions in `audit.test.ts` override and `vocabulary.test.ts:80` relies on. Once
   the bans split into two families keyed to two *different* utility sets, one `names` default
   cannot serve both. Replace it with one exported list of families —
   `SCALE_BANS: { utilities, steps }[]`, defaulted as `families = SCALE_BANS` — and let the function
   concatenate a `findBannedClasses` pass per family, re-sorted by line so a failure still reads
-  like a gutter. The fixture tests pass a one-family list; the injection seam survives.
+  like a gutter. The injection seam survives, and **eleven of the twelve fixtures pass a one-family
+  list**. The twelfth does not: `audit.test.ts:243` asserts
+  `findUndefinedScales('gap-3xs mt-3xs rounded-4xl', UNDEFINED_STEPS)` has length 3, and
+  `rounded-4xl` is a *radius* utility — a list scoped to `SPACING_UTILITIES` alone returns 2. That
+  one fixture must be handed both families. It is the only radius offender in the fixture set, so
+  it is also the only one that can catch a split that silently drops a family.
 - **The completeness test in `vocabulary.test.ts:70-76` must be split, not preserved.** It pools
   four key sources — the preset's `spacing` and `borderRadius`, and Tailwind's own two — into one
   `defined` set, then asserts no banned name is in it. That works only while the two families ban
@@ -294,10 +340,48 @@ names is the point of the change — a rename nothing objects to creeps back one
 diff de pixel está demonstrada, não afirmada"*. `--space-hairline` buys most of that back — the
 overlays, which are the only chrome sitting on a surface a pixel diff would flag, do not move — but
 **26 classes still change by 2px**, so a literal zero-pixel-diff cannot be demonstrated. Amend the
-criterion to **no *unintended* visual change**, against this enumerated intended diff: the 26
-`--gap-xs` classes that are not on the six overlay lines above go 4px → 6px. Everything else,
-including all 16 hairline classes, the `translate-x-[4px]` rewrite and all four `sp-*` uses, is
-pixel-identical, and *that* is the part to demonstrate rather than assert.
+criterion to **no *unintended* visual change**, against the enumerated intended diff below.
+Enumerated by `file:line`, not by subtraction from the overlay set — deriving it is exactly the
+step whose one wrong answer this criterion exists to catch. 26 classes, 25 lines, 15 files:
+
+| file:line | class |
+|---|---|
+| `apps/ascii/src/app.tsx:256` | `gap-xs` |
+| `apps/ascii/src/components/ai-config-banner.tsx:43` | `py-xs` |
+| `apps/ascii/src/components/ai-config-banner.tsx:49` | `gap-xs` |
+| `apps/ascii/src/components/ai-config-banner.tsx:58` | `px-xs` |
+| `apps/ascii/src/components/analysis-modal.tsx:72` | `gap-xs` |
+| `apps/ascii/src/components/analysis-modal.tsx:197` | `gap-xs` |
+| **`apps/ascii/src/components/analysis-modal.tsx:219`** | **`gap-xs`** — reflow |
+| `apps/ascii/src/components/output-panel.tsx:177` | `gap-xs` |
+| `apps/ascii/src/components/output-panel.tsx:184` | `gap-xs` |
+| `apps/ascii/src/components/output-panel.tsx:196` | `ml-xs` |
+| **`apps/ascii/src/components/output-panel.tsx:204`** | **`gap-xs`** — reflow |
+| `apps/ascii/src/components/settings-editor.tsx:156` | `gap-xs` |
+| `apps/deck/src/components/program-card.tsx:24` | `px-xs` |
+| `apps/glitch/src/components/chain-editor.tsx:423` | `gap-xs` |
+| `apps/glitch/src/components/chain-editor.tsx:495` | `gap-xs` |
+| `apps/glitch/src/components/output-panel.tsx:95` | `gap-xs` |
+| **`apps/golem/src/components/cache.tsx:56`** | **`gap-xs`** — reflow |
+| `apps/golem/src/components/cache.tsx:99` | `p-xs` |
+| `apps/golem/src/components/panel.tsx:26` | `py-xs` |
+| `packages/deck-kit/src/ui/header-button.tsx:28` | `px-xs` |
+| `packages/deck-kit/src/ui/theme-control.tsx:160` | `gap-xs` **and** `px-xs` — the one line carrying two |
+| `packages/deck-kit/src/ui/toast-provider.tsx:37` | `gap-xs` |
+| **`packages/deck-kit/src/ui/toggle-group.tsx:20`** | **`gap-xs`** — reflow |
+| `packages/deck-kit/src/ui/toggle-group.tsx:37` | `py-xs` |
+| `packages/deck-kit/src/ui/tooltip.tsx:86` | `p-xs` |
+
+**Four of the 26 are not "individually invisible", and they are the four the visual pass has to
+actually look at.** Three sit on a wrapping flex container — `analysis-modal.tsx:219`
+(`flex flex-wrap gap-xs`), `ascii/output-panel.tsx:204`
+(`flex flex-wrap items-start gap-xs sm:gap-sm`) and `toggle-group.tsx:20` (`gap-xs flex-wrap`) —
+where +2px can push an item onto a new line: a reflow, not a 2px shift. The fourth,
+`golem/cache.tsx:56` (`grid gap-xs sm:grid-cols-2`), changes the block's total height. The other
+22 are a 2px shift and nothing else.
+
+Everything outside that table — all 16 hairline classes, the `translate-x-1` rewrite and all four
+`sp-*` uses — is pixel-identical, and *that* is the part to demonstrate rather than assert.
 
 ## Questions / Future Work
 
