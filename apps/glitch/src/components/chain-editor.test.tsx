@@ -1,7 +1,15 @@
+import { ICON_GLYPH_SIZE } from '@cyberdeck/deck-kit/ui'
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import { useReducer } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { type Chain, createLink, type Link, MAX_CHAIN_LENGTH } from '../glitch/chain'
-import type { ChainActions, SeedControls } from '../glitch/editor-state'
+import {
+  type Chain,
+  createLink,
+  EFFECT_REGISTRY,
+  type Link,
+  MAX_CHAIN_LENGTH,
+} from '../glitch/chain'
+import { type ChainActions, editorReducer, type SeedControls } from '../glitch/editor-state'
 import ChainEditor from './chain-editor'
 
 /** `link`, bypassed — the state the toggle leaves a Link in, so a fixture can start in it. */
@@ -40,6 +48,51 @@ function renderEditor(chain: Chain, seed: Partial<SeedControls> = {}) {
   }
   render(<ChainEditor chain={chain} actions={actions} seedControls={seedControls} isLive={false} />)
   return { actions, seedControls }
+}
+
+/**
+ * The editor over a Chain the Editor's own reducer moves, rather than over stubbed actions.
+ *
+ * What the `↺` must *not* do — remove the Link, reorder the Chain, reach a neighbour (ADR 0017) —
+ * is a property of the Chain that comes back, so a spy on the call going out cannot see it. Returns
+ * a live handle on the current Chain.
+ */
+function renderWired(initial: Chain) {
+  const state = { chain: initial }
+  function Harness() {
+    const [editor, dispatch] = useReducer(editorReducer, {
+      chain: initial,
+      activePresetId: null,
+      seed: 0x8f2c1a3b,
+      isSeedAnimated: false,
+      seedHistory: [],
+    })
+    state.chain = editor.chain
+    return (
+      <ChainEditor
+        chain={editor.chain}
+        actions={{
+          onLinkChange: (id, params) => dispatch({ type: 'PATCH_LINK', id, params }),
+          onReorder: vi.fn(),
+          onAdd: vi.fn(),
+          onRemove: vi.fn(),
+          onDuplicate: vi.fn(),
+          onToggleBypass: vi.fn(),
+        }}
+        seedControls={{
+          isAnimated: false,
+          onReroll: vi.fn(),
+          onToggleAnimation: vi.fn(),
+          seed: 0x8f2c1a3b,
+          previous: null,
+          onStepBack: vi.fn(),
+        }}
+        isLive={false}
+      />
+    )
+  }
+  render(<Harness />)
+  return state
 }
 
 /** The Link chips, in Chain order — each is both the selection control and the drag handle. */
@@ -144,6 +197,69 @@ describe('the bypass toggle', () => {
 
     expect(screen.getByRole('button', { name: /^duplicate pixel sort/ })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'bypass pixel sort' })).toBeEnabled()
+  })
+})
+
+// The scoped way back (#397) — ASCII's `↺` at the other end of the deck (#393, ADR 0015). The unit
+// it is scoped to here is the Link, and the default it returns to is the one that seeds a new one.
+describe('the Link reset', () => {
+  it('returns the focused Link to that Effect’s registered defaults', () => {
+    const { actions } = renderEditor([SORT, GRAIN])
+
+    fireEvent.click(screen.getByRole('button', { name: 'reset pixel sort' }))
+
+    expect(actions.onLinkChange).toHaveBeenCalledWith(SORT.id, EFFECT_REGISTRY.pixelSort.defaults)
+  })
+
+  // ADR 0017: a reset is a param edit, not a Chain edit. The Link keeps its id, its slot and its
+  // bypass, the order is the order it was, and the Link beside it is untouched.
+  it('does not remove the Link, reorder the Chain or reach the Link beside it', () => {
+    const bypassedSort = silenced(SORT)
+    const state = renderWired([bypassedSort, GRAIN])
+    const neighbour = state.chain[1]
+
+    fireEvent.click(screen.getByRole('button', { name: 'reset pixel sort' }))
+
+    expect(state.chain.map((link) => link.id)).toEqual([bypassedSort.id, GRAIN.id])
+    expect(state.chain[0].params).toEqual(EFFECT_REGISTRY.pixelSort.defaults)
+    expect(state.chain[0].bypassed).toBe(true)
+    expect(state.chain[1]).toBe(neighbour)
+    expect(names()).toEqual(['pixel sort, bypassed, position 1 of 2', 'noise, position 2 of 2'])
+  })
+
+  // Disabled rather than gone, saying why — the answer duplicate gives beside it, and the one
+  // ASCII's `↺` gives: a control that vanished the moment a Link came home would reflow the row
+  // under the pointer that just put it there.
+  it('stays in place and says why when the Link is already on its defaults', () => {
+    renderEditor([GRAIN, SORT])
+
+    expect(
+      screen.getByRole('button', { name: 'reset noise — unavailable, already at its default' }),
+    ).toBeDisabled()
+  })
+
+  // The disabled state has to be reachable *by using the control*, not only by starting there —
+  // which is the one thing a stubbed action can't show.
+  it('goes unavailable once the Link it just reset is home', () => {
+    renderWired([SORT, GRAIN])
+
+    fireEvent.click(screen.getByRole('button', { name: 'reset pixel sort' }))
+
+    expect(
+      screen.getByRole('button', {
+        name: 'reset pixel sort — unavailable, already at its default',
+      }),
+    ).toBeDisabled()
+  })
+
+  // A real 44x44 box rather than the overlay ASCII's takes: the three controls beside it are real
+  // boxes, so this row is already 44px tall and a fourth costs the panel no height.
+  it('holds a real 44x44 target, with the glyph sized to read as pressable', () => {
+    renderEditor([SORT, GRAIN])
+    const reset = screen.getByRole('button', { name: 'reset pixel sort' })
+
+    expect(reset).toHaveClass('min-h-[44px]', 'min-w-[44px]')
+    expect(reset.className.split(/\s+/)).toEqual(expect.arrayContaining(ICON_GLYPH_SIZE.split(' ')))
   })
 })
 
