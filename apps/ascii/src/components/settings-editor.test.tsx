@@ -1,3 +1,4 @@
+import { ICON_GLYPH_SIZE, TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
@@ -440,6 +441,32 @@ describe('SettingsEditor', () => {
       focusTool('color mode')
 
       expect(screen.getByRole('button', { name: /^reset color mode — unavailable/ })).toBeDisabled()
+    })
+
+    // A refused ramp lives in the field rather than in ConversionSettings, so from the default
+    // Charset the patch is empty while an error is on screen — and the `↺` is the only control that
+    // takes it away. Announcing "already at its default" beside it would contradict what is visible.
+    it('offers the charset reset while a refusal stands over the default Charset', async () => {
+      const user = userEvent.setup()
+      const { field } = renderControlled()
+
+      fireEvent.change(field, { target: { value: '@' } })
+      await user.click(screen.getByRole('button', { name: 'reset charset' }))
+
+      expect(field).toHaveValue('')
+      expect(screen.queryByText(/2 characters or more/)).not.toBeInTheDocument()
+    })
+
+    // Against the constants rather than the classes they expand to, so respelling a target in the
+    // kit cannot red this without a real regression behind it. The target is the overlay and not a
+    // real 44x44 box: this control sits in a legend inside the panel's reserved height, and a box
+    // that tall would reflow the Strip on every tool switch (`PANEL_MIN_HEIGHT`).
+    it('holds the 44px target as an overlay, with the glyph sized to read as pressable', () => {
+      render(<SettingsEditor settings={ALL_DISPLACED} onChange={vi.fn()} />)
+
+      const classes = screen.getByRole('button', { name: 'reset charset' }).className.split(/\s+/)
+      expect(classes).toEqual(expect.arrayContaining(TOUCH_TARGET_ICON.split(' ')))
+      expect(classes).toEqual(expect.arrayContaining(ICON_GLYPH_SIZE.split(' ')))
     })
   })
 })

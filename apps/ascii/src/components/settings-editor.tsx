@@ -1,4 +1,12 @@
-import { Chip, ICON_GLYPH_SIZE, Label, Slider, ToggleGroup, Tooltip } from '@cyberdeck/deck-kit/ui'
+import {
+  Chip,
+  ICON_GLYPH_SIZE,
+  Label,
+  Slider,
+  TOUCH_TARGET_ICON,
+  ToggleGroup,
+  Tooltip,
+} from '@cyberdeck/deck-kit/ui'
 import { cn } from '@cyberdeck/deck-kit/utils'
 import { useState } from 'react'
 import { charsetGlyphs, charsetRamp, isCustomCharset, readCustomCharset } from '../ascii/charset'
@@ -133,6 +141,12 @@ export const TOOL_KEYS: Record<ToolId, readonly (keyof ConversionSettings)[]> = 
  * The patch that returns `keys` to `DEFAULT_SETTINGS` — carrying only the ones actually off it, so
  * an empty patch *is* "this scope is already at its default" and a control has one question to ask
  * rather than two.
+ *
+ * The `!==` is sound only while every `ConversionSettings` value is a primitive, which is a property
+ * held on purpose one file over: an authored Charset is a `custom:`-tagged string rather than an
+ * object precisely so a Charset stays one comparable value (`types.ts`). An axis that ever arrives
+ * as an array or an object would compare by identity and report a permanent difference, so it would
+ * need its own comparison here before it could be claimed by a `TOOL_KEYS` entry.
  */
 export function resetPatch(
   settings: ConversionSettings,
@@ -148,13 +162,24 @@ export function resetPatch(
   return patch
 }
 
-// GLITCH's Link actions, in the place this editor's panels put theirs — a 44x44 target the glyph
-// fills at ICON_GLYPH_SIZE, which the Strip can afford because it is anchored under the canvas
-// rather than over it (ADR 0013, ADR 0020).
+/**
+ * GLITCH's Link actions, in the place this editor's panels put theirs — the glyph at
+ * `ICON_GLYPH_SIZE`, which the Strip can afford because it is anchored under the canvas rather than
+ * over it (ADR 0013, ADR 0020).
+ *
+ * The target is `TOUCH_TARGET_ICON` and not the real 44x44 box GLITCH's row draws, because the two
+ * editors reserved their panels at different times: GLITCH derived its `PANEL_MIN_HEIGHT` with this
+ * row already in the legend, ours was derived without it, and a 44px-tall legend takes the color
+ * mode panel to 144px — so switching to a shorter tool would reflow the Strip by the whole
+ * difference, which is exactly what that reserve exists to prevent. The overlay buys the height and
+ * leaves the width real, so it cannot reach the target of the `Tooltip` beside it in the same
+ * legend, which buys its own the same way for the same reason.
+ */
 const RESET_CONTROL = cn(
-  'ml-auto inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm',
+  'ml-auto rounded-sm',
   'text-fg-muted hover:text-fg disabled:opacity-40 disabled:hover:text-fg-muted',
   'focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning',
+  TOUCH_TARGET_ICON,
   ICON_GLYPH_SIZE,
 )
 
@@ -165,18 +190,17 @@ const RESET_CONTROL = cn(
  */
 function ResetTool({
   label,
-  patch,
+  atDefault,
   onReset,
 }: {
   label: string
-  patch: Partial<ConversionSettings>
-  onReset: (patch: Partial<ConversionSettings>) => void
+  atDefault: boolean
+  onReset: () => void
 }) {
-  const atDefault = Object.keys(patch).length === 0
   return (
     <button
       type="button"
-      onClick={() => onReset(patch)}
+      onClick={onReset}
       disabled={atDefault}
       // Spells out *why* it is unavailable, the way GLITCH's duplicate does: a disabled control
       // with no explanation reads as a bug rather than as an answer.
@@ -278,18 +302,28 @@ export default function SettingsEditor({ settings, onChange }: Props) {
     }
   }
 
-  // A Charset reset is the chips' own gesture by another route — it takes the authored ramp out of
-  // ConversionSettings, so a refusal still standing has nothing left to refuse against.
-  const applyReset = (patch: Partial<ConversionSettings>) => {
-    if (patch.charset !== undefined) {
-      setRefusal(null)
-    }
-    onChange(patch)
+  const resetControl = (tool: ToolId, label: string) => {
+    const patch = resetPatch(settings, TOOL_KEYS[tool])
+    // The Charset has a second way of being off its default that ConversionSettings cannot see: a
+    // refused ramp stands in the field rather than in the settings, so the patch is empty while the
+    // panel still shows the refusal. Without this the `↺` would announce "already at its default"
+    // next to an error only it can clear.
+    const refused = tool === 'charset' && refusal !== null
+    return (
+      <ResetTool
+        label={label}
+        atDefault={Object.keys(patch).length === 0 && !refused}
+        // A Charset reset is the chips' own gesture by another route — it takes the authored ramp
+        // out of ConversionSettings, so a refusal still standing has nothing left to refuse against.
+        onReset={() => {
+          if (tool === 'charset') {
+            setRefusal(null)
+          }
+          onChange(patch)
+        }}
+      />
+    )
   }
-
-  const resetControl = (tool: ToolId, label: string) => (
-    <ResetTool label={label} patch={resetPatch(settings, TOOL_KEYS[tool])} onReset={applyReset} />
-  )
 
   // A slider outside the focused group is hidden rather than unmounted, which is what lets one
   // markup tree serve both densities: `hidden` takes it out of the accessibility tree too, so a
