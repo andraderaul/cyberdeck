@@ -1,7 +1,14 @@
 import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
 import { TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
-import { type MutableRefObject, type RefObject, useEffect, useRef, useState } from 'react'
+import {
+  type MutableRefObject,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import type { Chain } from '../glitch/chain'
 import { type ChainRunner, createChainRunner } from '../glitch/chain-runner'
 import { sourceDimensions } from '../glitch/image-utils'
@@ -16,6 +23,24 @@ import WipeDivider from './wipe-divider'
  * samples a frame and hands it over, not how much work it does with it.
  */
 export const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
+
+/**
+ * What a failed *live* frame gets instead of the ErrorBoundary — logged, and then the loop ticks
+ * on. ASCII//Convert's canvas answers the same way for the same reasons.
+ *
+ * The loop already treats a lost frame as something the next tick corrects (the drop rule), and a
+ * failed one is in that class: there is a fresh frame ~66 ms behind it. Routing it to the boundary
+ * instead would trade a transient failure for a permanent one — `ErrorBoundary` has no reset path,
+ * so it replaces the canvas *and the overlay standing on it* for good, and that overlay carries
+ * `clear`, mirror, switch-camera and the Recording **stop** control. A live render that fails once
+ * must not be what takes the stop button away from a recording in progress; the fallback's advice
+ * ("try a different image or adjust settings") is also advice it can never act on, because the
+ * child never re-mounts. A Source Image has no next tick, so its path keeps the boundary.
+ */
+function reportLiveFrameFailure(err: unknown): void {
+  // biome-ignore lint/suspicious/noConsole: the only trace a frame the loop rides out leaves
+  console.error('[glitch] live frame failed', err)
+}
 
 /**
  * Chrome shared by everything sitting on top of the canvas — see ADR 0013. `bg-bg` is the
@@ -126,6 +151,24 @@ export default function GlitchCanvas({
     [],
   )
 
+  // A **Source Image** render that fails belongs to the ErrorBoundary in `app.tsx`, whose fallback
+  // — "render failed — try a different image or adjust settings" — is written for exactly this and
+  // nothing else. Only the Source Image: the fallback's advice is act-on-able because there is no
+  // next frame coming, and the live loop's answer is `reportLiveFrameFailure` above instead.
+  // Deliberately not ADR 0006's toast: that mechanism is for *operational* errors (an Export, a
+  // Capture, a storage write), acts the user just took with the program otherwise intact and a next
+  // attempt available. A render failure is not one of those — the canvas is the whole surface, and
+  // a toast over a frozen picture leaves nothing to do.
+  //
+  // Since ADR 0002 the render is a promise, so a throw no longer leaves the effect on its own and
+  // the boundary never sees it. Re-throwing it from the next render is what puts it back in reach.
+  const [renderError, setRenderError] = useState<unknown>(null)
+  // Wrapped in an updater because an `Error` is fine as state but a thrown *function* would be read
+  // as one — the setter cannot tell them apart.
+  const surfaceRenderError = useCallback((err: unknown) => {
+    setRenderError(() => err)
+  }, [])
+
   // The Wipe (#372), off until asked for. `compareRef` is null exactly while it is off, which is
   // what the shell reads to decide whether the Source half costs anything at all — nothing about
   // the render loop changes when nobody is comparing.
@@ -168,18 +211,19 @@ export default function GlitchCanvas({
         await renderGlitchFrame(frame)
       }
     }
-    void paint()
+    paint().catch(surfaceRenderError)
     return () => {
       superseded = true
     }
-  }, [sourceImage, chain, seed, isMirrored, canvasRef, isWiping])
+  }, [sourceImage, chain, seed, isMirrored, canvasRef, isWiping, surfaceRenderError])
 
   // rAF loop throttled to ~15fps — the Chain runs on a Worker (ADR 0002), so what happens on this
   // thread is the sampling and the paint. The Seed is held across frames by default: that's what
   // keeps the corruption pattern from boiling. `onAdvanceSeed` is what makes the boiling a choice —
   // the loop asks for the next arrangement once a frame has actually been painted, so the Seed
   // advances per *painted* frame rather than per rAF tick, and a frame the runner dropped moves
-  // nothing.
+  // nothing. A frame that *fails* is in the same class — hence `reportLiveFrameFailure` rather than
+  // the boundary the Source Image path uses.
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !liveSource) {
@@ -197,7 +241,7 @@ export default function GlitchCanvas({
       }
       lastFrameTime.current = now
       if (video.readyState >= HAVE_ENOUGH_DATA) {
-        void renderGlitchFrame({
+        renderGlitchFrame({
           source: video,
           canvas,
           hidden: hiddenRef.current,
@@ -208,14 +252,16 @@ export default function GlitchCanvas({
           // Read per tick rather than closed over: the loop then needs no rebuilding when the Wipe
           // is toggled, and it is null the moment the divider unmounts.
           compare: compareRef.current,
-        }).then((outcome) => {
-          // Same reason editor-state.ts refuses ADVANCE_SEED while the animation is off: the loop
-          // and React's render are on different clocks, and a frame still in flight when the loop
-          // is torn down must not move the arrangement afterwards.
-          if (outcome === 'painted' && !stopped) {
-            onAdvanceSeed?.()
-          }
         })
+          .then((outcome) => {
+            // Same reason editor-state.ts refuses ADVANCE_SEED while the animation is off: the loop
+            // and React's render are on different clocks, and a frame still in flight when the loop
+            // is torn down must not move the arrangement afterwards.
+            if (outcome === 'painted' && !stopped) {
+              onAdvanceSeed?.()
+            }
+          })
+          .catch(reportLiveFrameFailure)
       }
     }
 
@@ -231,6 +277,11 @@ export default function GlitchCanvas({
   // Wipe can take whichever is there and lay the picture out on that Source's own aspect.
   const source = liveSource ?? sourceImage
   const sourceSize = source === null ? null : sourceDimensions(source)
+
+  // After every hook, so the throw never changes how many ran.
+  if (renderError) {
+    throw renderError
+  }
 
   return (
     <div className="relative w-full h-full">

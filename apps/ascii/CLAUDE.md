@@ -35,9 +35,9 @@ Single-page React/TS/Vite app. Fully client-side — no backend server. AI analy
 2. `App` holds `ConversionSettings` state and passes both down to `AsciiCanvas`
 3. `AsciiCanvas` keeps a **hidden off-screen canvas** (`hiddenRef`) sized `cols × rows` — this is used only for pixel sampling via `getImageData`. The visible canvas is sized in pixels. These two canvases must stay separate (see ADR 0001)
 4. `AsciiCanvas` decides *when* to render: once per settings change via `useEffect` for Source Image, or in a `requestAnimationFrame` loop throttled to ~15fps for Live Source (see ADR 0002). It calls `renderFrame()` from `src/ascii/render-frame.ts`
-5. `renderFrame()` in `src/ascii/render-frame.ts` orchestrates a single render: computes `cols × rows` from canvas size and resolution, draws source onto the hidden canvas → `convertImage()` → `computeFrame()` → `paintFrame()`. Returns `false` (skips render) if canvas is too small to fit any character; returns `true` on success. Mirror is threaded in here as an `isMirrored` flag and applied to the *sampling* `drawImage`, so preview and every Export carry the flip (ADR 0016) — never a CSS transform on the visible canvas
-6. `computeFrame()` is **pure** — given cells and settings, returns `RenderInstruction[]` and `asciiRows` with no DOM access (see ADR 0005)
-7. `paintFrame()` is the only function that writes to `CanvasRenderingContext2D` for rendering
+5. `renderFrame()` in `src/ascii/render-frame.ts` orchestrates a single render: computes `cols × rows` from canvas size and resolution, `sampleSource()` draws the Source onto the hidden canvas and reads its pixels, an `AsciiFrameRunner` runs `convertImage()` → `computeFrame()`, and `paintFrame()` draws what comes back. **Async** (ADR 0002 — the two pure stages run on a Worker) and reports `painted` / `dropped` / `skipped`: `skipped` when there is no 2D context or the canvas is too small to fit a character, `dropped` when the runner had no cells for this frame. Mirror is threaded in here as an `isMirrored` flag and applied to the *sampling* `drawImage`, so preview and every Export carry the flip (ADR 0016) — never a CSS transform on the visible canvas
+6. `convertImage()` and `computeFrame()` are **pure** and run **off the main thread** (ADR 0002): given the sampled pixels and the settings, they return `RenderInstruction[]` and `asciiRows` with no DOM access (ADR 0005). `frame-job.ts` is that pair as one function; `frame-runner.ts` decides which thread it runs on
+7. `paintFrame()` stays in the shell and is the only function that writes to `CanvasRenderingContext2D` for rendering — which is *why* the port stopped where it did
 8. `onConverted` callback sends the region-cropped result up to `App` — the plain-text rows for TXT
    Export and the same grid as `RenderInstruction[]`, colour still attached, for HTML Export. It is
    a second `computeFrame()` over the cropped cells rather than a slice of the instructions, so each
@@ -160,13 +160,16 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   glyphs is refused with the reason, so a half-typed ramp never reaches `ConversionSettings` and
   the canvas keeps the last Charset that read cleanly. It rejects rather than clamps and returns
   its reason rather than throwing, for `suggestion.ts`' reasons
-- `src/ascii/converter.ts` — `convertImage()`, `getAsciiChar()`, luminosity math, and the two
+- `src/ascii/converter.ts` — `sampleSource()`, `convertImage()`, `getAsciiChar()`, luminosity math, and the two
   opt-in passes over the sampled grid (both pure, ADR 0005): the Dithering, then the Edge Glyph
   (Sobel). That order is load-bearing and the file says why — a Dithering *manufactures* the sharp
   neighbour differences Sobel hunts for, so the gradient reads the undithered luminance and its
   stroke wins over whatever character the pattern chose. Measured, it is `floyd` that would invent
   contours (a flat field comes back with two dozen); `bayer`'s swing reaches only ~71 of the 255 the
-  threshold wants, so the rule is free for it today and stated for both anyway
+  threshold wants, so the rule is free for it today and stated for both anyway.
+  `sampleSource()` is the file's whole DOM surface and the reason the rest of it can cross a thread
+  (ADR 0002): the clear, the mirrored `drawImage` and the `getImageData` on the hidden canvas
+  (ADR 0001), split out so `convertImage()` takes the pixels rather than the context
 - `src/ascii/palette.ts` — `quantizePalette()`, `paletteColor()`: the `adaptive` Color Mode's
   quantizer, pure over the AsciiCell grid (ADR 0005) and called only by `computeFrame()`. A cell is
   painted the mean of the fixed 4×4×4 lattice bin it is *in*, never the nearest of a ranked few —
@@ -183,7 +186,23 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/ascii/renderer.ts` — `computeFrame()` (pure), `paintFrame()` (side effects) — see ADR 0005.
   `CANVAS_BACKGROUND` is the ground both the canvas and the HTML Export stand on: the user's art,
   so a literal rather than a Theme token (ADR 0013)
-- `src/ascii/render-frame.ts` — `renderFrame()`: pipeline orchestrator — cols/rows math, convertImage → computeFrame → paintFrame; returns `boolean`
+- `src/ascii/render-frame.ts` — `renderFrame()`: pipeline orchestrator — cols/rows math,
+  sampleSource → runner (convertImage → computeFrame) → paintFrame; async, returns
+  `painted` / `dropped` / `skipped`
+- `src/ascii/frame-job.ts` — `runFrameJob()`, `AsciiFrameJob`, `AsciiFrameResult`: what crosses the
+  thread boundary and the one function that runs on the far side of it (ADR 0002). Kept apart from
+  the Worker entry so the *work* is a pure function a test can call. The inbound pixels transfer;
+  the result cannot — `RenderInstruction[]` and `asciiRows` are not Transferables, and the file says
+  so rather than encoding glyphs and CSS colours into typed arrays to make the legs symmetric
+- `src/ascii/frame-runner.ts` — `createFrameRunner()`, `createWorkerFrameRunner()`,
+  `createSyncFrameRunner()`: which thread a frame is converted on, and the three rules that come
+  with the answer — at most one frame in flight and one waiting (a newer frame *replaces* the
+  waiting one, never queues behind it), a synchronous fallback wherever `Worker` is missing or
+  refused or has died, and every promise settled so no caller waits forever. GLITCH's
+  `chain-runner.ts` shape on purpose (ADR 0014's duplication is the signal, not yet the trigger):
+  one answer to backpressure on the deck rather than two
+- `src/ascii/frame-worker.ts` — the Worker entry. Three lines, deliberately: everything it could get
+  wrong lives in `frame-job.ts`, which has tests
 - `src/ascii/fit.ts` — `computeContainFit()`, `sliceToRegion()` (crops the *cells*, upstream of
   `computeFrame()`, which leaves TXT and HTML Export downstream of one crop by construction): the
   centered "contain" sub-region of
@@ -198,7 +217,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   the whole row under a single canvas frame. Renders at twice the box and is drawn down, so
   a glyph keeps the size its Resolution gives it and the picture reads as the canvas seen small. A
   Live Source is frozen into one still first — the loop runs at 15fps (ADR 0002), and one extra
-  conversion per Preset per frame is not what a row of chips is worth
+  conversion per Preset per frame is not what a row of chips is worth. The one caller that asks for
+  the *synchronous* runner by name: ten conversions in a burst, and the Worker runner's single
+  waiting slot would drop nine of them
 
 **AI analysis**
 - `src/ai/types.ts` — `AIConfig`, `AIProviderName`, `AIProvider`, `Analysis`, `ThreatLevel`, `AnalysisState`

@@ -12,7 +12,7 @@ import {
 // thumbnails go *through* it, unaltered. Hence the spy rather than a second painted canvas.
 vi.mock('./render-frame', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./render-frame')>()),
-  renderFrame: vi.fn(() => true),
+  renderFrame: vi.fn(async () => 'painted'),
 }))
 
 const { renderFrame } = await import('./render-frame')
@@ -80,14 +80,14 @@ describe('derivePresetThumbnails', () => {
     vi.restoreAllMocks()
   })
 
-  it('returns one thumbnail per Preset, keyed by its id', () => {
-    const thumbnails = derivePresetThumbnails(makeImage(400, 300))
+  it('returns one thumbnail per Preset, keyed by its id', async () => {
+    const thumbnails = await derivePresetThumbnails(makeImage(400, 300))
 
     expect(Object.keys(thumbnails)).toEqual(PRESETS.map((preset) => preset.id))
   })
 
-  it('converts each Preset through the ordinary pipeline, on its own settings verbatim', () => {
-    derivePresetThumbnails(makeImage(400, 300))
+  it('converts each Preset through the ordinary pipeline, on its own settings verbatim', async () => {
+    await derivePresetThumbnails(makeImage(400, 300))
 
     expect(renderFrameMock).toHaveBeenCalledTimes(PRESETS.length)
     PRESETS.forEach((preset, index) => {
@@ -96,32 +96,32 @@ describe('derivePresetThumbnails', () => {
     })
   })
 
-  it('renders into a box that supersamples the one it is drawn in', () => {
-    derivePresetThumbnails(makeImage(400, 300))
+  it('renders into a box that supersamples the one it is drawn in', async () => {
+    await derivePresetThumbnails(makeImage(400, 300))
 
     const canvas = renderFrameMock.mock.calls[0][1]
     expect(canvas.width).toBeGreaterThan(THUMBNAIL_WIDTH)
     expect(canvas.width / canvas.height).toBeCloseTo(THUMBNAIL_WIDTH / THUMBNAIL_HEIGHT)
   })
 
-  it('takes one snapshot of a Live Source, so every Preset reads the same instant', () => {
+  it('takes one snapshot of a Live Source, so every Preset reads the same instant', async () => {
     const video = makeVideo(640, 480)
 
-    derivePresetThumbnails(video)
+    await derivePresetThumbnails(video)
 
     const sources = new Set(renderFrameMock.mock.calls.map((call) => call[0]))
     expect(sources.size).toBe(1)
     expect(sources.has(video)).toBe(false)
   })
 
-  it('omits a Preset the pipeline refused to render rather than inventing one', () => {
-    renderFrameMock.mockImplementation(() => false)
+  it('omits a Preset the pipeline refused to render rather than inventing one', async () => {
+    renderFrameMock.mockImplementation(async () => 'skipped')
 
-    expect(derivePresetThumbnails(makeImage(400, 300))).toEqual({})
+    expect(await derivePresetThumbnails(makeImage(400, 300))).toEqual({})
   })
 
-  it('derives nothing from a Live Source with no frame decoded yet', () => {
-    expect(derivePresetThumbnails(makeVideo(0, 0))).toEqual({})
+  it('derives nothing from a Live Source with no frame decoded yet', async () => {
+    expect(await derivePresetThumbnails(makeVideo(0, 0))).toEqual({})
     expect(renderFrameMock).not.toHaveBeenCalled()
   })
 })

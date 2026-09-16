@@ -1,6 +1,7 @@
-import { convertImage } from './converter'
-import { computeContainFit, sliceToRegion } from './fit'
-import { computeFrame, paintFrame, type RenderInstruction } from './renderer'
+import { sampleSource } from './converter'
+import { computeContainFit } from './fit'
+import type { AsciiFrameRunner } from './frame-runner'
+import { paintFrame, type RenderInstruction } from './renderer'
 import { type ConversionSettings, MONOSPACE_CHAR_WIDTH_RATIO } from './types'
 
 /**
@@ -49,35 +50,60 @@ export function monoFontFamily(): string {
 }
 
 /**
+ * What became of one frame.
+ *
+ * `dropped` is not a failure: it is the runner saying this frame has no cells coming — either a
+ * newer frame took its place, or the Worker died holding its pixels (`frame-runner.ts`). A Live
+ * Source ignores it, since the next tick brings a fresher frame anyway; a Source Image, which has
+ * no next tick, asks again.
+ */
+export type AsciiFrameOutcome = 'painted' | 'dropped' | 'skipped'
+
+/**
+ * Impure: the shell around the pure core. Sizes the hidden sampling canvas (ADR 0001), draws the
+ * Source onto it, hands the pixels to the runner, and paints what comes back. It is the only place
+ * the DOM and the pure core meet (ADR 0005).
+ *
+ * The conversion itself runs on a Worker thread (ADR 0002), which is why this is async. `sampleSource`
+ * and `paintFrame` stay here: the hidden canvas is a DOM object, and `paintFrame` is the single
+ * point that writes to the visible one. Only `convertImage` and `computeFrame` cross, and the
+ * sampled buffer crosses with them by transfer — so nothing here may read it after handing it over.
+ *
  * Mirror flips the Source on the sampling draw, *before* the pixels become cells (ADR 0016) —
  * not with a CSS transform on the visible canvas, which mirrored the preview alone and left both
  * Exports disagreeing with it. The character grid is genuinely mirrored, so every Export follows.
  *
+ * The sampling happens before the runner is asked, even when the runner is busy and will drop the
+ * frame. That is deliberate: a fresh sample replaces the one waiting its turn, so what eventually
+ * runs is the newest frame rather than the oldest queued one (`frame-runner.ts`).
+ *
  * @param onConverted receives the region-cropped result both text Exports read: the plain rows for
  *   TXT Export, and the same grid as RenderInstructions — character *and* colour — for HTML Export.
- * @returns `false` when the render was skipped — no 2D context, or the canvas is too
- *   small to fit a single character. `true` when a frame was painted.
+ * @returns `skipped` when there was nothing to render — no 2D context, or a canvas too small to fit
+ *   a single character; `dropped` when the frame has no cells coming; `painted` when the canvas was
+ *   written.
  */
-export function renderFrame(
+export async function renderFrame(
   source: CanvasImageSource,
   canvasEl: HTMLCanvasElement,
   hiddenEl: HTMLCanvasElement,
   settings: ConversionSettings,
   fontFamily: string,
+  runner: AsciiFrameRunner,
   onConverted?: (rows: string[], instructions: RenderInstruction[]) => void,
   isMirrored = false,
-): boolean {
+): Promise<AsciiFrameOutcome> {
   const ctx = canvasEl.getContext('2d')
   const hiddenCtx = hiddenEl.getContext('2d')
   if (!ctx || !hiddenCtx) {
-    return false
+    return 'skipped'
   }
 
-  const { resolution, brightness, contrast, charset, edgeGlyphs, dithering } = settings
+  const { resolution } = settings
   const { cols, rows } = gridSize(canvasEl.width, canvasEl.height, resolution)
 
   if (cols < 1 || rows < 1) {
-    return false
+    return 'skipped'
   }
 
   hiddenEl.width = cols
@@ -86,25 +112,18 @@ export function renderFrame(
   const { w: srcW, h: srcH } = sourceDimensions(source)
   const region = computeContainFit(srcW, srcH, cols, rows)
 
-  const cells = convertImage(
-    hiddenCtx,
-    source,
-    cols,
-    rows,
-    { brightness, contrast, charset, edgeGlyphs, dithering },
-    region,
-    isMirrored,
-  )
-  const { instructions } = computeFrame(cells, settings)
-  paintFrame(ctx, instructions, resolution, fontFamily)
-
-  if (onConverted) {
-    // PNG keeps the framed canvas (painted above); the text Exports get the region cropped tight,
-    // with no letterbox padding (ADR 0010). Recomputing over the cropped cells rather than slicing
-    // the instructions is what rebases each x/y onto the cropped grid's own origin — a sliced
-    // instruction would carry a coordinate the exported document no longer has a cell for.
-    const cropped = computeFrame(sliceToRegion(cells, region), settings)
-    onConverted(cropped.asciiRows, cropped.instructions)
+  const pixels = sampleSource(hiddenCtx, source, cols, rows, region, isMirrored)
+  const frame = await runner.run({ pixels, cols, rows, settings, region, cropped: !!onConverted })
+  if (frame === null) {
+    return 'dropped'
   }
-  return true
+
+  paintFrame(ctx, frame.instructions, resolution, fontFamily)
+
+  // PNG keeps the framed canvas (painted above); the text Exports get the region cropped tight,
+  // with no letterbox padding (ADR 0010).
+  if (onConverted && frame.cropped) {
+    onConverted(frame.cropped.asciiRows, frame.cropped.instructions)
+  }
+  return 'painted'
 }

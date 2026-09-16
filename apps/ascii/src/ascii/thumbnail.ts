@@ -6,6 +6,7 @@
 // advertise something the chip does not apply. What makes it cheap is the *box* — a fraction of the
 // canvas' cells — and never a fraction of the settings.
 
+import { createSyncFrameRunner } from './frame-runner'
 import { resizeImage, SOURCE_SAMPLE_MAX_WIDTH } from './image-utils'
 import { PRESETS } from './presets'
 import { gridSize, monoFontFamily, renderFrame } from './render-frame'
@@ -75,9 +76,9 @@ function snapshotSource(source: HTMLImageElement | HTMLVideoElement): CanvasImag
  * then reads as the name it has always been, which is the state this whole feature improves on and
  * a correct answer where a canvas is unavailable.
  */
-export function derivePresetThumbnails(
+export async function derivePresetThumbnails(
   source: HTMLImageElement | HTMLVideoElement,
-): Record<string, string> {
+): Promise<Record<string, string>> {
   const still = snapshotSource(source)
   if (!still) {
     return {}
@@ -91,10 +92,17 @@ export function derivePresetThumbnails(
   canvas.height = THUMBNAIL_HEIGHT * THUMBNAIL_SUPERSAMPLE
   const hidden = document.createElement('canvas')
   const fontFamily = monoFontFamily()
+  // The synchronous runner, deliberately: the row is a burst of ten conversions over one canvas,
+  // and the Worker runner's single waiting slot would drop nine of them (ADR 0002,
+  // `frame-runner.ts`). A Worker of its own would be a second thread for work measured in a
+  // fraction of one canvas frame — the box is what makes this cheap, and it already is.
+  const runner = createSyncFrameRunner()
 
   const thumbnails: Record<string, string> = {}
   for (const preset of PRESETS) {
-    if (renderFrame(still, canvas, hidden, preset.settings, fontFamily)) {
+    // biome-ignore lint/performance/noAwaitInLoops: sequential by design — the whole row shares one pair of canvases, so each Preset has to be read off the visible one before the next paints over it. On the synchronous runner this is a microtask per Preset, not a round trip.
+    const outcome = await renderFrame(still, canvas, hidden, preset.settings, fontFamily, runner)
+    if (outcome === 'painted') {
       thumbnails[preset.id] = canvas.toDataURL()
     }
   }

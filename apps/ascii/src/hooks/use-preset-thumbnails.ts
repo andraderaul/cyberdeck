@@ -14,6 +14,26 @@ import { derivePresetThumbnails } from '../ascii/thumbnail'
 const derivedForImage = new WeakMap<HTMLImageElement, Record<string, string>>()
 
 /**
+ * The derivation, with a failed one answered the way a refused Preset already is: left out, so the
+ * chip reads as the name it was before this feature existed (`thumbnail.ts`).
+ *
+ * Deliberately not the canvas' ErrorBoundary — the Control Strip is that boundary's *sibling* in
+ * `app.tsx`, so a re-throw from here takes the whole program down over a row of decorations. And
+ * deliberately not ADR 0006's toast: those are operational errors, acts the user just took and can
+ * take again. Nobody asked for these, and the row already has an honest way to say it has none.
+ *
+ * Quiet in the UI is not the same as quiet everywhere, though: a real bug in `thumbnail.ts` would
+ * read as "the chips never got pictures" for good, so the console is what keeps it diagnosable.
+ */
+function derive(source: HTMLImageElement | HTMLVideoElement): Promise<Record<string, string>> {
+  return derivePresetThumbnails(source).catch((err: unknown) => {
+    // biome-ignore lint/suspicious/noConsole: the only trace a row that stays nameless leaves
+    console.error('[ascii] PRESETS thumbnails could not be derived', err)
+    return {}
+  })
+}
+
+/**
  * The PRESETS row's thumbnails — derived once per Source, never once per frame.
  *
  * The Source is the effect's only dependency, and there is nothing else it could be: a Preset is a
@@ -33,23 +53,49 @@ export function usePresetThumbnails(
       return
     }
 
+    // Async because the conversion runs through a FrameRunner now (ADR 0002) — on the synchronous
+    // one, so the whole row still settles in a single task, but the seam is a promise either way.
+    let cancelled = false
+    let stopWaiting: (() => void) | undefined
+
     const remembered = source instanceof HTMLImageElement ? derivedForImage.get(source) : undefined
-    const derived = remembered ?? derivePresetThumbnails(source)
-    setThumbnails(derived)
-    if (source instanceof HTMLImageElement && Object.keys(derived).length > 0) {
-      derivedForImage.set(source, derived)
+    const settle = (derived: Record<string, string>) => {
+      if (cancelled) {
+        return
+      }
+      setThumbnails(derived)
+      if (source instanceof HTMLImageElement && Object.keys(derived).length > 0) {
+        derivedForImage.set(source, derived)
+      }
+
+      // A Live Source the camera has decoded no frame for yet has nothing to snapshot, and the
+      // derivation says so by handing back nothing rather than a row of blank chips — so wait for
+      // `loadeddata`, the event that promises there is now a frame to read, and ask again. Asking
+      // first costs nothing: the refusal lands before any conversion runs.
+      if (!(source instanceof HTMLVideoElement) || Object.keys(derived).length > 0) {
+        return
+      }
+      const onFirstFrame = () => {
+        void derive(source).then((again) => {
+          if (!cancelled) {
+            setThumbnails(again)
+          }
+        })
+      }
+      source.addEventListener('loadeddata', onFirstFrame, { once: true })
+      stopWaiting = () => source.removeEventListener('loadeddata', onFirstFrame)
     }
 
-    // A Live Source the camera has decoded no frame for yet has nothing to snapshot, and the
-    // derivation says so by handing back nothing rather than a row of blank chips — so wait for
-    // `loadeddata`, the event that promises there is now a frame to read, and ask again. Asking
-    // first costs nothing: the refusal lands before any conversion runs.
-    if (!(source instanceof HTMLVideoElement) || Object.keys(derived).length > 0) {
-      return
+    if (remembered) {
+      settle(remembered)
+    } else {
+      void derive(source).then(settle)
     }
-    const onFirstFrame = () => setThumbnails(derivePresetThumbnails(source))
-    source.addEventListener('loadeddata', onFirstFrame, { once: true })
-    return () => source.removeEventListener('loadeddata', onFirstFrame)
+
+    return () => {
+      cancelled = true
+      stopWaiting?.()
+    }
   }, [source])
 
   return thumbnails

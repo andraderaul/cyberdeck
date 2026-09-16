@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted (amended in #316 — GLITCH//Studio took the Worker upgrade path; see Implementation Notes)
+Accepted (amended in #316 and #326 — both programs have now taken the Worker upgrade path; see
+Implementation Notes)
 
 ## Context
 
@@ -38,8 +39,8 @@ eye does not perceive a difference above ~10fps for ASCII art. The implementatio
 
 **Negative:**
 - All conversion CPU runs on the UI thread, so very high resolutions or slow hardware can jank. The
-  upgrade path (Web Worker) is recorded below. **GLITCH//Studio has taken it (#316);
-  ASCII//Convert has not** — see the amendment.
+  upgrade path (Web Worker) is recorded below. **Both programs have now taken it** — GLITCH//Studio
+  in #316, ASCII//Convert in #326 — and they took it at two different seams; see the amendments.
 
 ## Related ADRs
 
@@ -124,9 +125,80 @@ was `0` until now; it is fetched when a Source is opened, never at first paint, 
 the precached shell (ADR 0027) — a running program fetches it, and an offline user who could not
 would silently drop to the slow path.
 
-### ASCII//Convert has not taken it
+### Amendment (#326) — ASCII//Convert took it, at a different seam
 
 Its per-frame work is not one function but a pure conversion, a pure `computeFrame`, and a
 `paintFrame` that draws a glyph per cell straight onto the canvas. Only the first two could cross
-without `OffscreenCanvas`, and the paint is a real share of its frame — so the port is a different
-decision there, not the same one applied twice. `ascii-canvas.tsx` still carries the pointer here.
+without `OffscreenCanvas`, and that is exactly what crossed: **`convertImage()` and `computeFrame()`
+now run on a dedicated Worker** (`src/ascii/frame-worker.ts`, `frame-job.ts`, `frame-runner.ts`),
+while `paintFrame()` stays on the main thread and remains the only function writing to the visible
+canvas (ADR 0005). The Worker returns `RenderInstruction[]` and `asciiRows`; the shell paints.
+
+So the seam is not GLITCH's applied twice. There, one pure function is the whole per-frame cost and
+the shell's remaining work is a `putImageData`. Here the shell keeps a real share of the frame — a
+`fillText` per cell — and what it hands over is the part that has no DOM in it. The three rules
+above carry across unchanged (drop, never queue; a synchronous fallback always; a Source Image asks
+once more when a dying Worker took its pixels), because they are properties of the *runner*, not of
+what it runs: `frame-runner.ts` is `chain-runner.ts`'s shape, deliberately, so the deck has one
+answer to backpressure rather than two.
+
+Two things are this program's own:
+
+- **The sampling draw stays here, and had to be split out to do so.** `convertImage()` used to take
+  the sampling context and do its own `drawImage` + `getImageData`; that half is now
+  `sampleSource()`, on the main thread with the hidden canvas ADR 0001 gave it, and the Mirror still
+  rides on that draw ahead of everything (ADR 0016) — so the preview, the PNG, the TXT and the HTML
+  keep agreeing by construction, and nothing past the boundary can tell a flipped frame from an
+  unflipped one. What crosses is the buffer it returns.
+- **Only the inbound leg transfers.** The sampled pixels go by transfer, and they are the one large
+  value in the message. What comes back cannot: `RenderInstruction[]` is an array of objects and
+  `asciiRows` an array of strings, and neither is a Transferable. So the return leg is a structured
+  clone, and `frame-job.ts` says so rather than inventing a typed-array encoding of glyphs and CSS
+  colours to make the two legs look symmetric.
+
+The PRESETS row is the one caller that deliberately asks for the *synchronous* runner: it converts
+ten Presets in a burst over one canvas, and the single waiting slot would drop nine of them.
+
+`frame-job.test.ts` pins all three Exports for all ten Presets by digest, recorded from `main`
+before the port — the assertion the whole change had to answer to. The pure core is unit-tested
+directly, with no Worker in the room, exactly as before.
+
+The cost is the same one GLITCH paid: a second copy of the two stages in the build (2.47 kB gzipped,
+`bundle-budget.config.mjs`), fetched when a Source is opened and part of the precached shell
+(ADR 0027).
+
+**The paint is asynchronous here too, and this program has more surface for it.** PNG Export,
+Capture, Recording and AI Analysis are reads of the visible canvas, so #316's paragraph applies to
+them word for word. TXT and HTML Export are the part GLITCH has no counterpart for: they never touch
+the canvas, they read `asciiRows` and the `RenderInstruction[]` that `onConverted` hands `App` — and
+that callback now fires a Worker round trip after the settings change rather than inside the same
+commit. So the same window is reached by a second route: a slider moved and TXT Export hit in the
+same breath writes the grid from before the edit. The verdict is #316's, for #316's reasons — a
+valid render of settings the user held a moment earlier, never a torn or half-converted one,
+self-corrected by the next Export, and fixing it means threading a render concern through
+components that have no other reason to know one exists. What the window costs is *when*, never
+*what*: the drop rule keeps the newest frame, so the grid those two Exports eventually read is
+always the one the Editor holds.
+
+**The return leg is a structured clone, and it was measured rather than assumed.** `computeFrame`
+emits one instruction per cell, blanks included, so the count is the grid and not a property of the
+picture. Measured in headless Chromium on Apple silicon (medians of 40; the main thread's share is
+`structuredClone` minus a `MessageChannel.postMessage`, which serializes synchronously and does not
+deserialize): at **24,000 cells** — a ~1600×900 canvas at Resolution 10 — the clone costs **~4.5 ms**
+of main-thread time per frame, against **0.7 ms** for the two stages that left on the default Preset
+and **2.5 ms** with Edge Glyphs, `floyd` and `adaptive` all on. At **150,000 cells** — the same
+canvas at Resolution 4 — it is **~32 ms** against **3.4 ms** and **16 ms**. The frame budget is 66 ms.
+
+Read honestly, there is no crossover in the measured range. At **both** grids the clone costs more
+main-thread time than the two stages that left, and the margin grows with the grid rather than
+closing: +2.0 to +3.8 ms at 24,000 cells, +16 to +28.6 ms at 150,000. At the fine end the blocking
+burst is *larger* than the pipeline it replaced — ~32 ms against 16 ms, of a 66 ms budget — so a
+Live Source at Resolution 4 may well be slower than it was before the port, not merely differently
+shaped.
+
+What the port does buy is that the conversion itself is off this thread and what is left on it is
+one deserialize rather than a whole pipeline. The output is unchanged either way, which is why this
+is recorded rather than reverted — and it is why the encoding `frame-job.ts` declined is the next
+move rather than a contingency: char codes in a `Uint16Array`, colours packed into a `Uint32Array`,
+x and y dropped entirely since both are derivable from the index and `cols` — three Transferables
+instead of an array of objects, which takes the return leg's cost away rather than trimming it.

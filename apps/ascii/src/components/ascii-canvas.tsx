@@ -1,13 +1,51 @@
 import { formatElapsedTime } from '@cyberdeck/deck-kit/recording'
 import { TOUCH_TARGET_HEIGHT, TOUCH_TARGET_ICON } from '@cyberdeck/deck-kit/ui'
 import { cn, isTouchDevice } from '@cyberdeck/deck-kit/utils'
-import { type RefObject, useEffect, useRef } from 'react'
+import {
+  type MutableRefObject,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
+import { type AsciiFrameRunner, createFrameRunner } from '../ascii/frame-runner'
 import { resizeImage } from '../ascii/image-utils'
 import { monoFontFamily, renderFrame } from '../ascii/render-frame'
 import type { RenderInstruction } from '../ascii/renderer'
 import type { ConversionSettings } from '../ascii/types'
 
 const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
+
+/**
+ * What a failed *live* frame gets instead of the ErrorBoundary — logged, and then the loop ticks
+ * on. GLITCH//Studio's canvas answers the same way for the same reasons.
+ *
+ * The loop already treats a lost frame as something the next tick corrects (the drop rule), and a
+ * failed one is in that class: there is a fresh frame ~66 ms behind it. Routing it to the boundary
+ * instead would trade a transient failure for a permanent one — `ErrorBoundary` has no reset path,
+ * so it replaces the canvas *and the overlay standing on it* for good, and that overlay carries
+ * `clear`, mirror, switch-camera and the Recording **stop** control. A live render that fails once
+ * must not be what takes the stop button away from a recording in progress; the fallback's advice
+ * ("try a different image or adjust settings") is also advice it can never act on, because the
+ * child never re-mounts. A Source Image has no next tick, so its path keeps the boundary.
+ */
+function reportLiveFrameFailure(err: unknown): void {
+  // biome-ignore lint/suspicious/noConsole: the only trace a frame the loop rides out leaves
+  console.error('[ascii] live frame failed', err)
+}
+
+/**
+ * The canvas' own FrameRunner, built the first time a render asks for one.
+ *
+ * Lazy rather than eager, and a plain function over the ref rather than a hook: a runner built
+ * during render would leave a Worker behind on the pass StrictMode throws away, and one built in an
+ * effect would not exist yet for the render that effect is running for.
+ */
+function frameRunner(ref: MutableRefObject<AsciiFrameRunner | null>): AsciiFrameRunner {
+  ref.current ??= createFrameRunner()
+  return ref.current
+}
 
 /**
  * Shared shape for the overlay's source-tuning buttons (mirror, switch-camera, clear). No bg-bg
@@ -71,11 +109,40 @@ export default function AsciiCanvas({
 }: Props) {
   const hiddenRef = useRef<HTMLCanvasElement>(document.createElement('canvas'))
   const renderStaticRef = useRef<(() => void) | null>(null)
+  // One runner per canvas, built on first use rather than in an effect: both render paths below
+  // reach for it, and under StrictMode a runner built during render would leave a Worker behind on
+  // the discarded pass. Torn down on unmount, where the Worker's thread actually goes away.
+  const runnerRef = useRef<AsciiFrameRunner | null>(null)
+  useEffect(
+    () => () => {
+      runnerRef.current?.dispose()
+      runnerRef.current = null
+    },
+    [],
+  )
   const onDimensionsChangeRef = useRef(onDimensionsChange)
   useEffect(() => {
     onDimensionsChangeRef.current = onDimensionsChange
   })
   const fontFamilyRef = useRef(monoFontFamily())
+
+  // A **Source Image** render that fails belongs to the ErrorBoundary in `app.tsx`, whose fallback
+  // — "render failed — try a different image or adjust settings" — is written for exactly this and
+  // nothing else. Only the Source Image: the fallback's advice is act-on-able because there is no
+  // next frame coming, and the live loop's answer is `reportLiveFrameFailure` above instead.
+  // Deliberately not ADR 0006's toast: that mechanism is for *operational* errors (an Export, a
+  // Capture, a storage write), acts the user just took with the program otherwise intact and a next
+  // attempt available. A render failure is not one of those — the canvas is the whole surface, and
+  // a toast over a frozen picture leaves nothing to do.
+  //
+  // Since ADR 0002 the render is a promise, so a throw no longer leaves the effect on its own and
+  // the boundary never sees it. Re-throwing it from the next render is what puts it back in reach.
+  const [renderError, setRenderError] = useState<unknown>(null)
+  // Wrapped in an updater because an `Error` is fine as state but a thrown *function* would be read
+  // as one — the setter cannot tell them apart.
+  const surfaceRenderError = useCallback((err: unknown) => {
+    setRenderError(() => err)
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -83,23 +150,46 @@ export default function AsciiCanvas({
       renderStaticRef.current = null
       return
     }
-    const fn = () =>
+    let superseded = false
+    const convert = () =>
       renderFrame(
         resizeImage(sourceImage),
         canvas,
         hiddenRef.current,
         settings,
         fontFamilyRef.current,
+        frameRunner(runnerRef),
         onConverted,
         isMirrored,
       )
-    renderStaticRef.current = fn
-    fn()
-  }, [sourceImage, settings, onConverted, canvasRef, isMirrored])
+    const paint = async () => {
+      // The re-ask is for **a Worker that died holding this frame's pixels**, and for nothing else.
+      // Backpressure cannot reach it: the only thing that drops the newest Source Image render is a
+      // newer one, and React runs this effect's cleanup before that newer render is ever submitted,
+      // so `superseded` is already true by the time the drop lands. What is left is the runner
+      // falling back — the pixels were transferred and left with the Worker, and a still image has
+      // no next frame to correct that with. Asking once more is enough, because by then the runner
+      // *is* the synchronous core and cannot drop.
+      if ((await convert()) === 'dropped' && !superseded) {
+        await convert()
+      }
+    }
+    const run = () => {
+      paint().catch(surfaceRenderError)
+    }
+    renderStaticRef.current = run
+    run()
+    return () => {
+      superseded = true
+    }
+  }, [sourceImage, settings, onConverted, canvasRef, isMirrored, surfaceRenderError])
 
-  // rAF loop throttled to ~15fps — see ADR 0002 for the Web Worker upgrade path, which
-  // GLITCH//Studio has taken and this program has not: `paintFrame` draws a glyph per cell straight
-  // onto the canvas, so only the two pure stages ahead of it could cross without OffscreenCanvas.
+  // rAF loop throttled to ~15fps. The two pure stages run on a Worker now (ADR 0002), so what this
+  // throttles is how often the main thread samples a frame and hands it over; `paintFrame` is what
+  // is left here, and it stays here because it is the one point that writes to the visible canvas
+  // (ADR 0005). A frame the runner drops is corrected by the next tick, which is why nothing here
+  // reads the outcome — and a frame that *fails* is corrected the same way, which is why it goes to
+  // `reportLiveFrameFailure` rather than to the boundary the Source Image path uses.
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !sourceVideo) {
@@ -123,9 +213,10 @@ export default function AsciiCanvas({
           hiddenRef.current,
           settings,
           fontFamilyRef.current,
+          frameRunner(runnerRef),
           undefined,
           isMirrored,
-        )
+        ).catch(reportLiveFrameFailure)
       }
     }
 
@@ -166,6 +257,11 @@ export default function AsciiCanvas({
       }
     }
   }, [canvasRef])
+
+  // After every hook, so the throw never changes how many ran.
+  if (renderError) {
+    throw renderError
+  }
 
   return (
     <div className="relative w-full h-full">

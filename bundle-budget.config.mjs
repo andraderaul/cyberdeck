@@ -52,9 +52,17 @@
 // that 1.30 kB back at the price of a second chunk, an async seam in the hook and a second ceiling
 // to keep. The split is worth having when a chunk is an SDK, not when it is a kilobyte.
 
+// ASCII//Convert's `lazy` went 68 → 71 for **its own Worker** (ADR 0002, #326): the second program
+// to take the upgrade path, and the second row here to be reached through no `import()` at all.
+// Measured 64.87 → 67.34, so the chunk costs 2.47 kB gzipped — the two pure stages of the pipeline,
+// emitted a second time because a worker is a second top-level module graph and the entry chunk
+// still carries them for the synchronous fallback. Unlike GLITCH's row, this one was not `0` before:
+// the three AI adapters already sat in it, and 67.34 against the old 68 left about 1% of headroom
+// where the rest of this file works on roughly 5%. The raise is that headroom, not the port.
+
 /** Gzipped kB (1 kB = 1000 B), matching what Vite prints at the end of a build. */
 export const BUNDLE_BUDGET = {
-  ascii: { entry: 76, lazy: 68 },
+  ascii: { entry: 76, lazy: 71 },
   deck: { entry: 60, lazy: 0 },
   glitch: { entry: 77, lazy: 2.6 },
   golem: { entry: 79, lazy: 0 },

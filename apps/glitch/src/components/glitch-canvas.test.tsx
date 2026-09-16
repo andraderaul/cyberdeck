@@ -1,4 +1,4 @@
-import { TOUCH_TARGET_ICON, TOUCH_TARGET_OVERLAY } from '@cyberdeck/deck-kit/ui'
+import { ErrorBoundary, TOUCH_TARGET_ICON, TOUCH_TARGET_OVERLAY } from '@cyberdeck/deck-kit/ui'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { createRef, type RefObject, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -167,6 +167,30 @@ describe('GlitchCanvas', () => {
     // the Worker died, so it has nothing left to drop the second frame with.
     await expect(renderGlitchFrame.mock.results[1].value).resolves.toBe('painted')
     expect(worker.jobs).toHaveLength(1)
+  })
+
+  // ADR 0002 made the render a promise, and a promise is what stops a throw from reaching the
+  // boundary on its own. The fallback in `app.tsx` is written for this failure by name.
+  it('sends a failed render to the ErrorBoundary rather than dropping it', async () => {
+    renderGlitchFrame.mockRejectedValue(new Error('chain failed'))
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    render(
+      <ErrorBoundary fallback={<div>render failed</div>}>
+        <GlitchCanvas
+          sourceImage={{ naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement}
+          liveSource={null}
+          chain={CHAIN}
+          seed={SEED}
+          canvasRef={createRef<HTMLCanvasElement>() as RefObject<HTMLCanvasElement>}
+          onClearSource={vi.fn()}
+        />
+      </ErrorBoundary>,
+    )
+    await act(async () => {})
+
+    expect(screen.getByText('render failed')).toBeInTheDocument()
+    consoleError.mockRestore()
   })
 
   it('does not ask again for a Source Image frame that painted', async () => {
