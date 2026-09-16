@@ -154,10 +154,17 @@ export default function App() {
     setRevertPoint(null)
   }, [])
 
-  // The two acts that move every setting at once, spelled once: an applied Suggestion and the reset
-  // to defaults. Both keep the displaced look so the move is one chip away from being undone with
-  // no re-upload involved, and both land on nobody's Preset — leaving the old chip selected would
-  // mark it merely modified, when what happened is that the user left it.
+  // The two acts that move every setting at once, spelled once: an applied Suggestion (only ever
+  // from the modal's apply — issue #308: the settings never move on their own) and the reset to
+  // defaults. Both keep the displaced look so the move is one chip away from being undone with no
+  // re-upload involved, and both land on nobody's Preset — leaving the old chip selected would mark
+  // it merely modified, when what happened is that the user left it. That snapshot is what makes
+  // the reset safe to offer with no confirmation asked first; it is retired by the first edit of
+  // the user's own, under the rule below, because by then restoring it would throw work away.
+  //
+  // Single level by design: the snapshot is overwritten rather than stacked, so a reset pressed
+  // while a Suggestion's revert stands gives back the suggested look, not the one before it — the
+  // `revert` undoes whichever of the two last ran.
   const replaceLook = useCallback(
     (next: ConversionSettings, notice: string) => {
       setRevertPoint({ settings, presetId: activePresetId })
@@ -166,22 +173,6 @@ export default function App() {
       showInfo(`${notice} — revert from the presets tab`)
     },
     [settings, activePresetId, showInfo],
-  )
-
-  // Only ever from the modal's apply — nothing here runs when an Analysis arrives (issue #308: the
-  // settings never move on their own).
-  const handleApplySuggestion = useCallback(
-    (suggestion: ConversionSettings) => replaceLook(suggestion, 'suggested conversion applied'),
-    [replaceLook],
-  )
-
-  // The revert point is what makes this destructive act safe to offer with no confirmation: it is
-  // undone by the control already standing beside it, under the rule that already governs the offer
-  // — the first edit of the user's own retires it, because by then it would throw away work instead
-  // of restoring it. The Source is untouched; only the conversion moves.
-  const handleReset = useCallback(
-    () => replaceLook(DEFAULT_SETTINGS, 'settings reset'),
-    [replaceLook],
   )
 
   const handleRevert = useCallback(() => {
@@ -348,7 +339,7 @@ export default function App() {
           source={sourceVideo ?? sourceImage}
           onPresetSelect={handlePresetSelect}
           onSettingsChange={patchSettings}
-          onReset={handleReset}
+          onReset={() => replaceLook(DEFAULT_SETTINGS, 'settings reset')}
           onRevert={revertPoint ? handleRevert : undefined}
         />
       )}
@@ -385,7 +376,9 @@ export default function App() {
             state={activeModal.state}
             onClose={() => setActiveModal(null)}
             onRetry={activeModal.state.status === 'parse-error' ? handleAnalyze : undefined}
-            onApplySuggestion={handleApplySuggestion}
+            onApplySuggestion={(suggestion) =>
+              replaceLook(suggestion, 'suggested conversion applied')
+            }
           />
         </Suspense>
       )}

@@ -82,11 +82,7 @@ export default function PresetPicker({
         className="shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
         // Spells out *why* it is unavailable, as the EDIT tab's `↺` does: a disabled control with
         // no explanation reads as a bug rather than as an answer.
-        aria-label={
-          atDefault
-            ? 'reset to defaults — unavailable, already at its default'
-            : 'reset to defaults'
-        }
+        aria-label={`reset to defaults${atDefault ? ' — unavailable, already at its default' : ''}`}
       >
         <span aria-hidden="true">↺</span> defaults
       </Button>

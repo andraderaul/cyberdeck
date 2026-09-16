@@ -429,7 +429,30 @@ describe('the Analysis suggestion', () => {
     expect(screen.queryByText(/2 characters or more/)).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('tab', { name: 'presets' }))
-    expect(screen.getByRole('button', { name: 'revert suggestion' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'revert to the previous look' })).toBeInTheDocument()
+  })
+
+  // One level deep, not a stack: `replaceLook` re-snapshots unconditionally, so the second of the
+  // two acts displaces the first one's snapshot rather than pushing onto it. Deliberate — the
+  // control undoes whichever of them last ran, and says so by naming "the previous look".
+  it('holds one level of undo — a reset over an applied suggestion gives that suggestion back', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByText('hero'))
+    openCharsetTab()
+    fireEvent.click(screen.getByRole('button', { name: 'box' }))
+
+    openOut()
+    fireEvent.click(screen.getByRole('button', { name: /analyze/i }))
+    fireEvent.click(await screen.findByRole('button', { name: 'apply' }))
+
+    fireEvent.click(screen.getByRole('tab', { name: 'presets' }))
+    fireEvent.click(screen.getByRole('button', { name: 'reset to defaults' }))
+    fireEvent.click(screen.getByRole('button', { name: 'revert to the previous look' }))
+
+    openCharsetTab()
+    expect(screen.getByRole('button', { name: 'braille' })).toHaveAttribute('aria-pressed', 'true')
+    // The pre-Suggestion look is gone, and no second press brings it back.
+    expect(screen.getByRole('button', { name: 'box' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('withdraws the revert offer once the user edits on top of the suggestion', async () => {
@@ -545,6 +568,29 @@ describe('the reset to defaults', () => {
 
     openPresets()
     fireEvent.click(screen.getByRole('button', { name: 'reset to defaults' }))
+    fireEvent.click(screen.getByRole('button', { name: 'revert to the previous look' }))
+
+    openEdit()
+    expect(screen.getByRole('button', { name: 'box' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  // The revert offer is the whole of what this act gives back in place of a confirmation, so the
+  // one press that patches nothing must not spend it. A refused ramp stands in the field rather
+  // than in ConversionSettings, so over the restored default Charset the scoped `↺` is live with an
+  // empty patch — and App reads any patch at all as the edit that ends the offer (issue #393).
+  it('keeps that revert offer through a scoped reset that moves no setting', () => {
+    loadAndDiverge()
+
+    openPresets()
+    fireEvent.click(screen.getByRole('button', { name: 'reset to defaults' }))
+
+    // The refusal is local to SettingsEditor, which unmounts on a tab switch — so it has to be made
+    // after coming back to EDIT, not before leaving it.
+    openEdit()
+    fireEvent.change(screen.getByLabelText('custom charset'), { target: { value: '@' } })
+    fireEvent.click(screen.getByRole('button', { name: 'reset charset' }))
+
+    openPresets()
     fireEvent.click(screen.getByRole('button', { name: 'revert to the previous look' }))
 
     openEdit()

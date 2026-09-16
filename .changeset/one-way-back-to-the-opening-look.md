@@ -19,3 +19,8 @@ has: the reset takes a revert point, so the `revert` control that undoes an appl
 undoes this too, under the same rule — the user's own next edit retires it, because by then
 restoring the snapshot would discard work rather than return it. Nothing asks a modal question on
 the way. The loaded Source never moves: this is the conversion resetting, not the session.
+
+That way back is one level deep and not a stack: the two acts share a single snapshot, so a reset
+pressed while a Suggestion's revert still stands gives the suggested look back, not the one the
+session started from. The control names "the previous look" for exactly that reason — it undoes
+whichever of the two last ran.

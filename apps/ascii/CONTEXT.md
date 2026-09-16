@@ -58,6 +58,14 @@ _Avoid_: auto color, paleta automática, k-means, median cut, nearest-of-N (são
 Quantos caracteres cabem no canvas — controlado pelo tamanho do caractere. Resolução alta = caracteres pequenos = mais detalhe. Resolução baixa = caracteres grandes = resultado mais grosseiro.
 _Avoid_: fontSize, granularity, granularidade, tamanho de fonte
 
+**Reset to Defaults**:
+O ato que devolve a conversão inteira ao look com que o programa abre — `↺ defaults`, o chip zero da aba PRESETS. Restaura todos os eixos dos **ConversionSettings** *e* larga o Preset que estivesse selecionado: são as duas metades de um ato só, e é a segunda que o coloca em PRESETS e não em EDIT (a aba EDIT é por ferramenta por construção, e nenhum controle dela pode mexer em qual Preset está ativo). A **Source Image** não se move: quem reseta é a conversão, não a sessão. Fica sempre desenhado e desabilita quando não há nada a desfazer, em vez de sumir — dizendo *por que* está indisponível.
+_Avoid_: clear, limpar, restaurar sessão, novo (nada disso descarrega a Source)
+
+**Revert**:
+O único controle que desfaz um ato que trocou o look inteiro — hoje dois atos, não um: aplicar uma **Suggestion** e o **Reset to Defaults**. Aparece na aba PRESETS enquanto a oferta vale e some depois, e volta ao look que *aquele* ato deslocou, sem recarregar a **Source Image**. Um nível só, não uma pilha: o segundo dos dois atos desloca o snapshot do primeiro em vez de empilhar sobre ele, então o Revert desfaz o que tiver rodado por último — é por isso que o nome acessível fala do "look anterior" e não do ato que o produziu. A oferta expira na primeira edição do próprio usuário, porque depois dela restaurar o snapshot jogaria fora trabalho em vez de devolvê-lo. É essa oferta que deixa um ato destrutivo ser reversível em vez de confirmado: nada pergunta num modal no caminho.
+_Avoid_: undo (não há histórico), desfazer suggestion (o controle não é só dela), cancelar
+
 ## Relationships
 
 - Uma **Source Image** é convertida por `convertImage()` em uma grade de **AsciiCell** usando os **ConversionSettings** ativos
@@ -68,7 +76,8 @@ _Avoid_: fontSize, granularity, granularidade, tamanho de fonte
 - Sob o **Color Mode** `adaptive` a paleta sai da mesma grade de **AsciiCell** que está sendo pintada — a quantização é pura sobre a grade, sem canvas e sem DOM (ADR 0005), e é por isso que **PNG Export**, **TXT Export** e **HTML Export** concordam com o preview por construção: não existe paleta guardada fora do `computeFrame()` para alguém receber desatualizada
 - Mexer na **Resolution** sob o `adaptive` muda a paleta, porque muda a grade de que ela é tirada — é o único **Color Mode** em que um controle de amostragem chega na cor
 - O resultado pode ser exportado como **PNG Export** (canvas com cores), **TXT Export** (string ASCII pura) ou **HTML Export** (texto selecionável com cores)
-- Uma **Analysis** carrega uma **Suggestion** quando há uma legível: **ConversionSettings** propostos que só substituem os ativos quando o usuário aplica, e que voltam atrás por um controle enquanto ele não editar por conta própria
+- Uma **Analysis** carrega uma **Suggestion** quando há uma legível: **ConversionSettings** propostos que só substituem os ativos quando o usuário aplica, e que voltam atrás pelo **Revert** enquanto ele não editar por conta própria
+- Aplicar uma **Suggestion** e o **Reset to Defaults** são os dois atos que trocam o look inteiro, e por isso os dois deixam o mesmo tipo de rastro: um snapshot único atrás do **Revert**, largando o Preset ativo — deixá-lo aceso marcaria como *modificado* um Preset que o usuário na verdade abandonou
 
 ## Example dialogue
 
@@ -106,7 +115,7 @@ O resultado de um **Analyze** — uma descrição narrativa, um Threat Level, ta
 _Avoid_: AnalysisResult (nome de tipo interno), response, resultado
 
 **Suggestion**:
-Os **ConversionSettings** que a **Analysis** propõe para o que ela acabou de descrever — todos os eixos de uma vez, **Dithering** incluído, não um conselho em prosa. Chega junto da descrição mas não age: nenhum controle se move sozinho. O usuário lê a proposta no modal e aplica num clique; os ConversionSettings que ela deslocou ficam guardados atrás de um controle `revert` na aba PRESETS, sem precisar recarregar a **Source Image**, e a oferta expira na primeira edição do próprio usuário — depois dela, restaurar o snapshot jogaria fora trabalho que veio *depois* da sugestão. Vocabulário desconhecido é recusado, nunca aproximado: um Charset que não existe derruba a Suggestion inteira em vez de virar o Charset mais parecido — e derruba só ela: o painel some, a descrição fica.
+Os **ConversionSettings** que a **Analysis** propõe para o que ela acabou de descrever — todos os eixos de uma vez, **Dithering** incluído, não um conselho em prosa. Chega junto da descrição mas não age: nenhum controle se move sozinho. O usuário lê a proposta no modal e aplica num clique; os ConversionSettings que ela deslocou ficam guardados atrás do **Revert**, que ela divide com o **Reset to Defaults** em vez de ter só para si. Vocabulário desconhecido é recusado, nunca aproximado: um Charset que não existe derruba a Suggestion inteira em vez de virar o Charset mais parecido — e derruba só ela: o painel some, a descrição fica.
 _Avoid_: recommendation, auto-settings, AI preset (a sugestão não tem nome nem lugar fixo na fileira de presets)
 
 **AI Config**:

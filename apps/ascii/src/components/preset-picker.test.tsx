@@ -18,6 +18,19 @@ vi.mock('../ascii/thumbnail', async (importOriginal) => ({
 const { derivePresetThumbnails } = await import('../ascii/thumbnail')
 const deriveMock = vi.mocked(derivePresetThumbnails)
 
+// One off-default value per axis, spelled as a full ConversionSettings rather than a loose record:
+// a new axis is a type error here until it is given one, which is the compile-time half of the
+// run-time sweep below.
+const OFF_DEFAULT: ConversionSettings = {
+  resolution: 20,
+  brightness: 1.5,
+  contrast: 2.0,
+  colorMode: 'acid',
+  charset: 'box',
+  edgeGlyphs: true,
+  dithering: 'bayer',
+}
+
 function makeSourceImage(): HTMLImageElement {
   const img = new Image()
   Object.defineProperty(img, 'naturalWidth', { value: 400 })
@@ -132,6 +145,19 @@ describe('PresetPicker', () => {
     // Half of what the control undoes is the selected chip, which no comparison of the axes sees.
     renderPicker({ settings: DEFAULT_SETTINGS, activePresetId: PRESETS[0].id })
     expect(screen.getByRole('button', { name: 'reset to defaults' })).toBeEnabled()
+  })
+
+  // `handleReset` assigns DEFAULT_SETTINGS wholesale, so "every axis returns" needs no test — the
+  // assignment guarantees it. What the scope decides is the *availability*, and an axis missing
+  // from it fails the other way: the control sits disabled, saying "already at its default", while
+  // a non-default axis stands and nothing on screen offers a way back.
+  describe.each(
+    Object.keys(DEFAULT_SETTINGS) as (keyof ConversionSettings)[],
+  )('with only %s off its default', (key) => {
+    it('still offers the global reset', () => {
+      renderPicker({ settings: { ...DEFAULT_SETTINGS, [key]: OFF_DEFAULT[key] } })
+      expect(screen.getByRole('button', { name: 'reset to defaults' })).toBeEnabled()
+    })
   })
 
   it('does not mark modified when settings exactly match the active preset', () => {
