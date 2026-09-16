@@ -104,6 +104,24 @@ function isIdempotent(link: Link): boolean {
   return EFFECT_REGISTRY[link.type].idempotent === true
 }
 
+/**
+ * Whether this Link's params still are the ones `createLink` seeded it with — so the `↺` has one
+ * question to ask rather than two, the way ASCII's `resetPatch` gives its own control one (#393).
+ *
+ * `!==` is sound only while every param is a primitive, which every Effect's params are today:
+ * numbers, and the string of a `ToggleGroup` choice (types.ts). A param that ever arrived as an
+ * array or an object would compare by identity and report a permanent difference, so it would need
+ * its own comparison here before it could reach the panel.
+ */
+function isAtDefaults(link: Link): boolean {
+  // Spread rather than cast: a params *interface* carries no index signature, so neither side can
+  // be read key-by-key as it stands — and the objects are half a dozen numbers each.
+  const params: Record<string, unknown> = { ...link.params }
+  return Object.entries({ ...EFFECT_REGISTRY[link.type].defaults }).every(
+    ([key, value]) => params[key] === value,
+  )
+}
+
 interface LinkProps {
   link: Link
   onChange: (params: Link['params']) => void
@@ -422,7 +440,13 @@ export default function ChainEditor({ chain, actions, seedControls, isLive }: Pr
         {focusedLink ? (
           <div className="flex flex-col gap-xs">
             <div className="flex items-center gap-2xs">
-              <Label>{EFFECT_LABELS[focusedLink.type]}</Label>
+              {/* The heading is what yields, because the four controls beside it cannot: each owes a
+                  44px target, and on a 320px phone the longest Effect name plus the row no longer
+                  fits. Truncating costs nothing a user can't read off the focused chip below, where
+                  the same name is spelled in full. */}
+              <span className="min-w-0 truncate">
+                <Label>{EFFECT_LABELS[focusedLink.type]}</Label>
+              </span>
               <Tooltip
                 id={`tooltip-${focusedLink.id}`}
                 content={EFFECT_TOOLTIPS[focusedLink.type]}
@@ -431,8 +455,40 @@ export default function ChainEditor({ chain, actions, seedControls, isLive }: Pr
                   params rather than on every chip — six chips each carrying three icon buttons
                   would bury the Chain the row exists to show. */}
               <div className="ml-auto flex items-center gap-2xs">
-                {/* First of the three, and beside the destructive one on purpose: it is the
-                    non-destructive answer to the question remove used to be the only way to ask. */}
+                {/* Leads the row, and the other three keep the order they had. It is the one that
+                    acts on the params below rather than on the Link's place in the Chain, and it
+                    reads as ASCII's `↺` on the rule that names the unit (#393, ADR 0015). Leading
+                    also keeps it the furthest control from remove: both answer "take this back",
+                    and only one of them is unrecoverable.
+
+                    A real 44x44 box, not the `TOUCH_TARGET_ICON` overlay ASCII's takes: the three
+                    beside it are real boxes and `PANEL_MIN_HEIGHT` was derived with that row
+                    already in the legend, so a fourth costs the panel width and no height at all —
+                    the reflow that forced the overlay there cannot happen here. */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onLinkChange(focusedLink.id, EFFECT_REGISTRY[focusedLink.type].defaults)
+                  }
+                  disabled={isAtDefaults(focusedLink)}
+                  // Disabled rather than absent, and spelling out *why* — the idiom duplicate set
+                  // beside it: a control that vanished the moment a Link came home would reflow
+                  // this row under the pointer that just put it there.
+                  aria-label={
+                    isAtDefaults(focusedLink)
+                      ? `reset ${EFFECT_LABELS[focusedLink.type]} — unavailable, already at its default`
+                      : `reset ${EFFECT_LABELS[focusedLink.type]}`
+                  }
+                  className={cn(
+                    'inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-fg-muted hover:text-fg disabled:opacity-40 disabled:hover:text-fg-muted rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-warning',
+                    ICON_GLYPH_SIZE,
+                  )}
+                >
+                  <span aria-hidden="true">↺</span>
+                </button>
+                {/* First of the three that act on the Link itself, and beside the destructive one
+                    on purpose: it is the non-destructive answer to the question remove used to be
+                    the only way to ask. */}
                 <button
                   type="button"
                   onClick={() => onToggleBypass(focusedLink.id)}
