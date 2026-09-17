@@ -31,6 +31,16 @@ export default defineConfig({
   // No retries: every assertion here is deterministic against a static build, so a retry would
   // only delay a real failure and dress a flake up as a pass.
   retries: 0,
+  // NEVER `missing` (Playwright's default) and never `changed`. On the default a run that finds no
+  // baseline writes one and fails, which sounds harmless and is how an unreviewed picture reaches
+  // the repo: the file is on disk from then on, a second run is green, and nobody ever looked at
+  // it. `none` makes taking a baseline an act somebody has to perform on purpose —
+  // `npm run screens:update`, whose whole output is a diff of committed `.png`s (#328).
+  updateSnapshots: 'none',
+  // The platform is in the filename because the baselines are only valid on one. The deck ships no
+  // webfont (ADR 0024), so every glyph in a baseline is the system monospace of the machine that
+  // took it, and macOS and Linux do not draw the same one — see `e2e/support/screens.ts`.
+  snapshotPathTemplate: '{testDir}/__screenshots__/{arg}-{platform}{ext}',
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
     // Not `on-first-retry`, which never fires with retries pinned at zero — the CI artifact would

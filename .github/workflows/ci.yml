@@ -170,3 +170,78 @@ jobs:
           name: playwright-report-a11y
           path: playwright-report/
           retention-days: 7
+
+  # The break that renders fine and looks wrong (#328): a spacing step the preset never defined and
+  # so generates no class, a Theme token that resolves to nothing, an overlay that has lost the
+  # opaque ground ADR 0013 requires it to carry. Nothing else on the deck can see any of those —
+  # `Test` passes, `Smoke E2E` boots the program, `Accessibility` measures boxes and ratios, and the
+  # pixels are wrong in all three.
+  #
+  # ITS OWN JOB, for three reasons and not only the one the other two share.
+  #
+  # The shared one first: a check name should say what kind of break it was, and "the program is
+  # broken", "the program is unusable by half its users" and "the program looks wrong" are three
+  # reports, not one.
+  #
+  # The second is the environment, and it is why this job does not merely add a step to `Smoke E2E`.
+  # The deck ships no webfont (ADR 0024), so every glyph in a baseline is the system monospace of
+  # the machine that took it — these pictures are only comparable inside one pinned environment, and
+  # that is what `container:` and the `runs-on` below are. The other two jobs install a browser onto
+  # an `ubuntu-latest` runner and are right to; this one *is* the image, on an architecture of its
+  # own, so it could not share their steps even if it wanted to. No
+  # `npx playwright install` for the same reason: the browsers ship inside. If the image tag here
+  # ever drifts from the `@playwright/test` the lockfile resolves, Playwright refuses to launch and
+  # says which revision it wanted — which is a loud enough failure not to guard twice.
+  #
+  # The third is the flake. `Smoke E2E` fails on `ubuntu-latest` roughly two runs in three, a
+  # `chrome-headless-shell` SIGSEGV at browser launch, a different test each time; it is a starved
+  # runner rather than the deck, and `playwright.config.ts` pins `retries: 0` on purpose rather than
+  # papering over it. Folding screenshots into that job would make every one of those crashes
+  # indistinguishable from a real pixel diff, for the one check whose remedy is "open the picture
+  # and look" — the worst possible signal to bury under a flake. Running in the image with
+  # `--ipc=host`, which is Playwright's own recommendation for exactly this crash class, is also the
+  # best shot this suite has at not inheriting it. That is a hope and not a measurement, and it is
+  # written down as one.
+  #
+  # Baselines are never written here. `updateSnapshots: 'none'` in the config means a missing or
+  # changed picture fails and writes nothing; retaking one is `npm run screens:update` on a
+  # developer's machine, and it arrives as a diff of committed `.png`s.
+  screens:
+    name: Visual regression
+    # The one job on the deck that is not `ubuntu-latest`, and the architecture is load-bearing
+    # rather than incidental. Chromium cannot run under qemu-user, so an amd64 image on an Apple
+    # Silicon machine aborts at browser launch (`qemu: Assertion failed: p_rcu_reader->depth != 0`)
+    # — pinning this suite to amd64 would mean baselines nobody can take or look at outside CI, for
+    # a guard whose whole remedy is "open the picture and look". arm64 is native on the machines
+    # this deck is developed on and free on public repositories, so `scripts/screens.sh` and this
+    # job are the same image on the same architecture, both native. The suite fails rather than
+    # skips if this runner is ever anything else.
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      # Chromium's default 64MB `/dev/shm` inside a container is not enough for it, and the crash
+      # when it runs out looks like a browser bug rather than a memory one.
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v4
+      # No `setup-node` and no `cache: npm`, unlike the jobs above, and both absences are the same
+      # point: the environment is the image, all of it. A Node installed over the top would be one
+      # more thing that can differ between this job and the developer running
+      # `scripts/screens.sh`, which is the one difference this suite cannot tolerate. The image's
+      # Node satisfies `.nvmrc`'s floor, and the install is the lockfile's either way.
+      - run: npm ci
+
+      # The specs' own typecheck, ahead of the browser — the same step the two jobs above open with,
+      # and duplicated rather than shared for the same reason (this job takes nothing from them).
+      - name: Typecheck the specs
+        run: npx tsc
+
+      - run: npm run test:e2e:screens
+      # The report is the whole point of the artifact here: for a pixel diff it carries the expected
+      # picture, the actual one and the diff between them side by side, which no log line can.
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: playwright-report-screens
+          path: playwright-report/
+          retention-days: 7
