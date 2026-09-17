@@ -9,31 +9,21 @@
 // chrome's Theme (ADR 0013, narrowed in #355), and a sweep in `ice` alone could not tell the two
 // apart.
 //
-// The accepted lists below are all pre-existing and all written up in #355 — see `support/accepted.ts`
-// for why they are carried rather than fixed.
+// Nothing here is accepted any more. #355 took the last of it: the footer's `about` trigger and the
+// authored-Charset field grew to the target, and the header's `Configure AI key` label cleared
+// AA-small when `ice`'s `--accent` was re-derived.
 
 import { fileURLToPath } from 'node:url'
 import { expect, type Page, test } from '@playwright/test'
 import { THEME_STORAGE_KEY, THEMES } from '../../packages/deck-kit/src/theme/themes'
 import {
   A11Y,
-  type Accepted,
   expectEveryControlHoldsTheTarget,
   expectNoAxeViolations,
   expectTheCanvasIsItsOwnGround,
 } from '../support/a11y'
-import { accentOnALitSurface, theThemePopover } from '../support/accepted'
 
 const SOURCE_IMAGE = fileURLToPath(new URL('../../apps/ascii/gifs/ai-demo.png', import.meta.url))
-
-const HEADER = 'div#root > div:nth-of-type(1) > header > div'
-const THEME_MENU = `${HEADER} > div > div`
-const OUT = 'div#strip-panel-out > div'
-
-/** On every surface: the header outlives the Source, so this one is on screen throughout. */
-const THE_HEADER: Accepted[] = [
-  accentOnALitSurface(`${HEADER} > button "Configure AI key"`, '4.37:1'),
-]
 
 async function withASource(page: Page): Promise<void> {
   await page.goto('/')
@@ -45,9 +35,8 @@ test('the empty state is accessible and every control holds its target', A11Y, a
   await page.goto('/')
   await expect(page.getByText('drag & drop or click to upload')).toBeVisible()
 
-  const accepted = [...THE_HEADER]
-  await expectNoAxeViolations(page, accepted)
-  await expectEveryControlHoldsTheTarget(page, accepted)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
 })
 
 test('the About modal is accessible and every control holds its target', A11Y, async ({ page }) => {
@@ -55,15 +44,8 @@ test('the About modal is accessible and every control holds its target', A11Y, a
   await page.getByRole('button', { name: 'about' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
 
-  const accepted = [
-    ...THE_HEADER,
-    accentOnALitSurface(
-      'div#root > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > span "ASCII//CONVERT"',
-      '3.89:1',
-    ),
-  ]
-  await expectNoAxeViolations(page, accepted)
-  await expectEveryControlHoldsTheTarget(page, accepted)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
 })
 
 test('the Theme menu is accessible and every row holds its target', A11Y, async ({ page }) => {
@@ -71,9 +53,8 @@ test('the Theme menu is accessible and every row holds its target', A11Y, async 
   await page.getByRole('button', { name: /^theme:/ }).click()
   await expect(page.getByRole('menu', { name: 'theme' })).toBeVisible()
 
-  const accepted = [...THE_HEADER, ...theThemePopover(THEME_MENU)]
-  await expectNoAxeViolations(page, accepted)
-  await expectEveryControlHoldsTheTarget(page, accepted)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
 })
 
 test('the presets tab is accessible and every control holds its target', A11Y, async ({ page }) => {
@@ -81,8 +62,8 @@ test('the presets tab is accessible and every control holds its target', A11Y, a
   await page.getByRole('tab', { name: 'presets' }).click()
   await expect(page.getByRole('tab', { name: 'presets' })).toHaveAttribute('aria-selected', 'true')
 
-  await expectNoAxeViolations(page, THE_HEADER)
-  await expectEveryControlHoldsTheTarget(page, THE_HEADER)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
 })
 
 test('the edit tab is accessible and every control holds its target', A11Y, async ({ page }) => {
@@ -90,8 +71,8 @@ test('the edit tab is accessible and every control holds its target', A11Y, asyn
   await page.getByRole('tab', { name: 'edit' }).click()
   await expect(page.getByRole('tab', { name: 'edit' })).toHaveAttribute('aria-selected', 'true')
 
-  await expectNoAxeViolations(page, THE_HEADER)
-  await expectEveryControlHoldsTheTarget(page, THE_HEADER)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
 })
 
 test('the out tab is accessible and every control holds its target', A11Y, async ({ page }) => {
@@ -99,27 +80,8 @@ test('the out tab is accessible and every control holds its target', A11Y, async
   await page.getByRole('tab', { name: 'out' }).click()
   await expect(page.getByRole('tab', { name: 'out' })).toHaveAttribute('aria-selected', 'true')
 
-  const accepted = [
-    ...THE_HEADER,
-    accentOnALitSurface(
-      `${OUT} > div:nth-of-type(1) > div > button:nth-of-type(1) "configure AI"`,
-      '3.74:1',
-    ),
-    accentOnALitSurface(
-      `${OUT} > div:nth-of-type(1) > p > span:nth-of-type(1) "AI Analyze"`,
-      '3.89:1',
-    ),
-    accentOnALitSurface(
-      `${OUT} > div:nth-of-type(1) > p > span:nth-of-type(2) "AI Config"`,
-      '3.89:1',
-    ),
-    accentOnALitSurface(
-      `${OUT} > div:nth-of-type(3) > div:nth-of-type(1) > button "export png"`,
-      '4.23:1',
-    ),
-  ]
-  await expectNoAxeViolations(page, accepted)
-  await expectEveryControlHoldsTheTarget(page, accepted)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
 })
 
 // Every Theme, not a sample: the claim is that the ground is the same under all of them, and a

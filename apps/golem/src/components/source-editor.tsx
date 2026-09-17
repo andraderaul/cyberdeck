@@ -36,7 +36,7 @@ export default function SourceEditor({
       <div className="flex h-full min-h-0 flex-col gap-2">
         {/* Says why, not just that: a disabled box with no explanation reads as a broken page. */}
         {!editable && (
-          <p className="shrink-0 border-accent border-l-2 bg-accent/10 px-2 py-1 text-fg-muted text-xs">
+          <p className="shrink-0 border-accent border-l-2 bg-accent-dim px-2 py-1 text-fg-muted text-xs">
             A Machine is running this code. <code className="text-accent">reset</code> to edit.
           </p>
         )}
@@ -100,7 +100,7 @@ function Listing({
               'flex gap-2 whitespace-pre',
               // An accent fill rather than a text colour, so the marker stays legible against the
               // dimmed listing instead of competing with it.
-              active && 'bg-accent/20 text-fg',
+              active && 'bg-accent-soft text-fg',
               !active && 'text-fg-muted',
             )}
           >
@@ -108,7 +108,10 @@ function Listing({
               aria-hidden
               className={cn(
                 'w-10 shrink-0 select-none pr-1 text-right text-xs',
-                broken ? 'text-danger' : 'text-fg-subtle',
+                // The faintest step in the scale, lifted one notch on the active row: that row
+                // brings its own accent fill, and --fg-subtle over it is a hairline against
+                // AA-small where --fg-muted has room.
+                broken ? 'text-danger' : active ? 'text-fg-muted' : 'text-fg-subtle',
               )}
             >
               {broken ? '● ' : ''}

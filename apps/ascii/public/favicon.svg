@@ -10,7 +10,7 @@
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="ASCII//Convert">
   <rect width="32" height="32" rx="2" fill="#0a0a0f" />
-  <g fill="#b829ff">
+  <g fill="#c652ff">
     <rect x="4" y="4" width="5" height="5" />
     <rect x="16" y="4" width="5" height="5" />
     <rect x="22" y="4" width="5" height="5" />

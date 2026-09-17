@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted · **guard superseded by [ADR 0024](0024-themes-named-and-guarded-visual-language.md)**
+Accepted · **guard superseded by [ADR 0024](0024-themes-named-and-guarded-visual-language.md)** ·
+**`--violet`'s row and its exception superseded by the re-derivation below (#355)**
 
 The audit below stands as the record of what was measured and why. Its *regression guard* does not:
 it pinned hex values by hand, in two programs of four, from a file the tokens left in ADR 0014. It
@@ -123,6 +124,72 @@ Raising these tokens to 3:1 would require `--slate` to lighten from `#2a2a4a` to
 `#4a4a6a`, which significantly alters the dark cyberpunk palette. The decision is to accept this
 exception for purely decorative structural separators and document it here. If interactive borders
 (e.g., form inputs) are ever styled with `--slate` alone, they should be revisited at that time.
+
+## Superseded — `--accent` in `ice`, re-derived under the Theme Contract (#355)
+
+**Date:** 2026-09-16 · **Related:** issue #355, [ADR 0024](0024-themes-named-and-guarded-visual-language.md)
+
+The `--violet` row above and the `text-violet text-xs` exception under it no longer describe the
+deck. Both are kept as written — this ADR is the record of what was measured in May — and both are
+superseded by what follows.
+
+### What the exception actually bought
+
+The exception was granted to two labels and asked that "any future addition ... be evaluated
+individually". By the time #329's guards landed there were **sixteen**, across four programs, and
+none had been evaluated. That is not sixteen people ignoring a rule: `#b829ff` passing on one
+surface out of three means every accent label drawn anywhere but the base surface is a defect, and
+a palette with that property produces them faster than a review can catch them.
+
+A survey resolved the accent against every ground in use, in all seven Themes. **All sixteen
+failures were `ice`-only** — the other six Themes clear AA-small on every ground, the tightest being
+`kuang` at 4.96:1. `ice`'s accent is the one that predates the Theme Contract and was never
+re-derived under it. So the token was the fault, not the sixteen callsites.
+
+### The new value
+
+`--violet` becomes **`#c652ff`** — `hsl(280, 100%, 66%)`, the same hue and saturation as `#b829ff`
+lifted eight points of lightness. Deliberately not the bare-minimum `#c44dff`: that one clears the
+three surfaces and then measures **4.49:1** on the tightest ground the accent is actually drawn on,
+which is a hairline rather than a pass.
+
+| Ground | `#b829ff` | `#c652ff` |
+|---|---|---|
+| `--bg` (`#0a0a0f`) | 4.51:1 | **5.69:1** |
+| `--bg-surface` (`#0f0f1a`) | 4.35:1 | **5.48:1** |
+| `--bg-elevated` (`#1a1a2e`) | 3.90:1 | **4.92:1** |
+| `--color-accent-bg` — accent at 10% over `--bg` | 4.23:1 | **5.21:1** |
+| `--bg-accent-ghost` over `--bg` | 4.38:1 | **5.47:1** |
+| `--bg-accent-ghost` over `--bg-elevated` | 3.74:1 | **4.64:1** |
+
+The last row is the binding constraint, and note why the derived grounds move at all: both are
+`color-mix()` of the accent itself, so lifting the accent lifts the ground under it and only the
+*difference* is won.
+
+`--fg-on-accent` was the pair that could have broken, since a brighter accent is a worse ground for
+a light foreground. `ice` draws black there, so it improves too: **4.80:1 → 6.05:1**. `--void` on
+the new accent measures 5.69:1 and would also clear the floor now; black keeps the wider margin and
+the token is left alone.
+
+`--soft-violet` follows to **`#df9eff`** — `hsl(280, 100%, 81%)`. It has no contrast pin (no
+Contract pair names `--accent-soft`), but every Theme on the roster separates its accent from its
+soft by 17–19 points of lightness, and leaving the soft where it was would have left `ice` with 10.
+Its one consumer is the social cards' `accentSoft`.
+
+### The Contract's accent tier collapses to one
+
+ADR 0024 pinned the accent at AA-small on the base surface and at WCAG 1.4.11's 3:1 elsewhere, for
+one reason it wrote down: demanding AA-small everywhere would have failed `ice` itself. The
+incumbent it was sparing is the palette above, and the tier it bought is what let the sixteen
+labels ship under a green guard. With `ice` re-derived, `--accent` is now held to AA-small on all
+three surfaces, in every Theme — the roster's tightest is `ice` at 4.92:1. ADR 0024's rejected
+alternative is thereby adopted.
+
+### The two `analysis-modal.tsx` labels
+
+The exception is retired rather than re-granted. Both labels sit on `--bg-surface`, where the accent
+now measures 5.48:1 — there is no longer a threshold to be excused from, and the register argument
+never needed one: the re-derived accent is the same hue at the same saturation.
 
 ## Considered Alternatives
 

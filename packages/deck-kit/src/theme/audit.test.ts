@@ -3,6 +3,7 @@ import {
   contrastRatio,
   declaredPrimitives,
   declaredThemes,
+  findAlphaModifiers,
   findLiteralHues,
   findUndefinedScales,
   RETIRED_HUE_CLASSES,
@@ -248,6 +249,51 @@ describe('findUndefinedScales', () => {
   // undecidable utility is left out rather than guessed at.
   it('leaves sizing utilities out, since their scales cannot be derived', () => {
     expect(findUndefinedScales('max-w-4xl w-4xl h-3xs', UNDEFINED_STEPS)).toEqual([])
+  })
+})
+
+describe('findAlphaModifiers', () => {
+  const COLOURS = ['accent', 'accent-ghost', 'fg-muted', 'base'] as const
+
+  it('finds a deck colour thinned with a slash', () => {
+    expect(findAlphaModifiers('<p className="bg-accent/20" />', COLOURS)).toEqual([
+      { className: 'bg-accent/20', line: 1 },
+    ])
+  })
+
+  it('reports the line, and every offender on it', () => {
+    const source = ['const a = 1', '', 'cn("border-base/40 text-fg-muted/50")'].join('\n')
+    expect(findAlphaModifiers(source, COLOURS).map((f) => f.className)).toEqual([
+      'border-base/40',
+      'text-fg-muted/50',
+    ])
+  })
+
+  it('sees through responsive and state variants', () => {
+    expect(findAlphaModifiers('sm:hover:bg-accent/15', COLOURS).map((f) => f.className)).toEqual([
+      'sm:hover:bg-accent/15',
+    ])
+  })
+
+  // The tints that *do* render: a named token carries its own value, so it is the answer here
+  // rather than the offence.
+  it('leaves the semantic tint tokens alone', () => {
+    expect(
+      findAlphaModifiers('bg-accent-ghost bg-accent border-base text-fg-muted', COLOURS),
+    ).toEqual([])
+  })
+
+  // Tailwind's own palette parses, so `/50` on one of those renders exactly as written.
+  it("leaves Tailwind's built-in colours alone", () => {
+    expect(findAlphaModifiers('bg-black/50 ring-white/10', COLOURS)).toEqual([])
+  })
+
+  // An arbitrary alpha is dropped by Tailwind for exactly the same reason a scale step is, so it
+  // is the same offence — while a fraction that is part of the utility's own name is not.
+  it('reads an arbitrary alpha as the same defect, and a bare fraction as neither', () => {
+    expect(findAlphaModifiers('bg-accent/[.06] inset-1/2 w-1/3', COLOURS)).toEqual([
+      { className: 'bg-accent/[.06]', line: 1 },
+    ])
   })
 })
 

@@ -25,8 +25,8 @@ const INK = {
   muted: '#9898c0', // --fg-muted
   fg: '#c8c8e0', // --fg
   strong: '#eeeef8', // --fg-strong
-  accent: '#b829ff', // --accent
-  accentSoft: '#d888ff', // --accent-soft
+  accent: '#c652ff', // --accent
+  accentSoft: '#df9eff', // --accent-soft
   info: '#00e5ff', // --color-info / --color-phosphor
   infoSoft: '#80f4ff', // --color-info-soft
   danger: '#ff2d78', // --color-danger

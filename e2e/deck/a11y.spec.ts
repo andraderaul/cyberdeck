@@ -7,27 +7,19 @@
 // still read correctly, which is exactly the gap `smoke.spec.ts` names.
 
 import { expect, test } from '@playwright/test'
-import {
-  A11Y,
-  type Accepted,
-  expectEveryControlHoldsTheTarget,
-  expectNoAxeViolations,
-} from '../support/a11y'
-import { theThemePopover } from '../support/accepted'
-
-const THEME_MENU = 'div#root > div > header > div > div'
+import { A11Y, expectEveryControlHoldsTheTarget, expectNoAxeViolations } from '../support/a11y'
 
 // The hub's bottom edge used to be one sentence with a `source` link inside it, permanently
 // accepted under WCAG 2.5.5's Inline exception. It is now the kit's `Footer`, whose links carry
-// their own 44px — so there is nothing left to accept on this screen.
-const NOTHING_ACCEPTED: Accepted[] = []
+// their own 44px — and the Theme popover's last accepted row went with #355's accent work. There is
+// nothing left to accept on either screen.
 
 test('the door is accessible and every card holds its target', A11Y, async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'what the deck runs' })).toBeVisible()
 
-  await expectNoAxeViolations(page, NOTHING_ACCEPTED)
-  await expectEveryControlHoldsTheTarget(page, NOTHING_ACCEPTED)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
 })
 
 test('the Theme menu is accessible and every row holds its target', A11Y, async ({ page }) => {
@@ -35,7 +27,6 @@ test('the Theme menu is accessible and every row holds its target', A11Y, async 
   await page.getByRole('button', { name: /^theme:/ }).click()
   await expect(page.getByRole('menu', { name: 'theme' })).toBeVisible()
 
-  const accepted = [...NOTHING_ACCEPTED, ...theThemePopover(THEME_MENU)]
-  await expectNoAxeViolations(page, accepted)
-  await expectEveryControlHoldsTheTarget(page, accepted)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
 })

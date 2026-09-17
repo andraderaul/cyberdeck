@@ -5,19 +5,17 @@
 //
 // Two surfaces, because a machine that has run is a different page from one that has not: the
 // Registers, the Flags, the Memory and the Terminal all fill in, and none of that markup exists on
-// the opening screen. It is also where this program's accepted list doubles — five scrolling panels
-// that a keyboard cannot reach, in the one program that is nothing but a keyboard (#355).
+// the opening screen.
+//
+// Nothing here is accepted any more. #355 took the last of it: the command line and the five
+// scrolling panels a keyboard could not reach were fixed, and the four `--accent` labels a run
+// brings on screen cleared AA-small when `ice`'s `--accent` was re-derived.
 
 import { expect, test } from '@playwright/test'
 import { A11Y, expectEveryControlHoldsTheTarget, expectNoAxeViolations } from '../support/a11y'
-import { accentOnALitSurface, theThemePopover } from '../support/accepted'
 
 /** What the starter program writes to the memory-mapped Terminal, one byte at a time. */
 const STARTER_OUTPUT = 'Hello from GOLEM'
-
-const LEFT = 'div#root > div:nth-of-type(1) > main > div:nth-of-type(1)'
-const RIGHT = 'div#root > div:nth-of-type(1) > main > div:nth-of-type(2)'
-const THEME_MENU = 'div#root > div:nth-of-type(1) > header > div > div'
 
 // The kit's Theme popover is a surface in its own right, swept in every workspace that renders the
 // control rather than in whichever one happened to have a spec: the rows are the kit's, so leaving
@@ -27,9 +25,8 @@ test('the Theme menu is accessible and every row holds its target', A11Y, async 
   await page.getByRole('button', { name: /^theme:/ }).click()
   await expect(page.getByRole('menu', { name: 'theme' })).toBeVisible()
 
-  const accepted = theThemePopover(THEME_MENU)
-  await expectNoAxeViolations(page, accepted)
-  await expectEveryControlHoldsTheTarget(page, accepted)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
 })
 
 test(
@@ -55,24 +52,6 @@ test('a machine that has run is accessible and holds its targets', A11Y, async (
 
   await expect(page.getByRole('region', { name: 'Terminal' })).toContainText(STARTER_OUTPUT)
 
-  const accepted = [
-    accentOnALitSurface(
-      `${LEFT} > section:nth-of-type(1) > div > div > p > code "reset"`,
-      '4.34:1',
-    ),
-    accentOnALitSurface(
-      `${RIGHT} > section:nth-of-type(1) > div > dl > dt:nth-of-type(1) "pc"`,
-      '4.34:1',
-    ),
-    accentOnALitSurface(
-      `${RIGHT} > section:nth-of-type(2) > div > ul > li:nth-of-type(1) "the last comparison was equal"`,
-      '4.34:1',
-    ),
-    accentOnALitSurface(
-      `${RIGHT} > section:nth-of-type(4) > div > div > div:nth-of-type(1) > span:nth-of-type(1) > span "INSTR"`,
-      '4.34:1',
-    ),
-  ]
-  await expectNoAxeViolations(page, accepted)
-  await expectEveryControlHoldsTheTarget(page, accepted)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
 })

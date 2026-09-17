@@ -115,7 +115,7 @@ A neon-on-near-black palette. Four hues only, over a five-stop near-black ramp t
 
 **The hexes below are `ice` — one Theme of three (ADR 0024), and the one the deck shipped with. Every one of them is reached by its *role*, never by its name.** `text-accent`, never `text-violet`: the literal names are `ice`'s own vocabulary and are not in the Tailwind preset at all, so naming one renders unstyled and fails the kit's vocabulary guard. Read the four bullets as "what the accent looks like in `ice`", not as "what to type".
 
-- **`accent` — violet `#b829ff` in `ice`.** The wordmark, primary button border, active toggle state, slider thumb, focus ring, AI-configured state.
+- **`accent` — violet `#c652ff` in `ice`.** The wordmark, primary button border, active toggle state, slider thumb, focus ring, AI-configured state.
 - **`info` — cyan `#00e5ff` in `ice`.** Secondary buttons, `source code →` link, `LOW` threat, tag badges.
 - **`danger` — hot-pink `#ff2d78` in `ice`.** Webcam `LIVE` indicator, capture and record controls, `HIGH`/`CRITICAL` threat, error toast border.
 - **`warning` — electric yellow `#ffe600` in `ice`.** `MODERATE` threat and quota/parse errors. Used sparingly.
@@ -311,7 +311,7 @@ The product currently ships with the default Vite favicon. `assets/favicon.svg` 
 
 1. `@import "/colors_and_type.css"` (or copy the `:root` block into your file).
 2. Wrap everything in a `body` that uses `var(--font-mono)` on `var(--bg)`.
-3. Reach for **semantic** tokens, never a raw hex and never a primitive. `var(--accent)`, not `#b829ff` and not `var(--violet)` — the deck's look is a set of named Themes and only the semantic layer varies between them (ADR 0024).
+3. Reach for **semantic** tokens, never a raw hex and never a primitive. `var(--accent)`, not `#c652ff` and not `var(--violet)` — the deck's look is a set of named Themes and only the semantic layer varies between them (ADR 0024).
 4. Match casing: lowercase for product copy, UPPERCASE + wide tracking for "system" labels.
 5. Add a glyph next to every colored signal. No bare color.
 6. Use 1px borders, 2px radii, monospace everything. If you reach for `box-shadow` or `rounded-lg`, stop.
