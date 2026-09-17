@@ -20,6 +20,11 @@ export const DEFAULT_SOUND: SoundState = 'on'
  * **Placeholder — set by arithmetic, not by ear.** ADR 0029 asks for a level tuned by listening
  * (the prior art's two samples sit at `0.40` and `0.55` and are deliberately not normalised), and
  * nobody has listened to this one yet. This constant is the single edit that changes it.
+ *
+ * `click.wav` is provisional in the same way and for the same reason: it is a synthesised 30 ms
+ * resonant burst normalised to a peak of exactly 0.700 — arithmetic again, where ADR 0029 asks for a
+ * *designed* artifact tuned by ear. `click-sample.mjs` beside it is the recipe that writes it, so
+ * the replacement starts from constants rather than from a blob.
  */
 export const CLICK_VOLUME = 0.35
 
@@ -27,13 +32,41 @@ export const CLICK_VOLUME = 0.35
  * What makes a sound. An allowlist rather than a deny list, so silence is the default for a canvas,
  * a panel or a scroll surface without any of them asking for an exemption, and a control added
  * tomorrow is audible without wiring (ADR 0029).
+ *
+ * `input` is spelled by type rather than bare, because the bare tag is a namespace and not a
+ * control: a text field's press actuates nothing — you click into it to *begin* typing, and the
+ * typing itself is silent — so it would buy a sound on entering the field and another on moving the
+ * caret. The types named here all actuate on the press. GOLEM//Console is the case that makes it
+ * unarguable: its whole interaction is a bare `<input>` command line.
  */
-const CLICKABLE = 'button, a[href], input, select, [role="button"]'
+const CLICKABLE = [
+  'button',
+  'a[href]',
+  'select',
+  'input[type="button"]',
+  'input[type="submit"]',
+  'input[type="reset"]',
+  'input[type="checkbox"]',
+  'input[type="radio"]',
+  'input[type="range"]',
+  '[role="button"]',
+].join(', ')
 
 /** Absent, unreadable or unrecognised all mean the ADR's default. The stored value is the explicit
- *  state rather than a deviation flag, so amending the default never rewrites somebody's choice. */
-export function resolveSound(stored: string | null | undefined): SoundState {
-  return stored === 'off' ? 'off' : DEFAULT_SOUND
+ *  state rather than a deviation flag, so amending the default never rewrites somebody's choice —
+ *  which is a property of *resolution*, so this reads membership rather than falling through, the
+ *  way `resolveTheme` does. Returning the default for anything but `'off'` would be the deviation
+ *  flag again by the back door: flip `DEFAULT_SOUND` and everyone who chose sound loses it.
+ *
+ *  `fallback` is a parameter because with a two-valued state and the default inside it, no
+ *  black-box test can tell the two implementations apart — both map `'on'` to `'on'` while the
+ *  default is `'on'`. Passing the other default is the only way to show the recognised value never
+ *  routes through it, and the test is the only caller that passes one. */
+export function resolveSound(
+  stored: string | null | undefined,
+  fallback: SoundState = DEFAULT_SOUND,
+): SoundState {
+  return stored === 'on' || stored === 'off' ? stored : fallback
 }
 
 // Safari private mode / a sandboxed iframe — silently ignore. A mute that cannot be remembered is

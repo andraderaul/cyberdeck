@@ -12,11 +12,20 @@
 // Type only, never role: `text-accent` and `text-fg-muted` stay at the callsite. That split is also
 // what lets the test read every `text-` in this file as a size.
 
-// Below `sm` the header is one row holding the wordmark and both controls — tight enough that the
+// Below `sm` the header is one row holding the wordmark and three controls — tight enough that the
 // subtitle and its dash are already hidden there. 0.18em across the wordmark and a control label is
-// ~30px the row does not have: it pushes the Theme control off the edge at 320px. So the display
+// ~30px the row does not have: it pushes the last control off the edge at 320px. So the display
 // tracking arrives at the breakpoint that has the room for it, and below it the header keeps the
 // metrics it already shipped.
+//
+// **The row no longer fits below `sm`, and the tracking is not why.** Measured in Chromium over the
+// built output: the header's content is 389px wide at every width under `sm`, so it overflows at
+// 375, at 360 and at 320. The mute (ADR 0029) is the third pill and what tipped it — without it the
+// same row measures 324px, which already spilled 4px at 320 and fit everywhere above. The fix is a
+// design call rather than a metric: a glyph-only mute below `sm` recovers 17px and buys back 375
+// only, and the one measured way back to 324 is the AI control dropping its word too (325px). Both
+// cost a label at exactly the width where a label is worth most — ADR 0029 chose a readable mute
+// over a discoverable one — so the choice is left open here rather than made in passing.
 const DISPLAY_TRACKING = 'tracking-wide sm:tracking-widest'
 
 /**

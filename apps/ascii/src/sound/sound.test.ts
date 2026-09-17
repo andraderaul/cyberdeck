@@ -15,9 +15,20 @@ describe('the stored value', () => {
     expect(resolveSound('quiet')).toBe(DEFAULT_SOUND)
   })
 
-  it('is the explicit state, not a deviation flag', () => {
+  // `resolveSound('on') === 'on'` on its own proves nothing while `DEFAULT_SOUND` is `'on'`: a pure
+  // deviation flag (`stored === 'off' ? 'off' : DEFAULT_SOUND`) passes it too, and with a two-valued
+  // state containing the default there is no input that separates them. So the default is flipped
+  // instead — recognised in, same value out, whatever the fallback happens to be that day.
+  it('is the explicit state, not a deviation flag — a flipped default changes nothing', () => {
+    expect(resolveSound('off', 'on')).toBe('off')
+    expect(resolveSound('on', 'off')).toBe('on')
     expect(resolveSound('off')).toBe('off')
     expect(resolveSound('on')).toBe('on')
+  })
+
+  it('reaches the fallback only for a value it does not recognise', () => {
+    expect(resolveSound(null, 'off')).toBe('off')
+    expect(resolveSound('quiet', 'off')).toBe('off')
   })
 
   it('is written under the deck-wide key, with no program in it', () => {
@@ -53,6 +64,34 @@ describe('the one document listener', () => {
       throw new Error('no span')
     }
     press(span)
+    expect(play).toHaveBeenCalledTimes(1)
+  })
+
+  // The bare `input` tag is a namespace, not a control. GOLEM//Console's command line is the case
+  // that makes it matter — its whole interaction is typing at a bare `<input>` (ADR 0029, #400).
+  it.each(['text', 'password', 'search', 'email'])('stays silent for a %s field', (type) => {
+    document.body.innerHTML = `<input type="${type}" />`
+    const field = document.querySelector('input')
+    if (!field) {
+      throw new Error('no input')
+    }
+    press(field)
+    expect(play).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    'button',
+    'submit',
+    'checkbox',
+    'radio',
+    'range',
+  ])('plays for an input that actuates on the press — %s', (type) => {
+    document.body.innerHTML = `<input type="${type}" />`
+    const control = document.querySelector('input')
+    if (!control) {
+      throw new Error('no input')
+    }
+    press(control)
     expect(play).toHaveBeenCalledTimes(1)
   })
 

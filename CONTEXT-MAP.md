@@ -160,7 +160,10 @@ o deck é, não o que ele deixou de virar). Primeira entrada:
   mobília do deck por cima de uma peça é o deck falando em cima da obra (ADR 0021, ADR 0024). O hub
   entra — a cerca da ADR 0025 não é atingida, porque um mute é preferência de como o deck se
   apresenta, não maquinaria de retenção. E **som nunca é o único canal de um feedback**: tudo que
-  toca já muda algo visível, e é isso que permite calar a camada sem o deck perder informação.
+  toca já muda algo visível, e é isso que permite calar a camada sem o deck perder informação. A
+  allowlist nomeia `input` **por tipo**, nunca cru: a tag crua é um namespace, não um controle — um
+  campo de texto não *atua* na descida, você clica nele pra começar a digitar, e a digitação é
+  silenciosa. A linha de comando do GOLEM//Console é o caso que torna isso inegociável.
 - **Color Mode (ASCII) ≠ Theme (deck)** — os dois são "o esquema de cores", e o ASCII é o único
   programa onde os dois controles ficam à vista. Color Mode pinta a arte do usuário; Theme pinta a
   casca. Nenhum Theme do roster se chama `matrix` ou `neon` porque esses dois já são Color Modes —
