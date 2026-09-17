@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PRESETS } from '../ascii/presets'
 import type { ConversionSettings } from '../ascii/types'
+import { DEFAULT_SETTINGS } from '../ascii/types'
 import PresetPicker from './preset-picker'
 
 // The derivation is `thumbnail.test.ts`' subject; happy-dom has no 2D context to run it with, so
@@ -17,6 +18,19 @@ vi.mock('../ascii/thumbnail', async (importOriginal) => ({
 const { derivePresetThumbnails } = await import('../ascii/thumbnail')
 const deriveMock = vi.mocked(derivePresetThumbnails)
 
+// One off-default value per axis, spelled as a full ConversionSettings rather than a loose record:
+// a new axis is a type error here until it is given one, which is the compile-time half of the
+// run-time sweep below.
+const OFF_DEFAULT: ConversionSettings = {
+  resolution: 20,
+  brightness: 1.5,
+  contrast: 2.0,
+  colorMode: 'acid',
+  charset: 'box',
+  edgeGlyphs: true,
+  dithering: 'bayer',
+}
+
 function makeSourceImage(): HTMLImageElement {
   const img = new Image()
   Object.defineProperty(img, 'naturalWidth', { value: 400 })
@@ -26,16 +40,18 @@ function makeSourceImage(): HTMLImageElement {
 
 function renderPicker(props: Partial<React.ComponentProps<typeof PresetPicker>> = {}) {
   const onSelect = vi.fn()
+  const onReset = vi.fn()
   const view = render(
     <PresetPicker
       settings={PRESETS[0].settings}
       activePresetId={null}
       source={null}
       onSelect={onSelect}
+      onReset={onReset}
       {...props}
     />,
   )
-  return { onSelect, ...view }
+  return { onSelect, onReset, ...view }
 }
 
 // The derivation runs through a FrameRunner now (ADR 0002), so the row's pictures land a microtask
@@ -102,13 +118,52 @@ describe('PresetPicker', () => {
     expect(screen.queryByRole('button', { name: /revert/i })).not.toBeInTheDocument()
   })
 
-  it('shows a revert chip while an applied suggestion still stands, and calls it back', async () => {
+  it('shows a revert chip while a replaced look still stands, and calls it back', async () => {
     const user = userEvent.setup()
-    const onRevertSuggestion = vi.fn()
-    renderPicker({ onRevertSuggestion })
+    const onRevert = vi.fn()
+    renderPicker({ onRevert })
 
-    await user.click(screen.getByRole('button', { name: 'revert suggestion' }))
-    expect(onRevertSuggestion).toHaveBeenCalledOnce()
+    await user.click(screen.getByRole('button', { name: 'revert to the previous look' }))
+    expect(onRevert).toHaveBeenCalledOnce()
+  })
+
+  it('calls back the global reset, and puts it ahead of the revert offer it raises', async () => {
+    const user = userEvent.setup()
+    const { onReset } = renderPicker({ onRevert: vi.fn() })
+
+    const reset = screen.getByRole('button', { name: 'reset to defaults' })
+    await user.click(reset)
+    expect(onReset).toHaveBeenCalledOnce()
+
+    // Leftmost, so the revert offer the press raises lands to its right rather than under the
+    // pointer that just pressed it.
+    expect(reset.nextElementSibling).toBe(
+      screen.getByRole('button', { name: 'revert to the previous look' }),
+    )
+  })
+
+  it('keeps the global reset in place but unavailable once there is nothing left to reset', () => {
+    renderPicker({ settings: DEFAULT_SETTINGS, activePresetId: null })
+    expect(screen.getByRole('button', { name: /reset to defaults — unavailable/ })).toBeDisabled()
+  })
+
+  it('still offers the global reset for a Preset whose look is the default one', () => {
+    // Half of what the control undoes is the selected chip, which no comparison of the axes sees.
+    renderPicker({ settings: DEFAULT_SETTINGS, activePresetId: PRESETS[0].id })
+    expect(screen.getByRole('button', { name: 'reset to defaults' })).toBeEnabled()
+  })
+
+  // `handleReset` assigns DEFAULT_SETTINGS wholesale, so "every axis returns" needs no test — the
+  // assignment guarantees it. What the scope decides is the *availability*, and an axis missing
+  // from it fails the other way: the control sits disabled, saying "already at its default", while
+  // a non-default axis stands and nothing on screen offers a way back.
+  describe.each(
+    Object.keys(DEFAULT_SETTINGS) as (keyof ConversionSettings)[],
+  )('with only %s off its default', (key) => {
+    it('still offers the global reset', () => {
+      renderPicker({ settings: { ...DEFAULT_SETTINGS, [key]: OFF_DEFAULT[key] } })
+      expect(screen.getByRole('button', { name: 'reset to defaults' })).toBeEnabled()
+    })
   })
 
   it('does not mark modified when settings exactly match the active preset', () => {
@@ -177,6 +232,7 @@ describe('PresetPicker', () => {
         activePresetId={PRESETS[0].id}
         source={source}
         onSelect={vi.fn()}
+        onReset={vi.fn()}
       />,
     )
 
@@ -206,6 +262,7 @@ describe('PresetPicker', () => {
         activePresetId={null}
         source={makeSourceImage()}
         onSelect={vi.fn()}
+        onReset={vi.fn()}
       />,
     )
 
