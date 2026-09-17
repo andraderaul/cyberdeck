@@ -359,10 +359,33 @@ async function inspect(page: Page, minimum: number, resolve: string[] = []): Pro
 
       const round = (value: number): number => Math.round(value * 10) / 10
 
+      // A region made focusable so a keyboard can scroll it (`scrollable-region-focusable`, WCAG
+      // 2.1.1) is a *focus* target and not a pointer one: there is nothing on it to press, and
+      // 2.5.5 sizes what a pointer activates. GOLEM//Console's panels are the case — a 411x19
+      // Registers dump is not a control that is 25px too short, it is not a control.
+      //
+      // Deliberately narrow. It only lets go of an element whose entire claim to being a control is
+      // `[tabindex]` *and* which is a scroll container: anything carrying a control's tag or an
+      // explicit role is measured as before, so a real control cannot buy the exemption by adding
+      // `overflow-auto`.
+      const SELF_EVIDENTLY_A_CONTROL =
+        'a[href], button, input, select, textarea, summary, [role], [onclick]'
+
+      function isOnlyAScrollContainer(element: Element): boolean {
+        if (element.matches(SELF_EVIDENTLY_A_CONTROL)) {
+          return false
+        }
+        const { overflowX, overflowY } = getComputedStyle(element)
+        return /auto|scroll/.test(overflowY) || /auto|scroll/.test(overflowX)
+      }
+
       const smallTargets = [...document.querySelectorAll(CONTROLS)]
         .filter((element) => {
           // WCAG 2.5.5 exempts a control nothing can press, and so does the deck.
           if (element.matches(':disabled') || element.getAttribute('aria-disabled') === 'true') {
+            return false
+          }
+          if (isOnlyAScrollContainer(element)) {
             return false
           }
           return isOnScreen(element)

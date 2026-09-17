@@ -44,6 +44,17 @@ describe('Footer', () => {
     }
   })
 
+  // The half #288 missed and #297 had already found in `Chip`: "about" is five characters and drew
+  // 37.4px wide, because only the height was ever held (#355).
+  it('holds the about trigger on the axis its label leaves short', () => {
+    render(<Footer sourceHref={SOURCE} onAbout={() => {}} />)
+    const classes = new Set(screen.getByRole('button', { name: 'about' }).className.split(/\s+/))
+
+    expect(classes).toContain('min-w-[44px]')
+    // Without this the stretched width all falls to one side of a label that no longer fills it.
+    expect(classes).toContain('justify-center')
+  })
+
   it('keeps the about button off --fg-dim, which sits below the contrast floor', () => {
     render(<Footer sourceHref={SOURCE} onAbout={() => {}} />)
     const about = screen.getByRole('button', { name: 'about' })

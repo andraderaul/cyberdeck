@@ -1190,6 +1190,25 @@ describe('state inspection', () => {
       expect(panel.querySelectorAll('button, a, input, textarea, select')).toHaveLength(0)
     }
   })
+
+  // The other half of the same rule (#355, WCAG 2.1.1). Read-only is not the same as unreachable:
+  // every one of these scrolls, and a keyboard could not scroll back through what the machine
+  // printed — in the one program on the deck whose entire interface is a keyboard. A tab stop
+  // scrolls and drives nothing, so ADR 0018 is untouched.
+  it('gives every scrolling panel a tab stop, without giving it a control', async () => {
+    render(<App />)
+    write(PRINT_HI)
+
+    // A machine that has run: the Source is a listing rather than a textarea, and the Terminal has
+    // something to scroll back through. Before that there is nothing in either to reach.
+    await type('asm')
+    await stepTimes(30)
+
+    for (const name of ['Source', 'Console', 'Registers', 'Memory', 'Terminal']) {
+      const panel = screen.getByRole('region', { name: new RegExp(`^${name}`) })
+      expect(panel.querySelectorAll('[tabindex="0"]').length).toBeGreaterThan(0)
+    }
+  })
 })
 
 // The driver itself is verified by running the app — testing rAF scheduling would test the

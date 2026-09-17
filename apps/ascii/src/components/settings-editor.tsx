@@ -227,8 +227,11 @@ const CUSTOM_CHARSET_ERROR_ID = 'charset-custom-error'
 // The same spelling `api-key-modal` gives a text field — the deck has one input look, and this is
 // it. `w-40` keeps the authored ramp a column in the scrolling category row rather than a band
 // under it: the charset panel then costs exactly the height it already did (PANEL_MIN_HEIGHT).
+// `min-h-[44px]` because the padding and the line box add up to 42.8 on their own (#355) — an
+// `<input>` takes no target overlay, and the Chips it stands beside in the scrolling row are
+// already 44px tall, so the 1.2px is free.
 const CUSTOM_CHARSET_INPUT = cn(
-  'w-40 shrink-0 bg-bg-surface border border-base text-fg font-mono text-sm rounded-xs',
+  'w-40 shrink-0 min-h-[44px] bg-bg-surface border border-base text-fg font-mono text-sm rounded-xs',
   '[padding:var(--input-padding)]',
 )
 

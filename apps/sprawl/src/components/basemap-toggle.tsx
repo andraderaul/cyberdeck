@@ -33,7 +33,12 @@ export default function BasemapToggle({ on, onToggle }: Props) {
           : 'border border-base text-fg-muted hover:text-fg hover:border-strong',
       )}
     >
-      <span className="opacity-60">[B]</span> outline {on ? 'on' : 'off'}
+      {/* The key recedes with a token, not with alpha, while the outline is off: `opacity-60` over
+          `--fg-muted` composites to #5f5f79 on `--bg` — 3.19:1, under AA-small (#355).
+          `--fg-subtle` is the next step down the foreground scale and the Theme Contract pins it
+          above the floor, so the mark still recedes and is still auditable. On, the chip is
+          `--info` and the dimmed key clears the bar on its own. */}
+      <span className={on ? 'opacity-60' : 'text-fg-subtle'}>[B]</span> outline {on ? 'on' : 'off'}
     </button>
   )
 }

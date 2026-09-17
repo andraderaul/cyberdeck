@@ -1,6 +1,7 @@
+import { cn } from '@cyberdeck/deck-kit/utils'
 import { useEffect, useRef } from 'react'
 import type { Machine } from '../golem/machine'
-import Panel from './panel'
+import Panel, { KEYBOARD_SCROLLABLE } from './panel'
 
 type TerminalProps = {
   machine: Machine | null
@@ -27,7 +28,7 @@ export default function Terminal({ machine }: TerminalProps) {
   }, [output])
 
   return (
-    <Panel title="Terminal">
+    <Panel title="Terminal" bodyScrolls={false}>
       <div className="flex h-full min-h-0 flex-col">
         {output === '' ? (
           <p className="text-fg-muted text-xs">
@@ -40,7 +41,16 @@ export default function Terminal({ machine }: TerminalProps) {
           // marks this as the machine's voice — the Console answers in the foreground colour. It is
           // its own role rather than "info" (ADR 0024): what it says is not information the tool is
           // offering, it is the machine talking, and a Theme is free to make it green.
-          <output className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words font-mono text-phosphor text-sm leading-snug">
+          <output
+            // The panel #355 names first: the machine's own output, which a keyboard could not
+            // scroll back through. See `KEYBOARD_SCROLLABLE` in `panel.tsx`.
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: WCAG 2.1.1 outranks the rule here
+            tabIndex={0}
+            className={cn(
+              'min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words font-mono text-phosphor text-sm leading-snug',
+              KEYBOARD_SCROLLABLE,
+            )}
+          >
             {output}
           </output>
         )}

@@ -146,4 +146,18 @@ describe('ThemeControl', () => {
     expect(document.documentElement.getAttribute(THEME_ATTRIBUTE)).toBe('ice')
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull()
   })
+
+  // #288 took twelve controls to 44x44 and did not reach inside a popover, so every row in every
+  // program that renders this control drew 8px short (#355). A real box rather than an overlay:
+  // the rows are stacked 0px apart, so a centred 44px overlay would reach into its neighbour's.
+  it('holds every row of the popover to the 44px target', async () => {
+    const user = userEvent.setup()
+    render(<ThemeControl />)
+
+    await user.click(trigger())
+
+    for (const row of screen.getAllByRole('menuitemradio')) {
+      expect(row.className.split(/\s+/)).toContain('min-h-[44px]')
+    }
+  })
 })

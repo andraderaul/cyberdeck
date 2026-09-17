@@ -33,8 +33,10 @@ import { expect, type Page } from '@playwright/test'
  */
 const MENU_MIN_WIDTH = '128px' // `min-w-[8rem]`
 
-/** Each Theme's row in that popover, from the same file and equally unspelled outside the kit. */
-const MENU_ITEM_MIN_HEIGHT = '36px' // `min-h-[36px]`
+// The popover's rows used to be the second canary, at `min-h-[36px]`. #355 took them to the deck's
+// 44px target and that retired them: `min-h-[44px]` is the trap named at the top of this file, and
+// GOLEM//Console now spells it in `console.tsx` for its own command line. A canary a workspace can
+// keep alive on its own globs is a guard that cannot fail, so it is gone rather than updated.
 
 /**
  * The Theme control's popover, which is the whole of the kit that GOLEM//Console and the hub draw:
@@ -51,8 +53,4 @@ export async function expectThemeMenuKeptItsSizes(page: Page): Promise<void> {
 
   const menu = page.getByRole('menu', { name: 'theme' })
   await expect(menu).toHaveCSS('min-width', MENU_MIN_WIDTH)
-  await expect(menu.getByRole('menuitemradio').first()).toHaveCSS(
-    'min-height',
-    MENU_ITEM_MIN_HEIGHT,
-  )
 }
