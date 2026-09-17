@@ -265,7 +265,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   Provider owns — and `useDialog`); `recording` (`useRecording`, `formatElapsedTime`, and the
   share-or-download a finished take goes out through); `utils` (`cn`, `loadImageFile`,
   `shareOrDownloadCanvas`, `shareOrDownloadBlob`, `isTouchDevice`); `errors`; `pwa` (`useAppUpdate`,
-  `UpdateBanner`). The `precache-shell` build plugin ships beside them but is reached by relative
+  `UpdateBanner`); `sound` (`installClickSound`, `SoundControl` — ADR 0029, here since #400).
+  The `precache-shell` build plugin ships beside them but is reached by relative
   path from `vite.config.ts` rather than by package name — the reason is at that callsite (ADR 0027)
 
 **Installing and offline** (ADR 0027) — the machinery is the kit's; this app owns only these two
@@ -273,29 +274,18 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `public/manifest.webmanifest` — hand-written. The kit's roster guard pins its `theme_color` to the
   same token the `theme-color` meta carries, and checks every icon it names exists
 
-**The press sound** (ADR 0029) — deck-wide in intent, app-local for exactly one slice
-- `src/sound/sound.ts` — the whole mechanism: the deck-wide `cyberdeck:sound` key, the resolution of
-  a stored value to `on | off`, and `installClickSound()` — one `pointerdown` listener at the
-  document, one preloaded `Audio`, one allowlist matched with `closest()`. The allowlist names
-  `input` **by type**, never bare: the bare tag is a namespace, and a text field's press actuates
-  nothing — GOLEM//Console's command line is the case that makes it unarguable. `CLICK_VOLUME` is the
-  single edit that changes the level, and it is **a placeholder set by arithmetic rather than by
-  ear**. Nothing here is this program's: the key is unqualified from the first line, which is what
-  makes #400's crossing into `packages/deck-kit/src/sound/` a `git mv` rather than a rename. It is
-  written here because at this slice it has one caller, and one caller is a hypothetical seam
-  (ADR 0014) — the route `UpdateBanner` took
-- `src/sound/sound-control.tsx` — the mute, beside `ThemeControl` in the header (ADR 0015)
-- `src/sound/click.wav` — the sample, and **a placeholder too**: a synthesised 30 ms resonant burst
-  normalised to a peak of exactly 0.700, where ADR 0029 asks for an artifact designed by ear. A WAV
-  and not an MP3: encoder padding would put silence in front of the attack of the one sound chosen
-  for arriving early
-- `src/sound/click-sample.mjs` — the recipe that writes that placeholder, committed so the sample is
-  constants someone can vary rather than an opaque blob. Deterministic: same constants, same bytes.
-  Not shipped and not imported — a build-time input, in the register of GLITCH's reference plate
-- `src/sound/exclusion.test.ts` — the guard that keeps SPRAWL//Atlas's exclusion a decision someone
-  has to argue with rather than a line nobody noticed was missing (ADR 0021, ADR 0029)
-- `src/main.tsx` installs the listener outside the tree, which is also why no unit environment ever
-  does; `vite.config.ts` keeps the sample out of the entry chunk (see the comment there)
+**The press sound** (ADR 0029) — **the kit's, since #400**
+- It was written here with one caller, because one caller is a hypothetical seam (ADR 0014) — the
+  route `UpdateBanner` took — and it crossed into `packages/deck-kit/src/sound/` whole when the hub,
+  GLITCH//Studio and GOLEM//Console arrived as callers two, three and four. The key was deck-wide and
+  unqualified from the first line, which is what made the crossing a move rather than a rename
+- What is left in this program is two lines: `src/main.tsx` calls `installClickSound()` outside the
+  tree (which is also why no unit environment ever does), and `app.tsx` renders `SoundControl` beside
+  `ThemeControl` in the header (ADR 0015). `vite.config.ts` takes the kit's `assetsInlineLimit` so
+  the sample is emitted rather than folded into the entry chunk
+- The measured header table lives in `src/header-type.ts`: this is the tight header on the deck — the
+  only one of the four that overflows below `sm`, and the only one where the mute is a third control
+  rather than a second
 
 **Components**
 - `src/components/ascii-canvas.tsx` — lifecycle coordinator: drives static and rAF render paths.

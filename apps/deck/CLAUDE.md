@@ -47,13 +47,22 @@ A single-page React/TS/Vite app, and about as thin as one gets.
 - `src/roster.ts` — the four programs as content: id, name, `kind` (`tool` | `piece`, ADR 0021's
   vocabulary), tagline, description, live URL. **Not a core.** If it ever grows a function that
   transforms something, that is the third clause about to break.
-- `src/app.tsx` — the page: header with the wordmark and `ThemeControl`, the statement, the grid,
+- `src/app.tsx` — the page: header with the wordmark, `ThemeControl` and the mute, the statement, the grid,
   and the kit's `Footer`. The hub passes it no `onAbout`: it has no About modal, because a page
   whose whole subject is the deck says so on the page rather than behind a control (ADR 0025).
 - `src/components/program-card.tsx` — one entry. The whole card is the `<a>`, and it navigates in
   this tab: sending you into a program is what the door is *for*.
 
-Everything visual comes from `@cyberdeck/deck-kit` — tokens, preset, `ThemeControl`, `Footer`. The
+**The press sound** (ADR 0029) is the hub's too, and the fence of ADR 0025 is not in the way: a mute
+is a preference about how the deck presents itself, which is the same clause that admitted the Theme
+picker — not retention machinery, which is state about your *use*. `src/main.tsx` calls
+`installClickSound()` outside the tree; `app.tsx` renders `SoundControl` beside `ThemeControl`, the
+same slot the three programs use (ADR 0015). The hub has no service worker, so `vite.config.ts`
+imports the kit's `assetsInlineLimit` alone — the sample still has to be a file rather than a data
+URI folded into the entry chunk.
+
+Everything visual comes from `@cyberdeck/deck-kit` — tokens, preset, `ThemeControl`, `SoundControl`,
+`Footer`. The
 kit is the hub's only dependency of substance, and the hub is the kit's first caller with no domain
 at all: if something here needs the kit and cannot get it, that is a signal about the kit (ADR 0014,
 ADR 0025).

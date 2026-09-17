@@ -539,8 +539,15 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - Everything else shared comes from `@cyberdeck/deck-kit` (ADR 0014): `recording` (`useRecording`,
   `formatElapsedTime`), `ui` (the primitives plus `EmptyStateHero`, `ErrorBoundary`,
   the toast hooks), `utils` (`cn`, `shareOrDownloadCanvas`,
-  `shareOrDownloadBlob`, `isTouchDevice`), `errors`, `pwa` (`useAppUpdate`, `UpdateBanner`) and the
+  `shareOrDownloadBlob`, `isTouchDevice`), `errors`, `pwa` (`useAppUpdate`, `UpdateBanner`),
+  `sound` (`installClickSound`, `SoundControl` — ADR 0029) and the
   `precache-shell` build plugin beside it (ADR 0027)
+
+**The press sound** (ADR 0029) — the mechanism is the kit's; this program owns only the two lines
+that use it: `src/main.tsx` calls `installClickSound()` outside the tree, and `app.tsx` renders
+`SoundControl` beside `ThemeControl` in the header, which is the same slot in every included
+workspace (ADR 0015). `vite.config.ts` takes the kit's `assetsInlineLimit` so the sample is emitted
+into `dist/assets` and precached rather than folded into the entry chunk.
 
 **Installing and offline** (ADR 0027) — the machinery is the kit's; this app owns only these two
 - `vite.config.ts` — `precacheShell({ cachePrefix: 'glitch-shell-' })`

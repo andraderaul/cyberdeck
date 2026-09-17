@@ -1,3 +1,4 @@
+import { SoundControl } from '@cyberdeck/deck-kit/sound'
 import { Footer, ThemeControl } from '@cyberdeck/deck-kit/ui'
 import ProgramCard from './components/program-card'
 import { PROGRAMS } from './roster'
@@ -16,6 +17,10 @@ export default function App() {
         <span className="hidden text-fg-faint text-xs sm:block">—</span>
         <span className="hidden text-fg-muted text-xs sm:block">the front door</span>
         <ThemeControl className="ml-auto" />
+        {/* Deck chrome beside deck chrome: both are the deck describing itself, and ADR 0029 wants
+            one slot to learn (ADR 0015). A mute is a preference about how the deck presents itself,
+            which is what ADR 0025's fence already cleared for the Theme picker. */}
+        <SoundControl />
       </header>
 
       <main className="mx-auto w-full max-w-[72rem] flex-1 px-sm py-sp-xs sm:px-lg sm:py-sp-sm">

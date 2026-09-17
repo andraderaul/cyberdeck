@@ -1,5 +1,6 @@
 import { UpdateBanner, useAppUpdate } from '@cyberdeck/deck-kit/pwa'
 import { useRecording } from '@cyberdeck/deck-kit/recording'
+import { SoundControl } from '@cyberdeck/deck-kit/sound'
 import {
   EmptyStateHero,
   ErrorBoundary,
@@ -139,6 +140,9 @@ export default function App() {
         {/* Deck chrome rather than the artefact's, which is why it is here and not in the Control
             Strip — PRESETS | EDIT | OUT are all about the Chain being made (ADR 0020, 0024). */}
         <ThemeControl className="ml-auto" />
+        {/* Deck chrome too, and beside the Theme for the same reason — one slot to learn across the
+            programs (ADR 0015, ADR 0029). */}
+        <SoundControl />
       </header>
 
       {update.isReady && <UpdateBanner onApply={update.apply} />}

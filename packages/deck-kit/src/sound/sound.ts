@@ -1,9 +1,15 @@
 // The deck's press sound (ADR 0029): one document listener, one preloaded sample, one persisted
 // mute. No Web Audio and no synthesis — the whole effect is a static file and a `closest()`.
 //
-// It is born here with one caller, because one caller is a hypothetical seam (ADR 0014). Nothing in
-// it is ASCII//Convert's, though: the key below is deck-wide and unqualified from the first line, so
-// #400 is a `git mv` into `packages/deck-kit/src/sound/` rather than a rename.
+// It was born in `apps/ascii/src/sound/` with one caller, because one caller is a hypothetical seam
+// (ADR 0014), and crossed into the kit at #400 when the hub, GLITCH//Studio and GOLEM//Console
+// arrived together. Nothing in it was ever ASCII//Convert's — the key below is deck-wide and
+// unqualified from the first line, which is what made the crossing a move rather than a rename.
+
+/// <reference types="vite/client" />
+// The reference is here rather than in a `vite-env.d.ts` because the `.wav` declaration has to
+// reach every program's own `tsc -b` as well as the kit's, and a stray `.d.ts` in the kit is in no
+// program's project — only what an app imports is. This file is what they import.
 
 import clickUrl from './click.wav'
 

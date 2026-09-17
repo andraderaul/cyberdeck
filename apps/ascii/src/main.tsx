@@ -1,9 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import { installClickSound } from '@cyberdeck/deck-kit/sound'
 import { ToastProvider } from '@cyberdeck/deck-kit/ui'
 import App from './app'
-import { installClickSound } from './sound/sound'
 
 const rootEl = document.getElementById('root')
 if (!rootEl) {

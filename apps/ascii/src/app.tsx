@@ -1,6 +1,7 @@
 import { normalizeError } from '@cyberdeck/deck-kit/errors'
 import { UpdateBanner, useAppUpdate } from '@cyberdeck/deck-kit/pwa'
 import { useRecording } from '@cyberdeck/deck-kit/recording'
+import { SoundControl } from '@cyberdeck/deck-kit/sound'
 import {
   EmptyStateHero,
   ErrorBoundary,
@@ -25,7 +26,6 @@ import ScanPendingModal from './components/scan-pending-modal'
 import { outputFilename } from './export/output'
 import { HEADER_CONTROL_TYPE, HEADER_SUBTITLE, HEADER_WORDMARK } from './header-type'
 import { useWebcamState } from './hooks/use-webcam-state'
-import SoundControl from './sound/sound-control'
 
 // The rest of the AI surface, following the three provider adapters off the first-paint path
 // (#357). The surface is optional and off by default — ADR 0003 keeps the key on the user's own
