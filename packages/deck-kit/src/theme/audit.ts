@@ -380,6 +380,44 @@ export function findUndefinedScales(
 }
 
 /**
+ * Every deck colour a source file thins with an alpha modifier — `bg-accent/20` — and the line it
+ * sits on.
+ *
+ * The third spelling of the silence the two guards above catch. Every colour in the Tailwind preset
+ * is written `var(--token)` with no `<alpha-value>` placeholder, so Tailwind cannot parse it as a
+ * colour and drops the whole modified candidate: `bg-accent/20` emits no rule at all. A background
+ * simply never appears. A border is worse — Preflight has already painted one in Tailwind's own
+ * default grey, so the element keeps a colour nobody on this deck chose. Seven were shipping when
+ * this landed, across two programs (#355).
+ *
+ * Spelling `<alpha-value>` into the preset would make them all render, and that is the fix this
+ * guard exists *instead of*. An arbitrary tint is a composited ground, the Theme Contract proves
+ * token values rather than composites, and three of the seven measured under AA-small once
+ * composited — so making them render would have shipped three new contrast defects in place of
+ * three invisible ones. The deck's tints are named tokens — `bg-accent-ghost`, `-dim`, `-soft`, and
+ * the `subtle` / `base` / `strong` border ladder — which are values a reader can audit and a Theme
+ * can restate. A new tint is a token, not a slash.
+ *
+ * The colour names come from the preset at the callsite rather than from a list here, so a colour
+ * added tomorrow is guarded tomorrow.
+ */
+export function findAlphaModifiers(source: string, colours: readonly string[]): ClassFinding[] {
+  const named = bannedPairs(COLOR_UTILITIES, colours)
+  const findings: ClassFinding[] = []
+  source.split('\n').forEach((text, index) => {
+    for (const [candidate] of text.matchAll(CANDIDATE)) {
+      // `sm:hover:bg-accent/20` — variants in front, the modifier this guard is about behind.
+      const [name, alpha] = (candidate.split(':').pop() ?? '').split('/')
+      // A step of the opacity scale or an arbitrary one — `/20` and `/[.06]` fail the same way.
+      if (alpha !== undefined && /^(\d+|\[[^\]]*\])$/.test(alpha) && named.has(name)) {
+        findings.push({ className: candidate, line: index + 1 })
+      }
+    }
+  })
+  return findings
+}
+
+/**
  * WCAG 2.x relative-luminance contrast between two hex colours. Refuses anything it cannot read
  * rather than guessing: a pinned pair that quietly stopped being a hex must fail the guard, not
  * score 1:1 and be waved through.

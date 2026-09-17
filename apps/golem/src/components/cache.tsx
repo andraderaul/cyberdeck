@@ -97,7 +97,7 @@ function SetCell({ set, result }: { set: CacheSetView; result: CacheResult | nul
     <div
       className={cn(
         'border p-xs font-mono text-xs',
-        set.valid ? 'border-base bg-bg-elevated' : 'border-base/50 text-fg-subtle',
+        set.valid ? 'border-base bg-bg-elevated' : 'border-subtle text-fg-subtle',
       )}
     >
       <div className="mb-1 flex justify-between">
@@ -126,9 +126,11 @@ function SetCell({ set, result }: { set: CacheSetView; result: CacheResult | nul
 
 // The whole cache at a glance: eight cells warming as blocks load. Enough to feel the locality
 // without the panel drowning in 32 data words — the spotlight above carries the detail.
+// The ramp is spelled in the deck's tint tokens rather than in alpha modifiers: a modifier on a
+// `var()` colour renders nothing at all, so this strip was three states and two colours (#355).
 const HEAT: Record<CacheStripCell['heat'], string> = {
-  empty: 'bg-transparent border-base/40',
-  cold: 'bg-accent/30 border-base',
+  empty: 'bg-transparent border-subtle',
+  cold: 'bg-accent-soft border-base',
   hot: 'bg-accent border-accent',
 }
 

@@ -1,18 +1,18 @@
 // What the guards in `a11y.ts` found already broken on the day they landed (#329), written down one
 // node at a time.
 //
-// Every entry here is a real defect. None of them was introduced by the guard — the guard is where
+// Every entry here was a real defect. None of them was introduced by the guard — the guard is where
 // they became visible, which is the whole point of adding one to a codebase that has been shipping
-// for a while. They are accepted rather than fixed because each remedy is app behaviour with a
+// for a while. They were accepted rather than fixed because each remedy is app behaviour with a
 // changeset behind it and #329 is tooling only; the full write-up, with ratios and measurements,
 // is **#355**.
 //
 // THE RULES THIS FILE PLAYS BY, because a suppression list is one refactor away from being the place
 // defects go to be forgotten:
 //
-//  - One entry is one *node*. There is no way to spell "and every other control like it" here, and
-//    that is deliberate — accepting one `--accent` label on a lit surface must not quietly accept
-//    the next one somebody adds.
+//  - One entry is one *node*. There is no way to spell "and every other mark like it" here, and
+//    that is deliberate — accepting one of SPRAWL//Atlas's city labels must not quietly accept the
+//    next mark somebody draws over the map.
 //  - An entry that stops matching **fails the build**. Fix the cause, delete the entry; leave it and
 //    the guard says so by name. So the list can only ever shrink, and it cannot silently outlive
 //    what it describes.
@@ -24,62 +24,21 @@
 //  - Every factory below says what the defect *is*, not that it is tolerated. A `why` that reads
 //    "known issue" would be worth less than no entry at all.
 //
-// They are factories rather than constants because the same defect appears at different paths in
-// different programs — the Theme popover's checked row is the kit's, and it fails in all four
-// workspaces that render the control, under four different ancestors. The prose is written once, on
-// the factory; the node is named at the callsite, in the spec for the surface it fails on.
+// They are factories rather than constants because one defect covers many nodes: the piece's ink is
+// thirteen marks at thirteen paths. The prose is written once, on the factory; the node is named at
+// the callsite, in the spec for the surface it fails on.
 //
-// **The list has shrunk once already**, and by the route above. #355's sections 2, 3 and 4 were
-// fixed rather than carried: the footer's `about` trigger, the Theme popover's seven rows per
-// workspace, GOLEM//Console's command line and its authored-Charset sibling, the five scrolling
-// panels a keyboard could not reach, and SPRAWL//Atlas's dimmed key hint. Thirty-eight entries and
-// six factories went with them.
+// **The list has shrunk twice, and by the route above.** #355's sections 2, 3 and 4 were fixed
+// rather than carried: the footer's `about` trigger, the Theme popover's seven rows per workspace,
+// GOLEM//Console's command line and ASCII//Convert's authored-Charset sibling, the five scrolling
+// panels a keyboard could not reach, and SPRAWL//Atlas's dimmed key hint — thirty-eight entries and
+// six factories. Section 1 followed: `ice`'s `--accent` was re-derived under the Theme Contract, so
+// the sixteen accent labels across four programs went too, the Theme popover's checked row among
+// them, and `theThemePopover` went empty and was deleted rather than left returning nothing.
+//
+// What is left is not a deferral at all — it is ADR 0021's licence, held one node at a time.
 
-import { THEMES } from '../../packages/deck-kit/src/theme/themes'
 import type { Accepted } from './a11y'
-
-/** Where the full inventory lives, quoted in every `why` so a reader never has to hunt for it. */
-const WRITTEN_UP = 'see #355'
-
-/**
- * `--accent` used as small text on any surface other than `--void`.
- *
- * ADR 0009's table is unambiguous about this token: `#b829ff` measures 4.51:1 on `--void` and
- * **nothing else** — 4.35:1 on `--abyss`, 3.90:1 on `--shadow`. That ADR granted the
- * cyberpunk-register exception to exactly two labels in `analysis-modal.tsx`, and wrote down that
- * "any future addition of `text-violet text-xs` on `--abyss` or darker backgrounds should be
- * evaluated individually before being granted the same exception". Sixteen later ones exist across
- * four programs — twelve named at a callsite below and four more from `theThemePopover`, one per
- * workspace that renders the control — and none was evaluated. This is that evaluation being
- * deferred, in writing.
- *
- * Not a hole in the kit's Theme Contract guard, which is doing exactly its job: it proves *token
- * pairs* from token values, and an accent foreground over a lit surface is a pair it does not hold.
- * Only a browser that has composited the real surfaces can find these.
- */
-export function accentOnALitSurface(element: string, ratio: string): Accepted {
-  return {
-    rule: 'color-contrast',
-    target: element,
-    at: ratio,
-    why: `--accent as small text off --void reads ${ratio}, under AA-small. ADR 0009 has this token as "PASS on void only" and asked for each later use to be evaluated one at a time; ${WRITTEN_UP}.`,
-  }
-}
-
-/**
- * What the kit's Theme popover leaves failing, given the path to the menu in one workspace.
- *
- * The rows' 114x36 is gone — they are a real 44px box now (#355) — so what remains is the checked
- * row's `--accent` label, which belongs to the token question in #355's first section rather than
- * to the target work. A list rather than a single entry because that is the shape all four specs
- * spread, and because the popover is the surface a second accepted node would land on.
- */
-export function theThemePopover(menu: string): Accepted[] {
-  return [
-    // Only the checked row carries `--accent`; the other six are `--fg-muted` and clear the bar.
-    accentOnALitSurface(`${menu} > button:nth-of-type(1) "${THEMES[0]}"`, '3.89:1'),
-  ]
-}
 
 /**
  * A mark SPRAWL//Atlas draws straight onto its own render, with no plate under it — a city name, or

@@ -363,10 +363,11 @@ export default function GlitchCanvas({
               CANVAS_OVERLAY_CHROME,
               TOUCH_TARGET_ICON,
               'flex items-center gap-2xs text-accent border border-accent',
-              // No hover surface, unlike REC's: `accent` clears AA-small on `bg` and only the
-              // non-text floor on `bg-elevated` (3.90:1 in `ice`), and this badge carries the timer
-              // as small text. The accent chips beside it — mirror and compare, when active — hold
-              // the same line for the same reason.
+              // No hover surface, unlike REC's. This badge carries the timer as small text, and
+              // until #355 re-derived `ice`'s accent that text cleared AA-small on `bg` alone —
+              // `bg-elevated` measured 3.90:1. It clears every surface now (4.92:1 in `ice`, the
+              // tightest on the roster), so the bare ground is a choice rather than a constraint.
+              // The accent chips beside it — mirror and compare, when active — hold the same line.
               moshState === 'rendering' ? 'cursor-default' : 'cursor-pointer',
             )}
           >

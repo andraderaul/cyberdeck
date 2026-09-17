@@ -20,9 +20,6 @@ const THEMES = ['ice', ...declaredThemes(css)]
 const SURFACES = ['--bg', '--bg-surface', '--bg-elevated'] as const
 
 const AA_SMALL = 4.5
-// WCAG 1.4.11 — the floor for something you have to be able to *see* rather than read: a border,
-// a focus ring, a chip's outline.
-const NON_TEXT = 3
 
 // sRGB units, on a scale that tops out around 441. Not a WCAG figure — nothing in WCAG measures
 // two foregrounds against each other — so it is set from the roster instead. See the Hit/Miss pin.
@@ -37,12 +34,15 @@ describe.each(THEMES)('Theme `%s` meets the contract', (theme) => {
       expect(ratio(fg, surface)).toBeGreaterThanOrEqual(AA_SMALL)
     })
 
-    // Two tiers, and the split is what closes the hole without failing the incumbent: `ice`'s
-    // violet clears AA-small on the base surface and 3:1 everywhere, while a future Theme still
-    // cannot ship an accent at 2:1. Demanding AA-small everywhere would fail `ice` itself and turn
-    // "add Themes" into "reopen the deck's brand colour under deadline".
-    it('--accent passes the non-text floor', () => {
-      expect(ratio('--accent', surface)).toBeGreaterThanOrEqual(NON_TEXT)
+    // One tier, since #355. This used to relax to WCAG 1.4.11's 3:1 off the base surface, for one
+    // reason written down beside it: demanding AA-small everywhere would have failed `ice` itself.
+    // It also let sixteen accent-coloured labels ship over a lit surface across four programs —
+    // the Contract held the pair and held it to the wrong floor, which is the quietest way for a
+    // guard to be green and wrong. `ice`'s accent was re-derived (ADR 0009's superseding note) and
+    // the exemption went with it: the tightest accent on the roster now clears 4.9:1 on every
+    // surface, so the floor the rest of the palette meets is the floor the accent meets.
+    it('--accent passes AA-small, because it carries small text on every surface', () => {
+      expect(ratio('--accent', surface)).toBeGreaterThanOrEqual(AA_SMALL)
     })
 
     // The roles the tracer named (ADR 0024). A phosphor and a Hit/Miss pair are read as text on a
@@ -57,19 +57,14 @@ describe.each(THEMES)('Theme `%s` meets the contract', (theme) => {
     })
   })
 
-  it('--accent passes AA-small on the base surface, where it carries small text', () => {
-    expect(ratio('--accent', '--bg')).toBeGreaterThanOrEqual(AA_SMALL)
-  })
-
   // A selection highlight is the only place the deck paints text on an *opaque* accent, and it is
   // the one pair a Theme cannot get right by accident: whether the text wants to be lighter or
   // darker than the accent depends on how bright that accent is. Near-white on a bright accent
   // measures 1.3:1, which is invisible rather than merely low.
   //
-  // AA-small, with no second tier — unlike the accent's own pin, this one does not have to be
-  // relaxed to spare the incumbent. `ice` drew white on violet at 3.80:1; black on the same violet
-  // is 4.80:1, so the Theme keeps its colour and the pair clears the floor the rest of the palette
-  // already meets.
+  // `ice` drew white on violet at 3.80:1; black on the same violet was 4.80:1 and is 6.05:1 on the
+  // accent as re-derived, so the Theme keeps its colour and the pair clears the floor the rest of
+  // the palette already meets.
   it('--fg-on-accent passes AA-small on the accent it stands on', () => {
     expect(ratio('--fg-on-accent', '--accent')).toBeGreaterThanOrEqual(AA_SMALL)
   })

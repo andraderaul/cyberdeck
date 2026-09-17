@@ -7,7 +7,9 @@
 // contrast from whatever the Chain last painted — the REC badge measured 1.57:1 against a bright
 // feed before that ADR.
 //
-// The accepted entries below are pre-existing and written up in #355 — see `support/accepted.ts`.
+// Nothing here is accepted any more. #355 took the last of it: the footer's `about` trigger grew to
+// the target, and the wordmark and `export png` labels cleared AA-small when `ice`'s `--accent` was
+// re-derived.
 
 import { fileURLToPath } from 'node:url'
 import { expect, type Page, test } from '@playwright/test'
@@ -17,12 +19,9 @@ import {
   expectEveryMarkOnTheCanvasStandsOnItsOwnGround,
   expectNoAxeViolations,
 } from '../support/a11y'
-import { accentOnALitSurface, theThemePopover } from '../support/accepted'
 
 /** Any raster will do — this is the workspace's own social card, so nothing is borrowed. */
 const SOURCE_IMAGE = fileURLToPath(new URL('../../apps/glitch/public/og-card.png', import.meta.url))
-
-const THEME_MENU = 'div#root > div:nth-of-type(1) > header > div > div'
 
 async function withASource(page: Page): Promise<void> {
   await page.goto('/')
@@ -46,9 +45,8 @@ test('the Theme menu is accessible and every row holds its target', A11Y, async 
   await page.getByRole('button', { name: /^theme:/ }).click()
   await expect(page.getByRole('menu', { name: 'theme' })).toBeVisible()
 
-  const accepted = theThemePopover(THEME_MENU)
-  await expectNoAxeViolations(page, accepted)
-  await expectEveryControlHoldsTheTarget(page, accepted)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
 })
 
 test('the About modal is accessible and every control holds its target', A11Y, async ({ page }) => {
@@ -56,14 +54,8 @@ test('the About modal is accessible and every control holds its target', A11Y, a
   await page.getByRole('button', { name: 'about' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
 
-  const accepted = [
-    accentOnALitSurface(
-      'div#root > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > span "GLITCH//STUDIO"',
-      '3.89:1',
-    ),
-  ]
-  await expectNoAxeViolations(page, accepted)
-  await expectEveryControlHoldsTheTarget(page, accepted)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
 })
 
 for (const tab of ['presets', 'edit'] as const) {
@@ -101,10 +93,7 @@ test('the out tab is accessible and every control holds its target', A11Y, async
   await page.getByRole('tab', { name: 'out' }).click()
   await expect(page.getByRole('tab', { name: 'out' })).toHaveAttribute('aria-selected', 'true')
 
-  const accepted = [
-    accentOnALitSurface('div#strip-panel-out > div > button:nth-of-type(3) "export png"', '4.23:1'),
-  ]
-  await expectNoAxeViolations(page, accepted)
-  await expectEveryControlHoldsTheTarget(page, accepted)
-  await expectEveryMarkOnTheCanvasStandsOnItsOwnGround(page, accepted)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
+  await expectEveryMarkOnTheCanvasStandsOnItsOwnGround(page)
 })

@@ -29,9 +29,9 @@
 
   /* Violet — primary accent. "ASCII//CONVERT" wordmark, primary buttons,
      active toggles, slider thumbs, focus rings. */
-  --violet: #b829ff;
+  --violet: #c652ff;
   --deep-violet: #7b1fa2;
-  --soft-violet: #d888ff;
+  --soft-violet: #df9eff;
 
   /* Cyan — secondary / info. Secondary buttons, source-code link,
      LOW threat level, tag badges. */
@@ -75,8 +75,8 @@
   --fg-subtle: var(--muted);
 
   /* The one foreground that stands on the accent rather than on a surface. Black rather than
-     --white: white on this violet measures 3.80:1, below the floor the rest of the palette
-     clears, and black measures 4.80:1. */
+     --white: white on this violet measures 3.01:1, below the floor the rest of the palette
+     clears, and black measures 6.05:1. */
   --fg-on-accent: #000000;
 
   --bg: var(--void);

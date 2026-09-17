@@ -132,6 +132,10 @@ neighbouring control in the same program.
   - *Pros:* one rule, no tiers.
   - *Cons:* fails `ice` itself (violet is 3.90:1 on the elevated surface).
   - *Rejected because:* it turns "add Themes" into "reopen the deck's brand colour under deadline".
+  - **Adopted later, in #355** — see the superseding note in
+    [ADR 0009](0009-wcag-contrast-audit.md). The only Theme it failed was `ice`, whose accent
+    predates this Contract; once that one was re-derived the tier had nothing left to spare, and
+    what it was sparing had meanwhile shipped sixteen accent labels below AA across four programs.
 
 - **Keeping the literal names and relying on review.**
   - *Rejected because:* the shorter spelling wins by default, and the failure mode is one Theme

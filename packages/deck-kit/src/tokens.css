@@ -10,9 +10,14 @@
 
 :root {
   /* Colors — Primitives (`ice`'s vocabulary; a Theme does not restate these) */
-  --violet: #b829ff;
+  /* Re-derived under the Theme Contract rather than chosen afresh — same hue and saturation as the
+     `#b829ff` this deck shipped for a year, lifted to hsl(280, 100%, 66%) so `ice`'s accent clears
+     AA-small on every ground it is drawn on instead of on `--bg` alone. It is the one accent that
+     predates the Contract; see the superseding note in ADR 0009. The soft step follows it up, to
+     keep the gap between an accent and its soft in the band the other six Themes sit in. */
+  --violet: #c652ff;
   --deep-violet: #7b1fa2;
-  --soft-violet: #d888ff;
+  --soft-violet: #df9eff;
 
   --cyan: #00e5ff;
   --deep-cyan: #0097a7;
@@ -62,9 +67,10 @@
      bright that accent is, which is the whole question.
 
      Pure black rather than --void, and this is the only place in the deck that is true. `ice` drew
-     --white here for years and measured 3.80:1, below the floor the rest of the palette clears;
-     going the other way, --void measures 4.51:1 and black 4.80:1. On a pin the whole roster has to
-     meet, the 0.3 of headroom is worth the one literal. */
+     --white here for years and measured 3.80:1, below the floor the rest of the palette clears.
+     Against the accent as re-derived (ADR 0009's superseding note) --void measures 5.69:1 and black
+     6.05:1 — both clear the floor now, and on a pin the whole roster has to meet the wider margin
+     is worth the one literal. */
   --fg-on-accent: #000000;
 
   --bg: var(--void);

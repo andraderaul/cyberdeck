@@ -23,7 +23,7 @@ export default function Flags({ machine }: FlagsProps) {
             title={flag.meaning}
             className={cn(
               'border px-1.5 py-0.5',
-              flag.set ? 'border-accent bg-accent/15 text-accent' : 'border-base text-fg-subtle',
+              flag.set ? 'border-accent bg-accent-soft text-accent' : 'border-base text-fg-subtle',
             )}
           >
             {flag.name}
