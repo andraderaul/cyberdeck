@@ -28,7 +28,7 @@ export default function HoverInspector({ hover }: Props) {
         }}
       />
       <span
-        className="absolute font-mono text-xs px-sm py-2xs rounded-xs bg-bg border border-info text-info whitespace-nowrap"
+        className="absolute font-mono text-xs px-item py-tight rounded-xs bg-bg border border-info text-info whitespace-nowrap"
         style={{ left: hover.x, top: hover.y, transform: 'translate(12px, -130%)' }}
       >
         {formatInspection(hover.point)}

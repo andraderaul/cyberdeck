@@ -261,10 +261,10 @@ function ToolPanel({
 }) {
   return (
     <fieldset
-      className="flex flex-col gap-xs border-none p-0 m-0 min-w-0"
+      className="flex flex-col gap-tight border-none p-0 m-0 min-w-0"
       aria-describedby={tooltipId}
     >
-      <legend className="w-full mb-2xs flex items-center gap-2xs">
+      <legend className="w-full mb-tight flex items-center gap-tight">
         <Label>{label}</Label>
         <Tooltip id={tooltipId} content={tooltip} />
         {/* The tool's own reset, on the rule that names the tool — the scope is what the heading
@@ -355,13 +355,13 @@ export default function SettingsEditor({ settings, onChange }: Props) {
         tooltip="symbol set mapping luminosity to a character"
         reset={resetControl('charset', 'charset')}
       >
-        <div className="flex gap-md overflow-x-auto">
+        <div className="flex gap-group overflow-x-auto">
           {CHARSET_CATEGORIES.map(({ label, charsets }) => (
-            <fieldset key={label} className="flex flex-col gap-2xs border-none p-0 m-0 shrink-0">
-              <legend className="text-fg-subtle font-mono text-xs uppercase tracking-wide mb-2xs">
+            <fieldset key={label} className="flex flex-col gap-tight border-none p-0 m-0 shrink-0">
+              <legend className="text-fg-subtle font-mono text-xs uppercase tracking-wide mb-tight">
                 {label}
               </legend>
-              <div className="flex gap-2xs">
+              <div className="flex gap-tight">
                 {charsets.map((cs) => (
                   <Chip
                     key={cs}
@@ -386,8 +386,8 @@ export default function SettingsEditor({ settings, onChange }: Props) {
               characters ordered darkest to lightest whoever wrote it (CONTEXT.md). It stands in the
               scrolling row with the categories rather than under it, so the panel keeps its
               reserved height and the ramps stay one row to read across. */}
-          <fieldset className="flex flex-col gap-2xs border-none p-0 m-0 shrink-0">
-            <legend className="text-fg-subtle font-mono text-xs uppercase tracking-wide mb-2xs">
+          <fieldset className="flex flex-col gap-tight border-none p-0 m-0 shrink-0">
+            <legend className="text-fg-subtle font-mono text-xs uppercase tracking-wide mb-tight">
               custom
             </legend>
             <input
@@ -446,9 +446,9 @@ export default function SettingsEditor({ settings, onChange }: Props) {
         {/* Two rows, as in the old panel: the dual modes read differently enough from the rest —
             two colours split by luminosity — that the split is the one cue for what a mode does
             before you pick it. */}
-        <div className="flex flex-col gap-2xs">
+        <div className="flex flex-col gap-tight">
           {[NON_DUAL_MODES, DUAL_MODES].map((modes, index) => (
-            <div key={index === 0 ? 'single' : 'dual'} className="flex gap-2xs overflow-x-auto">
+            <div key={index === 0 ? 'single' : 'dual'} className="flex gap-tight overflow-x-auto">
               {modes.map((mode) => (
                 <Chip
                   key={mode}
@@ -473,14 +473,14 @@ export default function SettingsEditor({ settings, onChange }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-sm">
+    <div className="flex flex-col gap-item">
       {/* The panel sits above the row so the canvas is never what gets covered (ADR 0020). */}
       <div className={PANEL_MIN_HEIGHT}>
         {panels[focus]}
 
-        <div className="grid gap-sm sm:grid-flow-col sm:auto-cols-fr sm:gap-md sm:items-end">
+        <div className="grid gap-item sm:grid-flow-col sm:auto-cols-fr sm:gap-group sm:items-end">
           <div data-tool="resolution" className={sliderVisibility('resolution')}>
-            <div className="grid grid-cols-[1fr_auto] items-end gap-2xs">
+            <div className="grid grid-cols-[1fr_auto] items-end gap-tight">
               <Slider
                 label="resolution"
                 value={settings.resolution}
@@ -502,7 +502,7 @@ export default function SettingsEditor({ settings, onChange }: Props) {
             </div>
           </div>
           <div data-tool="brightness" className={sliderVisibility('brightness')}>
-            <div className="grid grid-cols-[1fr_auto] items-end gap-2xs">
+            <div className="grid grid-cols-[1fr_auto] items-end gap-tight">
               <Slider
                 label="brightness"
                 value={settings.brightness}
@@ -523,7 +523,7 @@ export default function SettingsEditor({ settings, onChange }: Props) {
             </div>
           </div>
           <div data-tool="contrast" className={sliderVisibility('contrast')}>
-            <div className="grid grid-cols-[1fr_auto] items-end gap-2xs">
+            <div className="grid grid-cols-[1fr_auto] items-end gap-tight">
               <Slider
                 label="contrast"
                 value={settings.contrast}
@@ -546,7 +546,7 @@ export default function SettingsEditor({ settings, onChange }: Props) {
         </div>
       </div>
 
-      <div className="flex gap-2xs overflow-x-auto">
+      <div className="flex gap-tight overflow-x-auto">
         {TOOLS.map((tool) => (
           <Chip
             key={tool.id}

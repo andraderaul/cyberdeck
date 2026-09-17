@@ -20,7 +20,7 @@ export default function UpdateBanner({ onApply }: Props) {
   return (
     <div
       role="status"
-      className="shrink-0 flex items-center gap-sm border-b border-info bg-bg-elevated px-sm py-2xs sm:px-lg"
+      className="shrink-0 flex items-center gap-item border-b border-info bg-bg-elevated px-item py-tight sm:px-stack"
     >
       <span aria-hidden="true" className="text-info text-xs shrink-0">
         ↻

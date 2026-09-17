@@ -284,14 +284,12 @@ export function findLiteralHues(
 const EXTRAPOLATED_STEPS = ['3xs', '4xs', '5xs', '4xl', '5xl'] as const
 
 /**
- * Steps the base spacing scale answers but the section macro scale does not — `sp-*` runs `xs` to
- * `2xl` where the base runs `2xs` to `3xl`. Sharing a vocabulary is exactly what makes these
- * reachable: `gap-3xl` is real, so `p-sp-3xl` reads as real too, and it is not.
- */
-const SECTION_ONLY_GAPS = ['2xs', '3xl'] as const
-
-/**
- * Every step name the two spacing vocabularies forbid — the bare ones, plus their `sp-` spellings.
+ * The size vocabulary the space ruler shed when it became a role ruler (ADR 0030) — both old rulers
+ * whole, every `sp-` spelling, and the steps a contributor extrapolates past either end.
+ *
+ * Banning what *used* to work is the point, not a side effect. A rename nothing objects to creeps
+ * back one callsite at a time, and `gap-sm` fails the same way `gap-3xs` always has: Tailwind
+ * generates no class, and neither tsc nor Biome says a word.
  *
  * A deny list rather than a check against the whole scale, and the asymmetry is the point. Validating
  * every scale utility would mean deciding `text-` (`fontSize` ∪ `colors` ∪ `text-center`), `border-`
@@ -299,20 +297,24 @@ const SECTION_ONLY_GAPS = ['2xs', '3xl'] as const
  * as functions rather than objects — undecidable without becoming a Tailwind resolver, and noisy
  * long before it was useful. These names are decidable, and the guard's own completeness test holds
  * the list to the preset: define `3xs` for real and this list has to give it up.
- *
- * `sp-*` is spelled out step by step rather than caught by a prefix rule because it is a *second
- * scale under the same utilities*, not a longer name: `p-sp-2xl` is real and `p-sp-3xl` renders
- * nothing, and only the step tells them apart.
  */
-export const UNDEFINED_SCALE_NAMES: readonly string[] = [
-  ...EXTRAPOLATED_STEPS,
-  ...[...EXTRAPOLATED_STEPS, ...SECTION_ONLY_GAPS].map((step) => `sp-${step}`),
-]
+const RETIRED_SPACING_STEPS: readonly string[] = (() => {
+  const bare = ['2xs', 'xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', ...EXTRAPOLATED_STEPS]
+  return [...bare, ...bare.map((step) => `sp-${step}`)]
+})()
 
 /**
- * The utilities that draw from `spacing` and `borderRadius` alone. Tailwind's own steps for both are
- * numeric (`px` aside), so an alphabetic suffix here can only have come from the preset — which is
- * what makes an undefined one decidable.
+ * The utilities that draw from `spacing` alone. Tailwind's own steps for it are numeric (`px`
+ * aside), so an alphabetic suffix here can only have come from the preset — which is what makes an
+ * undefined one decidable.
+ *
+ * Separate from `RADIUS_UTILITIES` because the two families no longer forbid the same names:
+ * `rounded-xs` is real while `p-xs` is dead (ADR 0030), so one shared step list would either
+ * un-ban the spacing name or ban the radius one.
+ *
+ * `inset`, `top/right/bottom/left`, `translate-*` and `indent` are in the family because the guard's
+ * job here is to reject a retired name wherever it is spelled — ADR 0030 makes no claim that
+ * `section` reads as a translate distance.
  *
  * Three families are deliberately absent, all for the same reason — the guard can only ban a step it
  * can prove is undefined, and for these it cannot:
@@ -328,7 +330,7 @@ export const UNDEFINED_SCALE_NAMES: readonly string[] = [
  * Each is a gap, not an oversight: an unguarded `leading-4xl` is a smaller cost than a guard that
  * cries wolf, which is how a guard stops being read.
  */
-const SCALE_UTILITIES = [
+const SPACING_UTILITIES = [
   'p',
   'px',
   'py',
@@ -358,12 +360,25 @@ const SCALE_UTILITIES = [
   'translate-x',
   'translate-y',
   'indent',
-  'rounded',
-  'rounded-t',
-  'rounded-r',
-  'rounded-b',
-  'rounded-l',
 ] as const
+
+/** The utilities that draw from `borderRadius`, whose scale ADR 0030 left alone. */
+const RADIUS_UTILITIES = ['rounded', 'rounded-t', 'rounded-r', 'rounded-b', 'rounded-l'] as const
+
+/** A step ban and the utility family it is decidable under. */
+export type ScaleBan = { utilities: readonly string[]; steps: readonly string[] }
+
+/**
+ * Every ban the scale guard carries, each keyed to the utilities it is decidable under.
+ *
+ * Two families rather than one flat list, because the same step name is not banned in both:
+ * `rounded-xs` is a real radius and `p-xs` is a retired space name (ADR 0030). The completeness
+ * test checks each family against its own scale for the same reason.
+ */
+export const SCALE_BANS: readonly ScaleBan[] = [
+  { utilities: SPACING_UTILITIES, steps: RETIRED_SPACING_STEPS },
+  { utilities: RADIUS_UTILITIES, steps: EXTRAPOLATED_STEPS },
+]
 
 /**
  * Every scale step a source file names that no key answers, with the line it sits on.
@@ -374,9 +389,15 @@ const SCALE_UTILITIES = [
  */
 export function findUndefinedScales(
   source: string,
-  names: readonly string[] = UNDEFINED_SCALE_NAMES,
+  families: readonly ScaleBan[] = SCALE_BANS,
 ): ClassFinding[] {
-  return findBannedClasses(source, bannedPairs(SCALE_UTILITIES, names))
+  return (
+    families
+      .flatMap(({ utilities, steps }) => findBannedClasses(source, bannedPairs(utilities, steps)))
+      // One pass per family, so sort back into gutter order — a file offending in both should read
+      // top to bottom.
+      .sort((a, b) => a.line - b.line)
+  )
 }
 
 /**

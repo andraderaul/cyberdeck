@@ -92,7 +92,7 @@ describe('SourceImageDropZone', () => {
     render(<SourceImageDropZone {...baseProps} size="sm" />)
     const label = document.querySelector('label') as HTMLElement
     expect(label.className).toContain('min-h-[120px]')
-    expect(label.className).toContain('p-xl')
+    expect(label.className).toContain('p-section')
     const icon = screen.getByText('⬆')
     expect(icon.className).toContain('text-lg')
   })

@@ -119,8 +119,8 @@ export default function ThemeControl({ className }: Props) {
         title="pick the deck's theme"
         onClick={() => setOpen((wasOpen) => !wasOpen)}
         className={cn(
-          'flex min-h-[44px] items-center justify-center gap-2xs',
-          'rounded-pill border border-transparent bg-transparent px-md py-2xs',
+          'flex min-h-[44px] items-center justify-center gap-tight',
+          'rounded-pill border border-transparent bg-transparent px-group py-tight',
           'font-mono text-fg-subtle text-xs tracking-wide',
           'cursor-pointer transition-all duration-fast',
           'hover:border-base hover:text-fg',
@@ -138,8 +138,8 @@ export default function ThemeControl({ className }: Props) {
           aria-label="theme"
           onKeyDown={onMenuKeyDown}
           className={cn(
-            'absolute right-0 top-full z-10 mt-2xs min-w-[8rem]',
-            'flex flex-col rounded-xs border border-base bg-bg-elevated p-2xs',
+            'absolute right-0 top-full z-10 mt-tight min-w-[8rem]',
+            'flex flex-col rounded-xs border border-base bg-bg-elevated p-tight',
           )}
         >
           {themes.map((option, index) => {
@@ -162,7 +162,7 @@ export default function ThemeControl({ className }: Props) {
                 // (`ui/touch-target.ts`). The panel is absolutely positioned, so the 56px it grows
                 // by moves nothing else on the page.
                 className={cn(
-                  'flex min-h-[44px] items-center gap-xs rounded-xs px-xs py-2xs',
+                  'flex min-h-[44px] items-center gap-tight rounded-xs px-tight py-tight',
                   'font-mono text-xs tracking-wide',
                   'cursor-pointer transition-colors duration-fast',
                   isActive ? 'text-accent' : 'text-fg-subtle hover:text-fg',

@@ -68,9 +68,10 @@ o deck é, não o que ele deixou de virar). Primeira entrada:
   — nomear o papel, não a medida — vale pra régua de espaço: as duas réguas de tamanho (`--gap-*` e
   `--sp-*`, 14 nomes, 6 deles sem nenhum uso) viram seis papéis, `--space-hairline / tight / item /
   group / stack / section`, e a verruga do `xs` 4px contra o `2xs` 6px fecha junto — não colapsando
-  os dois valores, mas dando a eles a regra que faltava: `hairline` é chrome medido contra a imagem
-  do usuário (ADR 0013, ADR 0021), `tight` é chrome medido contra si mesmo. **Decidido na ADR 0030,
-  executado na #399** — até lá o código ainda fala as duas réguas antigas. A camada de **som**
+  os dois valores, mas dando a eles a regra que faltava: `hairline` é qualquer medida que dimensiona
+  a *pegada* de um overlay sobre a imagem do usuário — o recuo da borda do canvas e os vãos dentro da
+  própria fileira do overlay (ADR 0013, ADR 0021); `tight` é chrome medido contra o próprio fundo
+  opaco. **Decidido na ADR 0030, executado na #399.** A camada de **som**
   (ADR 0029) — um listener em `pointerdown`, um sample e o mute deck-wide — **mora aqui desde a
   #400**, e não nasceu aqui: nasceu em `apps/ascii` com um caller só (#398) e cruzou a costura
   quando os outros três chegaram, que é a rota que o `UpdateBanner` percorreu (ADR 0027). A régua da

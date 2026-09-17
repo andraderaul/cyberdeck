@@ -40,13 +40,13 @@ export default function AiConfigBanner({ onConfigure }: Props) {
     <div
       role="status"
       aria-live="polite"
-      className="flex items-center justify-between gap-sm px-md py-xs bg-bg-elevated border border-base rounded-xs font-mono"
+      className="flex items-center justify-between gap-item px-group py-tight bg-bg-elevated border border-base rounded-xs font-mono"
     >
       <p className="text-xs text-fg-muted">
         <span className="text-accent">AI Analyze</span> is available — add an{' '}
         <span className="text-accent">AI Config</span> to scan your ASCII art.
       </p>
-      <div className="flex items-center gap-xs shrink-0">
+      <div className="flex items-center gap-tight shrink-0">
         <Button variant="analyze" className="text-xs" onClick={onConfigure}>
           configure AI
         </Button>
@@ -55,7 +55,7 @@ export default function AiConfigBanner({ onConfigure }: Props) {
           aria-label="dismiss"
           onClick={handleDismiss}
           className={cn(
-            'text-fg-subtle hover:text-fg-muted font-mono px-xs min-h-[44px] min-w-[44px] flex items-center justify-center',
+            'text-fg-subtle hover:text-fg-muted font-mono px-tight min-h-[44px] min-w-[44px] flex items-center justify-center',
             ICON_GLYPH_SIZE,
           )}
         >

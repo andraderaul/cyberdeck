@@ -49,7 +49,7 @@ export default function SoundControl() {
       // The mark is its own flex item so it can be hidden from the accessible name, and flex drops
       // the leading space of the text item beside it — the gap puts it back. The word is an element
       // too, for the one thing a bare text node cannot do: be hidden at a breakpoint.
-      className="gap-2xs"
+      className="gap-tight"
     >
       <span aria-hidden="true" className={GLYPH}>
         {isOn ? '◉' : '◌'}

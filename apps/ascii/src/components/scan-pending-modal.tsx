@@ -39,7 +39,7 @@ export const SCAN_MODAL: {
 export default function ScanPendingModal() {
   return (
     <Modal onClose={NOOP} closeable={false} {...SCAN_MODAL}>
-      <div className="flex-1 flex flex-col items-center justify-center gap-md py-xl">
+      <div className="flex-1 flex flex-col items-center justify-center gap-group py-section">
         <span className="animate-pulse text-accent text-xs tracking-wider">
           ▸ SCANNING VISUAL FEED...
         </span>

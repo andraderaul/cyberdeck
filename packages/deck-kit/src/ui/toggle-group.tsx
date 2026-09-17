@@ -17,7 +17,7 @@ export default function ToggleGroup<T extends string>({
 }) {
   return (
     <fieldset
-      className={cn('flex border-none p-0 m-0', fullWidth ? 'gap-2xs' : 'gap-xs flex-wrap')}
+      className={cn('flex border-none p-0 m-0', fullWidth ? 'gap-tight' : 'gap-tight flex-wrap')}
     >
       {/* A fieldset is spec'd to take its name from its legend, and `aria-label` on one is honoured
           inconsistently — the same reason PresetPicker spells it this way. */}
@@ -34,7 +34,7 @@ export default function ToggleGroup<T extends string>({
           aria-pressed={value === opt}
           className={cn(
             'min-h-[44px] text-xs font-mono tracking-wide rounded-xs border cursor-pointer transition-all duration-fast',
-            fullWidth ? 'flex-1 py-2xs' : 'py-xs px-sm',
+            fullWidth ? 'flex-1 py-tight' : 'py-tight px-item',
             value === opt
               ? 'border-accent bg-accent-soft text-accent'
               : 'border-base bg-transparent text-fg-muted',

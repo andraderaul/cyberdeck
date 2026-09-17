@@ -30,8 +30,8 @@ export default function SourceImageDropZone({ size, onImage, onError }: Props) {
         }
       }}
       className={cn(
-        'relative border rounded-xs flex flex-col items-center justify-center gap-sm cursor-pointer select-none transition-colors duration-fast h-full',
-        size === 'sm' ? 'p-xl min-h-[120px]' : 'min-h-[160px]',
+        'relative border rounded-xs flex flex-col items-center justify-center gap-item cursor-pointer select-none transition-colors duration-fast h-full',
+        size === 'sm' ? 'p-section min-h-[120px]' : 'min-h-[160px]',
         // Focus lands on the clipped input, so the zone is what has to show it. `has-` rather than
         // `focus-within`, which a mouse click also satisfies and would leave the border lit after it.
         'has-[:focus-visible]:border-accent',

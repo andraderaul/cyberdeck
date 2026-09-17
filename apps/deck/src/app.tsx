@@ -12,7 +12,7 @@ import { PROGRAMS } from './roster'
 export default function App() {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex shrink-0 items-center gap-sm border-base border-b px-sm py-sm sm:px-lg">
+      <header className="flex shrink-0 items-center gap-item border-base border-b px-item py-item sm:px-stack">
         <span className="font-bold text-accent text-base tracking-wide">CYBERDECK</span>
         <span className="hidden text-fg-faint text-xs sm:block">—</span>
         <span className="hidden text-fg-muted text-xs sm:block">the front door</span>
@@ -23,8 +23,8 @@ export default function App() {
         <SoundControl />
       </header>
 
-      <main className="mx-auto w-full max-w-[72rem] flex-1 px-sm py-sp-xs sm:px-lg sm:py-sp-sm">
-        <section className="flex flex-col gap-md">
+      <main className="mx-auto w-full max-w-[72rem] flex-1 px-item py-group sm:px-stack sm:py-section">
+        <section className="flex flex-col gap-group">
           <h1 className="font-display text-fg-strong text-xl leading-tight tracking-wide sm:text-2xl">
             what the deck runs
           </h1>
@@ -35,13 +35,13 @@ export default function App() {
           </p>
         </section>
 
-        <h2 className="mt-sp-xs flex items-center gap-sm text-fg-subtle text-xs uppercase tracking-widest sm:mt-sp-sm">
+        <h2 className="mt-group flex items-center gap-item text-fg-subtle text-xs uppercase tracking-widest sm:mt-section">
           <span aria-hidden="true">◆</span>
           programs
           <span aria-hidden="true" className="h-px flex-1 bg-bg-overlay" />
         </h2>
 
-        <ul className="mt-md grid list-none grid-cols-1 gap-md p-0 sm:grid-cols-2">
+        <ul className="mt-group grid list-none grid-cols-1 gap-group p-0 sm:grid-cols-2">
           {PROGRAMS.map((program) => (
             <ProgramCard key={program.id} program={program} />
           ))}

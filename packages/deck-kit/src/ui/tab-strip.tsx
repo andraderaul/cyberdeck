@@ -65,7 +65,7 @@ export default function TabStrip<Id extends string>({ tabs, ariaLabel, children 
 
   return (
     <div className="shrink-0 border-t border-base bg-bg">
-      <div role="tablist" aria-label={ariaLabel} onKeyDown={onTabsKeyDown} className="flex px-sm">
+      <div role="tablist" aria-label={ariaLabel} onKeyDown={onTabsKeyDown} className="flex px-item">
         {tabs.map((tab, index) => {
           const isActive = tab.id === activeTab
           return (
@@ -85,7 +85,7 @@ export default function TabStrip<Id extends string>({ tabs, ariaLabel, children 
               className={cn(
                 // `min-w` as well as `min-h`: a short label like `out` leaves the tab 38px wide, and
                 // the target has to hold in both axes, not just the one the row happens to set.
-                'inline-flex min-h-[44px] min-w-[44px] items-center justify-center px-sm font-mono text-xs tracking-wide border-b-2 transition-colors',
+                'inline-flex min-h-[44px] min-w-[44px] items-center justify-center px-item font-mono text-xs tracking-wide border-b-2 transition-colors',
                 isActive
                   ? 'text-accent border-accent'
                   : 'text-fg-muted border-transparent hover:text-fg',
@@ -101,7 +101,7 @@ export default function TabStrip<Id extends string>({ tabs, ariaLabel, children 
         role="tabpanel"
         id={`strip-panel-${activeTab}`}
         aria-labelledby={`strip-tab-${activeTab}`}
-        className="px-sm py-sm"
+        className="px-item py-item"
       >
         {children(activeTab)}
       </div>

@@ -8,6 +8,7 @@ import {
   findUndefinedScales,
   RETIRED_HUE_CLASSES,
   resolveTokens,
+  SCALE_BANS,
   srgbDistance,
 } from './audit'
 
@@ -181,74 +182,84 @@ describe('findLiteralHues', () => {
 
 describe('findUndefinedScales', () => {
   const UNDEFINED_STEPS = ['3xs', '4xl', 'sp-3xl'] as const
+  // The real families, with the fixture's steps substituted — so a fixture exercises the utility
+  // sets the guard actually ships rather than a second copy of them.
+  const SPACING_ONLY = [{ utilities: SCALE_BANS[0].utilities, steps: UNDEFINED_STEPS }]
+  const BOTH_FAMILIES = SCALE_BANS.map(({ utilities }) => ({ utilities, steps: UNDEFINED_STEPS }))
 
   it('finds an undefined scale name behind a spacing utility', () => {
-    expect(findUndefinedScales('<div className="gap-3xs" />', UNDEFINED_STEPS)).toEqual([
+    expect(findUndefinedScales('<div className="gap-3xs" />', SPACING_ONLY)).toEqual([
       { className: 'gap-3xs', line: 1 },
     ])
   })
 
   it('reports the line the offending class sits on', () => {
     const source = ['const a = 1', '', 'cn("py-3xs")'].join('\n')
-    expect(findUndefinedScales(source, UNDEFINED_STEPS)).toEqual([{ className: 'py-3xs', line: 3 }])
+    expect(findUndefinedScales(source, SPACING_ONLY)).toEqual([{ className: 'py-3xs', line: 3 }])
   })
 
   it('sees through responsive and state variants', () => {
-    const found = findUndefinedScales('sm:gap-3xs hover:mt-4xl', UNDEFINED_STEPS)
+    const found = findUndefinedScales('sm:gap-3xs hover:mt-4xl', SPACING_ONLY)
     expect(found.map((f) => f.className)).toEqual(['sm:gap-3xs', 'hover:mt-4xl'])
   })
 
   // The whole point of the guard: a defined key must never fire, or contributors learn to ignore it.
   it('leaves every key the preset defines alone', () => {
     expect(
-      findUndefinedScales(
-        'gap-2xs px-sm py-xs mt-md rounded-pill gap-3xl p-sp-lg',
-        UNDEFINED_STEPS,
-      ),
+      findUndefinedScales('gap-tight px-item py-section mt-hairline rounded-pill', SPACING_ONLY),
     ).toEqual([])
   })
 
   // Tailwind's own numeric scale survives the preset's `extend`, so it is not the guard's business.
   it("leaves Tailwind's built-in scale alone", () => {
-    expect(findUndefinedScales('gap-4 p-0.5 mt-px -mx-2 inset-1/2', UNDEFINED_STEPS)).toEqual([])
+    expect(findUndefinedScales('gap-4 p-0.5 mt-px -mx-2 inset-1/2', SPACING_ONLY)).toEqual([])
   })
 
   it('leaves an arbitrary value alone', () => {
-    expect(
-      findUndefinedScales('min-h-[44px] after:-inset-[16px] gap-[3px]', UNDEFINED_STEPS),
-    ).toEqual([])
+    expect(findUndefinedScales('min-h-[44px] after:-inset-[16px] gap-[3px]', SPACING_ONLY)).toEqual(
+      [],
+    )
   })
 
   // The mirror of `bg-accent-ghost` in the hue guard: a name that merely ends in an undefined step
   // is a different class, not an offence.
   it('leaves a name that merely ends in an undefined step alone', () => {
-    expect(findUndefinedScales('gap-my-3xs', UNDEFINED_STEPS)).toEqual([])
+    expect(findUndefinedScales('gap-my-3xs', SPACING_ONLY)).toEqual([])
   })
 
-  // `sp-*` is a second scale under the same utilities rather than a longer name, so it has to be
-  // denied step by step — the step is the only thing telling the two apart.
-  it('reads the section macro scale as its own set of steps', () => {
-    expect(findUndefinedScales('p-sp-2xl gap-sp-lg my-sp-xs', UNDEFINED_STEPS)).toEqual([])
-    expect(findUndefinedScales('p-sp-3xl', UNDEFINED_STEPS)).toEqual([
-      { className: 'p-sp-3xl', line: 1 },
-    ])
-  })
-
-  it('leaves prose alone', () => {
+  // The shipped bans, not a fixture. ADR 0030's rename is only clean while the size ruler stays
+  // dead — a guard that shrugs at `gap-sm` lets it back one callsite at a time.
+  it('rejects the retired size vocabulary under the spacing utilities', () => {
     expect(
-      findUndefinedScales('// the 3xs step never existed, nor did 4xl', UNDEFINED_STEPS),
+      findUndefinedScales('gap-sm p-xs mt-2xs py-sp-xs gap-3xl').map((f) => f.className),
+    ).toEqual(['gap-sm', 'p-xs', 'mt-2xs', 'py-sp-xs', 'gap-3xl'])
+  })
+
+  // The other half of the split: the same names are a live radius scale, and banning them there
+  // would be the guard crying wolf.
+  it('leaves the role ruler and the radius scale alone', () => {
+    expect(
+      findUndefinedScales(
+        'gap-hairline px-tight py-item mt-group mb-stack p-section rounded-xs rounded-sm rounded-md',
+      ),
     ).toEqual([])
   })
 
+  it('leaves prose alone', () => {
+    expect(findUndefinedScales('// the 3xs step never existed, nor did 4xl', SPACING_ONLY)).toEqual(
+      [],
+    )
+  })
+
   it('reports every offender, not just the first', () => {
-    expect(findUndefinedScales('gap-3xs mt-3xs rounded-4xl', UNDEFINED_STEPS)).toHaveLength(3)
+    expect(findUndefinedScales('gap-3xs mt-3xs rounded-4xl', BOTH_FAMILIES)).toHaveLength(3)
   })
 
   // A sizing utility layers its own keyword scale on top of `spacing` (`max-w-4xl` is real), and
   // Tailwind states those as functions rather than objects, so they cannot be derived — and an
   // undecidable utility is left out rather than guessed at.
   it('leaves sizing utilities out, since their scales cannot be derived', () => {
-    expect(findUndefinedScales('max-w-4xl w-4xl h-3xs', UNDEFINED_STEPS)).toEqual([])
+    expect(findUndefinedScales('max-w-4xl w-4xl h-3xs', SPACING_ONLY)).toEqual([])
   })
 })
 

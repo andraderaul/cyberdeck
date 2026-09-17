@@ -49,7 +49,7 @@ export default function ApiKeyModal({ current, onSave, onRemove, onClose }: Prop
       ariaLabel="AI configuration"
       variant="cyber"
     >
-      <div className="flex flex-col gap-sm">
+      <div className="flex flex-col gap-item">
         <label htmlFor="ai-provider" className="text-fg-muted text-xs tracking-wide">
           PROVIDER
         </label>
@@ -76,7 +76,7 @@ export default function ApiKeyModal({ current, onSave, onRemove, onClose }: Prop
         </a>
       </div>
 
-      <div className="flex flex-col gap-sm">
+      <div className="flex flex-col gap-item">
         <label htmlFor="ai-key" className="text-fg-muted text-xs tracking-wide">
           API KEY
         </label>
@@ -94,7 +94,7 @@ export default function ApiKeyModal({ current, onSave, onRemove, onClose }: Prop
         </span>
       </div>
 
-      <div className="flex gap-sm justify-between">
+      <div className="flex gap-item justify-between">
         {current && (
           <Button variant="danger" onClick={handleRemove}>
             remove key

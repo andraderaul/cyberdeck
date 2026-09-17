@@ -54,7 +54,7 @@ function frameRunner(ref: MutableRefObject<AsciiFrameRunner | null>): AsciiFrame
  * `OVERLAY_BUTTON_REST` below carries the same rationale.
  */
 const OVERLAY_BUTTON = cn(
-  'font-mono text-xs border px-sm py-2xs rounded-xs cursor-pointer transition-colors duration-fast',
+  'font-mono text-xs border px-item py-tight rounded-xs cursor-pointer transition-colors duration-fast',
   // These sit on the artwork (ADR 0013), so growing the row 32px → 44px would charge the picture for
   // its own controls — but the icon-only ones are ~27px wide on touch, which no height-only overlay
   // can fix. Hence the icon variant: height overlaid, width real.
@@ -267,9 +267,9 @@ export default function AsciiCanvas({
   return (
     <div className="relative w-full h-full">
       <canvas ref={canvasRef} className="w-full h-full block bg-bg [image-rendering:pixelated]" />
-      <div className="absolute top-xs right-xs flex items-center gap-xs">
+      <div className="absolute top-hairline right-hairline flex items-center gap-hairline">
         {isLive && (
-          <span className="flex items-center gap-2xs font-mono text-xs text-danger border border-danger px-sm py-2xs rounded-xs select-none">
+          <span className="flex items-center gap-tight font-mono text-xs text-danger border border-danger px-item py-tight rounded-xs select-none">
             <span className="motion-safe:animate-pulse" aria-hidden="true">
               ◉
             </span>{' '}
@@ -294,7 +294,7 @@ export default function AsciiCanvas({
             // it every second would talk over the user for the length of the take.
             aria-label={`stop recording — ${formatElapsedTime(elapsedSeconds)} elapsed`}
             className={cn(
-              'flex items-center gap-2xs font-mono text-xs text-danger border border-danger px-sm py-2xs rounded-xs select-none cursor-pointer transition-colors duration-fast hover:bg-bg-elevated',
+              'flex items-center gap-tight font-mono text-xs text-danger border border-danger px-item py-tight rounded-xs select-none cursor-pointer transition-colors duration-fast hover:bg-bg-elevated',
               TOUCH_TARGET_HEIGHT,
             )}
           >

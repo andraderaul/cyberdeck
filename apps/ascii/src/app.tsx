@@ -245,13 +245,13 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen">
-      <header className="py-sm px-sm sm:px-lg border-b border-base flex items-center gap-sm shrink-0">
+      <header className="py-item px-item sm:px-stack border-b border-base flex items-center gap-item shrink-0">
         <span className={cn(HEADER_WORDMARK, 'text-accent')}>ASCII//CONVERT</span>
         <span className={cn(HEADER_SUBTITLE, 'text-fg-faint hidden sm:block')}>—</span>
         <span className={cn(HEADER_SUBTITLE, 'text-fg-muted hidden sm:block')}>
           image → ascii art
         </span>
-        <div className="ml-auto flex items-center gap-xs">
+        <div className="ml-auto flex items-center gap-tight">
           <HeaderButton
             variant={aiConfig ? 'accent-text' : 'accent-fill'}
             onClick={() => setActiveModal({ kind: 'apiKey' })}
@@ -259,7 +259,7 @@ export default function App() {
             // The mark sits in its own element to be hidden, which makes it a flex item of the
             // button's own row — and flex drops the leading space of the text item beside it. The
             // gap is what puts that space back.
-            className={cn('gap-2xs', HEADER_CONTROL_TYPE)}
+            className={cn('gap-tight', HEADER_CONTROL_TYPE)}
           >
             {/* Hollow to AI Analyze's filled ◈ — the deck's two AI surfaces read as one family.
                 Unhidden it would join the accessible name, which is what the old ⚿ did: a screen

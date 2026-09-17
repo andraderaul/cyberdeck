@@ -137,23 +137,28 @@ attribute like the three tools (ADR 0025).
 
 ## Name a scale step the preset defines
 
-The same silent failure as a literal hue, one layer over: `gap-2xs` is a key, `gap-3xs` is not, and
+The same silent failure as a literal hue, one layer over: `gap-tight` is a key, `gap-2xs` is not, and
 Tailwind answers an undefined step by generating no class at all — no error from Tailwind, tsc or
 Biome. Each scale is its own set and none of them extrapolates:
 
 | Scale | Steps |
 |-------|-------|
-| `spacing` (`p-`, `m-`, `gap-`, `inset-`, …) | `2xs · xs · sm · md · lg · xl · 2xl · 3xl` |
-| `sp-*`, section macro spacing, under those same utilities | `sp-xs · sp-sm · sp-md · sp-lg · sp-xl · sp-2xl` |
+| `spacing` (`p-`, `m-`, `gap-`, `inset-`, …) — **named by role** (ADR 0030) | `hairline · tight · item · group · stack · section` |
 | `borderRadius` (`rounded-`) | `none · xs · sm · md · pill` |
 | `fontSize` (`text-`) — **unguarded**, see below | `xs · sm · base · md · lg · xl · 2xl` |
 
-So there is no `3xs`, no `4xl`, and no `rounded-lg` from this vocabulary. Note the two spacing rows
-do **not** share ends: `gap-3xl` is real and `p-sp-3xl` is not, and sharing the utilities is exactly
-what makes that one easy to reach for. Tailwind's own numeric
-steps (`gap-4`, `p-0.5`) and arbitrary values (`min-h-[44px]`) stay valid — the preset extends rather
-than replaces. The kit's scale guard fails the build the same way the hue guard does, with the class,
-the file and the line.
+So there is no `3xs`, no `4xl`, and no `rounded-lg` from this vocabulary. The space row is the one
+that reads differently on purpose: it names the relationship rather than the magnitude, so `hairline`
+sizes an overlay's *footprint* over the user's picture — its inset from the canvas edge and the gaps
+inside the overlay row alike (ADR 0013, ADR 0021) — while `tight` is chrome measured against its own
+opaque background; `item` is between siblings in a cluster, `group` between clusters in a panel,
+`stack` between blocks in a column, `section` between regions of a page. The size names it replaced
+(`xs`, `sm`, `2xl`, every `sp-*`) are banned rather than merely gone, so the rename cannot creep
+back. There is no step past `section`: a design that needs one names a *role* in the kit rather than
+extrapolating. Tailwind's own numeric steps (`gap-4`, `p-0.5`) and arbitrary values (`min-h-[44px]`)
+stay valid — the preset extends rather than replaces, and a number that is not a spacing relationship
+at all (a hover travel distance) belongs on the numeric step. The kit's scale guard fails the build
+the same way the hue guard does, with the class, the file and the line.
 
 The `fontSize` row is the exception, and it's the row to be careful in: the guard **cannot** cover
 `text-`, because that one prefix is three namespaces at once — `fontSize` ∪ `colors` ∪
@@ -163,11 +168,6 @@ sits *between* `base` and `lg`, which is not where Tailwind puts it; and because
 the steps it doesn't name stay Tailwind's own, so `text-3xl` resolves to 30px and silently leaves the
 deck scale. Where a size repeats, prefer a named constant over a step spelled at each callsite —
 `ICON_GLYPH_SIZE` below is the worked example, and a test pins the step it names to the preset.
-
-One wart to know about rather than work around: `--gap-xs` is **4px** and `--gap-2xs` is **6px**, so
-`xs` is the *tighter* of the two — the opposite of how the rest of the scale reads. Nothing today is
-wrong because of it, and renaming would touch every program, so it stands unresolved rather than
-decided; check the token values before reaching for either.
 
 ## Size an icon-only glyph with `ICON_GLYPH_SIZE`
 

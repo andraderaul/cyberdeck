@@ -215,7 +215,7 @@ describe('Modal', () => {
     it('pads the overlay, so the capped panel is inset from the viewport edge', () => {
       renderModal()
       const overlay = screen.getByRole('presentation')
-      expect(overlay.className.split(/\s+/)).toContain('p-md')
+      expect(overlay.className.split(/\s+/)).toContain('p-group')
     })
   })
 

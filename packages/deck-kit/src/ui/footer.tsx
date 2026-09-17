@@ -39,7 +39,7 @@ export default function Footer({ sourceHref, onAbout, className }: Props) {
   return (
     <footer
       className={cn(
-        'flex shrink-0 items-center gap-sm border-base border-t px-sm sm:px-lg',
+        'flex shrink-0 items-center gap-item border-base border-t px-item sm:px-stack',
         className,
       )}
     >

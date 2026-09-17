@@ -41,7 +41,7 @@ describe('BasemapToggle', () => {
 
     expect(classes).toEqual(expect.arrayContaining(overlay))
     // The visible box keeps the padding it always had — the overlay is what reaches 44.
-    expect(classes).toContain('py-2xs')
+    expect(classes).toContain('py-tight')
   })
 
   // The regression the class-name assertion above cannot see on its own: `TOUCH_TARGET_HEIGHT` opens

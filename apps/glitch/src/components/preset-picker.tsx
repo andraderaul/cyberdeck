@@ -31,12 +31,12 @@ export default function PresetPicker({
   // `min-w-0` on both the fieldset and the scroller: a fieldset's default min-width is min-content,
   // which would let the chips push Randomize off the Strip's right edge instead of scrolling.
   return (
-    <fieldset className="flex items-center gap-sm border-none p-0 m-0 min-w-0">
+    <fieldset className="flex items-center gap-item border-none p-0 m-0 min-w-0">
       {/* The Strip's PRESETS tab already names this group on screen (ADR 0020) — the legend stays
           for the accessible name rather than repeating the word underneath it. */}
       <legend className="sr-only">presets</legend>
       {/* The chips scroll horizontally so the Strip keeps one row whatever the width. */}
-      <div className="flex-1 min-w-0 flex gap-2xs overflow-x-auto">
+      <div className="flex-1 min-w-0 flex gap-tight overflow-x-auto">
         {PRESETS.map((preset) => {
           const isActive = preset.id === activePresetId
           const showModified = isActive && isModified
@@ -62,7 +62,7 @@ export default function PresetPicker({
                 height={THUMBNAIL_HEIGHT}
                 className="rounded-xs shrink-0"
               />
-              <span className="flex items-center gap-2xs">
+              <span className="flex items-center gap-tight">
                 {preset.name}
                 {showModified && (
                   <span aria-hidden="true" className="text-warning">

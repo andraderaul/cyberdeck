@@ -76,22 +76,15 @@ export default {
         normal: 'var(--leading-normal)',
         loose: 'var(--leading-loose)',
       },
+      // One ruler, named by role (ADR 0030). A step past `section` is not an extrapolation to guess
+      // at — it is a role the kit has not named yet.
       spacing: {
-        '2xs': 'var(--gap-2xs)',
-        xs: 'var(--gap-xs)',
-        sm: 'var(--gap-sm)',
-        md: 'var(--gap-md)',
-        lg: 'var(--gap-lg)',
-        xl: 'var(--gap-xl)',
-        '2xl': 'var(--gap-2xl)',
-        '3xl': 'var(--gap-3xl)',
-        // Section macro spacing
-        'sp-xs': 'var(--sp-xs)',
-        'sp-sm': 'var(--sp-sm)',
-        'sp-md': 'var(--sp-md)',
-        'sp-lg': 'var(--sp-lg)',
-        'sp-xl': 'var(--sp-xl)',
-        'sp-2xl': 'var(--sp-2xl)',
+        hairline: 'var(--space-hairline)',
+        tight: 'var(--space-tight)',
+        item: 'var(--space-item)',
+        group: 'var(--space-group)',
+        stack: 'var(--space-stack)',
+        section: 'var(--space-section)',
       },
       borderRadius: {
         none: 'var(--radius-none)',

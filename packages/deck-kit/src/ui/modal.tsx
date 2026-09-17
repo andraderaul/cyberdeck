@@ -31,7 +31,7 @@ export default function Modal({
   return (
     <div
       role="presentation"
-      className="fixed inset-0 z-50 flex items-center justify-center p-md bg-modal-overlay backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-group bg-modal-overlay backdrop-blur-sm"
     >
       {closeable && (
         // A full-screen button with no text announces itself as "button" and nothing else. It is
@@ -52,10 +52,10 @@ export default function Modal({
         aria-modal="true"
         aria-label={ariaLabel}
         className={cn(
-          'relative flex flex-col p-xl max-h-full overflow-y-auto',
+          'relative flex flex-col p-section max-h-full overflow-y-auto',
           variant === 'default'
-            ? 'gap-lg bg-bg-elevated max-w-[480px] w-[90%] rounded-sm border border-base'
-            : 'gap-md bg-bg-surface border border-base border-t-2 border-t-accent w-full max-w-sm',
+            ? 'gap-stack bg-bg-elevated max-w-[480px] w-[90%] rounded-sm border border-base'
+            : 'gap-group bg-bg-surface border border-base border-t-2 border-t-accent w-full max-w-sm',
           containerClassName,
         )}
       >

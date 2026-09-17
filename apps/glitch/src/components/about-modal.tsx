@@ -19,7 +19,7 @@ export default function AboutModal({ onClose }: Props) {
         uploaded anywhere.
       </p>
 
-      <div className="flex flex-col gap-sm">
+      <div className="flex flex-col gap-item">
         <span className="text-fg text-xs font-medium">made with ai</span>
         <p className="text-fg-muted text-sm leading-normal">
           This project was built in collaboration with AI — not just the code, but the design

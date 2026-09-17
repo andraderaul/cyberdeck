@@ -92,7 +92,7 @@ export default function OutputPanel({
   }
 
   return (
-    <div className="flex gap-xs sm:gap-sm sm:justify-end">
+    <div className="flex gap-tight sm:gap-item sm:justify-end">
       {/* Set apart from the three beside it — those take the picture out, this takes the look —
           and glyph-only below `sm`, where four labelled controls stop fitting one row. */}
       <IconLabelButton

@@ -39,9 +39,9 @@ export default function Slider({
   const isAtDefault = defaultValue !== undefined && value === defaultValue
 
   return (
-    <div className="flex flex-col gap-2xs">
+    <div className="flex flex-col gap-tight">
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2xs">
+        <div className="flex items-center gap-tight">
           <Label>{label}</Label>
           {tooltip}
         </div>

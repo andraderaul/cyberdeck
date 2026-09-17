@@ -17,8 +17,8 @@ export default function ScaleReader({ reader, overflow }: Props) {
     <div
       aria-live="polite"
       className={cn(
-        'absolute top-xs left-xs flex items-center gap-xs',
-        'font-mono text-xs px-sm py-2xs rounded-xs bg-bg select-none pointer-events-none',
+        'absolute top-hairline left-hairline flex items-center gap-hairline',
+        'font-mono text-xs px-item py-tight rounded-xs bg-bg select-none pointer-events-none',
         overflow ? 'text-warning border border-warning' : 'text-info border border-info',
       )}
     >

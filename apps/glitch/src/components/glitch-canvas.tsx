@@ -49,7 +49,7 @@ function reportLiveFrameFailure(err: unknown): void {
  * an opaque surface from the palette is what holds the ratio ADR 0009 audited. Not translucent —
  * no alpha survives an arbitrary backdrop.
  */
-const CANVAS_OVERLAY_CHROME = 'font-mono text-xs px-sm py-2xs rounded-xs bg-bg select-none'
+const CANVAS_OVERLAY_CHROME = 'font-mono text-xs px-item py-tight rounded-xs bg-bg select-none'
 
 /**
  * Rest state shared by the source-tuning buttons — mirror (off), switch-camera, clear. The border,
@@ -300,12 +300,12 @@ export default function GlitchCanvas({
           sourceHeight={sourceSize.h}
         />
       )}
-      <div className="absolute top-xs right-xs flex items-center gap-xs">
+      <div className="absolute top-hairline right-hairline flex items-center gap-hairline">
         {isLive && (
           <span
             className={cn(
               CANVAS_OVERLAY_CHROME,
-              'flex items-center gap-2xs text-danger border border-danger',
+              'flex items-center gap-tight text-danger border border-danger',
             )}
           >
             <span className="motion-safe:animate-pulse" aria-hidden="true">
@@ -330,7 +330,7 @@ export default function GlitchCanvas({
             className={cn(
               CANVAS_OVERLAY_CHROME,
               TOUCH_TARGET_ICON,
-              'flex items-center gap-2xs text-danger border border-danger',
+              'flex items-center gap-tight text-danger border border-danger',
               // `bg-bg-elevated`, not the translucent `bg-danger-ghost` a hover state would normally
               // take: this chip sits on the user's artwork, so ADR 0013's opaque-background rule
               // binds every state it has, not just the resting one. The pair is pinned by the
@@ -362,7 +362,7 @@ export default function GlitchCanvas({
             className={cn(
               CANVAS_OVERLAY_CHROME,
               TOUCH_TARGET_ICON,
-              'flex items-center gap-2xs text-accent border border-accent',
+              'flex items-center gap-tight text-accent border border-accent',
               // No hover surface, unlike REC's. This badge carries the timer as small text, and
               // until #355 re-derived `ice`'s accent that text cleared AA-small on `bg` alone —
               // `bg-elevated` measured 3.90:1. It clears every surface now (4.92:1 in `ice`, the

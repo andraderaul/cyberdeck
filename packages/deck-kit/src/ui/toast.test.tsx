@@ -72,7 +72,7 @@ describe('the dismiss target', () => {
 
     expect(classes).toContain('min-h-[44px]')
     expect(classes).toContain('min-w-[44px]')
-    expect(classes).toContain('-my-2xs')
+    expect(classes).toContain('-my-tight')
   })
 
   // Icon-only, so it takes the deck's icon size. The negative margins above are unaffected: the box

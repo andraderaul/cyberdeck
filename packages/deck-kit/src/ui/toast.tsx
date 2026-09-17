@@ -38,7 +38,7 @@ export default function Toast({ message, variant, onDismiss }: Props) {
   return (
     <div
       role="alert"
-      className={cn('flex items-start gap-sm p-sm bg-bg-elevated border rounded-xs', border)}
+      className={cn('flex items-start gap-item p-item bg-bg-elevated border rounded-xs', border)}
       style={{
         minWidth: '260px',
         maxWidth: '360px',
@@ -55,11 +55,11 @@ export default function Toast({ message, variant, onDismiss }: Props) {
         type="button"
         onClick={onDismiss}
         aria-label="dismiss"
-        // The negative margins are load-bearing: a 44px button inside `p-sm` would take a one-line
+        // The negative margins are load-bearing: a 44px button inside `p-item` would take a one-line
         // toast from ~37px to ~60px. They let it overflow the padding box instead, so the target is
         // the full 44 square and the toast grows by a few pixels.
         className={cn(
-          'flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center -my-2xs -mr-2xs text-fg-subtle cursor-pointer bg-transparent border-none',
+          'flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center -my-tight -mr-tight text-fg-subtle cursor-pointer bg-transparent border-none',
           ICON_GLYPH_SIZE,
         )}
       >

@@ -15,7 +15,7 @@ import {
   findLiteralHues,
   findUndefinedScales,
   RETIRED_HUE_CLASSES,
-  UNDEFINED_SCALE_NAMES,
+  SCALE_BANS,
 } from './audit'
 import { colourBearingSources, readTokensCss } from './sources'
 
@@ -65,14 +65,32 @@ describe('the literal hue vocabulary is retired', () => {
 describe('the scale vocabulary is the preset’s', () => {
   // Derived from both halves of what Tailwind actually resolves — the preset's `extend` and the
   // built-in scale it extends — so the ban list cannot drift into naming a step that is real.
-  it('bans only steps no key defines', () => {
-    const defined = new Set([
+  //
+  // Per family, not pooled. `xs`, `sm` and `md` are live `borderRadius` keys *and* retired spacing
+  // names (ADR 0030), so one pooled `defined` set would report the spacing bans as over-reach on
+  // day one — and the fix a reader reaches for then is weakening the ban rather than splitting it.
+  const scales = {
+    spacing: new Set([
       ...keysOf(preset.theme.extend.spacing, "the preset's spacing"),
-      ...keysOf(preset.theme.extend.borderRadius, "the preset's borderRadius"),
       ...keysOf(defaultTheme.spacing, "Tailwind's spacing"),
+    ]),
+    radius: new Set([
+      ...keysOf(preset.theme.extend.borderRadius, "the preset's borderRadius"),
       ...keysOf(defaultTheme.borderRadius, "Tailwind's borderRadius"),
-    ])
-    expect(UNDEFINED_SCALE_NAMES.filter((step) => defined.has(step))).toEqual([])
+    ]),
+  }
+
+  it.each(SCALE_BANS)('bans only steps no key defines ($utilities.0)', ({ utilities, steps }) => {
+    const defined = utilities[0].startsWith('rounded') ? scales.radius : scales.spacing
+    expect(steps.filter((step) => defined.has(step))).toEqual([])
+  })
+
+  // The mirror, and what makes the ban un-undoable: re-adding `xs` to the preset fails here rather
+  // than quietly un-banning the name the test above reads out of it.
+  it('keys the space ruler by role, and by nothing else', () => {
+    expect(keysOf(preset.theme.extend.spacing, "the preset's spacing").sort()).toEqual(
+      ['group', 'hairline', 'item', 'section', 'stack', 'tight'].sort(),
+    )
   })
 
   it.each(files)('$path names steps the scale defines', ({ path, source }) => {

@@ -69,14 +69,14 @@ function SuggestedConversion({
   return (
     <section
       aria-label="suggested conversion"
-      className="flex flex-col gap-xs border-t border-base pt-md"
+      className="flex flex-col gap-tight border-t border-base pt-group"
     >
       <span className="text-accent text-xs tracking-wider font-bold">◈ SUGGESTED CONVERSION</span>
-      <ul className="flex flex-wrap gap-2xs">
+      <ul className="flex flex-wrap gap-tight">
         {CHIP_KEYS.map((key) => (
           <li
             key={key}
-            className="px-sm py-2xs rounded-xs border border-base bg-bg-elevated font-mono text-xs lowercase whitespace-nowrap"
+            className="px-item py-tight rounded-xs border border-base bg-bg-elevated font-mono text-xs lowercase whitespace-nowrap"
           >
             {/* The space rides inside the label rather than in a gap: a chip is read as one string
                 ("charset: braille"), and a flex gap is not a word break to a screen reader. */}
@@ -96,7 +96,7 @@ function SuggestedConversion({
           onApply(suggestion)
           onClose()
         }}
-        className="self-start mt-2xs"
+        className="self-start mt-tight"
       >
         apply
       </Button>
@@ -160,13 +160,13 @@ const ERROR_META: Record<
 function ScanErrorState({ status, onRetry }: { status: ErrorStatus; onRetry?: () => void }) {
   const meta = ERROR_META[status]
   return (
-    <div className="flex-1 flex flex-col gap-sm justify-center py-md">
+    <div className="flex-1 flex flex-col gap-item justify-center py-group">
       <span className={cn('text-sm tracking-wide', meta.color)}>
         {meta.icon} {meta.title}
       </span>
       <span className="text-fg-muted text-xs leading-normal">{meta.message}</span>
       {meta.retryable && onRetry && (
-        <Button variant="secondary" onClick={onRetry} className="self-start mt-sm">
+        <Button variant="secondary" onClick={onRetry} className="self-start mt-item">
           retry
         </Button>
       )}
@@ -187,14 +187,14 @@ export default function AnalysisModal({ state, onClose, onRetry, onApplySuggesti
         <>
           {/* border and background are dynamic — inline style required */}
           <div
-            className="flex items-center justify-between px-md py-[10px]"
+            className="flex items-center justify-between px-group py-[10px]"
             style={{
               background: THREAT_META[state.analysis.threatLevel].bg,
               border: `1px solid ${THREAT_META[state.analysis.threatLevel].color}`,
             }}
           >
             <span className="text-fg-muted text-xs tracking-wide">THREAT LEVEL</span>
-            <span className="flex items-center gap-xs">
+            <span className="flex items-center gap-tight">
               <span data-testid="threat-icon" aria-hidden="true">
                 {THREAT_META[state.analysis.threatLevel].icon}
               </span>
@@ -216,7 +216,7 @@ export default function AnalysisModal({ state, onClose, onRetry, onApplySuggesti
 
           <p className="text-fg text-sm leading-normal m-0">{state.analysis.description}</p>
 
-          <div className="flex flex-wrap gap-xs lowercase">
+          <div className="flex flex-wrap gap-tight lowercase">
             {state.analysis.tags.map((tag) => (
               <Badge key={tag}>#{tag}</Badge>
             ))}

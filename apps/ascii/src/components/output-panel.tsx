@@ -49,14 +49,14 @@ interface ExportControlProps {
 function ExportControl({ format, label, variant, onClick }: ExportControlProps) {
   const tradeoffId = `export-tradeoff-${format}`
   return (
-    <div className="flex flex-col gap-2xs flex-1 sm:flex-none">
+    <div className="flex flex-col gap-tight flex-1 sm:flex-none">
       <Button variant={variant} onClick={onClick} aria-describedby={tradeoffId}>
         {label}
       </Button>
-      {/* `sm:px-2xs` only: one line each at that breakpoint, and three captions flush against the
+      {/* `sm:px-tight` only: one line each at that breakpoint, and three captions flush against the
           row gap read as one sentence. On mobile they already wrap, and the padding would only buy
           the separation back in extra lines. */}
-      <span id={tradeoffId} className="text-fg-muted text-xs font-mono text-center sm:px-2xs">
+      <span id={tradeoffId} className="text-fg-muted text-xs font-mono text-center sm:px-tight">
         {EXPORT_TRADEOFFS[format]}
       </span>
     </div>
@@ -174,14 +174,14 @@ export default function OutputPanel({
   }
 
   return (
-    <div className="flex flex-col gap-xs">
+    <div className="flex flex-col gap-tight">
       {/* Rehomed from above the bars into the tab it advertises: the banner sells AI Analysis, and
           this is now the only place that control appears. */}
       {!hasAiConfig && <AiConfigBanner onConfigure={onConfigureAi} />}
 
       {/* Scale is a PNG Export setting, so it only shows where PNG Export does. */}
       {!isLive && (
-        <div className="flex items-center gap-xs">
+        <div className="flex items-center gap-tight">
           <span className="text-fg-subtle text-xs font-mono">png scale</span>
           {([1, 2, 4] as const).map((s) => (
             <Chip
@@ -193,7 +193,7 @@ export default function OutputPanel({
               {s}×
             </Chip>
           ))}
-          <span className="text-fg-subtle text-xs ml-xs">
+          <span className="text-fg-subtle text-xs ml-tight">
             {targetDimensions ? `${targetDimensions.w}×${targetDimensions.h}` : '—'}
           </span>
         </div>
@@ -201,7 +201,7 @@ export default function OutputPanel({
 
       {/* `items-start` so the tradeoff copy hangs below its own control: stretching would drag
           Analyze, Capture and Record down to the height of a column that is not theirs. */}
-      <div className="flex flex-wrap items-start gap-xs sm:gap-sm sm:justify-end">
+      <div className="flex flex-wrap items-start gap-tight sm:gap-item sm:justify-end">
         {/* Hidden mid-take, as it was in LiveSourceBar: a modal over a running Recording would put
             the user somewhere they can't see the take they're still shooting. */}
         {hasAiConfig && !isRecording && (
