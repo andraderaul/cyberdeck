@@ -1,5 +1,75 @@
 # @cyberdeck/golem
 
+## 0.9.0
+
+### Minor Changes
+
+- 42d3b96: The accent is a brighter violet, and four surfaces that were meant to carry a tint finally do.
+
+  `ice`'s signature colour was re-derived in the kit (#355), so the accent labels on the panels —
+  `reset` in the Console help, `pc` in Registers, a set flag in Flags, `INSTR` in Cache — clear
+  AA-small instead of sitting just under it. The social card is regenerated to match.
+
+  The tints are the other half. The Source's locked banner, the listing's current line, a set flag's
+  chip and the Cache strip's _cold_ cell each asked for the accent at a fraction of its strength, in a
+  spelling Tailwind drops on the floor — so the banner had no fill, the current line was marked by its
+  text weight alone, and the Cache strip was three states drawn in two colours. They are the deck's
+  named tint tokens now and they render. The strip's empty cell and an invalid set, which had reached
+  for a thinned border and got Preflight's grey, take the faint border the ladder already has.
+
+- d7f4e42: GOLEM//Console makes a sound — and its command line stays silent.
+
+  The mechanism of ADR 0029 comes whole from `@cyberdeck/deck-kit/sound`: one listener at the document
+  on `pointerdown` so the sound lands on the way down, one preloaded WAV, one allowlist matched with
+  `closest()`. This program is the case that shaped that allowlist — it names `input` **by type** and
+  never bare, because a press on the Console's prompt begins typing rather than actuating anything, and
+  the typing itself is silent. A bare `<input>` in the list would have bought a click on entering the
+  field and another on moving the caret.
+
+  **Sound is on by default** (ADR 0029 chose opt-out), so a user who does not want it hears one press
+  before they can decline. The mute is beside the Theme picker in the header — the same slot in every
+  included workspace (ADR 0015) — and is remembered under the deck-wide `cyberdeck:sound` key. It is the
+  second control here that is not a typed command, and like the first it changes how the deck looks and
+  sounds rather than what the machine does, so ADR 0018's rule about the Console being the only control
+  grammar is untouched.
+
+  Measured in Chromium over the built output, the header fits at 320, 360 and 375 — the status readout
+  yields the auto margin and nothing is clipped.
+
+  The sample is emitted into `dist/assets` and precached with the rest of the shell, never inlined into
+  the entry chunk.
+
+### Patch Changes
+
+- c80f78f: Promoted to the role-named space ruler (ADR 0030): `gap-sm` becomes `gap-item`, `px-2xs` becomes
+  `px-tight`, and so on across the console's panels.
+
+  Three classes go 4px → 6px: the Panel's header padding, the Cache's byte padding, and the Cache's
+  line grid — that last one is a grid rather than a shift, so the block grows by a row gap.
+
+- 55c00ac: The one control this program has is now a target you can hit, and the panels it prints into can be
+  scrolled without a mouse (#355).
+
+  The **command line** drew 794x17.6 — wide enough to aim at and 26px short on the axis a thumb has
+  least of, the shortest target on the deck on the whole control grammar of the program (ADR 0018). A
+  real 44px box rather than a target overlay, because an `<input>` renders no `::after` for
+  `ui/touch-target.ts` to hang one on. The height comes out of the log above it rather than out of the
+  panel, which keeps its reserved height, and the prompt row reads as the strip it always was.
+
+  The **five scrolling panels** — the Source listing, the Console log, Registers, Memory and the
+  Terminal — each take a tab stop and draw a focus ring, which is what WCAG 2.1.1 asks of a region
+  that scrolls. A keyboard user could drive the machine and could not scroll back through what it
+  printed, in the one program on the deck whose entire interface is a keyboard. Nothing about ADR 0018
+  moves: focus scrolls a read-only surface and drives nothing, so the Console is still the only
+  grammar, and every panel is still free of controls.
+
+- Updated dependencies [bf772a2]
+- Updated dependencies [d7f4e42]
+- Updated dependencies [c80f78f]
+- Updated dependencies [42d3b96]
+- Updated dependencies [55c00ac]
+  - @cyberdeck/deck-kit@0.8.0
+
 ## 0.8.0
 
 ### Minor Changes
