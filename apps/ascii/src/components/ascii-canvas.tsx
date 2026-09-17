@@ -49,8 +49,9 @@ function frameRunner(ref: MutableRefObject<AsciiFrameRunner | null>): AsciiFrame
 
 /**
  * Shared shape for the overlay's source-tuning buttons (mirror, switch-camera, clear). No bg-bg
- * unlike GLITCH's CANVAS_OVERLAY_CHROME — ASCII's canvas is filled, so the border reads without an
- * opaque backdrop. `OVERLAY_BUTTON_REST` below carries the same rationale.
+ * unlike GLITCH's CANVAS_OVERLAY_CHROME — ASCII's canvas is filled with a *fixed* ground, so these
+ * stand on a colour the program chose rather than on one the user's material did (ADR 0013).
+ * `OVERLAY_BUTTON_REST` below carries the same rationale.
  */
 const OVERLAY_BUTTON = cn(
   'font-mono text-xs border px-sm py-2xs rounded-xs cursor-pointer transition-colors duration-fast',
@@ -65,10 +66,10 @@ const OVERLAY_BUTTON_REST = 'text-fg-muted border-base hover:text-fg hover:borde
  * The ground a *new* overlay stands on, which ADR 0013 asks for by name — the exemption above is an
  * argument about the chrome that predates it, not a licence this file goes on spending.
  *
- * It costs nothing to honour here: every Theme's `--bg` is within a few units of the `--void`
- * literal `paintFrame()` fills the canvas with (ADR 0024, `tokens.css`), so the chip reads exactly
- * like the transparent `clear` beside it while holding the audited pair wherever a glyph lands under
- * it.
+ * It costs nothing to honour here: every Theme's `--bg` is within a few units of the fixed literal
+ * `paintFrame()` fills the canvas with (ADR 0024, `tokens.css`), so the chip reads exactly like the
+ * transparent `clear` beside it — and it buys something the transparent ones cannot have, which is
+ * the pair the Theme Contract holds token-against-token rather than one pinned against a literal.
  */
 const OVERLAY_BUTTON_GROUND = 'bg-bg'
 
@@ -279,8 +280,10 @@ export default function AsciiCanvas({
             PRESETS and EDIT, so its stop has to be reachable from every tab — and the badge already
             marks the one place that is. No new chrome, and it carries the timer that left with
             LiveSourceBar. Unlike GLITCH's, it needs no opaque background of its own: paintFrame()
-            fills this canvas with --void before drawing, so the overlay already sits on the audited
-            pair (ADR 0013). */}
+            fills this canvas with a fixed literal before drawing, so the ground under it is known
+            rather than arbitrary — and the ratio over that literal is pinned per Theme in the kit's
+            contrast guard, since the Theme Contract cannot see a pair with a literal on one side
+            (ADR 0013). */}
         {isRecording && (
           <button
             type="button"
