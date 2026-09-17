@@ -1,4 +1,5 @@
 import { UpdateBanner, useAppUpdate } from '@cyberdeck/deck-kit/pwa'
+import { SoundControl } from '@cyberdeck/deck-kit/sound'
 import { ErrorBoundary, ThemeControl } from '@cyberdeck/deck-kit/ui'
 import { useEffect } from 'react'
 import Cache from './components/cache'
@@ -85,6 +86,11 @@ export default function App() {
               typed command: it changes how the deck looks, not what the machine does, so ADR 0018's
               rule about the Console being the only control grammar is untouched (ADR 0024). */}
           <ThemeControl />
+          {/* Deck chrome too, and beside the Theme for the same reason — one slot to learn across
+              the programs (ADR 0015, ADR 0029). It is the second control here that is not a typed
+              command, and it changes how the deck sounds rather than what the machine does, so ADR
+              0018's rule about the Console being the only control grammar is untouched. */}
+          <SoundControl />
         </header>
 
         {update.isReady && <UpdateBanner onApply={update.apply} />}

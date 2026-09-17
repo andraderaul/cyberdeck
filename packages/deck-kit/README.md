@@ -21,6 +21,7 @@ is fine, nothing else consumes it.
 | `@cyberdeck/deck-kit/errors` | the operational-error mechanism (`AppError`, `createError`, `normalizeError`) |
 | `@cyberdeck/deck-kit/recording` | `useRecording`, `formatElapsedTime` |
 | `@cyberdeck/deck-kit/pwa` | `useAppUpdate` and `UpdateBanner` — the page's half of ADR 0027 |
+| `@cyberdeck/deck-kit/sound` | `installClickSound` and `SoundControl` — the press sound of ADR 0029. Its own specifier rather than a corner of `/ui`, so SPRAWL//Atlas's exclusion is a fact about what the piece imports |
 | `@cyberdeck/deck-kit/tokens.css` | the CSS custom properties (design tokens), including every Theme |
 | `@cyberdeck/deck-kit/tailwind-preset` | the Tailwind `theme` |
 

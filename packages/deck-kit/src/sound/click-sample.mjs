@@ -7,7 +7,7 @@
 // constant and re-runs, instead of reverse-engineering a binary. Deterministic (its own LCG, since
 // `Math.random` has no seed), so re-running with the same constants reproduces the committed bytes.
 //
-// Usage: node apps/ascii/src/sound/click-sample.mjs
+// Usage: node packages/deck-kit/src/sound/click-sample.mjs
 
 import { writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'

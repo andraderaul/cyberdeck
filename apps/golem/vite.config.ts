@@ -2,10 +2,13 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 // By path rather than by package name — see the note in `apps/ascii/vite.config.ts`: a bare
 // specifier is left for Node to import at runtime, and Node cannot load the kit's `.ts` source.
-import { precacheShell } from '../../packages/deck-kit/scripts/precache-shell'
+import { assetsInlineLimit, precacheShell } from '../../packages/deck-kit/scripts/precache-shell'
 
 export default defineConfig({
   plugins: [react(), precacheShell({ cachePrefix: 'golem-shell-' })],
+  // The press sound is emitted rather than inlined — one predicate in the kit, four references
+  // (ADR 0029).
+  build: { assetsInlineLimit },
   test: {
     environment: 'happy-dom',
     globals: true,

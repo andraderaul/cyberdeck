@@ -269,6 +269,20 @@ into "empty by construction" buys one `git mv` and costs the bar its meaning, an
 need to buy it. The bar stays evidential, and this decision is measured against it like everything
 else.
 
+**Measured at #400, since the whole point of asking for the move was the evidence.** `git mv` of the
+seven files reported R100 with **zero content lines** — the mechanism, the sample, its recipe and the
+tests crossed byte for byte, and the `cyberdeck:sound` key needed no rename. What did *not* cross
+unchanged is the mute control, and it is worth naming because it is the one thing this decision did
+not predict: the control wore three typography constants from `apps/ascii/src/header-type.ts`, a
+module no other header on the deck has. A shared component cannot borrow one app's face, so it now
+wears `HeaderButton`'s own type — the same thing the `ThemeControl` beside it does — and
+`HEADER_CONTROL_LABEL` and `HEADER_CONTROL_GLYPH` left `header-type.ts` with it. Re-measured in
+Chromium at 320/360/375, ASCII//Convert's header is unchanged at 372px: below `sm` the mute is
+glyph-only and sits on `HeaderButton`'s `min-w-[44px]` floor, where the face cannot move the row. The
+kit's entry point is `@cyberdeck/deck-kit/sound` rather than a corner of `/ui`, because SPRAWL//Atlas
+imports `/ui` already and its exclusion should be a fact about what the piece imports rather than
+about what a bundler managed to drop.
+
 Expected shape, for the slice to fill in. Paths are as of #398; the sound module's own file is the
 only one #400 relocates, from `apps/ascii/src/sound/` to `packages/deck-kit/src/sound/`, and the
 build and config entries below are deck-wide already:

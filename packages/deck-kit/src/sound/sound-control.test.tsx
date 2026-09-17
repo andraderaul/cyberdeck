@@ -1,15 +1,14 @@
-// The mute is the header's third pill and the one that sheds its word below `sm` — see the table in
-// `header-type.ts` for what that buys and what still overflows. `header-type.test.ts` pins the two
-// constants against the preset and the kit; this file pins that the control actually wears them,
-// and that the name a screen reader hears does not move with the breakpoint.
+// The mute is the header's control that sheds its word below `sm` — see the table in
+// `apps/ascii/src/header-type.ts` for what that buys and what still overflows in the tightest of
+// the four headers. This file pins that the control actually wears it, and that the name a screen
+// reader hears does not move with the breakpoint.
 //
 // Every assertion here is positive. A `not.toContain` over a class name would resurrect that class
-// in the built CSS — the Tailwind content glob reads `*.test.tsx` like any other source file.
+// in the built CSS — every app's Tailwind content glob reads the kit's sources, tests included.
 
-import { ICON_GLYPH_SIZE } from '@cyberdeck/deck-kit/ui'
 import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { HEADER_CONTROL_GLYPH, HEADER_CONTROL_LABEL } from '../header-type'
+import { ICON_GLYPH_SIZE } from '../ui/icon-glyph'
 import SoundControl from './sound-control'
 
 afterEach(() => {
@@ -24,13 +23,12 @@ describe('the mute', () => {
     expect(glyph.className.split(/\s+/)).toEqual(
       expect.arrayContaining([...ICON_GLYPH_SIZE.split(' '), 'sm:text-xs']),
     )
-    expect(glyph.className).toBe(HEADER_CONTROL_GLYPH)
   })
 
   it('carries its word in an element that hides below `sm`', () => {
     render(<SoundControl />)
 
-    expect(screen.getByText('sound').className).toBe(HEADER_CONTROL_LABEL)
+    expect(screen.getByText('sound').className.split(/\s+/)).toEqual(['hidden', 'sm:block'])
   })
 
   // The word disappears below `sm`, so WCAG 2.5.3 stops constraining the name there — but the name

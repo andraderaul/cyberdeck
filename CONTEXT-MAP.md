@@ -71,10 +71,15 @@ o deck é, não o que ele deixou de virar). Primeira entrada:
   os dois valores, mas dando a eles a regra que faltava: `hairline` é chrome medido contra a imagem
   do usuário (ADR 0013, ADR 0021), `tight` é chrome medido contra si mesmo. **Decidido na ADR 0030,
   executado na #399** — até lá o código ainda fala as duas réguas antigas. A camada de **som**
-  (ADR 0029) — um listener em `pointerdown`, um sample e o mute deck-wide — vai morar aqui, mas
-  **não nasce aqui**: nasce em `apps/ascii` com um caller só (#398) e cruza a costura inteira quando
-  os outros três chegam (#400), que é a rota que o `UpdateBanner` percorreu (ADR 0027). A régua da
-  ADR 0014 continua sendo diff vazio **medido**, não afirmado.
+  (ADR 0029) — um listener em `pointerdown`, um sample e o mute deck-wide — **mora aqui desde a
+  #400**, e não nasceu aqui: nasceu em `apps/ascii` com um caller só (#398) e cruzou a costura
+  quando os outros três chegaram, que é a rota que o `UpdateBanner` percorreu (ADR 0027). A régua da
+  ADR 0014 foi **medida**: o `mv` dos sete arquivos saiu byte a byte vazio (R100), e o que não saiu
+  vazio foi só o controle — ele vestia três constantes de tipografia do header do ASCII, que nenhum
+  dos outros três headers tem. O mute agora veste o tipo do próprio `HeaderButton`, como o
+  `ThemeControl` ao lado dele. Entra por `@cyberdeck/deck-kit/sound`, especificador próprio e não um
+  canto do `/ui`: o SPRAWL//Atlas já importa `/ui` e `/pwa`, e a exclusão dele tem que ser um fato
+  sobre o que a peça importa, não sobre o que o rollup conseguiu remover.
 
 ## Relationships
 
@@ -163,7 +168,9 @@ o deck é, não o que ele deixou de virar). Primeira entrada:
   toca já muda algo visível, e é isso que permite calar a camada sem o deck perder informação. A
   allowlist nomeia `input` **por tipo**, nunca cru: a tag crua é um namespace, não um controle — um
   campo de texto não *atua* na descida, você clica nele pra começar a digitar, e a digitação é
-  silenciosa. A linha de comando do GOLEM//Console é o caso que torna isso inegociável.
+  silenciosa. A linha de comando do GOLEM//Console é o caso que torna isso inegociável. O controle
+  fica no mesmo lugar nos quatro workspaces incluídos (ADR 0015): ao lado do `ThemeControl`, na
+  ponta direita do header — e o hub tem esse slot porque casca é exatamente o que ele é (ADR 0025).
 - **Color Mode (ASCII) ≠ Theme (deck)** — os dois são "o esquema de cores", e o ASCII é o único
   programa onde os dois controles ficam à vista. Color Mode pinta a arte do usuário; Theme pinta a
   casca. Nenhum Theme do roster se chama `matrix` ou `neon` porque esses dois já são Color Modes —

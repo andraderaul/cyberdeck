@@ -48,6 +48,26 @@ const THIS_FILE = 'packages/deck-kit/scripts/precache-shell.ts'
 const SHELL_EXTENSIONS = ['.html', '.css', '.js', '.svg', '.png', '.webmanifest', '.webp', '.wav']
 
 /**
+ * Vite's `build.assetsInlineLimit`, spelled once for every workspace that ships the press sound.
+ *
+ * The sample has to be a *file* under `dist/assets`, never a base64 data URI folded into the entry
+ * chunk (ADR 0029). Inlined it would charge first paint for a sound only a press ever needs, it
+ * would leave the bundle budget's unbudgeted `other` row — where the ADR put it — empty, and it
+ * would never reach the classifier above, so no shell would precache it. The click is under Vite's
+ * 4 kB default today and a replacement tuned by ear is just as likely to be, which is why this is a
+ * rule about the extension rather than a bigger file.
+ *
+ * `undefined` for everything else means "Vite's own default" — this decides one extension and
+ * defers on the rest.
+ *
+ * It lives here rather than in `src/sound/` because a vite config imports it by path at config
+ * time, alongside the plugin below, and because it is the same statement as `SHELL_EXTENSIONS`
+ * seen from the other end: the sound is an emitted asset, so it has to be emitted.
+ */
+export const assetsInlineLimit = (file: string): false | undefined =>
+  file.endsWith('.wav') ? false : undefined
+
+/**
  * Emitted files the running program never fetches, so precaching them would only cost the install
  * its bytes. `og-card.png` is 1200x630 and exists for a link preview crawler; `sw.js` is the worker
  * itself, which the browser fetches through its own update check and must never serve from a cache

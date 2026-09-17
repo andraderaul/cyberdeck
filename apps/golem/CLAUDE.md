@@ -112,6 +112,18 @@ table in `docs/ISA.md` and `src/golem/__fixtures__/PROVENANCE.md`.
 0011 and 0014, duplication stays as signal until a second caller proves the seam, and a program
 this structurally different is the wrong place to guess at shared abstractions.
 
+## The press sound
+
+The mechanism is the kit's (`@cyberdeck/deck-kit/sound`, ADR 0029) and nothing about it is described
+again here. This program's whole share is `installClickSound()` in `src/main.tsx` and `SoundControl`
+beside `ThemeControl` in the header — the same slot every included workspace uses (ADR 0015).
+
+The one thing that is this program's: **the Console's command line stays silent.** The kit's
+allowlist names `input` by type and never bare, precisely because of it — a text field does not
+actuate on the press, and a click into the prompt is the start of typing rather than a command.
+ADR 0018's rule is untouched either way: the mute changes how the deck sounds, not what the machine
+does.
+
 ## Installing and offline
 
 The policy and all its machinery are the kit's — read `packages/deck-kit/README.md` ("Making a
