@@ -1,5 +1,86 @@
 # @cyberdeck/glitch
 
+## 0.15.0
+
+### Minor Changes
+
+- e40f82e: Every Link in the Chain has its own way back: a `↺` leading the Link's action row, returning that
+  Link's params to the defaults a fresh one is minted with and touching nothing else — nudge a
+  threshold too far and come back without losing the Chain you built around it. ASCII//Convert's
+  scoped reset at the other end of the deck, in this program's terms: there the unit is a tool, here
+  it is the Link.
+
+  There is no second table of defaults to keep in step. The `↺` reads `EFFECT_REGISTRY[type].defaults`
+  — the same entry `createLink` seeds a new Link from — so a re-curated default reaches the reset the
+  moment it is edited. It is a param edit and only a param edit: the Link keeps its id, its slot and
+  its bypass, the Chain keeps its order, and the Link beside it is untouched.
+
+  A Link already on its defaults keeps its control and disables it, saying why — the answer duplicate
+  already gives beside it, and an absent control would reflow the row the moment a Link came home. The
+  `↺` takes a real 44x44 box rather than an overlay, because the three controls it joins are real
+  boxes and the panel's reserved height was derived with that row already in it: measured in Chromium
+  at both breakpoints, every Effect's panel comes back the height it was. What gives instead is the
+  heading, which now truncates on the narrowest phones so the longest Effect name and four 44px
+  targets can share one 320px row.
+
+- 42d3b96: The accent is a brighter violet. `ice`'s signature colour was re-derived in the kit (#355) so an
+  accent label clears AA-small wherever it is drawn rather than on the base surface alone — here that
+  is the About modal's wordmark and the OUT tab's `export png`, both of which were under the floor.
+  The social card is regenerated to match.
+
+  The mosh badge over the canvas keeps its bare ground, but for a different reason than before: it had
+  none because the accent only cleared the non-text floor on an elevated surface, and now it clears
+  AA-small there too.
+
+- d7f4e42: GLITCH//Studio makes a sound.
+
+  The mechanism of ADR 0029 comes whole from `@cyberdeck/deck-kit/sound` — one listener at the document
+  on `pointerdown` so the sound lands on the way down, one preloaded WAV, one allowlist matched with
+  `closest()` so the canvas, the panels and the Control Strip's scroll surface stay quiet without asking
+  for an exemption. Sound is only ever a second channel: every press that plays it already changes
+  something visible, and nothing here has come to depend on hearing it.
+
+  **Sound is on by default** (ADR 0029 chose opt-out), so a user who does not want it hears one press
+  before they can decline. The mute is beside the Theme picker in the header — the same slot in every
+  included workspace (ADR 0015) — labelled rather than hidden behind a glyph, and remembered under the
+  deck-wide `cyberdeck:sound` key, which carries no program name: the mute is one decision for the deck,
+  and it is per origin only because `localStorage` is, the same recorded gap the Theme already has.
+
+  Measured in Chromium over the built output, the header fits at 320, 360 and 375: the mute costs its
+  44px in a row that had the room, and the word it shows from `sm` up is hidden below that.
+
+  The sample is emitted into `dist/assets` and precached with the rest of the shell, never inlined into
+  the entry chunk — a sound only a press needs does not belong on the first-paint path.
+
+### Patch Changes
+
+- bfd1c28: A dying Worker can no longer strand a frame, and a failed Source Image render reaches the ErrorBoundary again.
+
+  Both bugs are `chain-runner.ts`'s and `glitch-canvas.tsx`'s originals, found while reviewing the
+  same shapes in ASCII//Convert and fixed in the same pass rather than left in the file they were
+  copied from. The fallback path runs the Chain inside the Worker's `error` listener with both slots
+  already emptied, so a throw there settled nothing and left a promise nothing could ever settle — a
+  canvas that never paints; it is settled in a `finally` now. And a throw out of `renderGlitchFrame`
+  was a floating rejection nobody observed rather than the "render failed — try a different image or
+  adjust settings" the boundary in `app.tsx` was written to show; the canvas re-throws it from its
+  next render — for a Source Image. A failed frame on the rAF loop is logged and ridden out instead,
+  the way a dropped one already is: the boundary has no reset path, and one transient live failure
+  must not permanently replace the canvas and the overlay holding the Recording stop control.
+
+- c80f78f: Promoted to the role-named space ruler (ADR 0030): `gap-sm` becomes `gap-item`, `px-2xs` becomes
+  `px-tight`, and so on across the Chain editor, the Preset row and the out panel.
+
+  The LIVE / REC cluster over the canvas takes `hairline` — the 4px that keeps the overlay's footprint
+  off the user's artwork (ADR 0013) — so it does not move a pixel. Three classes go 4px → 6px, all in
+  the Chain editor and the out panel's action rows.
+
+- Updated dependencies [bf772a2]
+- Updated dependencies [d7f4e42]
+- Updated dependencies [c80f78f]
+- Updated dependencies [42d3b96]
+- Updated dependencies [55c00ac]
+  - @cyberdeck/deck-kit@0.8.0
+
 ## 0.14.0
 
 ### Minor Changes

@@ -1,5 +1,155 @@
 ## [1.25.0](https://github.com/andraderaul/ascii-art-converter/compare/v1.24.0...v1.25.0) (2026-07-16)
 
+## 1.37.0
+
+### Minor Changes
+
+- 42d3b96: The accent is a brighter violet. `ice`'s signature colour was re-derived in the kit (#355) so that
+  an accent label clears AA-small wherever it is drawn instead of on the base surface alone — the
+  header's `Configure AI key`, the About wordmark, and the OUT tab's `configure AI`, `AI Analyze`,
+  `AI Config` and `export png` were all below the floor and all read comfortably above it now. Same
+  hue, same saturation; the favicon, the icon set and the social card are regenerated to match.
+
+  The `Badge` also gets its border back. It asked for a thin info border and, because Tailwind cannot
+  parse an alpha modifier on a `var()` colour, rendered Preflight's default grey instead — a near-white
+  line nobody chose, on every badge in the program.
+
+- bfd1c28: The conversion moves off the main thread — the second half of ADR 0002's upgrade path.
+
+  `convertImage()` and `computeFrame()` now run on a Worker; the sampling draw and `paintFrame()` stay
+  in the shell, because the hidden canvas is a DOM object (ADR 0001) and `paintFrame()` is still the
+  only function writing to the visible one (ADR 0005). The sampled pixels cross by transfer; the
+  instructions and rows come back by copy, since neither type is a Transferable. A Live Source drops
+  frames rather than queueing them, and a synchronous fallback runs wherever `Worker` is missing,
+  refused or dead — so there is no state in which the canvas has no way to paint.
+
+  The output is unchanged, byte for byte, and a test pins all three Exports for all ten Presets
+  against digests recorded before the port. The Mirror still rides on the sampling draw, so the
+  preview, the PNG, the TXT and the HTML go on agreeing.
+
+- bf772a2: The deck makes a sound, and ASCII//Convert is where it starts.
+
+  One listener at the document on `pointerdown`, one preloaded WAV, one mute — the whole mechanism of
+  ADR 0029 in its first program. The trigger is `pointerdown` rather than `click` so the sound lands on
+  the way down, before the re-render the press causes, and it plays only for an allowlist of controls
+  matched with `closest()`, so a canvas, a panel or a scroll surface stays quiet without asking. Sound
+  is only ever a second channel: every press that plays it already changes something visible, and
+  nothing here has come to depend on hearing it.
+
+  **Sound is on by default** (ADR 0029 chose opt-out — a feedback nobody has heard is a feedback nobody
+  enables), so a user who does not want it hears one press before they can decline. The mute is beside
+  the Theme picker in the header, labelled rather than hidden behind a glyph, and it is remembered under
+  the deck-wide `cyberdeck:sound` key.
+
+  **On a narrow phone it keeps the glyph and gives up the word.** It is the header's third pill, and
+  three labelled pills do not fit under `sm`: measured in Chromium over the built output, the row is
+  389px wide there, against 324 before this mute existed. Glyph-only below `sm` brings it to 372, which
+  fits 375 and **still overflows 360 and 320** — 320 already spilled 4px before the sound landed, and
+  the 12px at 360 is a regression accepted with this mitigation rather than fixed, since the only
+  measured way back under 360 is a second control dropping its word. The accessible name does not move
+  with the width: it is `sound on — press to mute` / `muted — press to unmute` at every size, and the
+  target stays a real 44x44 box. `apps/ascii/src/header-type.ts` carries the table.
+
+  **The sample and the level are both placeholders, set by arithmetic and not by ear.** ADR 0029 asks
+  for a gain tuned by listening _and_ for a designed artifact, and neither exists yet: `click.wav` is a
+  synthesised 30 ms resonant burst normalised to a peak of exactly 0.700 — the round number is the tell
+  — standing in until someone makes one by listening. `CLICK_VOLUME` in `src/sound/sound.ts` is the
+  single edit that changes the level, `src/sound/click.wav` the single file that replaces the sample,
+  and `src/sound/click-sample.mjs` beside it is the recipe that writes the placeholder, committed so
+  the replacement starts from constants someone can vary rather than from an opaque blob.
+
+  **Only controls that actuate on the press make a sound.** `input` is spelled by type rather than
+  bare: a text field's press begins typing rather than doing anything, and the typing is silent, so a
+  bare `<input>` in the allowlist would only sound on entering the field and on moving the caret.
+
+- 5c69443: One control returns the whole conversion to the look the program opens on: `↺ defaults` in the
+  PRESETS tab, which restores every ConversionSettings axis _and_ leaves whatever Preset was selected.
+  It reuses the EDIT tab's own patch builder over every default key, so "already at its default" is
+  one rule and not a second copy of the defaults, and there is no second tool→keys map to keep.
+
+  It lives in PRESETS because the Strip is this program's only control grammar (ADR 0020) and its
+  three tabs answer three different questions — which look, which value of one axis, what to do with
+  the result. "Back to the opening look" is the first of those: it clears the active Preset as much as
+  it restores the axes, and clearing a Preset is a thing no per-tool control in EDIT may do. So it
+  stands as the row's zeroth chip, ahead of the scrolling Presets, rather than as an eighth reset in
+  EDIT or a fourth act in OUT — and the deck grows no command header to hang it from.
+
+  Throwing the look away is reversible instead of confirmed, through the offer the program already
+  has: the reset takes a revert point, so the `revert` control that undoes an applied Suggestion
+  undoes this too, under the same rule — the user's own next edit retires it, because by then
+  restoring the snapshot would discard work rather than return it. Nothing asks a modal question on
+  the way. The loaded Source never moves: this is the conversion resetting, not the session.
+
+  That way back is one level deep and not a stack: the two acts share a single snapshot, so a reset
+  pressed while a Suggestion's revert still stands gives the suggested look back, not the one the
+  session started from. The control names "the previous look" for exactly that reason — it undoes
+  whichever of the two last ran.
+
+### Patch Changes
+
+- bfd1c28: A failed Source Image render reaches the ErrorBoundary again, and a dying Worker can no longer strand a frame.
+
+  Two holes the move to a Worker opened, both of them the render becoming a promise. A throw out of
+  `renderFrame` used to leave the effect and land in the boundary whose fallback reads "render failed
+  — try a different image or adjust settings"; as a floating promise it became an unhandled rejection
+  nobody observed, and the user got a frozen canvas instead of the message written for it. The canvas
+  now re-throws it from its next render, so the boundary is back in reach.
+
+  **The Source Image only.** A failed frame on the rAF loop is logged and ridden out, the way a
+  dropped one already is — there is a fresh frame ~66 ms behind it, and the boundary has no reset
+  path, so routing a transient live failure there would replace the canvas _and the overlay on it_
+  for good. That overlay carries the Recording stop control, and one bad frame must not be what takes
+  a running take away from you. The PRESETS row takes a third answer for a third reason — the Control
+  Strip is that boundary's sibling, so a derivation that throws leaves the chips reading as names
+  rather than taking the program down; it now says so in the console instead of failing silently.
+
+  And the runner's fallback path ran a real conversion inside the Worker's `error` listener with both
+  its slots already emptied: a throw there settled nothing, and the promise it left behind could never
+  be settled by anything else — a canvas that never paints. It is settled in a `finally` now, with the
+  error still surfaced.
+
+  The return leg's clone cost is measured and recorded in ADR 0002.
+
+- d7f4e42: The press sound now comes from the kit.
+
+  Nothing about it changes for a user of this program — the same listener, the same sample, the same
+  mute under the same deck-wide `cyberdeck:sound` key. What changed is where it lives: the module was
+  written here at #398 because one caller is a hypothetical seam (ADR 0014), and it moved whole into
+  `@cyberdeck/deck-kit/sound` now that the hub, GLITCH//Studio and GOLEM//Console are callers two,
+  three and four. `src/sound/` is gone; what is left here is the `installClickSound()` call in
+  `main.tsx` and the `SoundControl` in the header.
+
+  **One visible detail did change.** The mute wore this program's header typography — `font-display`
+  and its tracking pair, from `src/header-type.ts` — and no other header on the deck has such a module,
+  so the shared control now wears `HeaderButton`'s own type, exactly as the `ThemeControl` beside it
+  does. The two now match each other rather than the AI control on their other side. Re-measured in
+  Chromium at 320, 360 and 375 over the built output: the header is unchanged at 372px, because below
+  `sm` the mute is glyph-only and sits on `HeaderButton`'s `min-w-[44px]` floor, where the face it
+  wears cannot move the row. `HEADER_CONTROL_LABEL` and `HEADER_CONTROL_GLYPH` left `header-type.ts`
+  with the control; `HEADER_CONTROL_TYPE` stays, since the AI control still takes it.
+
+- c80f78f: Promoted to the role-named space ruler (ADR 0030): `gap-sm` becomes `gap-item`, `px-2xs` becomes
+  `px-tight`, and so on across every panel. Behaviour and layout are unchanged except where the note
+  below says otherwise.
+
+  The LIVE / REC cluster over the canvas takes `hairline` — the 4px that keeps the overlay's footprint
+  off the user's artwork (ADR 0013) — so it does not move a pixel. Twelve classes elsewhere in the
+  chrome go 4px → 6px: the mode row, the AI banner, the Analysis modal and the out panel. Two of
+  those sit on wrapping rows (the modal's tag list and the out panel's action row), where the extra
+  2px can send an item to a new line on a narrow screen.
+
+- 55c00ac: The authored-Charset field drew 160x42.8 — 1.2px under the deck's 44x44 target, and the only control
+  here sized purely by its padding and its line box with no floor under either (#355). It takes a real
+  `min-h-[44px]`: an `<input>` renders no `::after` for `ui/touch-target.ts` to hang an overlay on, and
+  the Chips it stands beside in the scrolling row are already 44px tall, so the missing pixel and a bit
+  costs the panel nothing.
+- Updated dependencies [bf772a2]
+- Updated dependencies [d7f4e42]
+- Updated dependencies [c80f78f]
+- Updated dependencies [42d3b96]
+- Updated dependencies [55c00ac]
+  - @cyberdeck/deck-kit@0.8.0
+
 ## 1.36.0
 
 ### Minor Changes

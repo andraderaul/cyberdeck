@@ -1,5 +1,31 @@
 # @cyberdeck/sprawl
 
+## 0.2.1
+
+### Patch Changes
+
+- c80f78f: Promoted to the role-named space ruler (ADR 0030): `gap-sm` becomes `gap-item`, `px-2xs` becomes
+  `px-tight`, and so on.
+
+  Every class over the piece itself — the export controls, the scale reader, the basemap toggle and
+  the provenance credit — takes `hairline`, the 4px role that exists so an overlay's footprint never
+  grows over what it sits on (ADR 0021). Nothing here moves a pixel.
+
+- 55c00ac: The `[B]` key hint on the outline chip receded with alpha, and `opacity-60` over `--fg-muted`
+  composites to `#5f5f79` on `--bg` — 3.19:1, under AA-small (#355). Only while the outline is off;
+  with it on the chip recolours to `--info` and the dimmed key has the headroom.
+
+  The off state takes `--fg-subtle` instead, the next step down the foreground scale and one the Theme
+  Contract pins above the floor. The key still recedes behind the word it belongs to, and the amount it
+  recedes by is now a token a guard can read rather than a composite nothing audits.
+
+- Updated dependencies [bf772a2]
+- Updated dependencies [d7f4e42]
+- Updated dependencies [c80f78f]
+- Updated dependencies [42d3b96]
+- Updated dependencies [55c00ac]
+  - @cyberdeck/deck-kit@0.8.0
+
 ## 0.2.0
 
 ### Minor Changes

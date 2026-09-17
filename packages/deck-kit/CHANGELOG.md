@@ -1,5 +1,118 @@
 # @cyberdeck/deck-kit
 
+## 0.8.0
+
+### Minor Changes
+
+- d7f4e42: The press sound moves into the kit, on its own `@cyberdeck/deck-kit/sound` entry point.
+
+  It was written in ASCII//Convert at #398 because one caller is a hypothetical seam (ADR 0014), and it
+  crosses now that the hub, GLITCH//Studio and GOLEM//Console are callers two, three and four — the
+  route `UpdateBanner` took, and the reason ADR 0029 asked for the move rather than birth in the kit:
+  the bar is an **empty diff measured**, not predicted.
+
+  **Measured, it was empty.** `git mv` of all seven files reported R100 with zero content lines — the
+  mechanism, the sample, the recipe and the tests crossed byte for byte, because the `cyberdeck:sound`
+  key was deck-wide and unqualified from its first line. The one part that did not cross unchanged is
+  the mute _control_: it wore three typography constants from `apps/ascii/src/header-type.ts`, and no
+  other header on the deck has such a module. It now wears `HeaderButton`'s own type, exactly as the
+  `ThemeControl` it sits beside does — one component serving four headers cannot borrow one app's face.
+  Re-measured in Chromium at 320/360/375 over the built output, ASCII//Convert's header is unchanged at
+  372px: below `sm` the mute is glyph-only and sits on `HeaderButton`'s `min-w-[44px]` floor, so the
+  face it wears cannot move the row.
+
+  **`/sound` rather than a corner of `/ui`, and that is the exclusion doing work.** SPRAWL//Atlas
+  already imports `/ui` and `/pwa`; a `SoundControl` re-exported from the `/ui` barrel would leave the
+  piece one tree-shake away from a sample ADR 0021 decided it must never play. A separate specifier
+  makes the exclusion a fact about what the piece imports.
+
+  **The exclusion guard grew the two blind spots it had.** It scanned only `apps/sprawl/src/**/*.{ts,tsx}`,
+  so an inline script in `apps/sprawl/index.html` — which already carries script tags — was invisible to
+  it, and so was the kit installing the listener at its own module scope, which no scan of `apps/sprawl`
+  could ever see. It now reads every executable file under `apps/sprawl`, `index.html` included, and
+  holds that no kit module outside a test _calls_ `installClickSound()`.
+
+  **`assetsInlineLimit` ships beside `precacheShell`**, so the rule that keeps the sample out of the
+  entry chunk is one definition and four references rather than four copies of one predicate.
+
+- 42d3b96: `ice`'s accent is re-derived: `--violet` goes from `#b829ff` to `#c652ff` — the same hue and the
+  same saturation, eight points brighter.
+
+  The old value cleared AA-small on `--bg` and nowhere else (4.51:1, then 4.35:1 and 3.90:1), which
+  ADR 0009 recorded and excused for two labels. Sixteen accent labels across four programs were
+  sitting on lit surfaces by the time #329's guards could see them, and the survey behind #355 found
+  that **all sixteen were `ice`-only**: the other six Themes already clear the floor on every ground
+  they draw on. `ice`'s accent is the one that predates the Theme Contract and was never re-derived
+  under it.
+
+  It now measures 5.69 / 5.48 / 4.92 on the three surfaces, 5.21 on `--color-accent-bg` and 4.64 on
+  the tightest ground it is actually drawn on — the accent ghost over `--bg-elevated`, which is why
+  the value is not the bare-minimum `#c44dff` (that one lands on 4.49 there). Black on the accent, the
+  one pair a brighter accent could have broken, improves too: 4.80:1 → 6.05:1. `--soft-violet` follows
+  to `#df9eff`, keeping the accent-to-soft distance in the band the other six Themes sit in.
+
+  **The Theme Contract's accent tier collapses to one.** It used to relax to WCAG 1.4.11's 3:1 off the
+  base surface for one stated reason — demanding AA-small everywhere would have failed `ice` itself.
+  That incumbent is gone, and what the tier bought was sixteen defects under a green guard. `--accent`
+  is now held to AA-small on all three surfaces in every Theme; the roster's tightest is `ice` at
+  4.92:1.
+
+  **A third vocabulary guard.** Every colour in the Tailwind preset is `var(--token)` with no
+  `<alpha-value>` placeholder, so Tailwind cannot parse it and silently drops any candidate carrying
+  an alpha modifier: `bg-accent/20` emits nothing at all, and a thinned _border_ is worse, because
+  Preflight has already painted one in its own grey. Seven were shipping. The guard fails the build
+  with the class, the file and the line, like the hue and scale guards beside it — the deck tints with
+  named tokens (`bg-accent-ghost`, `-dim`, `-soft`, and the `subtle`/`base`/`strong` border ladder),
+  which are values the Contract can read, rather than with a slash.
+
+### Patch Changes
+
+- bf772a2: `.wav` joins the precached shell's classified extensions.
+
+  The press sound (ADR 0029) is the first audio the deck emits, and `collectShell` refuses any file it
+  cannot classify — so without this the build fails, which is the guard working rather than a bug. It is
+  precached like the rest of the shell for the reason the classifier exists: the sample answers a
+  gesture, and a shell installed without it would answer the first offline press with silence and
+  nothing to say why.
+
+- c80f78f: The space ruler is named by role rather than by size (ADR 0030). `--gap-*` and `--sp-*` — two
+  rulers, fourteen names, six of them never used — become six: `--space-hairline`, `--space-tight`,
+  `--space-item`, `--space-group`, `--space-stack`, `--space-section`, keyed into Tailwind as
+  `gap-tight`, `px-item`, `py-section` and the rest. Each one names a relationship instead of a
+  magnitude, so the name survives a change of value the way `text-accent` already does.
+
+  The rename is clean; there is no alias window. The scale guard splits into two families — spacing
+  and radius no longer forbid the same names, since `rounded-xs` stays real while `p-xs` is dead — and
+  the spacing family bans the entire retired vocabulary, so `gap-sm` fails the build with the class,
+  the file and the line rather than silently rendering nothing. `SECTION_ONLY_GAPS` and the
+  `p-sp-3xl` trap it described are gone with the ruler.
+
+  The one rule worth reading before reaching for a name: `hairline` is any measurement that sizes an
+  overlay's _footprint_ over the user's picture — its inset from the canvas edge and the gaps inside
+  the overlay row alike (ADR 0013, ADR 0021); `tight` is chrome measured against its own opaque
+  background. That rule is what the old `xs` (4px) / `2xs` (6px) pair could never state, and closing
+  that wart by construction is why the sixth role exists.
+
+  Inside the kit, seven of the primitives' tightest classes move 4px → 6px: `HeaderButton`,
+  `ThemeControl`, `ToggleGroup`, `Tooltip` and the toast stack. One of them is a wrapping row —
+  `ToggleGroup`'s non-full-width layout — where the extra 2px can send a control to a new line on a
+  narrow screen. Every other class in the kit is pixel-identical.
+
+- 55c00ac: Two kit controls that measured under the 44x44 the deck holds itself to, found by #329's target
+  guard and written up in #355.
+
+  The **Theme popover's rows** drew 114x36 — `min-h-[36px]`, from before #288, which took twelve
+  controls to the target and never reached inside a popover. They are a real 44px box now rather than
+  a target overlay, and the rows being stacked 0px apart is the reason: a centred 44px overlay would
+  reach 4px into each neighbour's, and two overlapping targets are a worse defect than one small
+  target. The panel is absolutely positioned, so the 56px it grows by moves nothing else on the page.
+  One fix, and it lands in all four workspaces that render the control — twenty-eight nodes.
+
+  The **footer's `about` trigger** drew 37.4x44. #288 gave it a minimum height and never a width, so
+  the width was whatever "about" happened to measure — precisely the defect #297 found in `Chip`. It
+  takes `min-w-[44px]` and centres its label; `ml-auto` already held it away from the two links beside
+  it, so the extra width costs the bar nothing.
+
 ## 0.7.2
 
 ### Patch Changes
