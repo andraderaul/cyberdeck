@@ -21,21 +21,13 @@ import {
   expectEveryMarkOnTheCanvasStandsOnItsOwnGround,
   expectNoAxeViolations,
 } from '../support/a11y'
-import { theDimmedKeyHint, thePiecesOwnInk } from '../support/accepted'
+import { thePiecesOwnInk } from '../support/accepted'
 
 /** The map itself is the control (ADR 0020) — the slider ARIA rides on the element it sits in. */
 const SCALE_CONTROL = /scale — connected capacity per pixel/
 
 /** Past the clip threshold, the same distance `smoke.spec.ts` measured it at. */
 const A_FEW_NOTCHES_COARSER = 700
-
-/**
- * Only while the outline is off. With it on the chip recolours and the hint clears the bar, so the
- * third test below passes no acceptance at all — and would be told if it did.
- */
-const THE_OUTLINE_OFF: Accepted[] = [
-  theDimmedKeyHint('div#root > div:nth-of-type(1) > main > button > span "[B]"'),
-]
 
 const LABELS = 'div#root > div:nth-of-type(1) > main > div:nth-of-type(1) > div:nth-of-type(1)'
 
@@ -83,8 +75,8 @@ test(
     await page.goto('/')
     await expect(page.getByTestId('overflow-flag')).toBeVisible()
 
-    await expectNoAxeViolations(page, THE_OUTLINE_OFF)
-    await expectEveryControlHoldsTheTarget(page, THE_OUTLINE_OFF)
+    await expectNoAxeViolations(page)
+    await expectEveryControlHoldsTheTarget(page)
     await expectEveryMarkOnTheCanvasStandsOnItsOwnGround(page, THE_PIECES_OWN_INK)
   },
 )
@@ -93,8 +85,8 @@ test('one gesture past OVERFLOW is accessible and holds its targets', A11Y, asyn
   await page.goto('/')
   await coarser(page)
 
-  await expectNoAxeViolations(page, THE_OUTLINE_OFF)
-  await expectEveryControlHoldsTheTarget(page, THE_OUTLINE_OFF)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
   await expectEveryMarkOnTheCanvasStandsOnItsOwnGround(page, THE_PIECES_OWN_INK)
 })
 

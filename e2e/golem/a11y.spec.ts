@@ -9,18 +9,8 @@
 // that a keyboard cannot reach, in the one program that is nothing but a keyboard (#355).
 
 import { expect, test } from '@playwright/test'
-import {
-  A11Y,
-  type Accepted,
-  expectEveryControlHoldsTheTarget,
-  expectNoAxeViolations,
-} from '../support/a11y'
-import {
-  accentOnALitSurface,
-  aScrollableRegionWithNoKeyboardAccess,
-  theConsoleCommandLine,
-  theThemePopover,
-} from '../support/accepted'
+import { A11Y, expectEveryControlHoldsTheTarget, expectNoAxeViolations } from '../support/a11y'
+import { accentOnALitSurface, theThemePopover } from '../support/accepted'
 
 /** What the starter program writes to the memory-mapped Terminal, one byte at a time. */
 const STARTER_OUTPUT = 'Hello from GOLEM'
@@ -28,16 +18,6 @@ const STARTER_OUTPUT = 'Hello from GOLEM'
 const LEFT = 'div#root > div:nth-of-type(1) > main > div:nth-of-type(1)'
 const RIGHT = 'div#root > div:nth-of-type(1) > main > div:nth-of-type(2)'
 const THEME_MENU = 'div#root > div:nth-of-type(1) > header > div > div'
-
-/** On every surface: the Console is where the program answers, and it scrolls from the first line. */
-const ALWAYS: Accepted[] = [
-  theConsoleCommandLine(
-    `${LEFT} > section:nth-of-type(2) > div > div > form > input "Console input"`,
-  ),
-  aScrollableRegionWithNoKeyboardAccess(
-    `${LEFT} > section:nth-of-type(2) > div > div > div "within Console"`,
-  ),
-]
 
 // The kit's Theme popover is a surface in its own right, swept in every workspace that renders the
 // control rather than in whichever one happened to have a spec: the rows are the kit's, so leaving
@@ -47,7 +27,7 @@ test('the Theme menu is accessible and every row holds its target', A11Y, async 
   await page.getByRole('button', { name: /^theme:/ }).click()
   await expect(page.getByRole('menu', { name: 'theme' })).toBeVisible()
 
-  const accepted = [...ALWAYS, ...theThemePopover(THEME_MENU)]
+  const accepted = theThemePopover(THEME_MENU)
   await expectNoAxeViolations(page, accepted)
   await expectEveryControlHoldsTheTarget(page, accepted)
 })
@@ -59,8 +39,8 @@ test(
     await page.goto('/')
     await expect(page.getByRole('banner')).toContainText('GOLEM//CONSOLE')
 
-    await expectNoAxeViolations(page, ALWAYS)
-    await expectEveryControlHoldsTheTarget(page, ALWAYS)
+    await expectNoAxeViolations(page)
+    await expectEveryControlHoldsTheTarget(page)
   },
 )
 
@@ -76,22 +56,6 @@ test('a machine that has run is accessible and holds its targets', A11Y, async (
   await expect(page.getByRole('region', { name: 'Terminal' })).toContainText(STARTER_OUTPUT)
 
   const accepted = [
-    ...ALWAYS,
-    // Named by the region each one sits in, never by what the machine currently holds: an
-    // acceptance keyed on `r00x00000051` would turn this job red the day the ISA changes, and the
-    // lesson it would teach — delete the accessibility acceptance — is the wrong one.
-    aScrollableRegionWithNoKeyboardAccess(
-      `${LEFT} > section:nth-of-type(1) > div > div > div "within Source — locked"`,
-    ),
-    aScrollableRegionWithNoKeyboardAccess(
-      `${RIGHT} > section:nth-of-type(1) > div "within Registers"`,
-    ),
-    aScrollableRegionWithNoKeyboardAccess(
-      `${RIGHT} > section:nth-of-type(5) > div "within Memory"`,
-    ),
-    aScrollableRegionWithNoKeyboardAccess(
-      `${RIGHT} > section:nth-of-type(6) > div > div > output "within Terminal"`,
-    ),
     accentOnALitSurface(
       `${LEFT} > section:nth-of-type(1) > div > div > p > code "reset"`,
       '4.34:1',

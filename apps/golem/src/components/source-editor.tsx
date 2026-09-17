@@ -1,6 +1,6 @@
 import { cn } from '@cyberdeck/deck-kit/utils'
 import { useEffect, useRef } from 'react'
-import Panel from './panel'
+import Panel, { KEYBOARD_SCROLLABLE } from './panel'
 
 type SourceEditorProps = {
   source: string
@@ -28,7 +28,11 @@ export default function SourceEditor({
   return (
     // Taller than the default floor when stacked: reading the program is the point of
     // opening a shared link on a phone.
-    <Panel title={editable ? 'Source' : 'Source — locked'} className="min-h-[16rem] lg:min-h-0">
+    <Panel
+      title={editable ? 'Source' : 'Source — locked'}
+      className="min-h-[16rem] lg:min-h-0"
+      bodyScrolls={false}
+    >
       <div className="flex h-full min-h-0 flex-col gap-2">
         {/* Says why, not just that: a disabled box with no explanation reads as a broken page. */}
         {!editable && (
@@ -71,7 +75,16 @@ function Listing({
   return (
     // Unnamed on purpose: the Panel already announces this region as "Source — locked", and a
     // second name here would only repeat it.
-    <div className="min-h-0 flex-1 overflow-auto font-mono text-sm leading-relaxed">
+    <div
+      // The tab stop that lets a keyboard scroll the listing — see `KEYBOARD_SCROLLABLE` in
+      // `panel.tsx`. Still read-only: a breakpoint is set with `break`, never here (ADR 0018).
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: WCAG 2.1.1 outranks the rule here
+      tabIndex={0}
+      className={cn(
+        'min-h-0 flex-1 overflow-auto font-mono text-sm leading-relaxed',
+        KEYBOARD_SCROLLABLE,
+      )}
+    >
       {source.split('\n').map((text, index) => {
         const line = index + 1
         const active = line === currentLine

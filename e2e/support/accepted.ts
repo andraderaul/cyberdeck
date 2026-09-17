@@ -11,23 +11,29 @@
 // defects go to be forgotten:
 //
 //  - One entry is one *node*. There is no way to spell "and every other control like it" here, and
-//    that is deliberate — accepting the footer's `about` trigger must not quietly accept the next
-//    control that lands 37px wide.
+//    that is deliberate — accepting one `--accent` label on a lit surface must not quietly accept
+//    the next one somebody adds.
 //  - An entry that stops matching **fails the build**. Fix the cause, delete the entry; leave it and
 //    the guard says so by name. So the list can only ever shrink, and it cannot silently outlive
 //    what it describes.
 //  - Every entry carries the reading it was written against (`at`), and covers that reading **and
 //    anything better** — never anything worse. Without it an entry would pin presence and not
-//    degree, and the footer trigger could slide from 37.4px to 20px inside an acceptance that still
-//    said 37.4. `at: null` is for a rule with no degree to slide along: a form control either has a
+//    degree, and a label accepted at 4.37:1 could slide to 2:1 inside an acceptance that still said
+//    4.37. `at: null` is for a rule with no degree to slide along: a form control either has a
 //    label or it does not.
 //  - Every factory below says what the defect *is*, not that it is tolerated. A `why` that reads
 //    "known issue" would be worth less than no entry at all.
 //
 // They are factories rather than constants because the same defect appears at different paths in
-// different programs — the Theme menu row is the kit's, and it fails in all four workspaces that
-// render the control, under four different ancestors. The prose is written once, on the factory;
-// the node is named at the callsite, in the spec for the surface it fails on.
+// different programs — the Theme popover's checked row is the kit's, and it fails in all four
+// workspaces that render the control, under four different ancestors. The prose is written once, on
+// the factory; the node is named at the callsite, in the spec for the surface it fails on.
+//
+// **The list has shrunk once already**, and by the route above. #355's sections 2, 3 and 4 were
+// fixed rather than carried: the footer's `about` trigger, the Theme popover's seven rows per
+// workspace, GOLEM//Console's command line and its authored-Charset sibling, the five scrolling
+// panels a keyboard could not reach, and SPRAWL//Atlas's dimmed key hint. Thirty-eight entries and
+// six factories went with them.
 
 import { THEMES } from '../../packages/deck-kit/src/theme/themes'
 import type { Accepted } from './a11y'
@@ -61,118 +67,18 @@ export function accentOnALitSurface(element: string, ratio: string): Accepted {
 }
 
 /**
- * A row of the kit's Theme popover, which draws 114x36 — `min-h-[36px]` in `theme-control.tsx`.
+ * What the kit's Theme popover leaves failing, given the path to the menu in one workspace.
  *
- * #288 took twelve controls to 44x44 and did not reach inside a popover, so every Theme row in every
- * program that renders the control is 8px short on the axis a thumb has least of. Deck-wide from one
- * kit component, which is also why fixing it is one line and a changeset per program.
- */
-function aThemeMenuRow(element: string): Accepted {
-  return {
-    rule: 'target-size-44',
-    target: element,
-    at: '114x36',
-    why: `the kit's Theme popover rows draw 114x36 — 8px under the target #288 set, in every program that renders the control; ${WRITTEN_UP}.`,
-  }
-}
-
-/**
- * The whole of what the kit's Theme popover leaves failing, given the path to the menu in one
- * workspace: a row per Theme at 114x36, plus the checked row's `--accent` label.
- *
- * Still one entry per node — this only spares four specs from transcribing the same list four times,
- * and it reads the roster from the kit so a new Theme arrives with its row already covered rather
- * than reddening four workspaces at once for a reason that has nothing to do with the new Theme.
+ * The rows' 114x36 is gone — they are a real 44px box now (#355) — so what remains is the checked
+ * row's `--accent` label, which belongs to the token question in #355's first section rather than
+ * to the target work. A list rather than a single entry because that is the shape all four specs
+ * spread, and because the popover is the surface a second accepted node would land on.
  */
 export function theThemePopover(menu: string): Accepted[] {
   return [
     // Only the checked row carries `--accent`; the other six are `--fg-muted` and clear the bar.
     accentOnALitSurface(`${menu} > button:nth-of-type(1) "${THEMES[0]}"`, '3.89:1'),
-    ...THEMES.map((theme, at) =>
-      aThemeMenuRow(`${menu} > button:nth-of-type(${at + 1}) "${theme}"`),
-    ),
   ]
-}
-
-/**
- * The footer's `about` trigger, which measures 37.4x44 in ASCII//Convert and GLITCH//Studio.
- *
- * Precisely the defect #297 found in `Chip`, one layer over: #288 gave this control `min-h-[44px]`
- * and never a width, so the width is held by whatever the label happens to be — and "about" is five
- * characters. The two footers are byte-identical, so one fix covers both.
- */
-export function theFooterAboutTrigger(element: string): Accepted {
-  return {
-    rule: 'target-size-44',
-    target: element,
-    at: '37.4x44',
-    why: `37.4x44 — #288 gave it min-h and no min-w, so the width is whatever "about" happens to measure. Same shape as #297's Chip; ${WRITTEN_UP}.`,
-  }
-}
-
-/**
- * ASCII//Convert's authored-Charset field, which measures 160x42.8 — 1.2px short.
- *
- * The newest entry in this file and the one that says most about why it exists: the field landed in
- * #356, days after #329 was written and hours before this guard did, and it is the only control on
- * the deck sized purely by its padding and its line box with no floor under either. Nothing in the
- * repo could have said so, which is the argument for the guard in one node.
- */
-export function theAuthoredCharsetField(element: string): Accepted {
-  return {
-    rule: 'target-size-44',
-    target: element,
-    at: '160x42.8',
-    why: `160x42.8 — a text field with no minimum height, so its target is whatever the padding and the line box add up to; ${WRITTEN_UP}.`,
-  }
-}
-
-/**
- * GOLEM//Console's command line, which measures 794x17.6.
- *
- * The program's whole control grammar is this one input (ADR 0018), and it is the shortest target on
- * the deck. Wide enough to hit is not the same as tall enough to hit.
- */
-export function theConsoleCommandLine(element: string): Accepted {
-  return {
-    rule: 'target-size-44',
-    target: element,
-    at: '794x17.6',
-    why: `794x17.6 — the one control GOLEM//Console has (ADR 0018) is 26px short on its height; ${WRITTEN_UP}.`,
-  }
-}
-
-/**
- * A panel that scrolls and cannot be reached by keyboard (`scrollable-region-focusable`, WCAG 2.1.1).
- *
- * All five are in GOLEM//Console, which is the program this bites hardest: a keyboard user can drive
- * the machine and cannot scroll back through what it printed, in the one program on the deck whose
- * entire interface is a keyboard.
- */
-export function aScrollableRegionWithNoKeyboardAccess(element: string): Accepted {
-  return {
-    rule: 'scrollable-region-focusable',
-    target: element,
-    at: null,
-    why: `it scrolls and nothing inside it takes focus, so a keyboard cannot reach what has scrolled off — in the program that is nothing but a keyboard; ${WRITTEN_UP}.`,
-  }
-}
-
-/**
- * SPRAWL//Atlas's `[B]` key hint, dimmed to 60% so the key recedes behind the word it belongs to.
- * Composited it reads `#5f5f79` on `--bg` — 3.19:1.
- *
- * Only while the outline is **off**: turning it on recolours the chip and the hint clears the bar,
- * which is why this is accepted on two of the three SPRAWL surfaces and would be reported as stale
- * on the third.
- */
-export function theDimmedKeyHint(element: string): Accepted {
-  return {
-    rule: 'color-contrast',
-    target: element,
-    at: '3.19:1',
-    why: `opacity-60 over --fg-muted composites to 3.19:1 on --bg, under AA-small, while the outline is off; ${WRITTEN_UP}.`,
-  }
 }
 
 /**

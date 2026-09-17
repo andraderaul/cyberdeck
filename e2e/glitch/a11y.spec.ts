@@ -13,22 +13,16 @@ import { fileURLToPath } from 'node:url'
 import { expect, type Page, test } from '@playwright/test'
 import {
   A11Y,
-  type Accepted,
   expectEveryControlHoldsTheTarget,
   expectEveryMarkOnTheCanvasStandsOnItsOwnGround,
   expectNoAxeViolations,
 } from '../support/a11y'
-import { accentOnALitSurface, theFooterAboutTrigger, theThemePopover } from '../support/accepted'
+import { accentOnALitSurface, theThemePopover } from '../support/accepted'
 
 /** Any raster will do — this is the workspace's own social card, so nothing is borrowed. */
 const SOURCE_IMAGE = fileURLToPath(new URL('../../apps/glitch/public/og-card.png', import.meta.url))
 
 const THEME_MENU = 'div#root > div:nth-of-type(1) > header > div > div'
-
-/** Only while the Source is empty — `App` hides the footer the moment one loads. */
-const THE_FOOTER: Accepted[] = [
-  theFooterAboutTrigger('div#root > div:nth-of-type(1) > footer > button "about"'),
-]
 
 async function withASource(page: Page): Promise<void> {
   await page.goto('/')
@@ -40,8 +34,8 @@ test('the empty state is accessible and every control holds its target', A11Y, a
   await page.goto('/')
   await expect(page.getByText('drag & drop or click to upload')).toBeVisible()
 
-  await expectNoAxeViolations(page, THE_FOOTER)
-  await expectEveryControlHoldsTheTarget(page, THE_FOOTER)
+  await expectNoAxeViolations(page)
+  await expectEveryControlHoldsTheTarget(page)
 })
 
 // The kit's Theme popover is a surface in its own right, swept in every workspace that renders the
@@ -52,7 +46,7 @@ test('the Theme menu is accessible and every row holds its target', A11Y, async 
   await page.getByRole('button', { name: /^theme:/ }).click()
   await expect(page.getByRole('menu', { name: 'theme' })).toBeVisible()
 
-  const accepted = [...THE_FOOTER, ...theThemePopover(THEME_MENU)]
+  const accepted = theThemePopover(THEME_MENU)
   await expectNoAxeViolations(page, accepted)
   await expectEveryControlHoldsTheTarget(page, accepted)
 })
@@ -63,7 +57,6 @@ test('the About modal is accessible and every control holds its target', A11Y, a
   await expect(page.getByRole('dialog')).toBeVisible()
 
   const accepted = [
-    ...THE_FOOTER,
     accentOnALitSurface(
       'div#root > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > span "GLITCH//STUDIO"',
       '3.89:1',

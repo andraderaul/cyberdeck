@@ -18,12 +18,7 @@ import {
   expectNoAxeViolations,
   expectTheCanvasIsItsOwnGround,
 } from '../support/a11y'
-import {
-  accentOnALitSurface,
-  theAuthoredCharsetField,
-  theFooterAboutTrigger,
-  theThemePopover,
-} from '../support/accepted'
+import { accentOnALitSurface, theThemePopover } from '../support/accepted'
 
 const SOURCE_IMAGE = fileURLToPath(new URL('../../apps/ascii/gifs/ai-demo.png', import.meta.url))
 
@@ -36,11 +31,6 @@ const THE_HEADER: Accepted[] = [
   accentOnALitSurface(`${HEADER} > button "Configure AI key"`, '4.37:1'),
 ]
 
-/** Only while the Source is empty — `App` hides the footer the moment one loads. */
-const THE_FOOTER: Accepted[] = [
-  theFooterAboutTrigger('div#root > div:nth-of-type(1) > footer > button "about"'),
-]
-
 async function withASource(page: Page): Promise<void> {
   await page.goto('/')
   await page.setInputFiles('input[type=file]', SOURCE_IMAGE)
@@ -51,7 +41,7 @@ test('the empty state is accessible and every control holds its target', A11Y, a
   await page.goto('/')
   await expect(page.getByText('drag & drop or click to upload')).toBeVisible()
 
-  const accepted = [...THE_HEADER, ...THE_FOOTER]
+  const accepted = [...THE_HEADER]
   await expectNoAxeViolations(page, accepted)
   await expectEveryControlHoldsTheTarget(page, accepted)
 })
@@ -63,7 +53,6 @@ test('the About modal is accessible and every control holds its target', A11Y, a
 
   const accepted = [
     ...THE_HEADER,
-    ...THE_FOOTER,
     accentOnALitSurface(
       'div#root > div:nth-of-type(1) > div:nth-of-type(2) > div > div:nth-of-type(1) > span "ASCII//CONVERT"',
       '3.89:1',
@@ -78,7 +67,7 @@ test('the Theme menu is accessible and every row holds its target', A11Y, async 
   await page.getByRole('button', { name: /^theme:/ }).click()
   await expect(page.getByRole('menu', { name: 'theme' })).toBeVisible()
 
-  const accepted = [...THE_HEADER, ...THE_FOOTER, ...theThemePopover(THEME_MENU)]
+  const accepted = [...THE_HEADER, ...theThemePopover(THEME_MENU)]
   await expectNoAxeViolations(page, accepted)
   await expectEveryControlHoldsTheTarget(page, accepted)
 })
@@ -97,14 +86,8 @@ test('the edit tab is accessible and every control holds its target', A11Y, asyn
   await page.getByRole('tab', { name: 'edit' }).click()
   await expect(page.getByRole('tab', { name: 'edit' })).toHaveAttribute('aria-selected', 'true')
 
-  const accepted = [
-    ...THE_HEADER,
-    theAuthoredCharsetField(
-      'div#strip-panel-edit > div > div:nth-of-type(1) > fieldset > div > fieldset:nth-of-type(6) > input "custom charset"',
-    ),
-  ]
-  await expectNoAxeViolations(page, accepted)
-  await expectEveryControlHoldsTheTarget(page, accepted)
+  await expectNoAxeViolations(page, THE_HEADER)
+  await expectEveryControlHoldsTheTarget(page, THE_HEADER)
 })
 
 test('the out tab is accessible and every control holds its target', A11Y, async ({ page }) => {

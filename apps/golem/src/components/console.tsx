@@ -1,7 +1,7 @@
 import { cn } from '@cyberdeck/deck-kit/utils'
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
 import type { ConsoleLine } from '../hooks/use-console'
-import Panel from './panel'
+import Panel, { KEYBOARD_SCROLLABLE } from './panel'
 
 type ConsoleProps = {
   lines: ConsoleLine[]
@@ -79,9 +79,17 @@ export default function Console({ lines, history, onSubmit }: ConsoleProps) {
   }, [lines])
 
   return (
-    <Panel title="Console" className="min-h-[12rem] lg:min-h-0">
+    <Panel title="Console" className="min-h-[12rem] lg:min-h-0" bodyScrolls={false}>
       <div className="flex h-full min-h-0 flex-col gap-2 font-mono text-xs">
-        <div ref={logRef} className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
+        <div
+          ref={logRef}
+          // The log scrolls from the first line, and this is the tab stop that lets a keyboard
+          // reach what has scrolled off it (#355). Read-only either way — focus scrolls it and
+          // drives nothing, so the Console is still the only grammar (ADR 0018).
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: WCAG 2.1.1 outranks the rule here
+          tabIndex={0}
+          className={cn('min-h-0 flex-1 space-y-0.5 overflow-y-auto', KEYBOARD_SCROLLABLE)}
+        >
           {lines.map((line) => (
             <p
               key={line.id}
@@ -134,7 +142,12 @@ export default function Console({ lines, history, onSubmit }: ConsoleProps) {
             autoCapitalize="off"
             autoCorrect="off"
             enterKeyHint="send"
-            className="min-w-0 flex-1 bg-transparent outline-none focus-visible:ring-1 focus-visible:ring-accent"
+            // A real 44px box, not an overlay: an `<input>` renders no `::after`, so
+            // `ui/touch-target.ts` has nothing to hang a target on. It drew 17.6px tall — the
+            // shortest target on the deck, on the one control this program has (#355, ADR 0018).
+            // The 26px comes out of the log above it rather than out of the panel, which keeps its
+            // reserved height.
+            className="min-h-[44px] min-w-0 flex-1 bg-transparent outline-none focus-visible:ring-1 focus-visible:ring-accent"
           />
         </form>
       </div>

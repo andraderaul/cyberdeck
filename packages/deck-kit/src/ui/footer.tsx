@@ -16,8 +16,13 @@ const LINK_CLASS =
 
 // `text-fg-subtle` rather than `text-fg-dim`, which sits below the contrast floor — a test in the
 // kit pins it, because the two are one character apart and the failure is invisible in review.
+//
+// `min-w-[44px]` alongside the height because "about" is five characters and drew 37.4px wide
+// (#355) — the same defect #297 found in `Chip`, where a control's width was whatever its label
+// happened to measure. The links beside it are already wider than the target and `ml-auto` keeps
+// this one away from them, so the extra width costs the bar nothing.
 const ABOUT_CLASS =
-  'ml-auto inline-flex items-center min-h-[44px] font-mono text-xs tracking-wide text-fg-subtle hover:text-fg transition-all cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
+  'ml-auto inline-flex items-center justify-center min-h-[44px] min-w-[44px] font-mono text-xs tracking-wide text-fg-subtle hover:text-fg transition-all cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
 interface Props {
   /** Each workspace points at its own repository — ASCII//Convert's predates the monorepo. */

@@ -156,8 +156,13 @@ export default function ThemeControl({ className }: Props) {
                 // Roving focus: the menu is one tab stop, and the arrows move within it.
                 tabIndex={-1}
                 onClick={() => select(option)}
+                // A real 44px box rather than a target overlay (#355): the rows are stacked 0px
+                // apart, so a centred overlay would reach 4px into each neighbour's — two
+                // overlapping targets being a worse defect than one small target
+                // (`ui/touch-target.ts`). The panel is absolutely positioned, so the 56px it grows
+                // by moves nothing else on the page.
                 className={cn(
-                  'flex min-h-[36px] items-center gap-xs rounded-xs px-xs py-2xs',
+                  'flex min-h-[44px] items-center gap-xs rounded-xs px-xs py-2xs',
                   'font-mono text-xs tracking-wide',
                   'cursor-pointer transition-colors duration-fast',
                   isActive ? 'text-accent' : 'text-fg-subtle hover:text-fg',
