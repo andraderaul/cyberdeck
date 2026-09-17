@@ -40,8 +40,12 @@ const THIS_FILE = 'packages/deck-kit/scripts/precache-shell.ts'
  * emitted image that is *part of the interface* rather than a favicon or a link-preview card, and
  * that is the whole reason they are precached: offline, a row of broken chips would be the one
  * surface a casual creator is asked to choose a look from.
+ *
+ * `.wav` joined for the press sound (ADR 0029). Precached for the same reason: the sample answers a
+ * gesture, so a shell that installed without it would answer the first offline press with silence
+ * and nothing to say why.
  */
-const SHELL_EXTENSIONS = ['.html', '.css', '.js', '.svg', '.png', '.webmanifest', '.webp']
+const SHELL_EXTENSIONS = ['.html', '.css', '.js', '.svg', '.png', '.webmanifest', '.webp', '.wav']
 
 /**
  * Emitted files the running program never fetches, so precaching them would only cost the install

@@ -9,6 +9,14 @@ import { precacheShell } from '../../packages/deck-kit/scripts/precache-shell'
 
 export default defineConfig({
   plugins: [react(), precacheShell({ cachePrefix: 'ascii-shell-' })],
+  build: {
+    // The press sound has to be a file under `dist/assets`, never a base64 data URI folded into the
+    // entry chunk (ADR 0029). Inlined it would charge first paint for a sample only a press ever
+    // needs, and it would leave the bundle budget's unbudgeted `other` row — where the ADR put it —
+    // empty. The click is under Vite's 4 kB inline limit today, and a replacement tuned by ear is
+    // just as likely to be, which is why this is a rule about the extension rather than a bigger file.
+    assetsInlineLimit: (file) => (file.endsWith('.wav') ? false : undefined),
+  },
   test: {
     environment: 'happy-dom',
     globals: true,

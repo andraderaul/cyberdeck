@@ -273,6 +273,30 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `public/manifest.webmanifest` — hand-written. The kit's roster guard pins its `theme_color` to the
   same token the `theme-color` meta carries, and checks every icon it names exists
 
+**The press sound** (ADR 0029) — deck-wide in intent, app-local for exactly one slice
+- `src/sound/sound.ts` — the whole mechanism: the deck-wide `cyberdeck:sound` key, the resolution of
+  a stored value to `on | off`, and `installClickSound()` — one `pointerdown` listener at the
+  document, one preloaded `Audio`, one allowlist matched with `closest()`. The allowlist names
+  `input` **by type**, never bare: the bare tag is a namespace, and a text field's press actuates
+  nothing — GOLEM//Console's command line is the case that makes it unarguable. `CLICK_VOLUME` is the
+  single edit that changes the level, and it is **a placeholder set by arithmetic rather than by
+  ear**. Nothing here is this program's: the key is unqualified from the first line, which is what
+  makes #400's crossing into `packages/deck-kit/src/sound/` a `git mv` rather than a rename. It is
+  written here because at this slice it has one caller, and one caller is a hypothetical seam
+  (ADR 0014) — the route `UpdateBanner` took
+- `src/sound/sound-control.tsx` — the mute, beside `ThemeControl` in the header (ADR 0015)
+- `src/sound/click.wav` — the sample, and **a placeholder too**: a synthesised 30 ms resonant burst
+  normalised to a peak of exactly 0.700, where ADR 0029 asks for an artifact designed by ear. A WAV
+  and not an MP3: encoder padding would put silence in front of the attack of the one sound chosen
+  for arriving early
+- `src/sound/click-sample.mjs` — the recipe that writes that placeholder, committed so the sample is
+  constants someone can vary rather than an opaque blob. Deterministic: same constants, same bytes.
+  Not shipped and not imported — a build-time input, in the register of GLITCH's reference plate
+- `src/sound/exclusion.test.ts` — the guard that keeps SPRAWL//Atlas's exclusion a decision someone
+  has to argue with rather than a line nobody noticed was missing (ADR 0021, ADR 0029)
+- `src/main.tsx` installs the listener outside the tree, which is also why no unit environment ever
+  does; `vite.config.ts` keeps the sample out of the entry chunk (see the comment there)
+
 **Components**
 - `src/components/ascii-canvas.tsx` — lifecycle coordinator: drives static and rAF render paths.
   Carries the LIVE badge and the REC badge, which is also the Recording's stop control and its

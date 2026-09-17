@@ -36,6 +36,10 @@ export default defineConfig({
     // Not `on-first-retry`, which never fires with retries pinned at zero — the CI artifact would
     // carry no trace on exactly the run that wanted one.
     trace: 'retain-on-failure',
+    // The deck's press sound (ADR 0029), silenced once for all five projects. It mutes the *device*
+    // rather than the code, so a spec can still instrument `HTMLMediaElement.prototype.play` and
+    // assert the sound fired — which seeding `cyberdeck:sound=off` per spec would have cost.
+    launchOptions: { args: ['--mute-audio'] },
   },
   projects: WORKSPACES.map(({ name, port }) => ({
     name,
