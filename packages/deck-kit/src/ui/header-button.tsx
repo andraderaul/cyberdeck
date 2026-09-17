@@ -25,7 +25,7 @@ export default function HeaderButton({ variant, className, children, ...props }:
       type="button"
       className={cn(
         'flex min-h-[44px] min-w-[44px] items-center justify-center',
-        'rounded-pill border bg-transparent px-xs py-2xs',
+        'rounded-pill border bg-transparent px-tight py-tight',
         'font-mono text-xs tracking-wide',
         'cursor-pointer transition-all duration-fast',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',

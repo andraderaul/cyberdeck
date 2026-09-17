@@ -45,12 +45,12 @@ export default function ExportControls({ position, basemap, canvasRef }: Props) 
   return (
     // The targets grow, the chrome does not: these sit on the piece (ADR 0021), and the PNG is meant
     // to stay a quiet secondary rather than become a second button competing with the link.
-    <div className="absolute top-xs right-xs flex items-center gap-xs font-mono text-xs select-none">
+    <div className="absolute top-hairline right-hairline flex items-center gap-hairline font-mono text-xs select-none">
       <button
         type="button"
         onClick={copyLink}
         className={cn(
-          'px-sm py-2xs rounded-xs bg-bg border border-accent text-accent font-bold tracking-wide cursor-pointer transition-colors duration-fast hover:bg-accent-soft',
+          'px-item py-tight rounded-xs bg-bg border border-accent text-accent font-bold tracking-wide cursor-pointer transition-colors duration-fast hover:bg-accent-soft',
           TOUCH_TARGET_HEIGHT,
         )}
       >
@@ -61,7 +61,7 @@ export default function ExportControls({ position, basemap, canvasRef }: Props) 
         onClick={savePng}
         title="save the current frame as a PNG"
         className={cn(
-          'min-w-[44px] px-sm py-2xs rounded-xs bg-bg border border-base text-fg-muted cursor-pointer transition-colors duration-fast hover:text-fg hover:border-strong',
+          'min-w-[44px] px-item py-tight rounded-xs bg-bg border border-base text-fg-muted cursor-pointer transition-colors duration-fast hover:text-fg hover:border-strong',
           TOUCH_TARGET_HEIGHT,
         )}
       >

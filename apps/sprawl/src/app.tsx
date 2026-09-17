@@ -69,7 +69,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen">
-      <header className="py-sm px-sm sm:px-lg border-b border-base flex items-center gap-sm shrink-0">
+      <header className="py-item px-item sm:px-stack border-b border-base flex items-center gap-item shrink-0">
         <span className="text-accent text-base font-bold tracking-wide">SPRAWL//ATLAS</span>
         <span className="text-fg-faint text-xs hidden sm:block">—</span>
         <span className="text-fg-muted text-xs hidden sm:block">
@@ -107,7 +107,7 @@ export default function App() {
         <BasemapToggle on={basemap} onToggle={toggleBasemap} />
 
         {/* The provenance credit (ADR 0022): named as connected capacity, never "traffic". */}
-        <p className="absolute bottom-xs right-xs text-fg-subtle text-xs font-mono select-none pointer-events-none">
+        <p className="absolute bottom-hairline right-hairline text-fg-subtle text-xs font-mono select-none pointer-events-none">
           as of {DATASET.asOf} · PeeringDB connected capacity
         </p>
       </main>

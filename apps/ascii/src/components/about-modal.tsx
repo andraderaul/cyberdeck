@@ -18,7 +18,7 @@ export default function AboutModal({ onClose }: Props) {
         Everything happens in your browser, nothing is uploaded anywhere.
       </p>
 
-      <div className="flex flex-col gap-sm">
+      <div className="flex flex-col gap-item">
         <span className="text-fg text-xs font-medium">ai scan</span>
         <p className="text-fg-muted text-sm leading-normal">
           There's an optional feature that lets an AI describe what it sees in your ASCII art. To
@@ -28,7 +28,7 @@ export default function AboutModal({ onClose }: Props) {
         </p>
       </div>
 
-      <div className="flex flex-col gap-sm">
+      <div className="flex flex-col gap-item">
         <span className="text-fg text-xs font-medium">made with ai</span>
         <p className="text-fg-muted text-sm leading-normal">
           This project was built in collaboration with AI — not just the code, but the design

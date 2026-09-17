@@ -471,7 +471,7 @@ describe('GlitchCanvas', () => {
       expect(button.className.split(/\s+/)).toEqual(
         expect.arrayContaining(TOUCH_TARGET_ICON.split(' ')),
       )
-      expect(button.className).toContain('py-2xs')
+      expect(button.className).toContain('py-tight')
     })
 
     // The badge wears the shared chrome but is not a control, so it must not grow a target either.

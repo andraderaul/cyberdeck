@@ -144,23 +144,17 @@
   --tracking-wider: 0.12em;
   --tracking-widest: 0.18em;
 
-  /* Spacing — Sections */
-  --sp-xs: 16px;
-  --sp-sm: 32px;
-  --sp-md: 64px;
-  --sp-lg: 96px;
-  --sp-xl: 128px;
-  --sp-2xl: 160px;
-
-  /* Spacing — Internal gaps */
-  --gap-xs: 4px;
-  --gap-sm: 8px;
-  --gap-md: 16px;
-  --gap-lg: 24px;
-  --gap-xl: 32px;
-  --gap-2xl: 48px;
-  --gap-2xs: 6px;
-  --gap-3xl: 64px;
+  /* Spacing — by role (ADR 0030). One ruler, named for the relationship it measures rather than
+     for how big it is: `hairline` sizes an overlay's footprint over the user's picture — its inset
+     from the canvas edge and the gaps inside the overlay row alike (ADR 0013, ADR 0021); `tight` is
+     chrome measured against its own opaque background. Above 32px there is no role and no callsite;
+     the next design that needs one names it here rather than extrapolating a step. */
+  --space-hairline: 4px;
+  --space-tight: 6px;
+  --space-item: 8px;
+  --space-group: 16px;
+  --space-stack: 24px;
+  --space-section: 32px;
 
   /* Borders */
   --border-width-thin: 1px;
@@ -195,8 +189,8 @@
   /* Components — Cards */
   --card-bg: var(--bg-surface);
   --card-border: var(--border-base);
-  --card-padding: var(--gap-xl);
-  --card-gap: var(--gap-lg);
+  --card-padding: var(--space-section);
+  --card-gap: var(--space-stack);
   --card-radius: var(--radius-xs);
 
   /* Components — Buttons */
@@ -249,9 +243,6 @@
   --transition-base: var(--duration-base) var(--ease-smooth);
   --transition-fast: var(--duration-fast) var(--ease-sharp);
   --transition-bounce: var(--duration-base) var(--ease-flick);
-
-  /* Sections */
-  --section-gap: var(--gap-2xl);
 }
 
 /* ============================================================

@@ -29,7 +29,7 @@ describe('ExportControls', () => {
       expect(button.className.split(/\s+/)).toEqual(
         expect.arrayContaining(TOUCH_TARGET_HEIGHT.split(' ')),
       )
-      expect(button.className).toContain('py-2xs')
+      expect(button.className).toContain('py-tight')
     })
 
     it('gives the PNG real width as well, since its label is narrower than the target', () => {

@@ -51,9 +51,9 @@ const hitColour = (result: CacheResult) => (result === 'HIT' ? 'text-hit' : 'tex
 
 function Lens({ view }: { view: CacheView }) {
   return (
-    <div className="flex flex-col gap-sm">
+    <div className="flex flex-col gap-item">
       <Header foreground={view.foreground} line={view.line} access={view.access} />
-      <div className="grid gap-xs sm:grid-cols-2">
+      <div className="grid gap-tight sm:grid-cols-2">
         {view.sets.map((set) => (
           <SetCell key={set.index} set={set} result={view.access?.result ?? null} />
         ))}
@@ -73,7 +73,7 @@ function Header({
   access: CacheAccessView | null
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-sm font-mono text-xs">
+    <div className="flex items-baseline justify-between gap-item font-mono text-xs">
       <span className="text-fg-muted">
         <span className="text-accent">{foreground === 'D' ? 'DATA' : 'INSTR'}</span> · line {line}
       </span>
@@ -96,7 +96,7 @@ function SetCell({ set, result }: { set: CacheSetView; result: CacheResult | nul
   return (
     <div
       className={cn(
-        'border p-xs font-mono text-xs',
+        'border p-tight font-mono text-xs',
         set.valid ? 'border-base bg-bg-elevated' : 'border-subtle text-fg-subtle',
       )}
     >

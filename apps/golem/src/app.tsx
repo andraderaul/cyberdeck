@@ -70,7 +70,7 @@ export default function App() {
       <div className="flex h-screen flex-col">
         {/* The deck's shared shell: same header rhythm and border as ASCII//Convert and
             GLITCH//Studio, so the three read as one collection. */}
-        <header className="flex shrink-0 items-center gap-sm border-base border-b px-sm py-sm sm:px-lg">
+        <header className="flex shrink-0 items-center gap-item border-base border-b px-item py-item sm:px-stack">
           <span className="font-bold text-base text-accent tracking-wide">GOLEM//CONSOLE</span>
           <span className="hidden text-fg-faint text-xs sm:block">—</span>
           <span className="hidden text-fg-muted text-xs sm:block">watch the machine think</span>
@@ -98,8 +98,8 @@ export default function App() {
         {/* One column on a phone, scrolling; two side by side once there is room. The state panels
             come first on a small screen only in source order — visually the Source stays on top,
             because reading the program is what a shared link is opened for. */}
-        <main className="grid flex-1 grid-cols-1 gap-sm overflow-y-auto p-sm lg:min-h-0 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:overflow-hidden lg:p-md">
-          <div className="grid gap-sm lg:min-h-0 lg:grid-rows-[minmax(0,2fr)_minmax(0,1fr)]">
+        <main className="grid flex-1 grid-cols-1 gap-item overflow-y-auto p-item lg:min-h-0 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:overflow-hidden lg:p-group">
+          <div className="grid gap-item lg:min-h-0 lg:grid-rows-[minmax(0,2fr)_minmax(0,1fr)]">
             <SourceEditor
               source={console.source}
               editable={console.editable}
@@ -116,7 +116,7 @@ export default function App() {
               the countdown is the thing worth watching while a run is going. It sizes to its
               content rather than sharing the stretch, so adding it does not squeeze Memory and the
               Terminal — on a phone the column simply scrolls, and the countdown still reads. */}
-          <div className="grid gap-sm lg:min-h-0 lg:grid-rows-[minmax(0,1fr)_auto_auto_auto_minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="grid gap-item lg:min-h-0 lg:grid-rows-[minmax(0,1fr)_auto_auto_auto_minmax(0,1fr)_minmax(0,1fr)]">
             <Registers machine={console.machine} />
             <Flags machine={console.machine} />
             <Devices machine={console.machine} />

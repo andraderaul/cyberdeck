@@ -250,7 +250,7 @@ describe('AsciiCanvas', () => {
         expect.arrayContaining(TOUCH_TARGET_ICON.split(' ')),
       )
       // The chip keeps the padding it always drew at — the overlay is what reaches 44.
-      expect(button.className).toContain('py-2xs')
+      expect(button.className).toContain('py-tight')
     })
   })
 
@@ -352,7 +352,7 @@ describe('AsciiCanvas', () => {
       expect(button.className.split(/\s+/)).toEqual(
         expect.arrayContaining(TOUCH_TARGET_ICON.split(' ')),
       )
-      expect(button.className).toContain('py-2xs')
+      expect(button.className).toContain('py-tight')
     })
 
     // ADR 0013's standing constraint on a *new* overlay: its backdrop is whatever the conversion

@@ -83,8 +83,8 @@ export default function Tooltip({ id, content }: Props) {
         role="tooltip"
         aria-hidden={!visible}
         className={cn(
-          'absolute z-10 max-w-48 w-max p-xs bg-bg-elevated border border-base rounded-xs font-mono text-xs text-fg-muted leading-relaxed',
-          'top-full left-0 mt-2xs',
+          'absolute z-10 max-w-48 w-max p-tight bg-bg-elevated border border-base rounded-xs font-mono text-xs text-fg-muted leading-relaxed',
+          'top-full left-0 mt-tight',
           visible ? 'block' : 'hidden',
         )}
       >

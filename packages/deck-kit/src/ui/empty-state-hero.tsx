@@ -18,9 +18,9 @@ export default function EmptyStateHero({ onImage, onUseWebcam, tagline }: Props)
   const showError = useToastError()
 
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-md p-lg">
+    <div className="h-full flex flex-col items-center justify-center gap-group p-stack">
       <span className="text-fg-muted text-xs text-center">{tagline}</span>
-      <div className="w-full max-w-[720px] flex flex-col sm:flex-row items-stretch justify-center gap-lg">
+      <div className="w-full max-w-[720px] flex flex-col sm:flex-row items-stretch justify-center gap-stack">
         <div className="flex-1 min-h-[160px]">
           <SourceImageDropZone size="lg" onImage={onImage} onError={showError} />
         </div>
@@ -32,7 +32,7 @@ export default function EmptyStateHero({ onImage, onUseWebcam, tagline }: Props)
         <button
           type="button"
           onClick={onUseWebcam}
-          className="flex-1 min-h-[160px] border border-base rounded-xs flex flex-col items-center justify-center gap-sm cursor-pointer transition-colors duration-fast hover:border-accent"
+          className="flex-1 min-h-[160px] border border-base rounded-xs flex flex-col items-center justify-center gap-item cursor-pointer transition-colors duration-fast hover:border-accent"
         >
           <span className="text-3xl text-fg-muted">◉</span>
           <span className="text-fg font-mono text-sm">use webcam</span>

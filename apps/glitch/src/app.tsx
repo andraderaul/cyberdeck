@@ -133,7 +133,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen">
-      <header className="py-sm px-sm sm:px-lg border-b border-base flex items-center gap-sm shrink-0">
+      <header className="py-item px-item sm:px-stack border-b border-base flex items-center gap-item shrink-0">
         <span className="text-accent text-base font-bold tracking-wide">GLITCH//STUDIO</span>
         <span className="text-fg-faint text-xs hidden sm:block">—</span>
         <span className="text-fg-muted text-xs hidden sm:block">image → glitch</span>

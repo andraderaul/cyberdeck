@@ -434,12 +434,12 @@ export default function ChainEditor({ chain, actions, seedControls, isLive }: Pr
   }
 
   return (
-    <div className="flex flex-col gap-sm">
+    <div className="flex flex-col gap-item">
       {/* The panel sits above the row so the canvas is never what gets covered (ADR 0020). */}
       <div className={PANEL_MIN_HEIGHT}>
         {focusedLink ? (
-          <div className="flex flex-col gap-xs">
-            <div className="flex items-center gap-2xs">
+          <div className="flex flex-col gap-tight">
+            <div className="flex items-center gap-tight">
               {/* The heading is what yields, because the four controls beside it cannot: each owes a
                   44px target, and on a 320px phone the longest Effect name plus the row no longer
                   fits. Truncating costs nothing a user can't read off the focused chip below, where
@@ -454,7 +454,7 @@ export default function ChainEditor({ chain, actions, seedControls, isLive }: Pr
               {/* Bypass, duplicate and remove act on the focused Link, so they live with its
                   params rather than on every chip — six chips each carrying three icon buttons
                   would bury the Chain the row exists to show. */}
-              <div className="ml-auto flex items-center gap-2xs">
+              <div className="ml-auto flex items-center gap-tight">
                 {/* Leads the row, and the other three keep the order they had. It is the one that
                     acts on the params below rather than on the Link's place in the Chain, and it
                     reads as ASCII's `↺` on the rule that names the unit (#393, ADR 0015). Leading
@@ -540,7 +540,7 @@ export default function ChainEditor({ chain, actions, seedControls, isLive }: Pr
             </div>
             {/* Adaptive density (ADR 0020): stacked on mobile, one control in focus at a time; at
                 sm the grid flows into equal columns so the whole param group reads at once. */}
-            <div className="grid gap-sm sm:grid-flow-col sm:auto-cols-fr sm:gap-md sm:items-end">
+            <div className="grid gap-item sm:grid-flow-col sm:auto-cols-fr sm:gap-group sm:items-end">
               <LinkControls
                 link={focusedLink}
                 onChange={(params) => onLinkChange(focusedLink.id, params)}
@@ -548,8 +548,8 @@ export default function ChainEditor({ chain, actions, seedControls, isLive }: Pr
             </div>
           </div>
         ) : (
-          <fieldset className="flex flex-col gap-xs border-none p-0 m-0">
-            <legend className="w-full mb-2xs">
+          <fieldset className="flex flex-col gap-tight border-none p-0 m-0">
+            <legend className="w-full mb-tight">
               <Label>add effect</Label>
             </legend>
             {/* The palette reads EFFECT_ORDER (presets.ts) — the canonical order the Presets share
@@ -558,7 +558,7 @@ export default function ChainEditor({ chain, actions, seedControls, isLive }: Pr
                 fails to compile there first. It wraps rather than scrolls: it's a set of options,
                 not the ordered Chain, so showing every Effect at once beats hiding half behind a
                 horizontal scroll. */}
-            <div className="flex flex-wrap gap-2xs">
+            <div className="flex flex-wrap gap-tight">
               {EFFECT_ORDER.map((type) => (
                 <Chip
                   key={type}
@@ -575,8 +575,8 @@ export default function ChainEditor({ chain, actions, seedControls, isLive }: Pr
         )}
       </div>
 
-      <div className="flex items-center gap-sm">
-        <div ref={rowRef} className="flex-1 min-w-0 flex gap-2xs overflow-x-auto">
+      <div className="flex items-center gap-item">
+        <div ref={rowRef} className="flex-1 min-w-0 flex gap-tight overflow-x-auto">
           {chain.map((link, index) => (
             // The chip is both the selection control and the drag handle: in a row, the thing you
             // grab to move a Link is the Link. Pointer Events rather than HTML5 drag-and-drop —
@@ -740,7 +740,7 @@ export default function ChainEditor({ chain, actions, seedControls, isLive }: Pr
         chain.
       </p>
 
-      <div className="flex items-baseline justify-between gap-sm">
+      <div className="flex items-baseline justify-between gap-item">
         {/* A live region, not a static hint: the message appears mid-interaction, and a user who just
             hit the limit is the one who most needs to be told why the palette went quiet. */}
         <p role="status" className="text-2xs text-fg-muted">

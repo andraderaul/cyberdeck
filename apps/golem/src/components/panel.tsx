@@ -43,13 +43,13 @@ export default function Panel({ title, children, className, bodyScrolls = true }
       )}
       aria-label={title}
     >
-      <h2 className="shrink-0 border-base border-b px-sm py-xs font-semibold text-fg-muted text-xs uppercase tracking-widest">
+      <h2 className="shrink-0 border-base border-b px-item py-tight font-semibold text-fg-muted text-xs uppercase tracking-widest">
         {title}
       </h2>
       <div
         tabIndex={bodyScrolls ? 0 : undefined}
         className={cn(
-          'min-h-0 flex-1 overflow-auto p-sm text-sm',
+          'min-h-0 flex-1 overflow-auto p-item text-sm',
           bodyScrolls && KEYBOARD_SCROLLABLE,
         )}
       >

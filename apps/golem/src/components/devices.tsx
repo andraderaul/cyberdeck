@@ -18,7 +18,7 @@ export default function Devices({ machine }: DevicesProps) {
 
   return (
     <Panel title="Devices">
-      <div className="grid gap-sm sm:grid-cols-2">
+      <div className="grid gap-item sm:grid-cols-2">
         <Group name="Watchdog" readings={watchdog} />
         <Group name="FPU" readings={fpu} />
       </div>
