@@ -16,6 +16,15 @@ enables), so a user who does not want it hears one press before they can decline
 the Theme picker in the header, labelled rather than hidden behind a glyph, and it is remembered under
 the deck-wide `cyberdeck:sound` key.
 
+**On a narrow phone it keeps the glyph and gives up the word.** It is the header's third pill, and
+three labelled pills do not fit under `sm`: measured in Chromium over the built output, the row is
+389px wide there, against 324 before this mute existed. Glyph-only below `sm` brings it to 372, which
+fits 375 and **still overflows 360 and 320** — 320 already spilled 4px before the sound landed, and
+the 12px at 360 is a regression accepted with this mitigation rather than fixed, since the only
+measured way back under 360 is a second control dropping its word. The accessible name does not move
+with the width: it is `sound on — press to mute` / `muted — press to unmute` at every size, and the
+target stays a real 44x44 box. `apps/ascii/src/header-type.ts` carries the table.
+
 **The sample and the level are both placeholders, set by arithmetic and not by ear.** ADR 0029 asks
 for a gain tuned by listening *and* for a designed artifact, and neither exists yet: `click.wav` is a
 synthesised 30 ms resonant burst normalised to a peak of exactly 0.700 — the round number is the tell

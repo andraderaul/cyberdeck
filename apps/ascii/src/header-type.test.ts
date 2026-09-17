@@ -7,15 +7,30 @@
 // here closes the hole for the whole header.
 
 import preset from '@cyberdeck/deck-kit/tailwind-preset'
+import { ICON_GLYPH_SIZE } from '@cyberdeck/deck-kit/ui'
 import { describe, expect, it } from 'vitest'
-import { HEADER_CONTROL_TYPE, HEADER_SUBTITLE, HEADER_WORDMARK } from './header-type'
+import {
+  HEADER_CONTROL_GLYPH,
+  HEADER_CONTROL_LABEL,
+  HEADER_CONTROL_TYPE,
+  HEADER_SUBTITLE,
+  HEADER_WORDMARK,
+} from './header-type'
 
 const PRESET_STEPS = Object.keys(preset.theme.extend.fontSize)
 
+// The three that carry the header's *type*: the face and the tracking travel with them.
 const CONSTANTS: Array<[string, string]> = [
   ['HEADER_WORDMARK', HEADER_WORDMARK],
   ['HEADER_SUBTITLE', HEADER_SUBTITLE],
   ['HEADER_CONTROL_TYPE', HEADER_CONTROL_TYPE],
+]
+
+// `HEADER_CONTROL_GLYPH` is a size and nothing else — no face, no tracking — so it joins the step
+// pinning and stays out of the two tests above.
+const SIZED: Array<[string, string]> = [
+  ...CONSTANTS,
+  ['HEADER_CONTROL_GLYPH', HEADER_CONTROL_GLYPH],
 ]
 
 /** Drops any responsive or state variant, so `sm:text-md` is read as the utility it applies. */
@@ -30,7 +45,7 @@ function fontSteps(classes: string): string[] {
 }
 
 describe('the header type', () => {
-  it.each(CONSTANTS)('%s names only font steps the preset defines', (_name, classes) => {
+  it.each(SIZED)('%s names only font steps the preset defines', (_name, classes) => {
     for (const step of fontSteps(classes)) {
       expect(PRESET_STEPS).toContain(step)
     }
@@ -57,5 +72,22 @@ describe('the header type', () => {
   // be the one that carries `uppercase`.
   it('leaves the controls their case', () => {
     expect(HEADER_CONTROL_TYPE).not.toContain('uppercase')
+  })
+
+  // The mute is glyph-only below `sm` and labelled from `sm` up, so the constant that sizes its mark
+  // has to be `ICON_GLYPH_SIZE` at the base and the inherited step at the breakpoint — both halves,
+  // asserted positively: a `not.toContain` over a class would put that class back in the CSS, since
+  // the Tailwind content glob reads test files too.
+  it('sizes a breakpoint-conditional glyph as icon-only below `sm` and inherited above', () => {
+    const classes = HEADER_CONTROL_GLYPH.split(/\s+/)
+    expect(classes).toEqual(expect.arrayContaining(ICON_GLYPH_SIZE.split(' ')))
+    expect(classes).toContain('sm:text-xs')
+  })
+
+  // The same breakpoint and the same idiom as the subtitle beside it — `app.tsx` spells
+  // `hidden sm:block` on the dash and the tagline, and a label that hid at a different width would
+  // make the row two designs.
+  it('hides a control label below `sm` on the subtitle\u2019s own breakpoint', () => {
+    expect(HEADER_CONTROL_LABEL.split(/\s+/)).toEqual(['hidden', 'sm:block'])
   })
 })
