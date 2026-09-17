@@ -37,15 +37,27 @@ A baseline is never rewritten by a failing run — `updateSnapshots: 'none'` in 
 means a changed or missing picture fails and writes nothing. Retaking one is the explicit command
 above, and it arrives in review as a diff of committed `.png`s.
 
+One trap in `screens:update`, which is `--update-snapshots=changed`: "changed" is Playwright's own
+comparison, and its default per-pixel `threshold` (0.2 in YIQ) is wide enough to swallow a *colour
+move at constant geometry*. `ice`'s accent going `#b829ff → #c652ff` is under it. So after a token
+re-derivation a shot with no layout change is not "changed", `screens:update` leaves the old file on
+disk, and the committed picture quietly stops being a picture of what ships — `strip-edit` was
+exactly that case. Retaking after a colour-only change is `npm run screens -- --update-snapshots=all`.
+The default stays `changed` on purpose: `all` rewrites every file whether or not it moved, and a
+handful of antialiased pixels differ run to run (five, on the `↺ defaults` control's left border),
+so `all` churns bytes that `changed` correctly ignores.
+
 ## What a reviewer is looking for, everywhere
 
 Before the per-shot list, four things that apply to all eight — these are the failures the suite
 exists for, and they are what a *wrong* baseline would look like:
 
-1. **Collapsed spacing.** `gap-3xs` and `p-sp-3xl` are not keys in the preset, and Tailwind answers
-   an undefined step by generating no class at all. The symptom is a row whose items touch, or a
-   panel with no padding on one edge. Look at the gaps between the Preset chips, between the tab
-   labels, and inside the settings fieldsets.
+1. **Collapsed spacing.** The space scale is named by role (ADR 0030) — `hairline · tight · item ·
+   group · stack · section` — and every size name it replaced is banned rather than merely gone. So
+   `gap-tight` is a key and `gap-2xs`, `gap-3xs` and every `p-sp-*` are not, and Tailwind answers an
+   undefined step by generating no class at all. The symptom is a row whose items touch, or a panel
+   with no padding on one edge. Look at the gaps between the Preset chips, between the tab labels,
+   and inside the settings fieldsets.
 2. **A surface that isn't there.** `bg-surface` and `bg-elevated` are not the utilities —
    `bg-bg-surface` and `bg-bg-elevated` are — and the short spellings render as *transparent over an
    already-dark parent*, which is exactly what fooled everyone until ADR 0024's promotion read every
@@ -63,9 +75,10 @@ exists for, and they are what a *wrong* baseline would look like:
 ### `empty-state-linux.png` — the opening screen, `ice`
 
 The one surface every visitor sees and the only one with no Source in it. It pins the three things
-that are on screen before anything else exists: the header (title, Theme control, AI key control),
-the drop hero, and the footer — which is the only screen the footer appears on at all, because
-`App` hides it the moment a Source loads.
+that are on screen before anything else exists: the header — the title and **three** controls now,
+`configure ai`, the Theme control, and the sound control the kit gives every workspace it reaches —
+the drop hero, and the footer, which is the only screen the footer appears on at all, because `App`
+hides it the moment a Source loads.
 
 **Look for:** the hero is two panels of the same height with the word `or` centred between them,
 each panel's border complete on all four sides, and the pair centred in the field. Inside the left
@@ -74,6 +87,14 @@ between them, not touching; the right one the same with `use webcam` and `live s
 rule runs the full width and the footer's sits on the bottom edge, `source code → author →` at one
 end and `about` at the other. This is the reference for what `ice` is — if the accent here (the
 arrow, the `configure ai` ring, the title) is not violet, nothing else in this set means anything.
+The violet is the **re-derived** one, `#c652ff` rather than the `#b829ff` the deck shipped for a
+year, so it reads a step brighter than it used to; the upload arrow is the cleanest place in the set
+to read it.
+
+This is also the one shot where the header is the whole subject, so it is where to check that its
+three controls still fit: `configure ai`, `◐ ice` and `● sound` on one line at the right end, none
+clipped and none wrapped under the rule. The sound control is the newest of the three and the one a
+header that ran out of room would drop.
 
 ### `empty-state-kuang-linux.png` — the same screen, `kuang`
 
@@ -85,7 +106,12 @@ moved together.
 position or size here is a Theme leaking into layout, which a Theme is not allowed to do (ADR 0024:
 a Theme varies hue and surface and nothing else). Then: no violet anywhere, the title, the upload
 arrow and the `configure ai` ring all carrying the new accent rather than one of them being left
-behind, and the footer's link row still readable against the new ground.
+behind, and the footer's link row still readable against the new ground. The sound control is here
+too and must have moved with the rest — it is kit chrome like everything else in that row.
+
+Note that `#417` re-derived **`ice`'s** accent and no other Theme's, so this picture's accent is
+unchanged from the set's first take while its `ice` counterpart's moved. The two shots parting
+company in exactly that way is the expected reading, not a discrepancy.
 
 ---
 
@@ -98,7 +124,8 @@ webcam, no Seed, no timestamp anywhere in these.
 ### `source-matrix-terminal-linux.png` — canvas and Strip, `ice`
 
 The whole program in its working state: converted art on the canvas, the `clear source` overlay on
-top of it, the Control Strip below with PRESETS active and ten chips each showing a real conversion.
+top of it, the Control Strip below with PRESETS active — the `↺ defaults` reset leading the row, and
+ten chips after it each showing a real conversion.
 
 **Look for:** the art is contained, not stretched — the fit is aspect-ratio `contain` (ADR 0010), so
 the letterboxing left and right should be even, and the plate's skyline should read as a skyline.
@@ -108,7 +135,10 @@ premise for this program and the reason its overlays carry no background of thei
 the ten Preset chips has a picture in it, not a bare name — a chip with no thumbnail means the
 derivation failed silently — and the ten pictures are visibly *different from each other*, which is
 the only thing that says each chip ran its own conversion rather than ten copies of one.
-`Matrix Terminal` is the selected chip and reads as selected.
+`Matrix Terminal` is the selected chip and reads as selected. `Truecolor`, the tenth, is now cut off
+at the Strip's right edge: the row is a horizontal scroller and `↺ defaults` took the width the last
+chip used to have. That is the row scrolling, not a chip overflowing its container — the check is
+that the clip lands on the *edge of the scroller* and nothing paints past it.
 
 ### `source-matrix-terminal-kuang-linux.png` — the same state, `kuang`
 
@@ -124,6 +154,14 @@ selected chip's ring, the tab underline, the `live source` / `clear` overlay —
 the new Theme. A recoloured canvas is a Theme that crossed the line; a violet chip border is a Theme
 that did not reach far enough. Both are failures and they look nothing alike.
 
+"Identical" here is meant literally and is worth checking as bytes rather than by eye. In this pair
+it holds exactly: the canvas is the same pixel for pixel from the row under the header's rule to the
+row above the Strip, the **only** exception being the rectangle the `live source` / `clear` overlay
+occupies in the canvas's top-right — chrome drawn over the picture, which is supposed to recolour.
+Across the chip row the ten thumbnails are the same pixel for pixel too, and every pixel that does
+differ between the two shots is chip border, chip ground or the gap between chips. The tenth
+thumbnail is clipped by the scroller in both, at the same column.
+
 ---
 
 ## The Control Strip, one shot per tab
@@ -135,13 +173,19 @@ twelve-pixel spacing regression in a fieldset hide inside a picture that is most
 
 ### `strip-presets-linux.png` — the PRESETS tab
 
-Ten chips in a scrolling row, each a thumbnail over its name.
+The `↺ defaults` reset, then ten chips in a scrolling row, each a thumbnail over its name.
 
 **Look for:** even gaps between chips — this row is the densest use of the spacing scale in the
 program and the first place a dropped `gap-*` would show. Every chip the same height, with the
 thumbnail above the name rather than overlapping it. The selected chip (`Matrix Terminal`)
-distinguishable from the other nine by more than a hair. The row ending inside the Strip rather than
-spilling past its right edge. And, as above, ten thumbnails that differ from one another.
+distinguishable from the other nine by more than a hair. And, as above, ten thumbnails that differ
+from one another.
+
+The row no longer ends inside the Strip, and that is the change to read rather than the regression
+it would have been. `↺ defaults` takes the width at the head of the row, so `Truecolor` is clipped
+mid-chip at the right edge. The scroller is doing its job — what to check is that the clip is a
+*clean cut at the container's edge* with nothing painted past it, that every chip before it is whole,
+and that `↺ defaults` sits on the row rather than over the first chip.
 
 ### `strip-edit-linux.png` — the EDIT tab
 
@@ -160,6 +204,12 @@ against the panel: it is the one control on the deck sized purely by its padding
 (`support/accepted.ts`), so it is the most likely to look wrong. And the reset `↺` at the far right
 is on its own, not overlapping the CUSTOM field.
 
+This is the one shot in the set whose **geometry did not move at all** across the accent, the space
+rename and the new header control — it is a colour-only diff, every element on the same pixel it was
+on. So it is the cheapest place to read the re-derived violet on its own: the `edit` tab label, its
+underline, the selected `katakana` chip and the selected `charset` tool chip, with nothing else
+changing around them.
+
 ### `strip-out-linux.png` — the OUT tab
 
 The terminal actions: the AI Config banner across the top, the PNG scale toggle with the canvas
@@ -167,24 +217,35 @@ readout beside it, and the three Exports with their captions.
 
 **Look for:** the three Export controls sit on one line, each with its caption underneath and none
 of them truncated. The `png scale` toggle reads as one group of three with `1×` selected. The
-readout beside it (`1280×423`) is the canvas size at this viewport — a number here is fine, a
+readout beside it (`1280×415`) is the canvas size at this viewport — a number here is fine, a
 *clock* is not: nothing in this panel may count, and if something does the baseline will flake
 rather than fail. The banner's dismiss `✕` is inside the banner, not colliding with
 `configure AI`.
 
+This is the tallest shot in the set and the only one whose **height changed**: the panel is eight
+pixels deeper than it was, four from the banner's own padding and two from each of the two gaps
+between its blocks, which is the space rename moving those three steps from 4px to 6px. Every block
+kept its 44px row and its place in the order, so read this as three rows that grew apart, never as a
+row that wrapped. The two containers here that *could* have wrapped are the ones to confirm by eye:
+the `png scale` toggle is one line of three chips, and the three Exports are one line of three. The
+readout dropping from `1280×423` to `1280×415` is the same eight pixels seen from the canvas's side
+— the Strip took them.
+
 ### `strip-out-kuang-linux.png` — the OUT tab, `kuang`
 
 The Theme check on the busiest panel, and the one with the most accent surface in it: this tab
-carries the AI controls, which are where ADR 0009's "accent as small text" exceptions cluster
-(`support/accepted.ts` carries four accepted nodes on this exact panel).
+carries the AI controls, which is where ADR 0009's "accent as small text" cases cluster.
 
-**Look for:** the same geometry as `strip-out-linux.png` — again, colour only. Then read the
-accented labels (`AI Analyze`, `AI Config`, `configure AI`, `export png`, the `1×` chip's ring)
-against their panel and ask whether they are legible. They are *known* to sit under AA-small in
-`ice`, which is written up in #355; what this picture guards is that `kuang` did not make them
-worse, and it is the only place anyone would notice. Note what must **not** move with the Theme:
-`export txt` and `export html` are `info`, not `accent`, and they stay cyan in both shots — a
-`kuang` picture where all three Exports are red is a role that got collapsed into the accent.
+**Look for:** the same geometry as `strip-out-linux.png` — again, colour only, including the eight
+pixels of height both gained. Then read the accented labels (`AI Analyze`, `AI Config`,
+`configure AI`, `export png`, the `1×` chip's ring) against their panel and ask whether they are
+legible. They used to be *known* to sit under AA-small in `ice` and to be excused for it; #417
+re-derived the accent so that they no longer are, and `support/accepted.ts` was emptied of every one
+of them. So this pair is now read the other way round: the `ice` shot is the one that had to improve,
+and what this picture guards is that `kuang` — which never needed the change — still clears the same
+bar. Note what must **not** move with the Theme: `export txt` and `export html` are `info`, not
+`accent`, and they stay cyan in both shots — a `kuang` picture where all three Exports are red is a
+role that got collapsed into the accent.
 
 ---
 
