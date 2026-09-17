@@ -609,24 +609,32 @@ export async function expectEveryMarkOnTheCanvasStandsOnItsOwnGround(
 
 /**
  * ADR 0013's *other* branch, and the reason ASCII//Convert's overlays legitimately carry no
- * background of their own: `paintFrame()` fills the canvas with `--void` before drawing a single
- * glyph, so the chips already stand on the pair ADR 0009 audited.
+ * background of their own: `paintFrame()` fills the canvas edge to edge with a **fixed** ground
+ * before a single glyph lands, so a chip here stands on a colour this program chose rather than on
+ * one the user's material did.
  *
- * That is a premise, not an exemption, so it is asserted rather than granted. Both halves matter —
- * the fill covers every pixel, and the colour it covers them with is the surface the audit signed
- * off. Narrow the `fillRect` or repaint it in another colour and this is what says so.
+ * That is a premise, not an exemption, so it is asserted rather than granted, and both halves
+ * matter. The fill covers every pixel — which is what discharges the narrowed exemption's first
+ * clause, that an overlay is covered only where the fill is actually under it. And the colour it
+ * covers them with is `--void`, the literal, in **every Theme**: `CANVAS_BACKGROUND` does not move
+ * when the chrome does, because the artwork is a thing the user takes away and the HTML Export
+ * spells the same literal for the same reason (ADR 0013, rewritten in #355).
+ *
+ * `--void` rather than `--bg`, and that swap is the whole correction. `--bg` resolves to the fill in
+ * `ice` alone, so the old comparison asserted a Theme-shaped claim that held in one Theme of seven
+ * and quietly said nothing in the other six. A primitive is the one thing in `tokens.css` a Theme
+ * never restates (ADR 0024), which is exactly why it is the right comparand for a ground that never
+ * moves — and the spec drives this once per Theme, so "it never moves" is measured rather than
+ * asserted from the shape of the stylesheet.
  *
  * Nothing is passed in, deliberately. An earlier version took the fill as a parameter and the spec
  * imported it from `renderer.ts` — which made the assertion compare the program's constant to
- * itself and pass however far it drifted. The surface is read off the loaded stylesheet instead.
+ * itself and pass however far it drifted. The ground is read off the loaded stylesheet instead, so
+ * the two spellings stay independent.
  *
- * **What it does not cover, stated rather than left to be discovered.** The fill is the literal
- * `#0a0a0f`, and `--bg` resolves to that in `ice` alone. Under the other six Themes the two are
- * different colours, so ADR 0013's exemption — "its overlays already sit on the audited pair" — is
- * true in one Theme of seven and this only ever runs in that one. That is a gap in the ADR rather
- * than in the guard, and widening the guard would assert a thing the deck has not decided: whether
- * the artwork's ground is meant to follow the chrome's Theme at all (the HTML Export spells the same
- * literal, which suggests not). Recorded in #355 for whoever decides.
+ * What it cannot cover is the *ratio* over that ground: one side is a literal, so no pair the Theme
+ * Contract holds describes it. `theme/contrast.test.ts` pins those pairs against the literal, per
+ * Theme, from the real token values — this half proves the ground, that half proves the pair.
  */
 export async function expectTheCanvasIsItsOwnGround(page: Page): Promise<void> {
   // The overlays are on screen a frame or two before the canvas under them is: sizing waits on a
@@ -676,13 +684,14 @@ export async function expectTheCanvasIsItsOwnGround(page: Page): Promise<void> {
       }
     }
 
-    // The audited surface, taken from the page rather than from the program: `--bg` is resolved by
+    // The fixed ground, taken from the page rather than from the program: `--void` is resolved by
     // the stylesheet the browser actually loaded, and the fill is a literal inside `renderer.ts`.
     // Two independent spellings of one colour, which is the only arrangement in which comparing
     // them means anything — read the fill off the module it comes from and the assertion compares a
-    // value to itself.
+    // value to itself. A primitive, because no Theme restates one (ADR 0024) and the artwork's
+    // ground does not follow the chrome.
     const probe = document.createElement('div')
-    probe.style.backgroundColor = 'var(--bg)'
+    probe.style.backgroundColor = 'var(--void)'
     document.body.append(probe)
     const [red, green, blue] = (getComputedStyle(probe).backgroundColor.match(/\d+/g) ?? []).map(
       Number,
@@ -692,7 +701,8 @@ export async function expectTheCanvasIsItsOwnGround(page: Page): Promise<void> {
     return {
       seeThrough,
       ground: `rgb(${(commonest >> 16) & 255}, ${(commonest >> 8) & 255}, ${commonest & 255})`,
-      audited: `rgb(${red}, ${green}, ${blue})`,
+      fixed: `rgb(${red}, ${green}, ${blue})`,
+      theme: document.documentElement.getAttribute('data-theme') ?? 'ice',
     }
   })
 
@@ -704,9 +714,9 @@ export async function expectTheCanvasIsItsOwnGround(page: Page): Promise<void> {
     `[${app()}] ${GROUND_RULE} — the canvas is not filled edge to edge, so an overlay carrying no background of its own stands on whatever is behind the page`,
   ).toBe(0)
   // Ink is sparse against a filled ground, so on a converted frame the commonest colour *is* the
-  // fill — which is the claim ADR 0013 exempts this program on.
+  // fill — which is the claim ADR 0013's narrowed exemption rests on.
   expect(
     painted?.ground,
-    `[${app()}] ${GROUND_RULE} — the canvas ground is no longer the surface the contrast audit signed off`,
-  ).toBe(painted?.audited)
+    `[${app()}] ${GROUND_RULE} — under the \`${painted?.theme}\` Theme the canvas ground is no longer the fixed colour the overlays are measured against`,
+  ).toBe(painted?.fixed)
 }

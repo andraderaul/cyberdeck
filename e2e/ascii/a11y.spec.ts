@@ -3,14 +3,18 @@
 // control in PRESETS, EDIT and OUT — which is most of the program.
 //
 // The canvas half is ADR 0013's second branch and not an exemption from it: this program's overlays
-// carry no background of their own *because* `paintFrame()` fills the canvas with `--void` first, so
-// what is asserted here is that premise rather than the conclusion drawn from it.
+// carry no background of their own *because* `paintFrame()` fills the canvas with a fixed ground
+// first, so what is asserted here is that premise rather than the conclusion drawn from it. It runs
+// once per Theme, because "fixed" is precisely the claim — the artwork's ground does not follow the
+// chrome's Theme (ADR 0013, narrowed in #355), and a sweep in `ice` alone could not tell the two
+// apart.
 //
 // The accepted lists below are all pre-existing and all written up in #355 — see `support/accepted.ts`
 // for why they are carried rather than fixed.
 
 import { fileURLToPath } from 'node:url'
 import { expect, type Page, test } from '@playwright/test'
+import { THEME_STORAGE_KEY, THEMES } from '../../packages/deck-kit/src/theme/themes'
 import {
   A11Y,
   type Accepted,
@@ -135,13 +139,26 @@ test('the out tab is accessible and every control holds its target', A11Y, async
   await expectEveryControlHoldsTheTarget(page, accepted)
 })
 
-test('the canvas overlays stand on the ground the audit signed off', A11Y, async ({ page }) => {
-  await withASource(page)
+// Every Theme, not a sample: the claim is that the ground is the same under all of them, and a
+// sample would leave the one that moved to be found by a user. The Theme is stored before the page
+// loads rather than picked afterwards, so the whole conversion runs under it — picking one from the
+// header would only prove that an already-painted canvas did not repaint itself.
+test.describe('the canvas is its own ground, whatever the chrome is wearing', () => {
+  for (const theme of THEMES) {
+    test(`under \`${theme}\``, A11Y, async ({ page }) => {
+      await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [
+        THEME_STORAGE_KEY,
+        theme,
+      ] as const)
+      await withASource(page)
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
 
-  // The clear control is the overlay that is always there — the LIVE and REC badges need a webcam
-  // and a take, which no CI browser has. It carries no background of its own, deliberately, so the
-  // canvas under it is what has to hold.
-  await expect(page.getByRole('button', { name: 'clear source' })).toBeVisible()
+      // The clear control is the overlay that is always there — the LIVE and REC badges need a
+      // webcam and a take, which no CI browser has. It carries no background of its own,
+      // deliberately, so the canvas under it is what has to hold.
+      await expect(page.getByRole('button', { name: 'clear source' })).toBeVisible()
 
-  await expectTheCanvasIsItsOwnGround(page)
+      await expectTheCanvasIsItsOwnGround(page)
+    })
+  }
 })

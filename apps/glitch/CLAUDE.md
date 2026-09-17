@@ -439,9 +439,13 @@ audited ratio. The deck kit's Theme Contract guard pins the pairs — for every 
 real token values rather than a hand-copy (ADR 0024).
 
 This is a real divergence from ASCII//Convert, whose identical-looking badges need no such thing:
-`paintFrame()` fills that canvas with `#0a0a0f` (`--void`) before drawing, so its overlays already
-sit on the audited pair. Here the canvas *is* the output (no fill, no letterbox to hide in), which
-is the same property that makes Capture and Recording a plain read of the visible pixels.
+`paintFrame()` fills that canvas with the fixed literal `#0a0a0f` before drawing, so its overlays
+stand on a ground that program *chose* — determinate, so a ratio exists to pin, which is all ADR
+0013 ever needed. Not the audited pair, though: `--bg` is that literal in `ice` alone, so #355
+narrowed the exemption and moved the measurement into a per-Theme pin against the literal itself.
+Here the canvas *is* the output (no fill, no letterbox to hide in), which is the same property that
+makes Capture and Recording a plain read of the visible pixels — and it is why no pin could exist on
+this side of the divergence.
 
 ### Comment convention
 

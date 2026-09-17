@@ -110,4 +110,36 @@ describe.each(THEMES)('Theme `%s` meets the contract', (theme) => {
       expect(ratio('--color-danger', '--bg-elevated')).toBeGreaterThanOrEqual(AA_SMALL)
     })
   })
+
+  // ADR 0013's other branch, and the one pairing the rest of this file structurally cannot reach.
+  // ASCII//Convert's overlays bring no surface: `paintFrame()` fills its canvas with the literal
+  // `#0a0a0f` and the HTML Export spells the same one, because the artwork is a thing the user
+  // takes away and must not recolour on a chrome preference. So the ground is fixed while the
+  // foreground over it is a Theme's — a token against a *literal*, which is why it is pinned here
+  // rather than inherited from the `--bg` pins above. Those are the same pair in `ice` alone.
+  //
+  // `--void` is that literal's name, not a surface token, and it is the only primitive this file
+  // may name for exactly that reason: every Theme restates `--bg` and no Theme restates `--void`,
+  // which is the whole content of "the artwork does not follow the chrome".
+  //
+  // Two overlay pairs are deliberately absent. The mirror control's pressed `--accent` draws over
+  // an accent-tinted fill, and belongs to the `--accent`-as-small-text question #355 §1 opens
+  // deck-wide. And the muted chips' outline is the deck's own `--border-color-base`, which measures
+  // the same against this fill as against `--bg` — the deck-wide border treatment rather than
+  // anything the fill does, so pinning it here would be filing a deck problem under ADR 0013.
+  describe("ASCII//Convert's canvas overlays, on the fill the program paints", () => {
+    const ASCII_CANVAS_GROUND = '--void'
+
+    it('LIVE / REC badge text passes on the fill', () => {
+      expect(ratio('--color-danger', ASCII_CANVAS_GROUND)).toBeGreaterThanOrEqual(AA_SMALL)
+    })
+
+    it('the clear, mirror and switch-camera controls pass on the fill', () => {
+      expect(ratio('--fg-muted', ASCII_CANVAS_GROUND)).toBeGreaterThanOrEqual(AA_SMALL)
+    })
+
+    it('their hover foreground passes on the fill', () => {
+      expect(ratio('--fg', ASCII_CANVAS_GROUND)).toBeGreaterThanOrEqual(AA_SMALL)
+    })
+  })
 })

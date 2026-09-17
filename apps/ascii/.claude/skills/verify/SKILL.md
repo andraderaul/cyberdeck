@@ -134,12 +134,14 @@ the take simply doesn't start. Silence is the correct observation there, not a m
 
 ## Evidence
 
-`paintFrame()` fills this canvas with `#0a0a0f` (`--void`) before drawing, so a screenshot is a
-letterboxed frame rather than the bare output — the opposite of GLITCH, where the canvas *is* the
+`paintFrame()` fills this canvas with the fixed literal `#0a0a0f` before drawing, so a screenshot is
+a letterboxed frame rather than the bare output — the opposite of GLITCH, where the canvas *is* the
 output. Two consequences when judging what you see:
 
-- The canvas overlays (LIVE / REC / clear / mirror) already sit on the audited pair, which is why
-  they carry no opaque background of their own (ADR 0013).
+- The canvas overlays (LIVE / REC / clear / mirror) stand on that fixed ground, which is why they
+  carry no opaque background of their own (ADR 0013). It is **not** the Theme's `--bg` outside
+  `ice` — screenshot under another Theme and the chrome moves while the canvas does not, which is
+  correct rather than a bug (#355).
 - **PNG Export is not the canvas**: at 2× and 4× it redraws through an off-screen canvas. Check the
   file, not the preview — `2×` on a 1280×543 canvas produced a genuine 2560×1086 PNG, matching the
   dimensions the scale picker predicted. The picker disables a scale whose output would pass the

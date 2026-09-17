@@ -101,9 +101,9 @@ ADR 0014.
 - **Left copied: the panels.** The Chain row, the tool chips and the output actions are domain
   surface. Their *anatomy* is shared; their contents are each app's.
 - **Divergent on purpose: the REC badge's background.** GLITCH's carries `bg-bg` because its canvas
-  *is* the output and any pixel can sit under the chip; ASCII's `paintFrame()` fills the canvas first,
-  so the overlay already stands on the audited pair (ADR 0013). Identical-looking, different for a
-  reason.
+  *is* the output and any pixel can sit under the chip; ASCII's `paintFrame()` fills the canvas first
+  with a fixed literal, so the overlay stands on a ground this program chose rather than on an
+  arbitrary one (ADR 0013). Identical-looking, different for a reason.
 
 ## Supersedes / Superseded by
 
