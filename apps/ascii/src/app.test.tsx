@@ -18,6 +18,13 @@ vi.mock('./hooks/use-webcam-state', () => ({
   })),
 }))
 
+// Thumbnail derivation has its own integration coverage in `preset-picker.test.tsx`. Keeping it
+// out of App's state tests prevents its asynchronous completion from outliving the user act each
+// test is asserting on.
+vi.mock('./hooks/use-preset-thumbnails', () => ({
+  usePresetThumbnails: vi.fn(() => ({})),
+}))
+
 vi.mock('@cyberdeck/deck-kit/recording', () => ({
   useRecording: vi.fn(() => ({
     isSupported: false,
