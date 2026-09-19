@@ -2,7 +2,12 @@
 // lines: everything it could get wrong lives in `runFrameJob`, which is a pure function with its
 // own tests. What is left here is wiring no test can reach and the browser check covers.
 
-import { type AsciiFrameJob, type AsciiFrameResult, runFrameJob } from './frame-job'
+import {
+  type AsciiFrameJob,
+  type AsciiFrameResult,
+  frameResultTransfers,
+  runFrameJob,
+} from './frame-job'
 
 /**
  * `self` in a Worker is a `DedicatedWorkerGlobalScope`, but this app's tsconfig carries the DOM lib
@@ -11,11 +16,10 @@ import { type AsciiFrameJob, type AsciiFrameResult, runFrameJob } from './frame-
  */
 const scope = self as unknown as {
   addEventListener(type: 'message', listener: (event: MessageEvent<AsciiFrameJob>) => void): void
-  postMessage(message: AsciiFrameResult): void
+  postMessage(message: AsciiFrameResult, transfer: Transferable[]): void
 }
 
-// No transfer list: what goes back is instructions and text, and neither type is a Transferable
-// (`frame-job.ts`). The inbound leg is the one that transfers, and the runner owns that.
 scope.addEventListener('message', (event) => {
-  scope.postMessage(runFrameJob(event.data))
+  const result = runFrameJob(event.data)
+  scope.postMessage(result, frameResultTransfers(result))
 })

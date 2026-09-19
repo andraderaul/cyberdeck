@@ -83,11 +83,11 @@ export function createWorkerFrameRunner(worker: Worker): AsciiFrameRunner {
 
   const send = (pending: Pending): void => {
     inFlight = pending
-    // Transfer, not copy, on the leg where the type allows it: the sampled buffer is the only large
-    // value in the message, and copying it on every frame would put back on the main thread a share
-    // of what moving the conversion off it bought. The buffer is detached the moment this returns —
-    // nothing reads it again, and the hidden canvas is redrawn from scratch for the next frame
-    // anyway (ADR 0001). What comes *back* cannot transfer: see `frame-job.ts`.
+    // Transfer, not copy — on both legs now (`frameResultTransfers` is the other one). The sampled
+    // buffer is the only large value in this message, and copying it on every frame would put back
+    // on the main thread a share of what moving the conversion off it bought. The buffer is
+    // detached the moment this returns — nothing reads it again, and the hidden canvas is redrawn
+    // from scratch for the next frame anyway (ADR 0001).
     worker.postMessage(pending.job, [pending.job.pixels.buffer])
   }
 

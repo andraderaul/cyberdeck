@@ -7,6 +7,7 @@ import {
   runFrameJob,
 } from './frame-job'
 import { createFrameRunner, createSyncFrameRunner, createWorkerFrameRunner } from './frame-runner'
+import { frameRows } from './packed-frame'
 import { PRESETS } from './presets'
 
 // The real conversion still runs — this only makes it something a single test can make throw, which
@@ -32,7 +33,8 @@ function request(): AsciiFrameRequest {
   }
 }
 
-const rowsOf = (result: AsciiFrameResult | null) => result?.cropped?.asciiRows
+const rowsOf = (result: AsciiFrameResult | null) =>
+  result?.cropped ? frameRows(result.cropped) : undefined
 
 /**
  * A Worker double that never runs anything on its own — every reply is driven by the test, which

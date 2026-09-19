@@ -1,4 +1,5 @@
 import { computeLuminosity } from './converter'
+import { cssColor, frameGlyph, type PackedFrame, packHex, packRgb } from './packed-frame'
 import { paletteColor, quantizePalette } from './palette'
 import {
   type AsciiCell,
@@ -6,13 +7,6 @@ import {
   type ConversionSettings,
   MONOSPACE_CHAR_WIDTH_RATIO,
 } from './types'
-
-export interface RenderInstruction {
-  char: string
-  x: number
-  y: number
-  color: string
-}
 
 export const COLOR_MODE_COLORS: Partial<Record<ColorMode, string>> = {
   matrix: '#00ff41',
@@ -49,50 +43,53 @@ export function getModePalette(mode: ColorMode): string | DualColorPair {
 }
 
 /**
- * Pure: derives render instructions and ascii text from a cell grid — no DOM, fully testable.
+ * Pure: derives the packed frame from a cell grid — no DOM, fully testable.
  * See ADR 0005 for the pure/impure boundary rationale.
+ *
+ * Assumes a rectangular grid, which is what `convertImage` and `sliceToRegion` both build: the row
+ * width is read once and every index is arithmetic on it.
  */
 export function computeFrame(
   cells: AsciiCell[][],
-  settings: Pick<ConversionSettings, 'resolution' | 'colorMode'>,
-): { instructions: RenderInstruction[]; asciiRows: string[] } {
-  const { resolution, colorMode } = settings
-  const charW = resolution * MONOSPACE_CHAR_WIDTH_RATIO
-  const charH = resolution
+  settings: Pick<ConversionSettings, 'colorMode'>,
+): PackedFrame {
+  const { colorMode } = settings
+  const rows = cells.length
+  const cols = cells[0]?.length ?? 0
 
-  const instructions: RenderInstruction[] = []
-  const asciiRows: string[] = []
+  const chars = new Uint32Array(rows * cols)
+  const colors = new Uint32Array(rows * cols)
 
-  // Both hoisted out of the cell loop: the Color Mode is one decision per frame, and this loop runs
+  // All hoisted out of the cell loop: the Color Mode is one decision per frame, and this loop runs
   // over every cell of every frame of a Live Source. `adaptive` reads the whole grid before the loop
   // starts — the palette is the picture's own, so there is nothing per-cell to derive it from.
   const palette = colorMode === 'adaptive' ? quantizePalette(cells) : null
   const dualColors = DUAL_COLOR_MODES[colorMode]
+  const dual = dualColors && ([packHex(dualColors[0]), packHex(dualColors[1])] as const)
+  const fallback = packHex(FALLBACK_COLOR)
+  const fixed = packHex(COLOR_MODE_COLORS[colorMode] ?? FALLBACK_COLOR)
 
-  for (let row = 0; row < cells.length; row++) {
-    let line = ''
-    for (let col = 0; col < cells[row].length; col++) {
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
       const cell = cells[row][col]
-      let color: string
+      const at = row * cols + col
       if (palette) {
-        color = paletteColor(palette, cell) ?? FALLBACK_COLOR
-      } else if (dualColors) {
-        color =
-          computeLuminosity(cell.r, cell.g, cell.b) >= DUAL_COLOR_LUM_THRESHOLD
-            ? dualColors[0]
-            : dualColors[1]
+        colors[at] = paletteColor(palette, cell) ?? fallback
+      } else if (dual) {
+        colors[at] =
+          computeLuminosity(cell.r, cell.g, cell.b) >= DUAL_COLOR_LUM_THRESHOLD ? dual[0] : dual[1]
       } else if (colorMode === 'original') {
-        color = `rgb(${cell.r},${cell.g},${cell.b})`
+        colors[at] = packRgb(cell.r, cell.g, cell.b)
       } else {
-        color = COLOR_MODE_COLORS[colorMode] ?? FALLBACK_COLOR
+        colors[at] = fixed
       }
-      instructions.push({ char: cell.char, x: col * charW, y: row * charH, color })
-      line += cell.char
+      // `codePointAt` and not `charCodeAt`: a glyph out of `charsetGlyphs` is exactly one code
+      // point, and an authored ramp can put an astral one there.
+      chars[at] = cell.char.codePointAt(0) ?? 32
     }
-    asciiRows.push(line)
   }
 
-  return { instructions, asciiRows }
+  return { cols, rows, chars, colors }
 }
 
 /**
@@ -101,18 +98,29 @@ export function computeFrame(
  */
 export function paintFrame(
   ctx: CanvasRenderingContext2D,
-  instructions: RenderInstruction[],
+  frame: PackedFrame,
   resolution: number,
   fontFamily: string,
 ): void {
+  const { cols, rows, chars, colors } = frame
+  const charW = resolution * MONOSPACE_CHAR_WIDTH_RATIO
   const { width: W, height: H } = ctx.canvas
   ctx.fillStyle = CANVAS_BACKGROUND
   ctx.fillRect(0, 0, W, H)
   ctx.font = `${resolution}px ${fontFamily}`
   ctx.textBaseline = 'top'
 
-  for (const { char, x, y, color } of instructions) {
-    ctx.fillStyle = color
-    ctx.fillText(char, x, y)
+  // The colour is re-read only where it changes, which is what makes the unpacking free in every
+  // mode but `original`: a fixed mode paints the whole frame out of one entry.
+  let painted = -1
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const at = row * cols + col
+      if (colors[at] !== painted) {
+        painted = colors[at]
+        ctx.fillStyle = cssColor(painted)
+      }
+      ctx.fillText(frameGlyph(chars[at]), col * charW, row * resolution)
+    }
   }
 }

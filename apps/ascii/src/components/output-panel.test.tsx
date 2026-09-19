@@ -1,7 +1,19 @@
 import { ToastContext } from '@cyberdeck/deck-kit/ui'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import type { PackedFrame } from '../ascii/packed-frame'
 import OutputPanel from './output-panel'
+
+/** A converted frame, in the packed shape `onConverted` hands the panel (ADR 0002). */
+function frame(rows: string[]): PackedFrame {
+  const cols = rows[0]?.length ?? 0
+  return {
+    cols,
+    rows: rows.length,
+    chars: Uint32Array.from(rows.join(''), (char) => char.codePointAt(0) ?? 32),
+    colors: new Uint32Array(cols * rows.length).fill(0x00ff41),
+  }
+}
 
 function makeCanvasRef(canvas?: HTMLCanvasElement | null) {
   return { current: canvas ?? null }
@@ -15,8 +27,7 @@ function renderPanel(
     <ToastContext.Provider value={{ error: toastError, info: vi.fn(), warn: vi.fn() }}>
       <OutputPanel
         canvasRef={makeCanvasRef()}
-        asciiRows={['row1', 'row2']}
-        renderInstructions={[{ char: 'A', x: 0, y: 0, color: '#00ff41' }]}
+        croppedFrame={frame(['row1', 'row2'])}
         resolution={12}
         isLive={false}
         hasAiConfig={false}
@@ -147,7 +158,7 @@ describe('OutputPanel', () => {
 
   describe('TXT Export', () => {
     it('triggers a download when there are rows', () => {
-      renderPanel({ asciiRows: ['hello', 'world'] })
+      renderPanel({ croppedFrame: frame(['hello', 'world']) })
       const click = vi.fn()
       const anchor = { href: '', download: '', click }
       vi.spyOn(document, 'createElement').mockImplementationOnce(
@@ -164,7 +175,7 @@ describe('OutputPanel', () => {
 
     it('does nothing when there is nothing converted yet', () => {
       const createElement = vi.spyOn(document, 'createElement')
-      renderPanel({ asciiRows: [] })
+      renderPanel({ croppedFrame: null })
 
       fireEvent.click(screen.getByRole('button', { name: /export txt/i }))
 
@@ -192,7 +203,7 @@ describe('OutputPanel', () => {
 
     it('does nothing when there is nothing converted yet', () => {
       const createElement = vi.spyOn(document, 'createElement')
-      renderPanel({ renderInstructions: [] })
+      renderPanel({ croppedFrame: null })
 
       fireEvent.click(screen.getByRole('button', { name: /export html/i }))
 

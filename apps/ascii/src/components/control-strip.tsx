@@ -1,7 +1,7 @@
 import { TabStrip } from '@cyberdeck/deck-kit/ui'
 import type { RefObject } from 'react'
+import type { PackedFrame } from '../ascii/packed-frame'
 import type { Preset } from '../ascii/presets'
-import type { RenderInstruction } from '../ascii/renderer'
 import type { ConversionSettings } from '../ascii/types'
 import OutputPanel from './output-panel'
 import PresetPicker from './preset-picker'
@@ -23,8 +23,8 @@ const TABS = [
 
 interface Props {
   canvasRef: RefObject<HTMLCanvasElement | null>
-  asciiRows: string[]
-  renderInstructions: RenderInstruction[]
+  /** The region-cropped frame both text Exports read, or `null` before the first conversion. */
+  croppedFrame: PackedFrame | null
   isLive: boolean
   canvasDimensions?: { w: number; h: number } | null
   hasAiConfig: boolean
@@ -56,8 +56,7 @@ interface Props {
  */
 export default function ControlStrip({
   canvasRef,
-  asciiRows,
-  renderInstructions,
+  croppedFrame,
   isLive,
   canvasDimensions,
   hasAiConfig,
@@ -94,8 +93,7 @@ export default function ControlStrip({
           {activeTab === 'out' && (
             <OutputPanel
               canvasRef={canvasRef}
-              asciiRows={asciiRows}
-              renderInstructions={renderInstructions}
+              croppedFrame={croppedFrame}
               resolution={settings.resolution}
               isLive={isLive}
               canvasDimensions={canvasDimensions}

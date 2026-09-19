@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { cssColor, frameGlyph, frameRows, type PackedFrame } from './packed-frame'
 import { computeFrame } from './renderer'
 import type { AsciiCell } from './types'
+
+/** The frame read back as the glyphs and CSS colours a reader of it ever sees. */
+const charsOf = (frame: PackedFrame) => [...frame.chars].map(frameGlyph)
+const colorsOf = (frame: PackedFrame) => [...frame.colors].map(cssColor)
 
 function makeCell(char: string, r = 0, g = 0, b = 0): AsciiCell {
   return { char, r, g, b }
@@ -12,51 +17,42 @@ const SIMPLE_GRID: AsciiCell[][] = [
 ]
 
 describe('computeFrame', () => {
-  it('produces one instruction per cell', () => {
-    const { instructions } = computeFrame(SIMPLE_GRID, { resolution: 12, colorMode: 'bw' })
-    expect(instructions).toHaveLength(4)
+  it('produces one entry per cell', () => {
+    const frame = computeFrame(SIMPLE_GRID, { colorMode: 'bw' })
+    expect(frame.chars).toHaveLength(4)
+    expect(frame.colors).toHaveLength(4)
   })
 
   it('preserves cell characters', () => {
-    const { instructions } = computeFrame(SIMPLE_GRID, { resolution: 12, colorMode: 'bw' })
-    expect(instructions.map((i) => i.char)).toEqual(['A', 'B', 'C', 'D'])
+    expect(charsOf(computeFrame(SIMPLE_GRID, { colorMode: 'bw' }))).toEqual(['A', 'B', 'C', 'D'])
   })
 
-  it('computes x positions from column index and resolution', () => {
-    const resolution = 10
-    const charW = resolution * 0.6
-    const { instructions } = computeFrame(SIMPLE_GRID, { resolution, colorMode: 'bw' })
-    expect(instructions[0].x).toBe(0)
-    expect(instructions[1].x).toBe(charW)
-  })
-
-  it('computes y positions from row index and resolution', () => {
-    const resolution = 10
-    const { instructions } = computeFrame(SIMPLE_GRID, { resolution, colorMode: 'bw' })
-    expect(instructions[0].y).toBe(0)
-    expect(instructions[2].y).toBe(resolution)
+  // x and y are gone from the frame because they are arithmetic on the index and `cols` (ADR 0002),
+  // so what there is to assert is that the index really is the grid, row-major.
+  it('lays the cells out row-major, so index and cols name the position', () => {
+    const frame = computeFrame(SIMPLE_GRID, { colorMode: 'bw' })
+    expect([frame.cols, frame.rows]).toEqual([2, 2])
+    expect(charsOf(frame)[frame.cols + 1]).toBe('D')
   })
 
   it('applies fixed color for non-original color modes', () => {
-    const { instructions } = computeFrame(SIMPLE_GRID, { resolution: 12, colorMode: 'matrix' })
-    expect(instructions.every((i) => i.color === '#00ff41')).toBe(true)
+    const colors = colorsOf(computeFrame(SIMPLE_GRID, { colorMode: 'matrix' }))
+    expect(colors.every((color) => color === '#00ff41')).toBe(true)
   })
 
   it('applies per-cell rgb for original color mode', () => {
     const grid = [[makeCell('X', 100, 150, 200)]]
-    const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'original' })
-    expect(instructions[0].color).toBe('rgb(100,150,200)')
+    expect(colorsOf(computeFrame(grid, { colorMode: 'original' }))[0]).toBe('rgb(100,150,200)')
   })
 
-  it('builds ascii rows matching cell characters', () => {
-    const { asciiRows } = computeFrame(SIMPLE_GRID, { resolution: 12, colorMode: 'bw' })
-    expect(asciiRows).toEqual(['AB', 'CD'])
+  it('reads back as ascii rows matching cell characters', () => {
+    expect(frameRows(computeFrame(SIMPLE_GRID, { colorMode: 'bw' }))).toEqual(['AB', 'CD'])
   })
 
-  it('returns empty arrays for empty grid', () => {
-    const { instructions, asciiRows } = computeFrame([], { resolution: 12, colorMode: 'bw' })
-    expect(instructions).toHaveLength(0)
-    expect(asciiRows).toHaveLength(0)
+  it('returns an empty frame for an empty grid', () => {
+    const frame = computeFrame([], { colorMode: 'bw' })
+    expect(frame.chars).toHaveLength(0)
+    expect(frameRows(frame)).toHaveLength(0)
   })
 
   describe('dual-color modes (luminosity threshold)', () => {
@@ -66,64 +62,64 @@ describe('computeFrame', () => {
 
     it('synthwave applies cyan (#00ffff) to bright cells', () => {
       const grid = [[makeCell('X', 255, 255, 255)]]
-      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'synthwave' })
-      expect(instructions[0].color).toBe('#00ffff')
+      const colors = colorsOf(computeFrame(grid, { colorMode: 'synthwave' }))
+      expect(colors[0]).toBe('#00ffff')
     })
 
     it('synthwave applies magenta (#ff00ff) to dark cells', () => {
       const grid = [[makeCell('X', 0, 0, 0)]]
-      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'synthwave' })
-      expect(instructions[0].color).toBe('#ff00ff')
+      const colors = colorsOf(computeFrame(grid, { colorMode: 'synthwave' }))
+      expect(colors[0]).toBe('#ff00ff')
     })
 
     it('matrix-dual applies green (#00ff41) to bright cells', () => {
       const grid = [[makeCell('X', 255, 255, 255)]]
-      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'matrix-dual' })
-      expect(instructions[0].color).toBe('#00ff41')
+      const colors = colorsOf(computeFrame(grid, { colorMode: 'matrix-dual' }))
+      expect(colors[0]).toBe('#00ff41')
     })
 
     it('matrix-dual applies violet (#9d00ff) to dark cells', () => {
       const grid = [[makeCell('X', 0, 0, 0)]]
-      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'matrix-dual' })
-      expect(instructions[0].color).toBe('#9d00ff')
+      const colors = colorsOf(computeFrame(grid, { colorMode: 'matrix-dual' }))
+      expect(colors[0]).toBe('#9d00ff')
     })
 
     it('applies Color A at threshold boundary (luminosity exactly 0.5)', () => {
       // r=g=b=128 → lum ≈ 0.502, just above threshold → Color A
       const grid = [[makeCell('X', 128, 128, 128)]]
-      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'synthwave' })
-      expect(instructions[0].color).toBe('#00ffff')
+      const colors = colorsOf(computeFrame(grid, { colorMode: 'synthwave' }))
+      expect(colors[0]).toBe('#00ffff')
     })
 
     it('applies Color B just below threshold (luminosity < 0.5)', () => {
       // r=g=b=127 → lum ≈ 0.498, just below threshold → Color B
       const grid = [[makeCell('X', 127, 127, 127)]]
-      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'synthwave' })
-      expect(instructions[0].color).toBe('#ff00ff')
+      const colors = colorsOf(computeFrame(grid, { colorMode: 'synthwave' }))
+      expect(colors[0]).toBe('#ff00ff')
     })
 
     it('acid applies lime (#ccff00) to bright cells', () => {
       const grid = [[makeCell('X', 255, 255, 255)]]
-      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'acid' })
-      expect(instructions[0].color).toBe('#ccff00')
+      const colors = colorsOf(computeFrame(grid, { colorMode: 'acid' }))
+      expect(colors[0]).toBe('#ccff00')
     })
 
     it('acid applies pink (#ff0099) to dark cells', () => {
       const grid = [[makeCell('X', 0, 0, 0)]]
-      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'acid' })
-      expect(instructions[0].color).toBe('#ff0099')
+      const colors = colorsOf(computeFrame(grid, { colorMode: 'acid' }))
+      expect(colors[0]).toBe('#ff0099')
     })
 
     it('infrared applies orange (#ff4500) to bright cells', () => {
       const grid = [[makeCell('X', 255, 255, 255)]]
-      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'infrared' })
-      expect(instructions[0].color).toBe('#ff4500')
+      const colors = colorsOf(computeFrame(grid, { colorMode: 'infrared' }))
+      expect(colors[0]).toBe('#ff4500')
     })
 
     it('infrared applies electric blue (#0066ff) to dark cells', () => {
       const grid = [[makeCell('X', 0, 0, 0)]]
-      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'infrared' })
-      expect(instructions[0].color).toBe('#0066ff')
+      const colors = colorsOf(computeFrame(grid, { colorMode: 'infrared' }))
+      expect(colors[0]).toBe('#0066ff')
     })
   })
 
@@ -135,8 +131,8 @@ describe('computeFrame', () => {
         [makeCell('X', 250, 10, 10), makeCell('X', 240, 20, 20)],
         [makeCell('X', 10, 10, 250), makeCell('X', 20, 20, 240)],
       ]
-      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'adaptive' })
-      expect(instructions.map((i) => i.color)).toEqual([
+      const colors = colorsOf(computeFrame(grid, { colorMode: 'adaptive' }))
+      expect(colors).toEqual([
         'rgb(245,15,15)',
         'rgb(245,15,15)',
         'rgb(15,15,245)',
@@ -149,17 +145,17 @@ describe('computeFrame', () => {
       const asRed = [[makeCell('X', 220, 40, 40)]]
       const asBlue = [[makeCell('X', 40, 40, 220)]]
       const colorOf = (grid: AsciiCell[][]) =>
-        computeFrame(grid, { resolution: 12, colorMode: 'adaptive' }).instructions[0].color
+        colorsOf(computeFrame(grid, { colorMode: 'adaptive' }))[0]
       expect(colorOf(asRed)).toBe('rgb(220,40,40)')
       expect(colorOf(asBlue)).toBe('rgb(40,40,220)')
     })
 
-    // A blank paints nothing, so no cell's colour is ever read off it — but the instruction still
-    // has to carry a colour rather than an undefined.
+    // A blank paints nothing, so no cell's colour is ever read off it — but the cell still has to
+    // carry a colour rather than an undefined.
     it('falls back to the neutral gray for a cell no painting cell shares a bin with', () => {
       const grid = [[makeCell(' ', 10, 20, 30)]]
-      const { instructions } = computeFrame(grid, { resolution: 12, colorMode: 'adaptive' })
-      expect(instructions[0].color).toBe('#c8c8e0')
+      const colors = colorsOf(computeFrame(grid, { colorMode: 'adaptive' }))
+      expect(colors[0]).toBe('#c8c8e0')
     })
   })
 })

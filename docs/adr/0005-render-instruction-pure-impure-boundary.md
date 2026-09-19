@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted (amended in #411 — the *boundary* is unchanged, the value crossing it is not; see
+Implementation Notes)
 
 ## Context
 
@@ -47,3 +48,21 @@ component: it calls `convertImage()`, `computeFrame()`, and `paintFrame()` in se
 ## Related ADRs
 
 - ADR 0004 — ASCII domain module.
+- ADR 0002 — the two pure stages run on a Worker, and its #411 amendment is what reshaped the value
+  this ADR names.
+
+## Implementation Notes
+
+### Amendment (#411) — the same boundary, a different value across it
+
+`computeFrame` no longer returns `RenderInstruction[]` and `asciiRows`. It returns a **PackedFrame**
+— `{cols, rows, chars: Uint32Array, colors: Uint32Array}`, one entry per cell, row-major — and
+`paintFrame(ctx, frame, resolution, fontFamily)` takes that. x and y are gone because both are
+arithmetic on the index and `cols`; `asciiRows` is gone because `frameRows(frame)` derives it and
+only TXT Export's click ever asks.
+
+**Nothing this ADR decided moved.** `computeFrame` is still pure and still directly testable with no
+DOM, `paintFrame` is still the only function that writes to `CanvasRenderingContext2D`, and the
+orchestrator still calls the three in sequence. What changed is that the value between them is now
+transferable, which is what let the Worker's return leg stop being a structured clone — the
+measurement, and the reason the shape is the one it is, live in ADR 0002's #411 amendment.
