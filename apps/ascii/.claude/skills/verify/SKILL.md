@@ -69,7 +69,7 @@ It leaves through a blob URL and a synthetic `a.click()`, not the kit's share/do
 looks like it might bypass Playwright's download plumbing. **It doesn't:** Chromium raises a normal
 `download` event, `suggestedFilename()` is `ascii-art.txt`, and the file holds the real rows. Prove
 it with the content, not the event: the rows are the output, and an empty or 1-line file is the
-failure this path actually has (`asciiRows` empty because nothing converted yet).
+failure this path actually has (`croppedFrame` still `null` because nothing converted yet).
 
 ```js
 const dl = page.waitForEvent('download')

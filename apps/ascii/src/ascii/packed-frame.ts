@@ -48,10 +48,12 @@ export function packRgb(r: number, g: number, b: number): number {
   return CSS_RGB_FORM | (r << 16) | (g << 8) | b
 }
 
-// Bounded rather than unbounded: `original` can put a distinct colour in every cell of a 150,000
-// cell grid, and a cache that kept them all would be a leak the Live Source feeds ~15 times a
-// second. Every other Color Mode fits in a handful of entries — one for the fixed modes, two for
-// the dual ones, at most 64 for `adaptive` — which is exactly the case the cache is for.
+/**
+ * Bounded rather than unbounded: `original` can put a distinct colour in every cell of a 150,000
+ * cell grid, and a cache that kept them all would be a leak the Live Source feeds ~15 times a
+ * second. Every other Color Mode fits in a handful of entries — one for the fixed modes, two for
+ * the dual ones, at most 64 for `adaptive` — which is exactly the case the cache is for.
+ */
 const CACHE_CAP = 4096
 const cssColors = new Map<number, string>()
 const glyphs = new Map<number, string>()
