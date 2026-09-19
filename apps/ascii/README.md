@@ -66,7 +66,7 @@ Source Image / Live Source
   convertImage() → grid of AsciiCell (char + original RGB)
         │
         ▼
-  computeFrame() → RenderInstruction[] (pure, no DOM)
+  computeFrame() → PackedFrame: chars + colors, one entry per cell (pure, no DOM)
         │
         ▼
   paintFrame() → renders characters on the visible canvas

@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { sourcePixels } from './__fixtures__/source-pixels'
 import { convertImage } from './converter'
 import { computeContainFit, sliceToRegion } from './fit'
-import { runFrameJob } from './frame-job'
+import { frameResultTransfers, runFrameJob } from './frame-job'
+import { cssColor, frameGlyph, frameRows, type PackedFrame } from './packed-frame'
 import { PRESETS } from './presets'
-import { computeFrame, type RenderInstruction } from './renderer'
+import { computeFrame } from './renderer'
+import { MONOSPACE_CHAR_WIDTH_RATIO } from './types'
 
 /** Odd on both axes, so an off-by-one on the last row or column can't hide behind a round number. */
 const COLS = 37
@@ -49,9 +51,29 @@ function fnv1a(text: string): string {
   return hash.toString(16).padStart(8, '0')
 }
 
-/** Every field of every instruction — the character, where it lands, and what colour it is. */
-function digestInstructions(instructions: RenderInstruction[]): string {
-  return fnv1a(instructions.map((i) => `${i.char}|${i.x}|${i.y}|${i.color}`).join(';'))
+/**
+ * Every field of every cell — the character, where it lands, and what colour it is.
+ *
+ * Spelled as the `{char, x, y, color}` the frame used to carry so the digests below stay the ones
+ * recorded from `main`: the packed form dropped x and y because they are arithmetic on the index
+ * and `cols` (ADR 0002), and this is the arithmetic, written out where the claim can be read.
+ */
+function digestFrame(frame: PackedFrame | null, resolution: number): string {
+  if (!frame) {
+    return fnv1a('')
+  }
+  const { cols, rows, chars, colors } = frame
+  const charW = resolution * MONOSPACE_CHAR_WIDTH_RATIO
+  const fields: string[] = []
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const at = row * cols + col
+      fields.push(
+        `${frameGlyph(chars[at])}|${col * charW}|${row * resolution}|${cssColor(colors[at])}`,
+      )
+    }
+  }
+  return fnv1a(fields.join(';'))
 }
 
 /**
@@ -101,17 +123,18 @@ describe('what a Preset converts to', () => {
     for (const preset of PRESETS) {
       const result = runFrameJob(jobFor(preset.settings))
       const expected = PRESET_OUTPUT[preset.id]
+      const { resolution } = preset.settings
 
-      expect(digestInstructions(result.instructions), `${preset.id} instructions`).toBe(
+      expect(digestFrame(result.frame, resolution), `${preset.id} instructions`).toBe(
         expected.instructions,
       )
-      expect(
-        digestInstructions(result.cropped?.instructions ?? []),
-        `${preset.id} cropped instructions`,
-      ).toBe(expected.croppedInstructions)
-      expect(fnv1a(result.cropped?.asciiRows.join('\n') ?? ''), `${preset.id} rows`).toBe(
-        expected.asciiRows,
+      expect(digestFrame(result.cropped, resolution), `${preset.id} cropped instructions`).toBe(
+        expected.croppedInstructions,
       )
+      expect(
+        fnv1a(result.cropped ? frameRows(result.cropped).join('\n') : ''),
+        `${preset.id} rows`,
+      ).toBe(expected.asciiRows)
     }
   })
 
@@ -132,9 +155,8 @@ describe('runFrameJob', () => {
 
       const result = runFrameJob(jobFor(preset.settings))
 
-      expect(result.instructions, preset.id).toEqual(direct.instructions)
-      expect(result.cropped?.instructions, preset.id).toEqual(cropped.instructions)
-      expect(result.cropped?.asciiRows, preset.id).toEqual(cropped.asciiRows)
+      expect(result.frame, preset.id).toEqual(direct)
+      expect(result.cropped, preset.id).toEqual(cropped)
     }
   })
 
@@ -144,7 +166,7 @@ describe('runFrameJob', () => {
     const result = runFrameJob({ ...jobFor(PRESETS[0].settings), cropped: false })
 
     expect(result.cropped).toBeNull()
-    expect(result.instructions.length).toBe(COLS * ROWS)
+    expect(result.frame.chars.length).toBe(COLS * ROWS)
   })
 
   it('carries the job id back, so a result can be matched to the frame that asked for it', () => {
@@ -164,10 +186,35 @@ describe('runFrameJob', () => {
     // own axis and would only make the assertion an arithmetic puzzle.
     const full = { offsetX: 0, offsetY: 0, dCols: COLS, dRows: ROWS }
 
-    const rows =
-      runFrameJob({ ...jobFor(settings), region: full, pixels: flipped }).cropped?.asciiRows ?? []
-    const plain = runFrameJob({ ...jobFor(settings), region: full }).cropped?.asciiRows ?? []
+    const croppedOf = (job: Parameters<typeof runFrameJob>[0]) => {
+      const cropped = runFrameJob(job).cropped
+      return cropped ? frameRows(cropped) : []
+    }
+    const rows = croppedOf({ ...jobFor(settings), region: full, pixels: flipped })
+    const plain = croppedOf({ ...jobFor(settings), region: full })
 
     expect(rows).toEqual(plain.map((line) => [...line].reverse().join('')))
+  })
+
+  // The acceptance criterion for the return leg itself (ADR 0002): a buffer missing from this list
+  // is a structured clone, which costs main-thread time and reports nothing.
+  it('names every buffer it sends, so the return leg moves rather than copies', () => {
+    const result = runFrameJob(jobFor(PRESETS[0].settings))
+
+    expect(frameResultTransfers(result)).toEqual([
+      result.frame.chars.buffer,
+      result.frame.colors.buffer,
+      result.cropped?.chars.buffer,
+      result.cropped?.colors.buffer,
+    ])
+  })
+
+  it('names only the frame it computed when the job asked for no cropped grid', () => {
+    const result = runFrameJob({ ...jobFor(PRESETS[0].settings), cropped: false })
+
+    expect(frameResultTransfers(result)).toEqual([
+      result.frame.chars.buffer,
+      result.frame.colors.buffer,
+    ])
   })
 })

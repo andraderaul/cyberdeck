@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { cssColor } from './packed-frame'
 import { paletteColor, quantizePalette } from './palette'
 import type { AsciiCell } from './types'
 
@@ -15,10 +16,16 @@ function repeat(times: number, make: () => AsciiCell): AsciiCell[] {
   return Array.from({ length: times }, make)
 }
 
-/** What each cell of a grid is actually painted — all a reader of this mode ever sees. */
+/**
+ * What each cell of a grid is actually painted — all a reader of this mode ever sees. Read back
+ * through `cssColor`, since the quantizer packs its colours the way every other one is packed.
+ */
 function painted(cells: AsciiCell[][]): (string | undefined)[] {
   const palette = quantizePalette(cells)
-  return cells.flat().map((c) => paletteColor(palette, c))
+  return cells.flat().map((c) => {
+    const packed = paletteColor(palette, c)
+    return packed === undefined ? undefined : cssColor(packed)
+  })
 }
 
 describe('quantizePalette', () => {

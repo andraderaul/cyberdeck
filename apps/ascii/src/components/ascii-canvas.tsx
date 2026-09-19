@@ -11,8 +11,8 @@ import {
 } from 'react'
 import { type AsciiFrameRunner, createFrameRunner } from '../ascii/frame-runner'
 import { resizeImage } from '../ascii/image-utils'
+import type { PackedFrame } from '../ascii/packed-frame'
 import { monoFontFamily, renderFrame } from '../ascii/render-frame'
-import type { RenderInstruction } from '../ascii/renderer'
 import type { ConversionSettings } from '../ascii/types'
 
 const LIVE_SOURCE_FRAME_INTERVAL_MS = 1000 / 15
@@ -77,7 +77,7 @@ interface Props {
   sourceImage: HTMLImageElement | null
   sourceVideo: HTMLVideoElement | null
   settings: ConversionSettings
-  onConverted: (rows: string[], instructions: RenderInstruction[]) => void
+  onConverted: (cropped: PackedFrame) => void
   canvasRef: RefObject<HTMLCanvasElement>
   isMirrored?: boolean
   isRecording?: boolean

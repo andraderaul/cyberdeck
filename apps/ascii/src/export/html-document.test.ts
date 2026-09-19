@@ -1,29 +1,43 @@
 import { describe, expect, it } from 'vitest'
 import { computeContainFit, sliceToRegion } from '../ascii/fit'
-import { computeFrame, type RenderInstruction } from '../ascii/renderer'
-import { type AsciiCell, MONOSPACE_CHAR_WIDTH_RATIO } from '../ascii/types'
+import {
+  cssColor,
+  frameGlyph,
+  frameRows,
+  type PackedFrame,
+  packHex,
+  packRgb,
+} from '../ascii/packed-frame'
+import { computeFrame } from '../ascii/renderer'
+import type { AsciiCell } from '../ascii/types'
 import { buildHtmlDocument } from './html-document'
 
 const GREEN = '#00ff41'
 const PINK = '#ff2d78'
 const RESOLUTION = 10
 const METRICS = {
-  charWidth: RESOLUTION * MONOSPACE_CHAR_WIDTH_RATIO,
   charHeight: RESOLUTION,
   background: '#0a0a0f',
 }
 
-/** A grid in the shape `computeFrame()` emits: row-major, x/y in px on the Resolution's pitch. */
-function grid(chars: string[][], colors: string[][], resolution = RESOLUTION): RenderInstruction[] {
-  const charW = resolution * MONOSPACE_CHAR_WIDTH_RATIO
-  return chars.flatMap((line, row) =>
-    line.map((char, col) => ({
-      char,
-      x: col * charW,
-      y: row * resolution,
-      color: colors[row][col],
-    })),
-  )
+/** A CSS colour back in the form `computeFrame()` packs it — the two spellings it ever emits. */
+function pack(css: string): number {
+  const channels = css.match(/\d+/g)
+  return css.startsWith('#')
+    ? packHex(css)
+    : packRgb(...(channels?.map(Number) as [number, number, number]))
+}
+
+/** A grid in the shape `computeFrame()` emits: row-major, one entry per cell. */
+function grid(chars: string[][], colors: string[][]): PackedFrame {
+  const rows = chars.length
+  const cols = chars[0]?.length ?? 0
+  return {
+    cols,
+    rows,
+    chars: Uint32Array.from(chars.flat(), (char) => char.codePointAt(0) ?? 32),
+    colors: Uint32Array.from(colors.flat(), pack),
+  }
 }
 
 const SIMPLE = grid(
@@ -87,7 +101,7 @@ describe('buildHtmlDocument', () => {
     expect(textOf(html)).toBe('AB\nCD')
   })
 
-  it('carries each cell colour from its instruction', () => {
+  it('carries each cell colour from the frame', () => {
     const html = buildHtmlDocument(SIMPLE, METRICS)
 
     expect(html).toContain(`<span style="color:${GREEN}">AB</span>`)
@@ -126,13 +140,6 @@ describe('buildHtmlDocument', () => {
     expect(html).not.toContain('<span style="color:#00ff41"><')
   })
 
-  it('escapes a colour before it reaches the style attribute', () => {
-    const hostile = grid([['A']], [['" onload="x']])
-    const html = buildHtmlDocument(hostile, METRICS)
-
-    expect(html).toContain('<span style="color:&quot; onload=&quot;x">A</span>')
-  })
-
   it('takes its type size and line box from the Resolution', () => {
     const html = buildHtmlDocument(SIMPLE, { ...METRICS, charHeight: 16 })
 
@@ -146,26 +153,17 @@ describe('buildHtmlDocument', () => {
     expect(html).toContain('background: #0a0a0f')
   })
 
-  it('places each cell at the column its own x names, not at its place in the list', () => {
-    const shuffled = [...SIMPLE].reverse()
+  // What the old instruction list needed three tests to defend — a reordered list, a skipped cell,
+  // a row nothing landed in — the packed frame makes unreachable: it is dense and row-major, so the
+  // grid is `cols` and the index (ADR 0002). What is left to hold is that the reading is that one.
+  it('reads the row off cols and the index, so a wide frame does not wrap early', () => {
+    const wide = grid([['A', 'B', 'C', 'D', 'E', 'F']], [Array(6).fill(GREEN)])
 
-    expect(textOf(buildHtmlDocument(shuffled, METRICS))).toBe('AB\nCD')
-  })
-
-  it('leaves a skipped cell blank rather than shifting the row', () => {
-    const gappy = SIMPLE.filter((instruction) => instruction.char !== 'A')
-
-    expect(textOf(buildHtmlDocument(gappy, METRICS))).toBe(' B\nCD')
-  })
-
-  it('keeps a row that carries no cells, as TXT Export keeps its empty line', () => {
-    const gappy = SIMPLE.filter((instruction) => instruction.y !== 0)
-
-    expect(textOf(buildHtmlDocument(gappy, METRICS))).toBe('\nCD')
+    expect(textOf(buildHtmlDocument(wide, METRICS))).toBe('ABCDEF')
   })
 
   it('stays a valid document with an empty grid', () => {
-    const html = buildHtmlDocument([], METRICS)
+    const html = buildHtmlDocument(grid([], []), METRICS)
 
     expect(html.startsWith('<!doctype html>')).toBe(true)
     expect(textOf(html)).toBe('')
@@ -174,7 +172,7 @@ describe('buildHtmlDocument', () => {
 
 // The two text Exports read one cropped grid (`sliceToRegion` upstream of `computeFrame`), so the
 // only thing that can still part them is this generator. These drive the real path — crop, compute,
-// build — rather than a hand-built instruction list, because that is where a divergence would land.
+// build — rather than a hand-built frame, because that is where a divergence would land.
 describe('against TXT Export, over the same cropped grid', () => {
   const cellsOf = (rows: string[]): AsciiCell[][] =>
     rows.map((row) => [...row].map((char, col) => ({ char, r: col, g: 0, b: 0 })))
@@ -185,12 +183,8 @@ describe('against TXT Export, over the same cropped grid', () => {
   const REGION = computeContainFit(240, 100, 8, 6)
 
   function exported(colorMode: 'original' | 'matrix' | 'adaptive') {
-    const cropped = sliceToRegion(FULL, REGION)
-    const { instructions, asciiRows } = computeFrame(cropped, {
-      resolution: RESOLUTION,
-      colorMode,
-    })
-    return { html: buildHtmlDocument(instructions, METRICS), asciiRows }
+    const frame = computeFrame(sliceToRegion(FULL, REGION), { colorMode })
+    return { html: buildHtmlDocument(frame, METRICS), asciiRows: frameRows(frame) }
   }
 
   it('carries byte-for-byte the characters TXT Export writes', () => {
@@ -231,14 +225,13 @@ describe('against TXT Export, over the same cropped grid', () => {
   // must give the palette the full grid gave, which is what skipping blank cells buys (ADR 0010).
   it('carries the colours the adaptive Color Mode derived from the grid itself', () => {
     const { html } = exported('adaptive')
-    const cropped = sliceToRegion(FULL, REGION)
-    const painted = computeFrame(cropped, {
-      resolution: RESOLUTION,
-      colorMode: 'adaptive',
-    }).instructions.filter((instruction) => instruction.char !== ' ')
+    const frame = computeFrame(sliceToRegion(FULL, REGION), { colorMode: 'adaptive' })
+    const painted = [...frame.chars.keys()]
+      .filter((at) => frameGlyph(frame.chars[at]) !== ' ')
+      .map((at) => cssColor(frame.colors[at]))
 
     expect(painted.length).toBeGreaterThan(0)
-    for (const { color } of painted) {
+    for (const color of painted) {
       expect(color).toMatch(/^rgb\(\d+,\d+,\d+\)$/)
       expect(html).toContain(`color:${color}`)
     }

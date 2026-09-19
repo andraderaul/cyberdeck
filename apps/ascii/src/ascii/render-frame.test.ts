@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildHtmlDocument } from '../export/html-document'
 import { readCustomCharset } from './charset'
 import { createSyncFrameRunner } from './frame-runner'
+import { frameGlyph, frameRows, type PackedFrame } from './packed-frame'
 import { renderFrame } from './render-frame'
-import type { RenderInstruction } from './renderer'
 import type { ConversionSettings, CustomCharset } from './types'
 
 /** The reader is the only way in, so the authored fixture comes through it. */
@@ -40,7 +40,11 @@ function makeCtxMock(canvas: HTMLCanvasElement) {
     scale: vi.fn(),
     clearRect: vi.fn(),
     drawImage: vi.fn(),
-    getImageData: vi.fn(() => ({ data: new Uint8ClampedArray(4) })),
+    // Sized off the canvas the shell just resized, so the stub hands back a buffer the grid
+    // actually covers — a short one reads past its end and feeds the ramp a NaN.
+    getImageData: vi.fn(() => ({
+      data: new Uint8ClampedArray(Math.max(1, canvas.width * canvas.height) * 4),
+    })),
     fillRect: vi.fn(),
     fillText: vi.fn(),
     fillStyle: '',
@@ -104,14 +108,14 @@ describe('renderFrame', () => {
 
     await renderFrame(source, canvasEl, hiddenEl, SETTINGS, 'monospace', runner, onConverted)
 
-    const emitted = onConverted.mock.calls[0][0] as string[]
+    const emitted = frameRows(onConverted.mock.calls[0][0] as PackedFrame)
     expect(emitted).toHaveLength(20)
     for (const line of emitted) {
       expect(line).toHaveLength(8)
     }
   })
 
-  it('crops the onConverted instructions to the same region, rebased on its own origin', async () => {
+  it('crops the onConverted frame to the same region, rebased on its own width', async () => {
     // Same 200x200 canvas and pillarboxed 100x400 source as above: 8 cols x 20 rows kept.
     canvasEl.width = 200
     canvasEl.height = 200
@@ -131,12 +135,11 @@ describe('renderFrame', () => {
       onConverted,
     )
 
-    const instructions = onConverted.mock.calls[0][1] as RenderInstruction[]
-    expect(instructions).toHaveLength(8 * 20)
-    // The kept region starts at column 12 of the full grid; the HTML Export's first cell is its own.
-    expect(instructions[0]).toMatchObject({ x: 0, y: 0 })
-    expect(instructions[7]).toMatchObject({ x: 7 * 6, y: 0 })
-    expect(instructions[8]).toMatchObject({ x: 0, y: 10 })
+    const cropped = onConverted.mock.calls[0][0] as PackedFrame
+    expect(cropped.chars).toHaveLength(8 * 20)
+    // The kept region starts at column 12 of the full grid; the HTML Export's first cell is its own,
+    // which is what `cols` being the *crop's* width says — index 8 is the second row, not column 8.
+    expect([cropped.cols, cropped.rows]).toEqual([8, 20])
   })
 
   it('carries an authored Charset into every Export, astral glyphs whole', async () => {
@@ -161,16 +164,12 @@ describe('renderFrame', () => {
       onConverted,
     )
 
-    const [rows, instructions] = onConverted.mock.calls[0] as [string[], RenderInstruction[]]
-    expect(rows[0]).toBe('🌑'.repeat(8))
-    expect(new Set(instructions.map((i) => i.char))).toEqual(new Set(['🌑']))
+    const cropped = onConverted.mock.calls[0][0] as PackedFrame
+    expect(frameRows(cropped)[0]).toBe('🌑'.repeat(8))
+    expect(new Set([...cropped.chars].map(frameGlyph))).toEqual(new Set(['🌑']))
     expect(ctxMock.fillText).toHaveBeenCalledWith('🌑', expect.any(Number), expect.any(Number))
 
-    const html = buildHtmlDocument(instructions, {
-      charWidth: 6,
-      charHeight: 10,
-      background: '#000',
-    })
+    const html = buildHtmlDocument(cropped, { charHeight: 10, background: '#000' })
     expect(html).toContain('🌑'.repeat(8))
   })
 
@@ -278,7 +277,7 @@ describe('renderFrame', () => {
         onConverted,
         mirrored,
       )
-      return onConverted.mock.calls[0][0] as string[]
+      return frameRows(onConverted.mock.calls[0][0] as PackedFrame)
     }
 
     const plain = await emitted(false)
@@ -322,7 +321,7 @@ describe('renderFrame', () => {
       onConverted,
     )
 
-    const emitted = onConverted.mock.calls[0][0] as string[]
+    const emitted = frameRows(onConverted.mock.calls[0][0] as PackedFrame)
     expect(emitted.every((line) => line[half - 1] === '|' && line[half] === '|')).toBe(true)
     expect(ctxMock.fillText).toHaveBeenCalledWith('|', expect.any(Number), expect.any(Number))
   })
@@ -348,7 +347,7 @@ describe('renderFrame', () => {
       onConverted,
     )
 
-    const emitted = (onConverted.mock.calls[0][0] as string[]).join('')
+    const emitted = frameRows(onConverted.mock.calls[0][0] as PackedFrame).join('')
     expect(new Set(emitted)).toEqual(new Set(['░', '▒']))
     expect(ctxMock.fillText).toHaveBeenCalledWith('▒', expect.any(Number), expect.any(Number))
   })

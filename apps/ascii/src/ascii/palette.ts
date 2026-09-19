@@ -6,6 +6,7 @@
 // the Source itself, which is the strongest form that rule can take — there is no constant to get
 // wrong.
 
+import { packRgb } from './packed-frame'
 import type { AsciiCell } from './types'
 
 /**
@@ -30,10 +31,13 @@ const BIN_STRIDE = 4
 
 /**
  * A colour per lattice bin — the mean of the cells that landed in it — and a hole where none did.
+ * Packed the way `computeFrame` packs every other colour (`renderer.ts`), so the quantizer hands
+ * back numbers and nothing here builds a string a typed array would only have to undo.
+ *
  * Read it through `paletteColor` rather than by index: which bin a colour belongs to is this file's
  * business, and a caller indexing it itself would be a second copy of the partition.
  */
-export type SourcePalette = readonly (string | undefined)[]
+export type SourcePalette = readonly (number | undefined)[]
 
 /**
  * Which bin a colour falls in. This is the whole partition, and it is settled before any picture is
@@ -105,7 +109,7 @@ export function quantizePalette(cells: readonly AsciiCell[][]): SourcePalette {
     }
   }
 
-  const palette: (string | undefined)[] = new Array(BIN_COUNT)
+  const palette: (number | undefined)[] = new Array(BIN_COUNT)
   for (let bin = 0; bin < BIN_COUNT; bin++) {
     const at = bin * BIN_STRIDE
     const population = bins[at]
@@ -113,7 +117,7 @@ export function quantizePalette(cells: readonly AsciiCell[][]): SourcePalette {
       const r = Math.round(bins[at + 1] / population)
       const g = Math.round(bins[at + 2] / population)
       const b = Math.round(bins[at + 3] / population)
-      palette[bin] = `rgb(${r},${g},${b})`
+      palette[bin] = packRgb(r, g, b)
     }
   }
   return palette
@@ -126,6 +130,6 @@ export function quantizePalette(cells: readonly AsciiCell[][]): SourcePalette {
  *   the palette came from that means only a blank, since a painting cell always contributes to its
  *   own bin — but the function makes no such promise about a cell from anywhere else.
  */
-export function paletteColor(palette: SourcePalette, cell: AsciiCell): string | undefined {
+export function paletteColor(palette: SourcePalette, cell: AsciiCell): number | undefined {
   return palette[binOf(cell)]
 }

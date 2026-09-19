@@ -5,7 +5,7 @@
 // fonts installed, which is the fallback every viewer's machine will be taking too.
 
 import { expect, test } from '@playwright/test'
-import type { RenderInstruction } from '../../apps/ascii/src/ascii/renderer'
+import { type PackedFrame, packHex } from '../../apps/ascii/src/ascii/packed-frame'
 import { MONOSPACE_CHAR_WIDTH_RATIO } from '../../apps/ascii/src/ascii/types'
 import { buildHtmlDocument } from '../../apps/ascii/src/export/html-document'
 
@@ -18,26 +18,24 @@ const COLUMNS = 4
 
 // Two rows of four, deliberately mixing the narrowest and widest glyphs a proportional font would
 // draw at different widths — under a monospace one they measure the same.
-const GRID: RenderInstruction[] = [
+const ROWS = [
   ['i', 'l', 'i', 'l'],
   ['W', 'M', 'W', 'M'],
-].flatMap((line, row) =>
-  line.map((char, col) => ({
-    char,
-    x: col * CHAR_WIDTH,
-    y: row * CHAR_HEIGHT,
-    color: row === 0 ? GREEN : PINK,
-  })),
-)
+]
+const GRID: PackedFrame = {
+  cols: COLUMNS,
+  rows: ROWS.length,
+  chars: Uint32Array.from(ROWS.flat(), (char) => char.codePointAt(0) ?? 32),
+  colors: Uint32Array.from(
+    ROWS.flatMap((line, row) => line.map(() => (row === 0 ? GREEN : PINK))),
+    packHex,
+  ),
+}
 
 test.describe('the HTML Export document', () => {
   test.beforeEach(async ({ page }) => {
     await page.setContent(
-      buildHtmlDocument(GRID, {
-        charWidth: CHAR_WIDTH,
-        charHeight: CHAR_HEIGHT,
-        background: BACKGROUND,
-      }),
+      buildHtmlDocument(GRID, { charHeight: CHAR_HEIGHT, background: BACKGROUND }),
     )
   })
 

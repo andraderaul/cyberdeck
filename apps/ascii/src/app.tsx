@@ -15,8 +15,8 @@ import { cn } from '@cyberdeck/deck-kit/utils'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import type { AnalysisState } from './ai/types'
 import { useAIConfig } from './ai/use-ai-config'
+import type { PackedFrame } from './ascii/packed-frame'
 import type { Preset } from './ascii/presets'
-import type { RenderInstruction } from './ascii/renderer'
 import type { ConversionSettings } from './ascii/types'
 import { DEFAULT_SETTINGS } from './ascii/types'
 import AboutModal from './components/about-modal'
@@ -56,8 +56,7 @@ export default function App() {
   const [revertPoint, setRevertPoint] = useState<RevertPoint | null>(null)
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null)
   const [sourceVideo, setSourceVideo] = useState<HTMLVideoElement | null>(null)
-  const [asciiRows, setAsciiRows] = useState<string[]>([])
-  const [renderInstructions, setRenderInstructions] = useState<RenderInstruction[]>([])
+  const [croppedFrame, setCroppedFrame] = useState<PackedFrame | null>(null)
   const [isMirrored, setIsMirrored] = useState(false)
   const [canvasDimensions, setCanvasDimensions] = useState<{ w: number; h: number } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -116,11 +115,10 @@ export default function App() {
 
   const handleMirrorToggle = useCallback(() => setIsMirrored((prev) => !prev), [])
 
-  // One conversion feeds both text Exports: TXT Export reads the rows, HTML Export the same grid
-  // with its colours still attached.
-  const handleConverted = useCallback((rows: string[], instructions: RenderInstruction[]) => {
-    setAsciiRows(rows)
-    setRenderInstructions(instructions)
+  // One conversion feeds both text Exports: TXT Export reads the characters, HTML Export the same
+  // grid with its colours still attached. Held packed, and unpacked only by the Export that asks.
+  const handleConverted = useCallback((cropped: PackedFrame) => {
+    setCroppedFrame(cropped)
   }, [])
 
   const handleDimensionsChange = useCallback((w: number, h: number) => {
@@ -200,7 +198,7 @@ export default function App() {
     stopWebcam()
     setSourceImage(null)
     setSourceVideo(null)
-    setAsciiRows([])
+    setCroppedFrame(null)
   }, [isRecording, stopRecording, stopWebcam])
 
   // The one way into the Live Source, taken by the hero and by the canvas overlay alike (#366) —
@@ -326,8 +324,7 @@ export default function App() {
       {(sourceImage || sourceVideo) && (
         <ControlStrip
           canvasRef={canvasRef}
-          asciiRows={asciiRows}
-          renderInstructions={renderInstructions}
+          croppedFrame={croppedFrame}
           isLive={!!sourceVideo}
           canvasDimensions={canvasDimensions}
           hasAiConfig={!!aiConfig}

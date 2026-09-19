@@ -36,12 +36,12 @@ Single-page React/TS/Vite app. Fully client-side — no backend server. AI analy
 3. `AsciiCanvas` keeps a **hidden off-screen canvas** (`hiddenRef`) sized `cols × rows` — this is used only for pixel sampling via `getImageData`. The visible canvas is sized in pixels. These two canvases must stay separate (see ADR 0001)
 4. `AsciiCanvas` decides *when* to render: once per settings change via `useEffect` for Source Image, or in a `requestAnimationFrame` loop throttled to ~15fps for Live Source (see ADR 0002). It calls `renderFrame()` from `src/ascii/render-frame.ts`
 5. `renderFrame()` in `src/ascii/render-frame.ts` orchestrates a single render: computes `cols × rows` from canvas size and resolution, `sampleSource()` draws the Source onto the hidden canvas and reads its pixels, an `AsciiFrameRunner` runs `convertImage()` → `computeFrame()`, and `paintFrame()` draws what comes back. **Async** (ADR 0002 — the two pure stages run on a Worker) and reports `painted` / `dropped` / `skipped`: `skipped` when there is no 2D context or the canvas is too small to fit a character, `dropped` when the runner had no cells for this frame. Mirror is threaded in here as an `isMirrored` flag and applied to the *sampling* `drawImage`, so preview and every Export carry the flip (ADR 0016) — never a CSS transform on the visible canvas
-6. `convertImage()` and `computeFrame()` are **pure** and run **off the main thread** (ADR 0002): given the sampled pixels and the settings, they return `RenderInstruction[]` and `asciiRows` with no DOM access (ADR 0005). `frame-job.ts` is that pair as one function; `frame-runner.ts` decides which thread it runs on
+6. `convertImage()` and `computeFrame()` are **pure** and run **off the main thread** (ADR 0002): given the sampled pixels and the settings, they return a `PackedFrame` — `{cols, rows, chars, colors}`, one entry per cell in two `Uint32Array`s — with no DOM access (ADR 0005). `frame-job.ts` is that pair as one function; `frame-runner.ts` decides which thread it runs on
 7. `paintFrame()` stays in the shell and is the only function that writes to `CanvasRenderingContext2D` for rendering — which is *why* the port stopped where it did
-8. `onConverted` callback sends the region-cropped result up to `App` — the plain-text rows for TXT
-   Export and the same grid as `RenderInstruction[]`, colour still attached, for HTML Export. It is
-   a second `computeFrame()` over the cropped cells rather than a slice of the instructions, so each
-   x/y is rebased on the cropped grid's own origin
+8. `onConverted` callback sends the region-cropped `PackedFrame` up to `App` — one grid that both
+   text Exports read, TXT through `frameRows()` and HTML through the colours still attached. It is
+   a second `computeFrame()` over the cropped cells rather than a slice of the full frame, so the
+   grid is rebased on the crop's own origin and width
 
 ### AI analysis
 
@@ -183,6 +183,13 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   this path may read a Theme token — a Color Mode paints the user's art (ADR 0013, ADR 0024), and
   here every colour came out of the Source itself
 - `src/ascii/image-utils.ts` — `resizeImage()` (caps Source Image at 800px wide before sampling)
+- `src/ascii/packed-frame.ts` — `PackedFrame`, `cssColor()`, `frameGlyph()`, `frameRows()`,
+  `packHex()`, `packRgb()`: the wire shape of a converted frame and the two encodings that make it
+  one (ADR 0002's #411 amendment). Apart from `renderer.ts` because the `adaptive` quantizer packs
+  colours too and `renderer.ts` already imports it — the pair would otherwise be a cycle. `chars`
+  holds **code points** and not UTF-16 units, for `charset.ts`' reason one layer down; `colors`
+  carries the CSS *spelling* in a flag bit, because an HTML Export writes the colour verbatim and
+  `#00ff41` coming back as `rgb(0,255,65)` is a different document
 - `src/ascii/renderer.ts` — `computeFrame()` (pure), `paintFrame()` (side effects) — see ADR 0005.
   `CANVAS_BACKGROUND` is the ground both the canvas and the HTML Export stand on: the user's art,
   so a literal rather than a Theme token (ADR 0013)
@@ -191,9 +198,9 @@ See the root `CLAUDE.md` — the convention is deck-wide.
   `painted` / `dropped` / `skipped`
 - `src/ascii/frame-job.ts` — `runFrameJob()`, `AsciiFrameJob`, `AsciiFrameResult`: what crosses the
   thread boundary and the one function that runs on the far side of it (ADR 0002). Kept apart from
-  the Worker entry so the *work* is a pure function a test can call. The inbound pixels transfer;
-  the result cannot — `RenderInstruction[]` and `asciiRows` are not Transferables, and the file says
-  so rather than encoding glyphs and CSS colours into typed arrays to make the legs symmetric
+  the Worker entry so the *work* is a pure function a test can call. **Both legs transfer** since
+  #411: the inbound pixels, and every buffer of the returned `PackedFrame`, which
+  `frameResultTransfers()` names for the Worker's transfer list
 - `src/ascii/frame-runner.ts` — `createFrameRunner()`, `createWorkerFrameRunner()`,
   `createSyncFrameRunner()`: which thread a frame is converted on, and the three rules that come
   with the answer — at most one frame in flight and one waiting (a newer frame *replaces* the
@@ -241,8 +248,8 @@ See the root `CLAUDE.md` — the convention is deck-wide.
 - `src/errors/app-error.ts` — `Errors`: this app's error factories (Export, Capture, localStorage)
   over the kit's `AppError` / `createError` (`@cyberdeck/deck-kit/errors`) — only the wording stays
   here (ADR 0014)
-- `src/export/html-document.ts` — `buildHtmlDocument()`: the HTML Export's document, pure over
-  `RenderInstruction[]` (ADR 0005). HTML rather than SVG because only `<pre>` guarantees the art
+- `src/export/html-document.ts` — `buildHtmlDocument()`: the HTML Export's document, pure over a
+  `PackedFrame` (ADR 0005). HTML rather than SVG because only `<pre>` guarantees the art
   copies back with its line breaks and column alignment; the reason is a comment at the top of the
   file. `e2e/ascii/html-export.spec.ts` proves the selection, the monospace grid and the colours in
   a real browser, which a string assertion structurally cannot

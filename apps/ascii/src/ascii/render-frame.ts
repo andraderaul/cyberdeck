@@ -1,7 +1,8 @@
 import { sampleSource } from './converter'
 import { computeContainFit } from './fit'
 import type { AsciiFrameRunner } from './frame-runner'
-import { paintFrame, type RenderInstruction } from './renderer'
+import type { PackedFrame } from './packed-frame'
+import { paintFrame } from './renderer'
 import { type ConversionSettings, MONOSPACE_CHAR_WIDTH_RATIO } from './types'
 
 /**
@@ -77,8 +78,8 @@ export type AsciiFrameOutcome = 'painted' | 'dropped' | 'skipped'
  * frame. That is deliberate: a fresh sample replaces the one waiting its turn, so what eventually
  * runs is the newest frame rather than the oldest queued one (`frame-runner.ts`).
  *
- * @param onConverted receives the region-cropped result both text Exports read: the plain rows for
- *   TXT Export, and the same grid as RenderInstructions — character *and* colour — for HTML Export.
+ * @param onConverted receives the region-cropped frame both text Exports read — the characters TXT
+ *   Export writes and the colours HTML Export puts on them, as the packed arrays that came back.
  * @returns `skipped` when there was nothing to render — no 2D context, or a canvas too small to fit
  *   a single character; `dropped` when the frame has no cells coming; `painted` when the canvas was
  *   written.
@@ -90,7 +91,7 @@ export async function renderFrame(
   settings: ConversionSettings,
   fontFamily: string,
   runner: AsciiFrameRunner,
-  onConverted?: (rows: string[], instructions: RenderInstruction[]) => void,
+  onConverted?: (cropped: PackedFrame) => void,
   isMirrored = false,
 ): Promise<AsciiFrameOutcome> {
   const ctx = canvasEl.getContext('2d')
@@ -113,17 +114,17 @@ export async function renderFrame(
   const region = computeContainFit(srcW, srcH, cols, rows)
 
   const pixels = sampleSource(hiddenCtx, source, cols, rows, region, isMirrored)
-  const frame = await runner.run({ pixels, cols, rows, settings, region, cropped: !!onConverted })
-  if (frame === null) {
+  const result = await runner.run({ pixels, cols, rows, settings, region, cropped: !!onConverted })
+  if (result === null) {
     return 'dropped'
   }
 
-  paintFrame(ctx, frame.instructions, resolution, fontFamily)
+  paintFrame(ctx, result.frame, resolution, fontFamily)
 
   // PNG keeps the framed canvas (painted above); the text Exports get the region cropped tight,
   // with no letterbox padding (ADR 0010).
-  if (onConverted && frame.cropped) {
-    onConverted(frame.cropped.asciiRows, frame.cropped.instructions)
+  if (onConverted && result.cropped) {
+    onConverted(result.cropped)
   }
   return 'painted'
 }

@@ -1,8 +1,8 @@
 import { Button, Chip, useToastError } from '@cyberdeck/deck-kit/ui'
 import { isTouchDevice, shareOrDownloadCanvas } from '@cyberdeck/deck-kit/utils'
 import { type ComponentProps, type RefObject, useState } from 'react'
-import { CANVAS_BACKGROUND, type RenderInstruction } from '../ascii/renderer'
-import { MONOSPACE_CHAR_WIDTH_RATIO } from '../ascii/types'
+import { frameRows, type PackedFrame } from '../ascii/packed-frame'
+import { CANVAS_BACKGROUND } from '../ascii/renderer'
 import { Errors } from '../errors/app-error'
 import { buildHtmlDocument } from '../export/html-document'
 import { outputFilename, type PngScale, planPngExport } from '../export/output'
@@ -65,8 +65,8 @@ function ExportControl({ format, label, variant, onClick }: ExportControlProps) 
 
 interface Props {
   canvasRef: RefObject<HTMLCanvasElement | null>
-  asciiRows: string[]
-  renderInstructions: RenderInstruction[]
+  /** The region-cropped frame both text Exports read, or `null` before the first conversion. */
+  croppedFrame: PackedFrame | null
   resolution: number
   isLive: boolean
   canvasDimensions?: { w: number; h: number } | null
@@ -91,8 +91,7 @@ interface Props {
  */
 export default function OutputPanel({
   canvasRef,
-  asciiRows,
-  renderInstructions,
+  croppedFrame,
   resolution,
   isLive,
   canvasDimensions,
@@ -132,26 +131,26 @@ export default function OutputPanel({
   }
 
   function exportTxt() {
-    if (!asciiRows.length) {
+    if (!croppedFrame?.rows) {
       return
     }
     try {
-      downloadText(asciiRows.join('\n'), 'text/plain', outputFilename('txt-export'))
+      // Built here rather than carried from the conversion: the rows are the packed characters
+      // read back, and nothing but this click ever wants them as strings (ADR 0002).
+      downloadText(frameRows(croppedFrame).join('\n'), 'text/plain', outputFilename('txt-export'))
     } catch {
       toastError(Errors.exportFailed('txt').message)
     }
   }
 
   function exportHtml() {
-    if (!renderInstructions.length) {
+    if (!croppedFrame?.rows) {
       return
     }
     try {
-      // The preview's own cell metrics: Resolution is the type size it paints at, and the pitch it
-      // positions on is that times MONOSPACE_CHAR_WIDTH_RATIO. Handing the document the same two is
-      // what puts its grid on the preview's proportions.
-      const html = buildHtmlDocument(renderInstructions, {
-        charWidth: resolution * MONOSPACE_CHAR_WIDTH_RATIO,
+      // The preview's own cell metric: Resolution is the type size it paints at, and the document
+      // holds its columns on that same size's 0.6em advance.
+      const html = buildHtmlDocument(croppedFrame, {
         charHeight: resolution,
         background: CANVAS_BACKGROUND,
       })

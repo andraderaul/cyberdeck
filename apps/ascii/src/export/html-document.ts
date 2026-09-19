@@ -1,5 +1,5 @@
-// The document behind the HTML Export. Pure: RenderInstruction[] in, one string out — no DOM, no
-// canvas, the same boundary ADR 0005 draws around computeFrame().
+// The document behind the HTML Export. Pure: a PackedFrame in, one string out — no DOM, no canvas,
+// the same boundary ADR 0005 draws around computeFrame().
 //
 // HTML rather than SVG, and the reason is the one thing this Export exists for. Both formats can
 // hold coloured text, but only `<pre>` guarantees the art *copies back* with its line breaks and its
@@ -8,7 +8,7 @@
 // advantage, surviving a drop into a README, it takes through `<img>`, where nothing is selectable
 // at all. So the format that reads as an image loses the text; this one keeps it.
 
-import type { RenderInstruction } from '../ascii/renderer'
+import { cssColor, frameGlyph, type PackedFrame } from '../ascii/packed-frame'
 
 /**
  * The deck's own stack, spelled out rather than read from `--font-mono`: the exported document
@@ -19,15 +19,18 @@ const FONT_STACK =
   '"IBM Plex Mono", "Departure Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
 
 export interface HtmlDocumentMetrics {
-  /** Cell advance in px — `resolution × MONOSPACE_CHAR_WIDTH_RATIO`, the pitch the preview paints on. */
-  charWidth: number
   /** Cell height in px — the ConversionSettings' Resolution, which is also the preview's type size. */
   charHeight: number
   /** The ground `paintFrame()` fills behind the glyphs — the user's art, never a Theme token (ADR 0013). */
   background: string
 }
 
-/** `"` included: the colours interpolate into a `style` attribute, and only the escape makes that safe. */
+/**
+ * `"` included: the colours interpolate into a `style` attribute, and only the escape makes that
+ * safe. A colour now arrives from `cssColor` and can only be `#rrggbb` or `rgb(r,g,b)`, so nothing
+ * hostile can reach it today — the escape stays because that is a property of today's *source*, and
+ * the attribute would be the thing that breaks if the source ever changed.
+ */
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -37,33 +40,15 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Places every instruction at the row and column its own x/y name, rather than trusting the array's
- * order to be the grid's. A cell the list skips stays a hole and renders as a blank, so a partial or
- * reordered list produces the document it describes instead of a silently shifted one.
- */
-function toGrid(
-  instructions: RenderInstruction[],
-  { charWidth, charHeight }: HtmlDocumentMetrics,
-): (RenderInstruction | undefined)[][] {
-  const grid: (RenderInstruction | undefined)[][] = []
-  for (const instruction of instructions) {
-    const row = Math.round(instruction.y / charHeight)
-    const col = Math.round(instruction.x / charWidth)
-    while (grid.length <= row) {
-      grid.push([])
-    }
-    grid[row][col] = instruction
-  }
-  return grid
-}
-
-/**
  * One span per run of same-coloured cells rather than one per cell — a matrix-mode row collapses to
  * a single span, and a document that opens instantly is the difference between an Export and a file
  * nobody opens twice. A blank paints nothing, so it never opens a run of its own and never breaks
  * one either.
+ *
+ * The row is read straight off the packed arrays: `computeFrame` emits one entry per cell in
+ * row-major order, so the index *is* the grid and there is no ordering left to distrust.
  */
-function renderRow(row: (RenderInstruction | undefined)[]): string {
+function renderRow({ chars, colors, cols }: PackedFrame, row: number): string {
   let out = ''
   let runColor: string | null = null
   let runText = ''
@@ -78,15 +63,15 @@ function renderRow(row: (RenderInstruction | undefined)[]): string {
     runText = ''
   }
 
-  for (let col = 0; col < row.length; col++) {
-    const cell = row[col]
-    const char = cell?.char ?? ' '
-    const paints = cell !== undefined && char !== ' '
-    if (paints && runColor !== null && cell.color !== runColor) {
-      flush()
-      runColor = cell.color
-    } else if (paints && runColor === null) {
-      runColor = cell.color
+  for (let col = 0; col < cols; col++) {
+    const at = row * cols + col
+    const char = frameGlyph(chars[at])
+    if (char !== ' ') {
+      const color = cssColor(colors[at])
+      if (runColor !== null && color !== runColor) {
+        flush()
+      }
+      runColor = color
     }
     runText += char
   }
@@ -101,16 +86,13 @@ function renderRow(row: (RenderInstruction | undefined)[]): string {
  * The document holds its columns on the resolved font's own advance rather than a per-cell box,
  * because a box per cell is exactly what stops a `<pre>` copying back as text. That advance is
  * 0.6em — `MONOSPACE_CHAR_WIDTH_RATIO`, the same pitch `computeFrame()` positions on — across the
- * deck's stack and the generic `monospace` every fallback lands on, which is why `charWidth` needs
+ * deck's stack and the generic `monospace` every fallback lands on, which is why the pitch needs
  * no `letter-spacing` correction to arrive. `e2e/ascii/html-export.spec.ts` measures it rather than
  * assuming it.
  */
-export function buildHtmlDocument(
-  instructions: RenderInstruction[],
-  metrics: HtmlDocumentMetrics,
-): string {
+export function buildHtmlDocument(frame: PackedFrame, metrics: HtmlDocumentMetrics): string {
   const { charHeight, background } = metrics
-  const art = toGrid(instructions, metrics).map(renderRow).join('\n')
+  const art = Array.from({ length: frame.rows }, (_, row) => renderRow(frame, row)).join('\n')
 
   return `<!doctype html>
 <html lang="en">

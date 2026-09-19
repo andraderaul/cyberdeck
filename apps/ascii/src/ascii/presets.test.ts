@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { greyPixels, sourcePixels } from './__fixtures__/source-pixels'
 import { convertImage } from './converter'
+import { cssColor, frameGlyph } from './packed-frame'
 import { PRESETS, settingsMatch } from './presets'
 import { computeFrame, DUAL_COLOR_MODES } from './renderer'
 import type { ConversionSettings } from './types'
@@ -250,15 +251,15 @@ describe('PRESETS', () => {
         sourcePixels(GRID, GRID, () => teal),
         settings,
       )
-      const { instructions } = computeFrame(cells, settings)
+      const frame = computeFrame(cells, settings)
 
-      const painted = instructions.filter((i) => i.char !== ' ')
+      const painted = [...frame.chars.keys()].filter((at) => frameGlyph(frame.chars[at]) !== ' ')
       expect(painted.length).toBeGreaterThan(0)
 
       // The lattice bin's mean, so the channels come back near the Source's own rather than equal
       // to it. A fixed Color Mode would answer one of the deck's constants instead, whatever the
       // Source was.
-      const rgb = painted[0].color.match(/\d+/g)?.map(Number) ?? []
+      const rgb = cssColor(frame.colors[painted[0]]).match(/\d+/g)?.map(Number) ?? []
       expect(rgb).toHaveLength(3)
       for (const [channel, source] of rgb.map((v, i) => [v, teal[i]] as const)) {
         expect(Math.abs(channel - source)).toBeLessThan(32)
@@ -302,12 +303,14 @@ describe('PRESETS', () => {
       cells.flat().filter((cell) => cell.char !== ' ').length
 
     /** The colours a look actually *paints* — a blank cell is excluded, which is the whole point. */
-    const inkColours = (pixels: Uint8ClampedArray, settings: ConversionSettings) =>
-      new Set(
-        computeFrame(convert(pixels, settings), settings)
-          .instructions.filter((instruction) => instruction.char !== ' ')
-          .map((instruction) => instruction.color),
+    const inkColours = (pixels: Uint8ClampedArray, settings: ConversionSettings) => {
+      const frame = computeFrame(convert(pixels, settings), settings)
+      return new Set(
+        [...frame.chars.keys()]
+          .filter((at) => frameGlyph(frame.chars[at]) !== ' ')
+          .map((at) => cssColor(frame.colors[at])),
       )
+    }
 
     it('Thermal keeps the cold half of the infrared pair at the contrast it is curated to', () => {
       const { settings } = presetById('thermal')
