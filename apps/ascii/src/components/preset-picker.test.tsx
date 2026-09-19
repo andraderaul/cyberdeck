@@ -222,7 +222,7 @@ describe('PresetPicker', () => {
     }
   })
 
-  it('derives once per Source, not once per render', () => {
+  it('derives once per Source, not once per render', async () => {
     const source = makeSourceImage()
     const { rerender } = renderPicker({ source })
 
@@ -235,6 +235,7 @@ describe('PresetPicker', () => {
         onReset={vi.fn()}
       />,
     )
+    await flushThumbnails()
 
     expect(deriveMock).toHaveBeenCalledOnce()
   })
@@ -253,7 +254,7 @@ describe('PresetPicker', () => {
     expect(document.querySelectorAll('img')).toHaveLength(PRESETS.length)
   })
 
-  it('re-derives when the Source itself changes', () => {
+  it('re-derives when the Source itself changes', async () => {
     const { rerender } = renderPicker({ source: makeSourceImage() })
 
     rerender(
@@ -265,6 +266,7 @@ describe('PresetPicker', () => {
         onReset={vi.fn()}
       />,
     )
+    await flushThumbnails()
 
     expect(deriveMock).toHaveBeenCalledTimes(2)
   })
@@ -285,8 +287,9 @@ describe('PresetPicker', () => {
     expect(deriveMock).toHaveBeenCalledTimes(2)
   })
 
-  it('keeps the row scrollable inside the Strip rather than spilling past its edge', () => {
+  it('keeps the row scrollable inside the Strip rather than spilling past its edge', async () => {
     const { container } = renderPicker({ source: makeSourceImage() })
+    await flushThumbnails()
 
     // The fieldset's UA `min-inline-size: min-content` is what would push the chips past the
     // Strip's right edge instead of letting the row scroll.

@@ -6,13 +6,11 @@ its 44px — and it *looks* wrong. A spacing step the preset never defined gener
 token resolves to nothing and the parent's colour shows through, an overlay loses the opaque ground
 ADR 0013 requires it to carry.
 
-> **These baselines have not been reviewed.**
+> **These baselines were reviewed and approved by the maintainer on 2026-09-18.**
 >
 > A screenshot baseline pins whatever was on screen the day it was taken, *including a bug*. The
-> automation that produced them cannot tell a correct layout from an incorrect one — that is the
-> entire reason this set needs a human before it is merged. Nothing here is an approval. The list
-> below is a reviewer's checklist: what each picture is for, and the specific thing to look at in
-> it. Approving one means having looked at that thing.
+> automation that produced them cannot tell a correct layout from an incorrect one. The list below
+> records what was reviewed in each picture and remains the checklist for future baseline changes.
 
 ## How to look at them
 
